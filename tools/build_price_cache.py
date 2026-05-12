@@ -22,6 +22,8 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+import time
+import requests
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -118,6 +120,59 @@ def build_price_entry(card: dict, ts: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Live Price Fetching
+# ---------------------------------------------------------------------------
+# Providers configuration
+PROVIDERS = [
+    {
+        "name": "tcgdex",
+        "url": "https://api.tcgdex.net/v2/prices",
+        "key_env": None,  # No API key required
+    },
+    {
+        "name": "pokewallet",
+        "url": "https://api.pokewallet.com/prices",
+        "key_env": "POKEWALLET_API_KEY",
+    },
+    {
+        "name": "pokemonTcgApi",
+        "url": "https://api.pokemontcg.io/v2/prices",
+        "key_env": "POKEMON_TCG_API_KEY",
+    },
+]
+
+# Fetch prices from a provider
+def fetch_prices_from_provider(provider, card):
+    headers = {}
+    if provider["key_env"]:
+        api_key = os.getenv(provider["key_env"])
+        if not api_key:
+            print(f"[WARN] Missing API key for {provider['name']}, skipping.")
+            return None
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        response = requests.get(provider["url"], params=card, headers=headers, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"[ERROR] {provider['name']} request failed: {e}")
+        return None
+
+# Fetch live prices with fallback to manual_seed
+def fetch_live_prices(card):
+    for provider in PROVIDERS:
+        result = fetch_prices_from_provider(provider, card)
+        if result:
+            print(f"[INFO] Price fetched from {provider['name']} for {card['canonicalId']}")
+            return result, provider["name"]
+        time.sleep(1)  # Rate limiting
+
+    # Fallback to manual_seed
+    print(f"[WARN] No live price found for {card['canonicalId']}, using manual_seed.")
+    return seed_price(card["normalizedName"], card["condition"]), "manual_seed"
+
+# ---------------------------------------------------------------------------
 # Main build
 # ---------------------------------------------------------------------------
 def build() -> None:
@@ -136,11 +191,22 @@ def build() -> None:
         groups.setdefault(key, []).append(card)
 
     datasets = []
+    diagnostics = {
+        "buildStatus": "success",
+        "builtAtUtc": ts,
+        "cacheVersion": datetime.now(timezone.utc).strftime("%Y.%m.%d.%H%M"),
+        "cardsRequested": len(cards),
+        "cardsPriced": 0,
+        "manualFallbackCount": 0,
+        "noResultCount": 0,
+        "errorCount": 0,
+        "sourcesUsed": set(),
+        "datasetsBuilt": [],
+    }
 
     for (game, language), group_cards in sorted(groups.items()):
         price_path = PRICES_DIR / game / language / "sample.json"
 
-        # Check for duplicate canonicalIds in this group
         seen: set[str] = set()
         prices = []
         for card in group_cards:
@@ -148,7 +214,18 @@ def build() -> None:
             if cid in seen:
                 print(f"  [WARN] Duplicate canonicalId skipped: {cid}")
                 continue
+
             seen.add(cid)
+            price_data, source = fetch_live_prices(card)
+            diagnostics["sourcesUsed"].add(source)
+
+            if source == "manual_seed":
+                diagnostics["manualFallbackCount"] += 1
+            elif not price_data:
+                diagnostics["noResultCount"] += 1
+                continue
+
+            diagnostics["cardsPriced"] += 1
             prices.append(build_price_entry(card, ts))
 
         payload = {
@@ -170,30 +247,22 @@ def build() -> None:
             "url": rel_url,
             "sha256": digest,
         })
+        diagnostics["datasetsBuilt"].append(dataset_id)
         print(f"  Wrote {price_path}  sha256={digest}")
-
-    # Update cacheVersion to use the current UTC timestamp in the format YYYY.MM.DD.HHMM
-    cache_version = datetime.now(timezone.utc).strftime("%Y.%m.%d.%H%M")
 
     # Update index.json
     index = {
         "schemaVersion": SCHEMA_VERSION,
         "generatedAtUtc": ts,
-        "cacheVersion": cache_version,
+        "cacheVersion": diagnostics["cacheVersion"],
         "datasets": datasets,
     }
     write_json(INDEX_PATH, index)
-    print(f"  Updated {INDEX_PATH} with cacheVersion={cache_version}")
+    print(f"  Updated {INDEX_PATH}")
 
     # Update diagnostics
-    diag = {
-        "buildStatus": "success",
-        "builtAtUtc": ts,
-        "cacheVersion": cache_version,
-        "datasetsBuilt": [d["id"] for d in datasets],
-        "notes": "Built by build_price_cache.py",
-    }
-    write_json(DIAG_PATH, diag)
+    diagnostics["sourcesUsed"] = list(diagnostics["sourcesUsed"])
+    write_json(DIAG_PATH, diagnostics)
     print(f"  Updated {DIAG_PATH}")
 
     print("[build_price_cache] Build complete.")

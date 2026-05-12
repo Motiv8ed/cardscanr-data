@@ -3,8 +3,8 @@ name: Update Price Cache
 on:
   workflow_dispatch:
   schedule:
-    # Every 6 hours
-    - cron: "0 */6 * * *"
+    # Every 12 hours
+    - cron: "17 */12 * * *"
 
 permissions:
   contents: write
@@ -22,10 +22,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - name: Build price cache
         env:
           # Optional: set in repository secrets to enable live API fetches
           POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY }}
+          POKEWALLET_API_KEY: ${{ secrets.POKEWALLET_API_KEY }}
         run: python tools/build_price_cache.py
 
       - name: Validate cache
