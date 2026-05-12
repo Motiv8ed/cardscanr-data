@@ -135,18 +135,22 @@ def check_index() -> list[dict]:
         return []
     ok("index.json has all required top-level fields")
 
+    # Add validation for cacheVersion, generatedAtUtc, and datasets
+    if not data.get("cacheVersion"):
+        err("index.json 'cacheVersion' must be present and non-empty")
+    if not data.get("generatedAtUtc"):
+        err("index.json 'generatedAtUtc' must be present")
     datasets = data.get("datasets", [])
     if not isinstance(datasets, list) or not datasets:
         err("index.json 'datasets' must be a non-empty list")
-        return []
+    for ds in datasets:
+        if not check_required(ds, REQUIRED_DATASET_FIELDS, f"dataset entry {ds.get('id', '?')}"):
+            continue
 
     print("\n[3] Dataset URL existence check")
     print("\n[4] SHA-256 integrity check")
     valid_datasets = []
     for ds in datasets:
-        if not check_required(ds, REQUIRED_DATASET_FIELDS, f"dataset entry {ds.get('id', '?')}"):
-            continue
-
         rel_url: str = ds["url"]
         # Convert URL path to local file path
         local_path = PUBLIC_DIR / rel_url.lstrip("/")

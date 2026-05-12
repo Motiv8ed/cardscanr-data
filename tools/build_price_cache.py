@@ -172,21 +172,24 @@ def build() -> None:
         })
         print(f"  Wrote {price_path}  sha256={digest}")
 
+    # Update cacheVersion to use the current UTC timestamp in the format YYYY.MM.DD.HHMM
+    cache_version = datetime.now(timezone.utc).strftime("%Y.%m.%d.%H%M")
+
     # Update index.json
     index = {
         "schemaVersion": SCHEMA_VERSION,
         "generatedAtUtc": ts,
-        "cacheVersion": "1",
+        "cacheVersion": cache_version,
         "datasets": datasets,
     }
     write_json(INDEX_PATH, index)
-    print(f"  Updated {INDEX_PATH}")
+    print(f"  Updated {INDEX_PATH} with cacheVersion={cache_version}")
 
     # Update diagnostics
     diag = {
         "buildStatus": "success",
         "builtAtUtc": ts,
-        "cacheVersion": "1",
+        "cacheVersion": cache_version,
         "datasetsBuilt": [d["id"] for d in datasets],
         "notes": "Built by build_price_cache.py",
     }
