@@ -126,7 +126,7 @@ def build_price_entry(card: dict, ts: str) -> dict:
 PROVIDERS = [
     {
         "name": "tcgdex",
-        "url": "https://api.tcgdex.net/v2/prices",
+        "url": "https://api.tcgdex.net/v2/cards",
         "key_env": None,  # No API key required
     },
     {
@@ -159,10 +159,50 @@ def fetch_prices_from_provider(provider, card):
         print(f"[ERROR] {provider['name']} request failed: {e}")
         return None
 
+# Fetch prices from TCGdex card endpoint
+def fetch_prices_from_tcg_dex(card):
+    try:
+        # Construct the URL using setId and collectorNumber/localId
+        url = f"https://api.tcgdex.net/v2/cards/{card['setId']}/{card['collectorNumber']}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 404:
+            print(f"[WARN] TCGdex card not found: {url}")
+            return None
+        response.raise_for_status()
+
+        card_data = response.json()
+        pricing = card_data.get("pricing", {}).get("tcgplayer", {})
+
+        # Map variants to pricing fields
+        variant_map = {
+            "holo": pricing.get("holofoil"),
+            "reverse": pricing.get("reverse-holofoil"),
+            "normal": pricing.get("normal"),
+            "first_edition": pricing.get("1st-edition") or pricing.get("1st-edition-holofoil"),
+        }
+        variant_prices = variant_map.get(card["variant"], None)
+
+        if not variant_prices:
+            print(f"[WARN] No compatible price found for variant: {card['variant']} in TCGdex.")
+            return None
+
+        return {
+            "marketPrice": variant_prices.get("marketPrice"),
+            "lowPrice": variant_prices.get("lowPrice"),
+            "highPrice": variant_prices.get("highPrice"),
+        }
+    except requests.RequestException as e:
+        print(f"[ERROR] TCGdex request failed: {e}")
+        return None
+
 # Fetch live prices with fallback to manual_seed
 def fetch_live_prices(card):
     for provider in PROVIDERS:
-        result = fetch_prices_from_provider(provider, card)
+        if provider["name"] == "tcgdex":
+            result = fetch_prices_from_tcg_dex(card)
+        else:
+            result = fetch_prices_from_provider(provider, card)
+
         if result:
             print(f"[INFO] Price fetched from {provider['name']} for {card['canonicalId']}")
             return result, provider["name"]
