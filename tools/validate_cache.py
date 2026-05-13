@@ -76,8 +76,49 @@ REQUIRED_DIAGNOSTICS_FIELDS = {
 }
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
-REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {"canonicalId", "firstTrackedAtUtc", "latestPrice"}
+REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
+    "canonicalId",
+    "firstTrackedAtUtc",
+    "lastTrackedAtUtc",
+    "firstTrackedPrice",
+    "latestPrice",
+    "trackingStats",
+}
 REQUIRED_DAILY_HISTORY_FIELDS = {"schemaVersion", "generatedAtUtc", "date", "game", "language", "prices"}
+REQUIRED_API_MANIFEST_FIELDS = {
+    "schemaVersion",
+    "apiVersion",
+    "generatedAtUtc",
+    "baseUrl",
+    "name",
+    "intendedConsumer",
+    "publicDeveloperApi",
+    "thirdPartyUseSupported",
+    "status",
+    "authRequired",
+    "notes",
+    "endpoints",
+}
+REQUIRED_API_NOTES_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "intendedConsumer",
+    "publicDeveloperApi",
+    "thirdPartyUseSupported",
+    "notes",
+}
+REQUIRED_SCHEMAS_FIELDS = {"schemaVersion", "generatedAtUtc", "schemas"}
+REQUIRED_PLACEHOLDER_CATALOG_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "game",
+    "language",
+    "catalogueStatus",
+    "cardsAvailable",
+    "sets",
+    "source",
+    "notes",
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -101,7 +142,10 @@ def ok(msg: str) -> None:
 
 
 def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    canonical = json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def load_json_file(path: Path) -> object | None:
@@ -166,9 +210,34 @@ def check_index() -> list[dict]:
     datasets = data.get("datasets", [])
     if not isinstance(datasets, list) or not datasets:
         err("index.json 'datasets' must be a non-empty list")
+    seen_dataset_ids: set[str] = set()
     for ds in datasets:
         if not check_required(ds, REQUIRED_DATASET_FIELDS, f"dataset entry {ds.get('id', '?')}"):
             continue
+        missing_meta = {"type", "description", "updatedAtUtc", "recommendedCacheTtlSeconds"} - set(ds.keys())
+        if missing_meta:
+            err(f"dataset entry {ds.get('id', '?')} is missing rich metadata fields: {sorted(missing_meta)}")
+        ds_id = ds.get("id", "")
+        if ds_id in seen_dataset_ids:
+            err(f"index.json has duplicate dataset id: {ds_id}")
+        elif ds_id:
+            seen_dataset_ids.add(ds_id)
+
+    required_dataset_ids = {
+        "app_config",
+        "api_manifest",
+        "api_notes",
+        "schemas",
+        "diagnostics",
+        "tracked_history",
+        "prices_pokemon_en",
+        "prices_pokemon_jp",
+        "catalog_pokemon_en_sets",
+        "catalog_pokemon_jp_sets",
+    }
+    missing_ids = required_dataset_ids - seen_dataset_ids
+    if missing_ids:
+        err(f"index.json is missing required dataset ids: {sorted(missing_ids)}")
 
     print("\n[3] Dataset URL existence check")
     print("\n[4] SHA-256 integrity check")
@@ -263,11 +332,95 @@ def check_diagnostics() -> None:
         ok("diagnostics/latest-build.json has all required fields")
 
 
+def check_api_manifest() -> None:
+    print("\n[7] API manifest check")
+    path = V1_DIR / "api-manifest.json"
+    if not path.exists():
+        err(f"API manifest file not found: {path.relative_to(ROOT)}")
+        return
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("api-manifest.json must be a JSON object")
+        return
+    if check_required(data, REQUIRED_API_MANIFEST_FIELDS, "api-manifest.json"):
+        ok("api-manifest.json has all required fields")
+    if data.get("intendedConsumer") != "cardscanr_app":
+        err("api-manifest.json intendedConsumer must be cardscanr_app")
+    if data.get("publicDeveloperApi") is not False:
+        err("api-manifest.json publicDeveloperApi must be false")
+    if data.get("thirdPartyUseSupported") is not False:
+        err("api-manifest.json thirdPartyUseSupported must be false")
+    endpoints = data.get("endpoints", [])
+    if not isinstance(endpoints, list) or not endpoints:
+        err("api-manifest.json endpoints must be a non-empty list")
+
+
+def check_api_notes() -> None:
+    print("\n[8] API notes check")
+    path = V1_DIR / "api-notes.json"
+    if not path.exists():
+        err(f"API notes file not found: {path.relative_to(ROOT)}")
+        return
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("api-notes.json must be a JSON object")
+        return
+    if check_required(data, REQUIRED_API_NOTES_FIELDS, "api-notes.json"):
+        ok("api-notes.json has all required fields")
+    if data.get("publicDeveloperApi") is not False:
+        err("api-notes.json publicDeveloperApi must be false")
+    if data.get("thirdPartyUseSupported") is not False:
+        err("api-notes.json thirdPartyUseSupported must be false")
+    notes = data.get("notes", [])
+    if not isinstance(notes, list) or not notes:
+        err("api-notes.json notes must be a non-empty list")
+
+
+def check_schemas() -> None:
+    print("\n[9] Schema docs check")
+    path = V1_DIR / "schemas.json"
+    if not path.exists():
+        err(f"Schemas file not found: {path.relative_to(ROOT)}")
+        return
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("schemas.json must be a JSON object")
+        return
+    if check_required(data, REQUIRED_SCHEMAS_FIELDS, "schemas.json"):
+        ok("schemas.json has all required top-level fields")
+    schemas = data.get("schemas", {})
+    if not isinstance(schemas, dict) or not schemas:
+        err("schemas.json schemas must be a non-empty object")
+
+
+def check_catalog_placeholders() -> None:
+    print("\n[10] Catalogue placeholder check")
+    catalog_files = sorted((V1_DIR / "catalog").rglob("sets.json")) if (V1_DIR / "catalog").exists() else []
+    if not catalog_files:
+        warn("No catalogue placeholder files found under public/v1/catalog/")
+        return
+    for path in catalog_files:
+        rel = path.relative_to(ROOT)
+        data = load_json_file(path)
+        if data is None or not isinstance(data, dict):
+            err(f"{rel} must be a JSON object")
+            continue
+        if check_required(data, REQUIRED_PLACEHOLDER_CATALOG_FIELDS, str(rel)):
+            ok(f"{rel} has required placeholder fields")
+        if data.get("catalogueStatus") != "not_built_yet":
+            err(f"{rel} catalogueStatus must be not_built_yet for the placeholder catalogue")
+        if data.get("cardsAvailable") is not False:
+            err(f"{rel} cardsAvailable must be false for the placeholder catalogue")
+        sets = data.get("sets", [])
+        if not isinstance(sets, list):
+            err(f"{rel} sets must be a list")
+
+
 # ---------------------------------------------------------------------------
 # Check: tracked cards history and daily history files
 # ---------------------------------------------------------------------------
 def check_history() -> None:
-    print("\n[7] Tracked history check")
+    print("\n[11] Tracked history check")
     history_root = V1_DIR / "history"
     tracked_cards_path = history_root / "tracked-cards.json"
 
@@ -306,6 +459,12 @@ def check_history() -> None:
         latest_price = entry.get("latestPrice")
         if latest_price is not None and not isinstance(latest_price, dict):
             err(f"{label} latestPrice must be an object when present")
+        first_price = entry.get("firstTrackedPrice")
+        if first_price is not None and not isinstance(first_price, dict):
+            err(f"{label} firstTrackedPrice must be an object when present")
+        tracking_stats = entry.get("trackingStats")
+        if tracking_stats is not None and not isinstance(tracking_stats, dict):
+            err(f"{label} trackingStats must be an object when present")
 
     daily_root = history_root / "daily"
     if not daily_root.exists():
@@ -367,6 +526,10 @@ def main() -> None:
     check_index()
     check_price_files()
     check_diagnostics()
+    check_api_manifest()
+    check_api_notes()
+    check_schemas()
+    check_catalog_placeholders()
     check_history()
 
     print("\n" + "=" * 60)

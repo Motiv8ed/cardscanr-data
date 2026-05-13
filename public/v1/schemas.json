@@ -1,0 +1,174 @@
+{
+  "generatedAtUtc": "2026-05-13T06:44:06Z",
+  "notes": [
+    "CardScanR tracked history starts from the first tracked build for each card.",
+    "Images are referenced by URL and are not mirrored into this cache yet."
+  ],
+  "schemaVersion": "1.0.0",
+  "schemas": {
+    "api_manifest": {
+      "notes": [
+        "This describes the CardScanR internal data API, not a public developer platform.",
+        "Images are referenced by URL only and are not mirrored into this cache yet."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "apiVersion",
+        "generatedAtUtc",
+        "baseUrl",
+        "name",
+        "intendedConsumer",
+        "publicDeveloperApi",
+        "thirdPartyUseSupported",
+        "status",
+        "authRequired",
+        "notes",
+        "endpoints"
+      ]
+    },
+    "api_notes": {
+      "notes": [
+        "Consumer-facing summary of the internal app data layer constraints."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "intendedConsumer",
+        "publicDeveloperApi",
+        "thirdPartyUseSupported",
+        "notes"
+      ]
+    },
+    "app_config": {
+      "notes": [
+        "Static remote app settings used by CardScanR."
+      ],
+      "requiredFields": [
+        "featureFlags"
+      ]
+    },
+    "catalogue_cards_file": {
+      "notes": [
+        "When implemented, catalogue card records should store image URLs only.",
+        "Use imageSmall, imageLarge, imageSource, and imageCached: false."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "game",
+        "language",
+        "cards"
+      ]
+    },
+    "catalogue_sets_file": {
+      "notes": [
+        "Placeholder file until full catalogue cache generation is implemented."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "game",
+        "language",
+        "catalogueStatus",
+        "cardsAvailable",
+        "sets",
+        "source",
+        "notes"
+      ]
+    },
+    "current_price_record": {
+      "notes": [
+        "Current tracked price cache entry."
+      ],
+      "requiredFields": [
+        "canonicalId",
+        "setId",
+        "collectorNumber",
+        "normalizedName",
+        "variant",
+        "condition",
+        "currency",
+        "marketPrice",
+        "lowPrice",
+        "highPrice",
+        "source",
+        "fetchedAtUtc"
+      ]
+    },
+    "daily_tracked_history_file": {
+      "notes": [
+        "Daily snapshots only for tracked cards from data/cards_to_track.json for now.",
+        "This is append-by-day history, not a full all-card historical archive."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "date",
+        "game",
+        "language",
+        "prices"
+      ]
+    },
+    "diagnostics": {
+      "notes": [
+        "Build telemetry for current cache and CardScanR tracked history generation."
+      ],
+      "requiredFields": [
+        "buildStatus",
+        "builtAtUtc",
+        "cacheVersion",
+        "cardsRequested",
+        "cardsPriced",
+        "tcgdexAttempted",
+        "tcgdexMatched",
+        "tcgdexNoMatch",
+        "livePriceCount",
+        "manualFallbackCount",
+        "noResultCount",
+        "errorCount",
+        "sourcesUsed",
+        "datasetsBuilt",
+        "trackedHistoryWritten",
+        "trackedCardsTotal",
+        "dailyHistoryFilesWritten",
+        "firstTrackedCreatedCount",
+        "trackedCardsUpdatedCount"
+      ]
+    },
+    "index_dataset_entry": {
+      "notes": [
+        "Backwards compatible fields id/url/sha256 remain required.",
+        "Richer metadata may include game, language, schemaVersion, and recommendedCacheTtlSeconds."
+      ],
+      "requiredFields": [
+        "id",
+        "url",
+        "sha256",
+        "type",
+        "description",
+        "updatedAtUtc"
+      ]
+    },
+    "tracked_cards_record": {
+      "notes": [
+        "CardScanR tracked history means history since CardScanR started tracking the card.",
+        "This is not lifetime/all-time market history."
+      ],
+      "requiredFields": [
+        "canonicalId",
+        "game",
+        "language",
+        "setId",
+        "collectorNumber",
+        "normalizedName",
+        "variant",
+        "condition",
+        "firstTrackedAtUtc",
+        "lastTrackedAtUtc",
+        "firstTrackedPrice",
+        "latestPrice",
+        "trackingStats"
+      ]
+    }
+  }
+}

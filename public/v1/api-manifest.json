@@ -1,0 +1,86 @@
+{
+  "apiVersion": "v1",
+  "authRequired": false,
+  "baseUrl": "https://cardscanr-cache.pages.dev/v1",
+  "endpoints": [
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Dataset manifest for CardScanR cache files",
+      "id": "index",
+      "method": "GET",
+      "path": "/index.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Remote app feature flags and cache settings",
+      "id": "app_config",
+      "method": "GET",
+      "path": "/app-config.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Internal CardScanR app data API manifest",
+      "id": "api_manifest",
+      "method": "GET",
+      "path": "/api-manifest.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Machine-readable schema documentation for CardScanR cache files",
+      "id": "schemas",
+      "method": "GET",
+      "path": "/schemas.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Internal data layer notes and product constraints",
+      "id": "api_notes",
+      "method": "GET",
+      "path": "/api-notes.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Current tracked price cache for a language",
+      "id": "current_prices",
+      "method": "GET",
+      "path": "/prices/pokemon/{language}/sample.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "CardScanR tracked price history summary",
+      "id": "tracked_history",
+      "method": "GET",
+      "path": "/history/tracked-cards.json"
+    }
+  ],
+  "futureInternalDynamicRoutes": [
+    "/api/v1/card",
+    "/api/v1/price",
+    "/api/v1/history",
+    "/api/v1/search"
+  ],
+  "generatedAtUtc": "2026-05-13T06:44:06Z",
+  "intendedConsumer": "cardscanr_app",
+  "name": "CardScanR Internal Data API",
+  "notes": [
+    "This data layer is intended for the CardScanR mobile app and future CardScanR web app.",
+    "It is not a supported public developer API.",
+    "Static files may be publicly reachable for app delivery and caching.",
+    "Future authenticated app routes may be served through Cloudflare Workers or Supabase.",
+    "Current price files may be overwritten each build.",
+    "Tracked history means history since CardScanR started tracking the card.",
+    "Lifetime/all-time market history is not currently provided.",
+    "Images are referenced by URL and are not mirrored into this cache yet."
+  ],
+  "publicDeveloperApi": false,
+  "schemaVersion": "1.0.0",
+  "status": "internal_static_app_data_layer",
+  "thirdPartyUseSupported": false
+}

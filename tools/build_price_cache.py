@@ -37,9 +37,20 @@ DIAGNOSTICS_DIR = PUBLIC_DIR / "diagnostics"
 HISTORY_ROOT_DIR = PUBLIC_DIR / "history"
 HISTORY_DIR = HISTORY_ROOT_DIR / "daily"
 TRACKED_CARDS_PATH = HISTORY_ROOT_DIR / "tracked-cards.json"
+CATALOG_DIR = PUBLIC_DIR / "catalog"
+API_MANIFEST_PATH = PUBLIC_DIR / "api-manifest.json"
+API_NOTES_PATH = PUBLIC_DIR / "api-notes.json"
+SCHEMAS_PATH = PUBLIC_DIR / "schemas.json"
+APP_CONFIG_PATH = PUBLIC_DIR / "app-config.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
 DIAG_PATH = DIAGNOSTICS_DIR / "latest-build.json"
 CARDS_PATH = DATA_DIR / "cards_to_track.json"
+BASE_URL = "https://cardscanr-cache.pages.dev/v1"
+DEFAULT_CACHE_TTL_SECONDS = 86400
+PRICE_CACHE_TTL_SECONDS = 43200
+DIAGNOSTICS_CACHE_TTL_SECONDS = 900
+HISTORY_CACHE_TTL_SECONDS = 86400
+CATALOG_CACHE_TTL_SECONDS = 86400
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -58,7 +69,10 @@ def now_utc() -> str:
 
 
 def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+    canonical = json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def write_json(path: Path, obj: object) -> None:
@@ -167,7 +181,6 @@ def update_tracked_cards_history(
         "generatedAtUtc": ts,
         "cards": tracked_cards,
     }
-    write_json(TRACKED_CARDS_PATH, payload)
     return payload, first_tracked_created_count, tracked_cards_updated_count
 
 
@@ -250,6 +263,310 @@ def build_price_entry(card: dict, ts: str, price_info: dict) -> dict:
         "source": price_info["source"],
         "fetchedAtUtc": ts,
     }
+
+
+def build_api_manifest(ts: str) -> dict:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "apiVersion": "v1",
+        "generatedAtUtc": ts,
+        "baseUrl": BASE_URL,
+        "name": "CardScanR Internal Data API",
+        "intendedConsumer": "cardscanr_app",
+        "publicDeveloperApi": False,
+        "thirdPartyUseSupported": False,
+        "status": "internal_static_app_data_layer",
+        "authRequired": False,
+        "notes": [
+            "This data layer is intended for the CardScanR mobile app and future CardScanR web app.",
+            "It is not a supported public developer API.",
+            "Static files may be publicly reachable for app delivery and caching.",
+            "Future authenticated app routes may be served through Cloudflare Workers or Supabase.",
+            "Current price files may be overwritten each build.",
+            "Tracked history means history since CardScanR started tracking the card.",
+            "Lifetime/all-time market history is not currently provided.",
+            "Images are referenced by URL and are not mirrored into this cache yet.",
+        ],
+        "endpoints": [
+            {
+                "id": "index",
+                "method": "GET",
+                "path": "/index.json",
+                "description": "Dataset manifest for CardScanR cache files",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "app_config",
+                "method": "GET",
+                "path": "/app-config.json",
+                "description": "Remote app feature flags and cache settings",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "api_manifest",
+                "method": "GET",
+                "path": "/api-manifest.json",
+                "description": "Internal CardScanR app data API manifest",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "schemas",
+                "method": "GET",
+                "path": "/schemas.json",
+                "description": "Machine-readable schema documentation for CardScanR cache files",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "api_notes",
+                "method": "GET",
+                "path": "/api-notes.json",
+                "description": "Internal data layer notes and product constraints",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "current_prices",
+                "method": "GET",
+                "path": "/prices/pokemon/{language}/sample.json",
+                "description": "Current tracked price cache for a language",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "tracked_history",
+                "method": "GET",
+                "path": "/history/tracked-cards.json",
+                "description": "CardScanR tracked price history summary",
+                "authRequired": False,
+                "cacheable": True,
+            },
+        ],
+        "futureInternalDynamicRoutes": [
+            "/api/v1/card",
+            "/api/v1/price",
+            "/api/v1/history",
+            "/api/v1/search",
+        ],
+    }
+
+
+def build_api_notes(ts: str) -> dict:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "intendedConsumer": "cardscanr_app",
+        "publicDeveloperApi": False,
+        "thirdPartyUseSupported": False,
+        "notes": [
+            "This is a static internal data layer for the CardScanR app.",
+            "This is not a supported public developer API.",
+            "Current price files may be overwritten each build.",
+            "Tracked history means history since CardScanR started tracking the card.",
+            "Lifetime/all-time market history is not currently provided.",
+            "Images are referenced by URL and are not mirrored into this cache yet.",
+            "Future authenticated app routes may be served by Cloudflare Workers or Supabase.",
+        ],
+    }
+
+
+def build_schemas(ts: str) -> dict:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "schemas": {
+            "index_dataset_entry": {
+                "requiredFields": ["id", "url", "sha256", "type", "description", "updatedAtUtc"],
+                "notes": [
+                    "Backwards compatible fields id/url/sha256 remain required.",
+                    "Richer metadata may include game, language, schemaVersion, and recommendedCacheTtlSeconds.",
+                ],
+            },
+            "app_config": {
+                "requiredFields": ["featureFlags"],
+                "notes": ["Static remote app settings used by CardScanR."],
+            },
+            "api_manifest": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "apiVersion",
+                    "generatedAtUtc",
+                    "baseUrl",
+                    "name",
+                    "intendedConsumer",
+                    "publicDeveloperApi",
+                    "thirdPartyUseSupported",
+                    "status",
+                    "authRequired",
+                    "notes",
+                    "endpoints",
+                ],
+                "notes": [
+                    "This describes the CardScanR internal data API, not a public developer platform.",
+                    "Images are referenced by URL only and are not mirrored into this cache yet.",
+                ],
+            },
+            "api_notes": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "intendedConsumer",
+                    "publicDeveloperApi",
+                    "thirdPartyUseSupported",
+                    "notes",
+                ],
+                "notes": ["Consumer-facing summary of the internal app data layer constraints."],
+            },
+            "diagnostics": {
+                "requiredFields": [
+                    "buildStatus",
+                    "builtAtUtc",
+                    "cacheVersion",
+                    "cardsRequested",
+                    "cardsPriced",
+                    "tcgdexAttempted",
+                    "tcgdexMatched",
+                    "tcgdexNoMatch",
+                    "livePriceCount",
+                    "manualFallbackCount",
+                    "noResultCount",
+                    "errorCount",
+                    "sourcesUsed",
+                    "datasetsBuilt",
+                    "trackedHistoryWritten",
+                    "trackedCardsTotal",
+                    "dailyHistoryFilesWritten",
+                    "firstTrackedCreatedCount",
+                    "trackedCardsUpdatedCount",
+                ],
+                "notes": ["Build telemetry for current cache and CardScanR tracked history generation."],
+            },
+            "catalogue_sets_file": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "game",
+                    "language",
+                    "catalogueStatus",
+                    "cardsAvailable",
+                    "sets",
+                    "source",
+                    "notes",
+                ],
+                "notes": ["Placeholder file until full catalogue cache generation is implemented."],
+            },
+            "catalogue_cards_file": {
+                "requiredFields": ["schemaVersion", "generatedAtUtc", "game", "language", "cards"],
+                "notes": [
+                    "When implemented, catalogue card records should store image URLs only.",
+                    "Use imageSmall, imageLarge, imageSource, and imageCached: false.",
+                ],
+            },
+            "current_price_record": {
+                "requiredFields": [
+                    "canonicalId",
+                    "setId",
+                    "collectorNumber",
+                    "normalizedName",
+                    "variant",
+                    "condition",
+                    "currency",
+                    "marketPrice",
+                    "lowPrice",
+                    "highPrice",
+                    "source",
+                    "fetchedAtUtc",
+                ],
+                "notes": ["Current tracked price cache entry."],
+            },
+            "tracked_cards_record": {
+                "requiredFields": [
+                    "canonicalId",
+                    "game",
+                    "language",
+                    "setId",
+                    "collectorNumber",
+                    "normalizedName",
+                    "variant",
+                    "condition",
+                    "firstTrackedAtUtc",
+                    "lastTrackedAtUtc",
+                    "firstTrackedPrice",
+                    "latestPrice",
+                    "trackingStats",
+                ],
+                "notes": [
+                    "CardScanR tracked history means history since CardScanR started tracking the card.",
+                    "This is not lifetime/all-time market history.",
+                ],
+            },
+            "daily_tracked_history_file": {
+                "requiredFields": ["schemaVersion", "generatedAtUtc", "date", "game", "language", "prices"],
+                "notes": [
+                    "Daily snapshots only for tracked cards from data/cards_to_track.json for now.",
+                    "This is append-by-day history, not a full all-card historical archive.",
+                ],
+            },
+        },
+        "notes": [
+            "CardScanR tracked history starts from the first tracked build for each card.",
+            "Images are referenced by URL and are not mirrored into this cache yet.",
+        ],
+    }
+
+
+def build_catalog_sets_placeholder(game: str, language: str, ts: str) -> dict:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "game": game,
+        "language": language,
+        "catalogueStatus": "not_built_yet",
+        "cardsAvailable": False,
+        "sets": [],
+        "source": None,
+        "notes": [
+            "Full catalogue cache is planned but not built yet.",
+            "Card records should store image URLs only when implemented.",
+        ],
+    }
+
+
+def build_index_dataset_entry(
+    *,
+    dataset_id: str,
+    file_path: Path,
+    dataset_type: str,
+    description: str,
+    ts: str,
+    ttl_seconds: int,
+    schema_version: str | None = SCHEMA_VERSION,
+    game: str | None = None,
+    language: str | None = None,
+    extra: dict | None = None,
+) -> dict:
+    rel_url = f"/v1/{file_path.relative_to(PUBLIC_DIR).as_posix()}"
+    entry = {
+        "id": dataset_id,
+        "url": rel_url,
+        "sha256": sha256_file(file_path),
+        "type": dataset_type,
+        "description": description,
+        "updatedAtUtc": ts,
+        "recommendedCacheTtlSeconds": ttl_seconds,
+    }
+    if schema_version is not None:
+        entry["schemaVersion"] = schema_version
+    if game is not None:
+        entry["game"] = game
+    if language is not None:
+        entry["language"] = language
+    if extra:
+        entry.update(extra)
+    return entry
 
 
 # ---------------------------------------------------------------------------
@@ -472,7 +789,6 @@ def build() -> None:
         key = (card["game"], card["language"])
         groups.setdefault(key, []).append(card)
 
-    datasets = []
     diagnostics = {
         "buildStatus": "success",
         "builtAtUtc": ts,
@@ -497,6 +813,8 @@ def build() -> None:
 
     cards_by_id: dict[str, dict] = {}
     latest_prices_by_id: dict[str, dict] = {}
+    daily_history_files: list[tuple[str, str, Path]] = []
+    current_price_files: list[tuple[str, str, Path]] = []
 
     for (game, language), group_cards in sorted(groups.items()):
         price_path = PRICES_DIR / game / language / "sample.json"
@@ -542,34 +860,12 @@ def build() -> None:
         }
         write_json(history_path, history_payload)
         diagnostics["dailyHistoryFilesWritten"] += 1
+        daily_history_files.append((game, language, history_path))
+        current_price_files.append((game, language, price_path))
 
         digest = sha256_file(price_path)
-        rel_url = f"/v1/prices/{game}/{language}/sample.json"
-        dataset_id = f"prices_{game}_{language}"
-
-        datasets.append(
-            {
-                "id": dataset_id,
-                "description": f"{game.capitalize()} TCG {language.upper()} tracked card prices",
-                "url": rel_url,
-                "sha256": digest,
-            }
-        )
-        diagnostics["datasetsBuilt"].append(dataset_id)
-
         print(f"  Wrote {price_path}  sha256={digest}")
         print(f"  Wrote {history_path}")
-
-    index = {
-        "schemaVersion": SCHEMA_VERSION,
-        "generatedAtUtc": ts,
-        "cacheVersion": diagnostics["cacheVersion"],
-        "datasets": datasets,
-    }
-    write_json(INDEX_PATH, index)
-    print(f"  Updated {INDEX_PATH}")
-
-    diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
     tracked_payload, first_created, tracked_updated = update_tracked_cards_history(
         ts=ts,
@@ -581,9 +877,150 @@ def build() -> None:
     diagnostics["firstTrackedCreatedCount"] = first_created
     diagnostics["trackedCardsUpdatedCount"] = tracked_updated
 
+    api_manifest = build_api_manifest(ts)
+    api_notes = build_api_notes(ts)
+    schemas = build_schemas(ts)
+    catalog_en = build_catalog_sets_placeholder("pokemon", "en", ts)
+    catalog_jp = build_catalog_sets_placeholder("pokemon", "jp", ts)
+
+    diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
+
+    write_json(API_MANIFEST_PATH, api_manifest)
+    write_json(API_NOTES_PATH, api_notes)
+    write_json(SCHEMAS_PATH, schemas)
+    write_json(CATALOG_DIR / "pokemon" / "en" / "sets.json", catalog_en)
+    write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
+    write_json(TRACKED_CARDS_PATH, tracked_payload)
+
+    index_entries = []
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="app_config",
+            file_path=APP_CONFIG_PATH,
+            dataset_type="app_config",
+            description="CardScanR remote app settings",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+            schema_version=None,
+        )
+    )
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="api_manifest",
+            file_path=API_MANIFEST_PATH,
+            dataset_type="api_manifest",
+            description="CardScanR internal data API manifest",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="api_notes",
+            file_path=API_NOTES_PATH,
+            dataset_type="api_notes",
+            description="CardScanR internal app data notes",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="schemas",
+            file_path=SCHEMAS_PATH,
+            dataset_type="schemas",
+            description="Machine-readable CardScanR cache schema docs",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+    for game, language, price_path in current_price_files:
+        dataset_id = f"prices_{game}_{language}"
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=dataset_id,
+                file_path=price_path,
+                dataset_type="price_current",
+                description=f"{game.capitalize()} TCG {language.upper()} current tracked prices",
+                ts=ts,
+                ttl_seconds=PRICE_CACHE_TTL_SECONDS,
+                game=game,
+                language=language,
+            )
+        )
+
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="tracked_history",
+            file_path=TRACKED_CARDS_PATH,
+            dataset_type="tracked_history",
+            description="CardScanR tracked price history summary",
+            ts=ts,
+            ttl_seconds=HISTORY_CACHE_TTL_SECONDS,
+        )
+    )
+
+    for game, language, history_path in daily_history_files:
+        dataset_id = f"daily_tracked_history_{game}_{language}_{day}"
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=dataset_id,
+                file_path=history_path,
+                dataset_type="daily_tracked_history",
+                description=f"CardScanR tracked history snapshot for {game} {language.upper()} on {day}",
+                ts=ts,
+                ttl_seconds=HISTORY_CACHE_TTL_SECONDS,
+                game=game,
+                language=language,
+                extra={"date": day},
+            )
+        )
+
+    for game, language, catalog_path in [
+        ("pokemon", "en", CATALOG_DIR / "pokemon" / "en" / "sets.json"),
+        ("pokemon", "jp", CATALOG_DIR / "pokemon" / "jp" / "sets.json"),
+    ]:
+        dataset_id = f"catalog_{game}_{language}_sets"
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=dataset_id,
+                file_path=catalog_path,
+                dataset_type="catalogue_sets",
+                description=f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder",
+                ts=ts,
+                ttl_seconds=CATALOG_CACHE_TTL_SECONDS,
+                game=game,
+                language=language,
+            )
+        )
+
+    index_entries.sort(key=lambda entry: entry["id"])
+    diagnostics["datasetsBuilt"] = [entry["id"] for entry in index_entries] + ["diagnostics"]
+
     write_json(DIAG_PATH, diagnostics)
-    print(f"  Updated {DIAG_PATH}")
+
+    index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="diagnostics",
+            file_path=DIAG_PATH,
+            dataset_type="diagnostics",
+            description="Latest CardScanR cache build diagnostics",
+            ts=ts,
+            ttl_seconds=DIAGNOSTICS_CACHE_TTL_SECONDS,
+        )
+    )
+    index_entries.sort(key=lambda entry: entry["id"])
+
+    index = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "cacheVersion": diagnostics["cacheVersion"],
+        "datasets": index_entries,
+    }
+    write_json(INDEX_PATH, index)
+    print(f"  Updated {INDEX_PATH}")
     print(f"  Updated {TRACKED_CARDS_PATH}")
+    print(f"  Updated {DIAG_PATH}")
 
     print("[build_price_cache] Build complete.")
 
