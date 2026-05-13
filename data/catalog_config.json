@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "games": [
+    "pokemon"
+  ],
+  "languages": [
+    "en",
+    "jp"
+  ],
+  "fullCatalogueEnabled": true,
+  "buildEnglishFromPokemonTcgApi": true,
+  "buildJapaneseFromTcgdex": true,
+  "englishCatalogueFetchStrategy": "set_by_set",
+  "maxSetsPerRun": 9999,
+  "maxPagesPerSet": 50,
+  "continueOnSetError": true,
+  "skipSetsOnError": true,
+  "catalogueRequestSleepSeconds": 0.15,
+  "pageSize": 250,
+  "maxPagesPerRun": 1000,
+  "prioritySets": [],
+  "imageStrategy": {
+    "storeImageUrlsOnly": true,
+    "mirrorImages": false,
+    "cacheImagesInGit": false
+  }
+}

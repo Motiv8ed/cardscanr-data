@@ -129,16 +129,16 @@ warnings: list[str] = []
 
 def err(msg: str) -> None:
     errors.append(f"ERROR: {msg}")
-    print(f"  ✗ {msg}")
+    print(f"  [x] {msg}")
 
 
 def warn(msg: str) -> None:
     warnings.append(f"WARNING: {msg}")
-    print(f"  ⚠ {msg}")
+    print(f"  [!] {msg}")
 
 
 def ok(msg: str) -> None:
-    print(f"  ✓ {msg}")
+    print(f"  [ok] {msg}")
 
 
 def sha256_file(path: Path) -> str:
