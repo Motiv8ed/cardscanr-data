@@ -101,8 +101,7 @@ def ok(msg: str) -> None:
 
 
 def sha256_file(path: Path) -> str:
-    with open(path, "rb") as fh:
-        return hashlib.sha256(fh.read()).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_json_file(path: Path) -> object | None:

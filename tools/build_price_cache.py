@@ -58,14 +58,13 @@ def now_utc() -> str:
 
 
 def sha256_file(path: Path) -> str:
-    with open(path, "rb") as fh:
-        return hashlib.sha256(fh.read()).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_json(path: Path, obj: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(obj, fh, indent=2, ensure_ascii=False)
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(obj, fh, indent=2, sort_keys=True, ensure_ascii=False)
         fh.write("\n")
 
 
