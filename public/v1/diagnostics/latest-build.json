@@ -1,17 +1,27 @@
 {
   "buildStatus": "success",
-  "builtAtUtc": "2026-05-12T09:16:12Z",
-  "cacheVersion": "2026.05.12.0916",
+  "builtAtUtc": "2026-05-13T06:14:11Z",
+  "cacheVersion": "2026.05.13.0614",
   "cardsRequested": 4,
   "cardsPriced": 4,
-  "manualFallbackCount": 4,
+  "tcgdexAttempted": 4,
+  "tcgdexMatched": 3,
+  "tcgdexNoMatch": 1,
+  "livePriceCount": 3,
+  "manualFallbackCount": 1,
   "noResultCount": 0,
   "errorCount": 0,
   "sourcesUsed": [
-    "manual_seed"
+    "manual_seed",
+    "pokemon_tcg_api"
   ],
   "datasetsBuilt": [
     "prices_pokemon_en",
     "prices_pokemon_jp"
-  ]
+  ],
+  "trackedHistoryWritten": true,
+  "trackedCardsTotal": 4,
+  "dailyHistoryFilesWritten": 2,
+  "firstTrackedCreatedCount": 0,
+  "trackedCardsUpdatedCount": 4
 }

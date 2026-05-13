@@ -53,7 +53,31 @@ REQUIRED_PRICE_ENTRY_FIELDS = {
     "source",
     "fetchedAtUtc",
 }
-REQUIRED_DIAGNOSTICS_FIELDS = {"buildStatus", "builtAtUtc", "cacheVersion", "datasetsBuilt"}
+REQUIRED_DIAGNOSTICS_FIELDS = {
+    "buildStatus",
+    "builtAtUtc",
+    "cacheVersion",
+    "cardsRequested",
+    "cardsPriced",
+    "tcgdexAttempted",
+    "tcgdexMatched",
+    "tcgdexNoMatch",
+    "livePriceCount",
+    "manualFallbackCount",
+    "noResultCount",
+    "errorCount",
+    "sourcesUsed",
+    "datasetsBuilt",
+    "trackedHistoryWritten",
+    "trackedCardsTotal",
+    "dailyHistoryFilesWritten",
+    "firstTrackedCreatedCount",
+    "trackedCardsUpdatedCount",
+}
+
+REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
+REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {"canonicalId", "firstTrackedAtUtc", "latestPrice"}
+REQUIRED_DAILY_HISTORY_FIELDS = {"schemaVersion", "generatedAtUtc", "date", "game", "language", "prices"}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -241,6 +265,98 @@ def check_diagnostics() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check: tracked cards history and daily history files
+# ---------------------------------------------------------------------------
+def check_history() -> None:
+    print("\n[7] Tracked history check")
+    history_root = V1_DIR / "history"
+    tracked_cards_path = history_root / "tracked-cards.json"
+
+    if not tracked_cards_path.exists():
+        err(f"Tracked cards file not found: {tracked_cards_path.relative_to(ROOT)}")
+        return
+
+    tracked_data = load_json_file(tracked_cards_path)
+    if tracked_data is None or not isinstance(tracked_data, dict):
+        err("history/tracked-cards.json must be a JSON object")
+        return
+
+    if check_required(tracked_data, REQUIRED_TRACKED_CARDS_FIELDS, "history/tracked-cards.json"):
+        ok("history/tracked-cards.json has required top-level fields")
+
+    tracked_cards = tracked_data.get("cards", [])
+    if not isinstance(tracked_cards, list):
+        err("history/tracked-cards.json 'cards' must be a list")
+        tracked_cards = []
+
+    seen_tracked_ids: set[str] = set()
+    for i, entry in enumerate(tracked_cards):
+        label = f"history/tracked-cards.json cards[{i}]"
+        if not isinstance(entry, dict):
+            err(f"{label} is not an object")
+            continue
+        missing = REQUIRED_TRACKED_CARD_ENTRY_FIELDS - set(entry.keys())
+        if missing:
+            err(f"{label} missing fields: {sorted(missing)}")
+        cid = entry.get("canonicalId", "")
+        if cid in seen_tracked_ids:
+            err(f"history/tracked-cards.json duplicate canonicalId: {cid}")
+        elif cid:
+            seen_tracked_ids.add(cid)
+
+        latest_price = entry.get("latestPrice")
+        if latest_price is not None and not isinstance(latest_price, dict):
+            err(f"{label} latestPrice must be an object when present")
+
+    daily_root = history_root / "daily"
+    if not daily_root.exists():
+        warn("No daily history directory found under public/v1/history/daily")
+        return
+
+    daily_files = sorted(daily_root.rglob("tracked.json"))
+    if not daily_files:
+        warn("No daily tracked history files found")
+        return
+
+    for path in daily_files:
+        rel = path.relative_to(ROOT)
+        data = load_json_file(path)
+        if data is None or not isinstance(data, dict):
+            err(f"{rel} must be a JSON object")
+            continue
+
+        if not check_required(data, REQUIRED_DAILY_HISTORY_FIELDS, str(rel)):
+            continue
+
+        prices = data.get("prices", [])
+        if not isinstance(prices, list):
+            err(f"{rel}: 'prices' must be a list")
+            continue
+
+        seen_daily_ids: set[str] = set()
+        for i, entry in enumerate(prices):
+            if not isinstance(entry, dict):
+                err(f"{rel}: prices[{i}] is not an object")
+                continue
+
+            cid = entry.get("canonicalId")
+            if not cid:
+                err(f"{rel}: prices[{i}] missing canonicalId")
+                continue
+            if cid in seen_daily_ids:
+                err(f"{rel}: duplicate canonicalId values include '{cid}'")
+            else:
+                seen_daily_ids.add(cid)
+
+            # Price fields are validated when available in history snapshots.
+            for field in ["currency", "marketPrice", "source", "fetchedAtUtc"]:
+                if field in entry and entry.get(field) in (None, ""):
+                    err(f"{rel}: prices[{i}] field '{field}' is present but empty")
+
+        ok(f"{rel}: {len(prices)} tracked snapshots validated")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
@@ -252,6 +368,7 @@ def main() -> None:
     check_index()
     check_price_files()
     check_diagnostics()
+    check_history()
 
     print("\n" + "=" * 60)
     if errors:
