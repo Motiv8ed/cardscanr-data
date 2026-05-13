@@ -41,6 +41,13 @@ INDEX_PATH = V1_DIR / "index.json"
 REQUIRED_INDEX_FIELDS = {"schemaVersion", "generatedAtUtc", "cacheVersion", "datasets"}
 REQUIRED_DATASET_FIELDS = {"id", "url", "sha256"}
 REQUIRED_PRICE_FIELDS = {"schemaVersion", "generatedAtUtc", "game", "language", "prices"}
+REQUIRED_CURRENT_PRICE_SET_FIELDS = REQUIRED_PRICE_FIELDS | {
+    "setId",
+    "setName",
+    "source",
+    "currency",
+    "priceCount",
+}
 REQUIRED_PRICE_ENTRY_FIELDS = {
     "canonicalId",
     "setId",
@@ -49,7 +56,6 @@ REQUIRED_PRICE_ENTRY_FIELDS = {
     "variant",
     "condition",
     "currency",
-    "marketPrice",
     "source",
     "fetchedAtUtc",
 }
@@ -82,6 +88,13 @@ REQUIRED_DIAGNOSTICS_FIELDS = {
     "catalogueEnCardsFetched",
     "catalogueEnFailedSetIds",
     "catalogueEnStoppedReason",
+    "currentPriceEnStatus",
+    "currentPriceEnSetsAttempted",
+    "currentPriceEnSetsWritten",
+    "currentPriceEnPriceRecordsWritten",
+    "currentPriceEnSkippedNoPriceSets",
+    "currentPriceEnSource",
+    "currentPriceEnCurrency",
 }
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
@@ -337,13 +350,22 @@ def check_price_files() -> None:
         if data is None:
             continue
 
-        if not check_required(data, REQUIRED_PRICE_FIELDS, str(rel)):
+        is_current_set_file = path.parent == V1_DIR / "prices" / "current" / "pokemon" / "en"
+        required_top_fields = REQUIRED_CURRENT_PRICE_SET_FIELDS if is_current_set_file else REQUIRED_PRICE_FIELDS
+        if not check_required(data, required_top_fields, str(rel)):
             continue
+        if is_current_set_file:
+            if data.get("source") != "pokemon_tcg_api":
+                err(f"{rel}: source must be pokemon_tcg_api")
+            if data.get("currency") != "USD":
+                err(f"{rel}: currency must be USD")
 
         prices = data.get("prices", [])
         if not isinstance(prices, list):
             err(f"{rel}: 'prices' must be a list")
             continue
+        if is_current_set_file and data.get("priceCount") != len(prices):
+            err(f"{rel}: priceCount must equal prices length")
 
         seen_ids: set[str] = set()
         dupes: list[str] = []
@@ -362,6 +384,22 @@ def check_price_files() -> None:
                 dupes.append(cid)
             else:
                 seen_ids.add(cid)
+
+            useful_price_found = False
+            for field in ["marketPrice", "lowPrice", "highPrice"]:
+                if field not in entry:
+                    continue
+                value = entry.get(field)
+                if value is None:
+                    continue
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    useful_price_found = True
+                else:
+                    err(f"{rel}: prices[{i}] field '{field}' must be numeric or null")
+                    entry_errors += 1
+            if not useful_price_found:
+                err(f"{rel}: prices[{i}] must include at least one numeric marketPrice, lowPrice, or highPrice")
+                entry_errors += 1
 
         if dupes:
             err(f"{rel}: duplicate canonicalId values: {dupes}")

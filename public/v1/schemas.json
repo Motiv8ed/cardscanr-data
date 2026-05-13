@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-13T22:25:42Z",
+  "generatedAtUtc": "2026-05-13T23:19:22Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -84,7 +84,10 @@
     },
     "current_price_record": {
       "notes": [
-        "Current tracked price cache entry."
+        "Current price cache entry.",
+        "Per-set current price files are latest-known snapshots and may be overwritten each build.",
+        "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
+        "Currency is stored per price record."
       ],
       "requiredFields": [
         "canonicalId",
@@ -99,6 +102,25 @@
         "highPrice",
         "source",
         "fetchedAtUtc"
+      ]
+    },
+    "current_price_set_file": {
+      "notes": [
+        "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
+        "These files are latest-known current snapshots, not lifetime/all-time price history.",
+        "Tracked historical movement remains limited to CardScanR-tracked cards."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "game",
+        "language",
+        "setId",
+        "setName",
+        "source",
+        "currency",
+        "priceCount",
+        "prices"
       ]
     },
     "daily_tracked_history_file": {

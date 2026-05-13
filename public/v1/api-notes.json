@@ -1,10 +1,12 @@
 {
-  "generatedAtUtc": "2026-05-13T22:25:42Z",
+  "generatedAtUtc": "2026-05-13T23:19:22Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
     "This is not a supported public developer API.",
     "Current price files may be overwritten each build.",
+    "Per-set current price files are latest-known snapshots, not guaranteed live quotes.",
+    "Currency is provided on each price record.",
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",
     "Images are referenced by URL and are not mirrored into this cache yet.",

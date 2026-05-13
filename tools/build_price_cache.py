@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 PUBLIC_DIR = ROOT / "public" / "v1"
 PRICES_DIR = PUBLIC_DIR / "prices"
+CURRENT_PRICES_EN_DIR = PRICES_DIR / "current" / "pokemon" / "en"
 DIAGNOSTICS_DIR = PUBLIC_DIR / "diagnostics"
 HISTORY_ROOT_DIR = PUBLIC_DIR / "history"
 HISTORY_DIR = HISTORY_ROOT_DIR / "daily"
@@ -54,6 +55,15 @@ DIAGNOSTICS_CACHE_TTL_SECONDS = 900
 HISTORY_CACHE_TTL_SECONDS = 86400
 CATALOG_CACHE_TTL_SECONDS = 86400
 POKEMON_TCG_API_BASE = "https://api.pokemontcg.io/v2"
+CURRENT_PRICE_SOURCE = "pokemon_tcg_api"
+CURRENT_PRICE_CURRENCY = "USD"
+CURRENT_PRICE_VARIANTS = [
+    ("normal", "normal"),
+    ("holofoil", "holo"),
+    ("reverseHolofoil", "reverse"),
+    ("1stEditionHolofoil", "first_edition_holo"),
+    ("1stEditionNormal", "first_edition_normal"),
+]
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -91,6 +101,8 @@ def load_catalog_config() -> dict:
     defaults = {
         "fullCatalogueEnabled": True,
         "buildEnglishFromPokemonTcgApi": True,
+        "buildCurrentPricesFromPokemonTcgApi": True,
+        "rebuildFullCatalogueOnScheduled": False,
         "englishCatalogueFetchStrategy": "set_by_set",
         "maxSetsPerRun": 9999,
         "maxPagesPerSet": 50,
@@ -232,6 +244,23 @@ def to_float(value: object) -> float | None:
         return None
 
 
+def price_sort_key(entry: dict) -> tuple[str, str, str, str]:
+    return (
+        normalize_number(entry.get("collectorNumber", "")),
+        str(entry.get("collectorNumber", "")),
+        str(entry.get("normalizedName", "")),
+        str(entry.get("variant", "")),
+    )
+
+
+def catalogue_card_sort_key(entry: dict) -> tuple[str, str, str]:
+    return (
+        normalize_number(entry.get("collectorNumber", "")),
+        str(entry.get("collectorNumber", "")),
+        str(entry.get("normalizedName", "")),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Seed price generation
 # ---------------------------------------------------------------------------
@@ -309,6 +338,7 @@ def build_api_manifest(ts: str) -> dict:
             "Static files may be publicly reachable for app delivery and caching.",
             "Future authenticated app routes may be served through Cloudflare Workers or Supabase.",
             "Current price files may be overwritten each build.",
+            "Per-set current price files are latest-known values sourced from official provider API payloads and are not guaranteed live.",
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
             "Images are referenced by URL and are not mirrored into this cache yet.",
@@ -363,6 +393,14 @@ def build_api_manifest(ts: str) -> dict:
                 "cacheable": True,
             },
             {
+                "id": "current_prices_by_set",
+                "method": "GET",
+                "path": "/prices/current/pokemon/en/{setId}.json",
+                "description": "Latest-known English Pokemon current prices by set where official API pricing is available",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
                 "id": "tracked_history",
                 "method": "GET",
                 "path": "/history/tracked-cards.json",
@@ -391,6 +429,8 @@ def build_api_notes(ts: str) -> dict:
             "This is a static internal data layer for the CardScanR app.",
             "This is not a supported public developer API.",
             "Current price files may be overwritten each build.",
+            "Per-set current price files are latest-known snapshots, not guaranteed live quotes.",
+            "Currency is provided on each price record.",
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
             "Images are referenced by URL and are not mirrored into this cache yet.",
@@ -520,7 +560,31 @@ def build_schemas(ts: str) -> dict:
                     "source",
                     "fetchedAtUtc",
                 ],
-                "notes": ["Current tracked price cache entry."],
+                "notes": [
+                    "Current price cache entry.",
+                    "Per-set current price files are latest-known snapshots and may be overwritten each build.",
+                    "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
+                    "Currency is stored per price record.",
+                ],
+            },
+            "current_price_set_file": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "game",
+                    "language",
+                    "setId",
+                    "setName",
+                    "source",
+                    "currency",
+                    "priceCount",
+                    "prices",
+                ],
+                "notes": [
+                    "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
+                    "These files are latest-known current snapshots, not lifetime/all-time price history.",
+                    "Tracked historical movement remains limited to CardScanR-tracked cards.",
+                ],
             },
             "tracked_cards_record": {
                 "requiredFields": [
@@ -745,7 +809,7 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
                 sleep_seconds=sleep_seconds,
             )
             card_records = [build_catalog_card_record(card, set_id, set_name) for card in cards]
-            card_records.sort(key=lambda item: (normalize_number(item["collectorNumber"]), item["collectorNumber"], item["normalizedName"]))
+            card_records.sort(key=catalogue_card_sort_key)
 
             card_payload = {
                 "schemaVersion": SCHEMA_VERSION,
@@ -805,6 +869,220 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
         ],
     }
     return sets_payload, card_files, metrics
+
+
+def load_existing_catalogue_sets() -> dict:
+    path = CATALOG_DIR / "pokemon" / "en" / "sets.json"
+    if not path.exists():
+        return build_catalog_sets_placeholder("pokemon", "en", now_utc())
+    data = load_json(path)
+    return data if isinstance(data, dict) else build_catalog_sets_placeholder("pokemon", "en", now_utc())
+
+
+def load_existing_catalogue_card_files() -> list[tuple[str, str, Path]]:
+    cards_dir = CATALOG_DIR / "pokemon" / "en" / "cards"
+    if not cards_dir.exists():
+        return []
+
+    card_files: list[tuple[str, str, Path]] = []
+    for path in sorted(cards_dir.glob("*.json")):
+        try:
+            payload = load_json(path)
+        except OSError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        set_id = str(payload.get("setId") or path.stem)
+        set_name = str(payload.get("setName") or set_id)
+        card_files.append((set_id, set_name, path))
+    return card_files
+
+
+def load_existing_japanese_catalogue(ts: str) -> dict:
+    path = CATALOG_DIR / "pokemon" / "jp" / "sets.json"
+    if not path.exists():
+        return build_catalog_sets_placeholder("pokemon", "jp", ts)
+    data = load_json(path)
+    return data if isinstance(data, dict) else build_catalog_sets_placeholder("pokemon", "jp", ts)
+
+
+def cleanup_current_price_files() -> None:
+    CURRENT_PRICES_EN_DIR.mkdir(parents=True, exist_ok=True)
+    root = CURRENT_PRICES_EN_DIR.resolve()
+    for path in CURRENT_PRICES_EN_DIR.glob("*.json"):
+        resolved = path.resolve()
+        if resolved.parent != root:
+            raise RuntimeError(f"Refusing to delete unexpected current price path: {resolved}")
+        path.unlink()
+
+
+def compact_current_price(pricing: dict) -> dict | None:
+    market = to_float(pricing.get("market") if pricing.get("market") is not None else pricing.get("mid"))
+    low = to_float(pricing.get("low"))
+    high = to_float(pricing.get("high"))
+
+    if market is None and low is None and high is None:
+        return None
+
+    return {
+        "marketPrice": market,
+        "lowPrice": low,
+        "highPrice": high,
+    }
+
+
+def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str) -> dict | None:
+    compacted = compact_current_price(pricing)
+    if compacted is None:
+        return None
+
+    set_data = card.get("set") if isinstance(card.get("set"), dict) else {}
+    set_id = str(set_data.get("id") or "")
+    collector_number = str(card.get("number") or "")
+    normalized_name = normalize_catalog_name(card.get("name", ""))
+
+    return {
+        "canonicalId": f"pokemon|en|{set_id}|{collector_number}|{normalized_name}|{variant}|near_mint",
+        "setId": set_id,
+        "collectorNumber": collector_number,
+        "normalizedName": normalized_name,
+        "variant": variant,
+        "condition": "near_mint",
+        "currency": CURRENT_PRICE_CURRENCY,
+        "marketPrice": compacted["marketPrice"],
+        "lowPrice": compacted["lowPrice"],
+        "highPrice": compacted["highPrice"],
+        "source": CURRENT_PRICE_SOURCE,
+        "fetchedAtUtc": ts,
+    }
+
+
+def extract_current_price_records(card: dict, ts: str) -> list[dict]:
+    pricing_root = card.get("tcgplayer")
+    if not isinstance(pricing_root, dict):
+        return []
+    prices = pricing_root.get("prices")
+    if not isinstance(prices, dict):
+        return []
+
+    records = []
+    for api_key, variant in CURRENT_PRICE_VARIANTS:
+        pricing = prices.get(api_key)
+        if not isinstance(pricing, dict):
+            continue
+        record = build_current_price_record(card, variant, pricing, ts)
+        if record is not None:
+            records.append(record)
+    return records
+
+
+def build_english_current_prices_by_set(
+    ts: str,
+    config: dict,
+    catalog_sets: dict,
+) -> tuple[list[tuple[str, str, Path]], dict]:
+    metrics = {
+        "currentPriceEnStatus": "not_built_yet",
+        "currentPriceEnSetsAttempted": 0,
+        "currentPriceEnSetsWritten": 0,
+        "currentPriceEnPriceRecordsWritten": 0,
+        "currentPriceEnSkippedNoPriceSets": 0,
+        "currentPriceEnSource": CURRENT_PRICE_SOURCE,
+        "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+    }
+
+    if not config.get("buildCurrentPricesFromPokemonTcgApi", True):
+        metrics["currentPriceEnStatus"] = "disabled_by_config"
+        return [], metrics
+
+    if not isinstance(catalog_sets, dict) or catalog_sets.get("catalogueStatus") not in {"built", "partial_built"}:
+        metrics["currentPriceEnStatus"] = "skipped_no_built_catalogue"
+        return [], metrics
+
+    sets = [item for item in catalog_sets.get("sets", []) if isinstance(item, dict) and item.get("id")]
+    if not sets:
+        metrics["currentPriceEnStatus"] = "skipped_no_sets"
+        return [], metrics
+
+    cleanup_current_price_files()
+
+    page_size = int(config.get("pageSize", 250))
+    max_pages_per_set = int(config.get("maxPagesPerSet", 50))
+    sleep_seconds = float(config.get("catalogueRequestSleepSeconds", 0.15))
+    written_files: list[tuple[str, str, Path]] = []
+    failed_set_ids: list[str] = []
+
+    for set_data in sets:
+        set_id = str(set_data.get("id"))
+        set_name = str(set_data.get("name") or set_id)
+        metrics["currentPriceEnSetsAttempted"] += 1
+        print(f"  Fetching current prices for set {set_id} ({set_name})")
+
+        try:
+            cards, _total_cards, _pages = fetch_pokemon_tcg_paginated(
+                "cards",
+                base_params={"q": f"set.id:{set_id}"},
+                page_size=page_size,
+                max_pages=max_pages_per_set,
+                sleep_seconds=sleep_seconds,
+            )
+        except (requests.RequestException, ValueError) as exc:
+            print(f"  [WARN] Failed to build current prices for set {set_id}: {exc}")
+            failed_set_ids.append(set_id)
+            if not config.get("continueOnSetError", True):
+                break
+            continue
+
+        prices: list[dict] = []
+        for card in cards:
+            prices.extend(extract_current_price_records(card, ts))
+
+        prices.sort(key=price_sort_key)
+        if not prices:
+            metrics["currentPriceEnSkippedNoPriceSets"] += 1
+        else:
+            price_path = CURRENT_PRICES_EN_DIR / f"{set_id}.json"
+            payload = {
+                "schemaVersion": SCHEMA_VERSION,
+                "generatedAtUtc": ts,
+                "game": "pokemon",
+                "language": "en",
+                "setId": set_id,
+                "setName": set_name,
+                "source": CURRENT_PRICE_SOURCE,
+                "currency": CURRENT_PRICE_CURRENCY,
+                "priceCount": len(prices),
+                "prices": prices,
+            }
+            write_json(price_path, payload)
+            written_files.append((set_id, set_name, price_path))
+            metrics["currentPriceEnSetsWritten"] += 1
+            metrics["currentPriceEnPriceRecordsWritten"] += len(prices)
+
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+
+    if failed_set_ids:
+        metrics["currentPriceEnStatus"] = "partial_built"
+    else:
+        metrics["currentPriceEnStatus"] = "built"
+
+    return written_files, metrics
+
+
+def load_existing_current_price_files() -> list[tuple[str, str, Path]]:
+    if not CURRENT_PRICES_EN_DIR.exists():
+        return []
+
+    files: list[tuple[str, str, Path]] = []
+    for path in sorted(CURRENT_PRICES_EN_DIR.glob("*.json")):
+        payload = load_json(path)
+        if not isinstance(payload, dict):
+            continue
+        set_id = str(payload.get("setId") or path.stem)
+        set_name = str(payload.get("setName") or set_id)
+        files.append((set_id, set_name, path))
+    return files
 
 
 def build_index_dataset_entry(
@@ -1043,13 +1321,45 @@ def fetch_live_price_info(card: dict, diagnostics: dict) -> dict:
     return manual_seed_price_info(card)
 
 
+def resolve_build_mode(config: dict) -> str:
+    mode = None
+    if len(sys.argv) > 1:
+        mode = sys.argv[1]
+    mode = mode or os.getenv("CACHE_BUILD_MODE") or config.get("buildMode") or "scheduled"
+    mode = str(mode).strip().lower().replace("-", "_")
+    allowed_modes = {"scheduled", "current_prices", "full_catalogue", "tracked_history"}
+    if mode not in allowed_modes:
+        raise ValueError(f"Unsupported build mode '{mode}'. Expected one of {sorted(allowed_modes)}")
+    return mode
+
+
+def should_build_tracked_history(mode: str) -> bool:
+    return mode in {"scheduled", "tracked_history", "full_catalogue"}
+
+
+def should_build_current_prices(mode: str, config: dict) -> bool:
+    return mode in {"scheduled", "current_prices", "full_catalogue"} and bool(
+        config.get("buildCurrentPricesFromPokemonTcgApi", True)
+    )
+
+
+def should_build_full_catalogue(mode: str, config: dict) -> bool:
+    if mode == "full_catalogue":
+        return True
+    if mode == "scheduled" and config.get("rebuildFullCatalogueOnScheduled", False):
+        return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Main build
 # ---------------------------------------------------------------------------
 def build() -> None:
     ts = now_utc()
     day = ts[:10]
-    print(f"[build_price_cache] Starting build at {ts}")
+    catalog_config = load_catalog_config()
+    mode = resolve_build_mode(catalog_config)
+    print(f"[build_price_cache] Starting {mode} build at {ts}")
 
     cards: list[dict] = load_json(CARDS_PATH).get("cards", [])
     if not cards:
@@ -1090,90 +1400,143 @@ def build() -> None:
         "catalogueEnCardsFetched": 0,
         "catalogueEnFailedSetIds": [],
         "catalogueEnStoppedReason": None,
+        "currentPriceEnStatus": "not_built_yet",
+        "currentPriceEnSetsAttempted": 0,
+        "currentPriceEnSetsWritten": 0,
+        "currentPriceEnPriceRecordsWritten": 0,
+        "currentPriceEnSkippedNoPriceSets": 0,
+        "currentPriceEnSource": CURRENT_PRICE_SOURCE,
+        "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
     }
 
     cards_by_id: dict[str, dict] = {}
     latest_prices_by_id: dict[str, dict] = {}
     daily_history_files: list[tuple[str, str, Path]] = []
-    current_price_files: list[tuple[str, str, Path]] = []
+    sample_price_files: list[tuple[str, str, Path]] = []
 
-    for (game, language), group_cards in sorted(groups.items()):
-        price_path = PRICES_DIR / game / language / "sample.json"
-        history_path = HISTORY_DIR / day / game / language / "tracked.json"
+    if should_build_tracked_history(mode):
+        for (game, language), group_cards in sorted(groups.items()):
+            price_path = PRICES_DIR / game / language / "sample.json"
+            history_path = HISTORY_DIR / day / game / language / "tracked.json"
 
-        seen: set[str] = set()
-        prices = []
-        for card in group_cards:
-            cid = card["canonicalId"]
-            if cid in seen:
-                print(f"  [WARN] Duplicate canonicalId skipped: {cid}")
-                continue
+            seen: set[str] = set()
+            prices = []
+            for card in group_cards:
+                cid = card["canonicalId"]
+                if cid in seen:
+                    print(f"  [WARN] Duplicate canonicalId skipped: {cid}")
+                    continue
 
-            seen.add(cid)
-            price_info = fetch_live_price_info(card, diagnostics)
-            diagnostics["sourcesUsed"].add(price_info["source"])
+                seen.add(cid)
+                price_info = fetch_live_price_info(card, diagnostics)
+                diagnostics["sourcesUsed"].add(price_info["source"])
 
-            if price_info["source"] != "manual_seed":
-                diagnostics["livePriceCount"] += 1
+                if price_info["source"] != "manual_seed":
+                    diagnostics["livePriceCount"] += 1
 
-            diagnostics["cardsPriced"] += 1
-            price_entry = build_price_entry(card, ts, price_info)
-            prices.append(price_entry)
-            cards_by_id[cid] = card
-            latest_prices_by_id[cid] = price_entry
+                diagnostics["cardsPriced"] += 1
+                price_entry = build_price_entry(card, ts, price_info)
+                prices.append(price_entry)
+                cards_by_id[cid] = card
+                latest_prices_by_id[cid] = price_entry
 
-        payload = {
-            "schemaVersion": SCHEMA_VERSION,
-            "generatedAtUtc": ts,
-            "game": game,
-            "language": language,
-            "prices": prices,
-        }
-        write_json(price_path, payload)
+            payload = {
+                "schemaVersion": SCHEMA_VERSION,
+                "generatedAtUtc": ts,
+                "game": game,
+                "language": language,
+                "prices": prices,
+            }
+            write_json(price_path, payload)
 
-        history_payload = {
-            "schemaVersion": SCHEMA_VERSION,
-            "generatedAtUtc": ts,
-            "date": day,
-            "game": game,
-            "language": language,
-            "prices": prices,
-        }
-        write_json(history_path, history_payload)
-        diagnostics["dailyHistoryFilesWritten"] += 1
-        daily_history_files.append((game, language, history_path))
-        current_price_files.append((game, language, price_path))
+            history_payload = {
+                "schemaVersion": SCHEMA_VERSION,
+                "generatedAtUtc": ts,
+                "date": day,
+                "game": game,
+                "language": language,
+                "prices": prices,
+            }
+            write_json(history_path, history_payload)
+            diagnostics["dailyHistoryFilesWritten"] += 1
+            daily_history_files.append((game, language, history_path))
+            sample_price_files.append((game, language, price_path))
 
-        digest = sha256_file(price_path)
-        print(f"  Wrote {price_path}  sha256={digest}")
-        print(f"  Wrote {history_path}")
+            digest = sha256_file(price_path)
+            print(f"  Wrote {price_path}  sha256={digest}")
+            print(f"  Wrote {history_path}")
 
-    tracked_payload, first_created, tracked_updated = update_tracked_cards_history(
-        ts=ts,
-        cards_by_id=cards_by_id,
-        latest_prices_by_id=latest_prices_by_id,
-    )
-    diagnostics["trackedHistoryWritten"] = True
-    diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
-    diagnostics["firstTrackedCreatedCount"] = first_created
-    diagnostics["trackedCardsUpdatedCount"] = tracked_updated
+        tracked_payload, first_created, tracked_updated = update_tracked_cards_history(
+            ts=ts,
+            cards_by_id=cards_by_id,
+            latest_prices_by_id=latest_prices_by_id,
+        )
+        diagnostics["trackedHistoryWritten"] = True
+        diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
+        diagnostics["firstTrackedCreatedCount"] = first_created
+        diagnostics["trackedCardsUpdatedCount"] = tracked_updated
+        write_json(TRACKED_CARDS_PATH, tracked_payload)
+    else:
+        for game, language in sorted(groups.keys()):
+            price_path = PRICES_DIR / game / language / "sample.json"
+            if price_path.exists():
+                sample_price_files.append((game, language, price_path))
+        if TRACKED_CARDS_PATH.exists():
+            tracked_payload = load_json(TRACKED_CARDS_PATH)
+            if isinstance(tracked_payload, dict):
+                diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
 
     api_manifest = build_api_manifest(ts)
     api_notes = build_api_notes(ts)
     schemas = build_schemas(ts)
-    catalog_config = load_catalog_config()
-    catalog_en, catalog_en_card_files, catalog_metrics = build_english_pokemon_catalogue(ts, catalog_config)
-    catalog_jp = build_catalog_sets_placeholder("pokemon", "jp", ts)
+
+    if should_build_full_catalogue(mode, catalog_config):
+        catalog_en, catalog_en_card_files, catalog_metrics = build_english_pokemon_catalogue(ts, catalog_config)
+        write_json(CATALOG_DIR / "pokemon" / "en" / "sets.json", catalog_en)
+    else:
+        catalog_en = load_existing_catalogue_sets()
+        catalog_en_card_files = load_existing_catalogue_card_files()
+        catalog_metrics = {
+            "catalogueEnStatus": catalog_en.get("catalogueStatus", "not_built_yet"),
+            "catalogueEnFetchStrategy": "set_by_set",
+            "catalogueEnSetCount": int(catalog_en.get("setCount", 0) or 0),
+            "catalogueEnSetsAttempted": 0,
+            "catalogueEnSetsBuilt": 0,
+            "catalogueEnSetsFailed": int(catalog_en.get("failedSetCount", 0) or 0),
+            "catalogueEnCardsFetched": int(catalog_en.get("cardCount", 0) or 0),
+            "catalogueEnFailedSetIds": catalog_en.get("failedSetIds", []),
+            "catalogueEnStoppedReason": "not_rebuilt",
+        }
     diagnostics.update(catalog_metrics)
+
+    if should_build_current_prices(mode, catalog_config):
+        broad_current_price_files, current_price_metrics = build_english_current_prices_by_set(
+            ts,
+            catalog_config,
+            catalog_en,
+        )
+    else:
+        broad_current_price_files = load_existing_current_price_files()
+        current_price_metrics = {
+            "currentPriceEnStatus": "not_rebuilt",
+            "currentPriceEnSetsAttempted": 0,
+            "currentPriceEnSetsWritten": len(broad_current_price_files),
+            "currentPriceEnPriceRecordsWritten": 0,
+            "currentPriceEnSkippedNoPriceSets": 0,
+            "currentPriceEnSource": CURRENT_PRICE_SOURCE,
+            "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+        }
+    diagnostics.update(current_price_metrics)
+
+    catalog_jp = load_existing_japanese_catalogue(ts)
 
     diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
     write_json(API_MANIFEST_PATH, api_manifest)
     write_json(API_NOTES_PATH, api_notes)
     write_json(SCHEMAS_PATH, schemas)
-    write_json(CATALOG_DIR / "pokemon" / "en" / "sets.json", catalog_en)
-    write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
-    write_json(TRACKED_CARDS_PATH, tracked_payload)
+    if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
+        write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
 
     index_entries = []
     index_entries.append(
@@ -1217,7 +1580,7 @@ def build() -> None:
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )
     )
-    for game, language, price_path in current_price_files:
+    for game, language, price_path in sample_price_files:
         dataset_id = f"prices_{game}_{language}"
         index_entries.append(
             build_index_dataset_entry(
@@ -1232,16 +1595,31 @@ def build() -> None:
             )
         )
 
-    index_entries.append(
-        build_index_dataset_entry(
-            dataset_id="tracked_history",
-            file_path=TRACKED_CARDS_PATH,
-            dataset_type="tracked_history",
-            description="CardScanR tracked price history summary",
-            ts=ts,
-            ttl_seconds=HISTORY_CACHE_TTL_SECONDS,
+    for set_id, set_name, price_path in broad_current_price_files:
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=f"prices_current_pokemon_en_{set_id}",
+                file_path=price_path,
+                dataset_type="price_current",
+                description=f"Pokemon TCG EN latest-known current prices for {set_name}",
+                ts=ts,
+                ttl_seconds=PRICE_CACHE_TTL_SECONDS,
+                game="pokemon",
+                language="en",
+            )
         )
-    )
+
+    if TRACKED_CARDS_PATH.exists():
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id="tracked_history",
+                file_path=TRACKED_CARDS_PATH,
+                dataset_type="tracked_history",
+                description="CardScanR tracked price history summary",
+                ts=ts,
+                ttl_seconds=HISTORY_CACHE_TTL_SECONDS,
+            )
+        )
 
     for game, language, history_path in daily_history_files:
         dataset_id = f"daily_tracked_history_{game}_{language}_{day}"

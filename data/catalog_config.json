@@ -9,6 +9,8 @@
   ],
   "fullCatalogueEnabled": true,
   "buildEnglishFromPokemonTcgApi": true,
+  "buildCurrentPricesFromPokemonTcgApi": true,
+  "rebuildFullCatalogueOnScheduled": false,
   "buildJapaneseFromTcgdex": true,
   "englishCatalogueFetchStrategy": "set_by_set",
   "maxSetsPerRun": 9999,
