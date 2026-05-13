@@ -73,6 +73,15 @@ REQUIRED_DIAGNOSTICS_FIELDS = {
     "dailyHistoryFilesWritten",
     "firstTrackedCreatedCount",
     "trackedCardsUpdatedCount",
+    "catalogueEnStatus",
+    "catalogueEnFetchStrategy",
+    "catalogueEnSetCount",
+    "catalogueEnSetsAttempted",
+    "catalogueEnSetsBuilt",
+    "catalogueEnSetsFailed",
+    "catalogueEnCardsFetched",
+    "catalogueEnFailedSetIds",
+    "catalogueEnStoppedReason",
 }
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
@@ -119,6 +128,53 @@ REQUIRED_PLACEHOLDER_CATALOG_FIELDS = {
     "source",
     "notes",
 }
+REQUIRED_EN_CATALOG_FIELDS = REQUIRED_PLACEHOLDER_CATALOG_FIELDS | {
+    "setCount",
+    "cardCount",
+    "partialSetCount",
+    "failedSetCount",
+    "failedSetIds",
+}
+REQUIRED_CATALOG_CARD_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "game",
+    "language",
+    "setId",
+    "setName",
+    "source",
+    "catalogueStatus",
+    "cardCount",
+    "cards",
+}
+REQUIRED_CATALOG_CARD_ENTRY_FIELDS = {
+    "canonicalBaseId",
+    "game",
+    "language",
+    "setId",
+    "setName",
+    "collectorNumber",
+    "name",
+    "normalizedName",
+    "rarity",
+    "supertype",
+    "subtypes",
+    "types",
+    "hp",
+    "artist",
+    "imageSmall",
+    "imageLarge",
+    "imageSource",
+    "imageCached",
+    "externalIds",
+    "availableVariants",
+}
+REQUIRED_CATALOG_EXTERNAL_ID_FIELDS = {
+    "pokemonTcgApiId",
+    "tcgdexCardId",
+    "tcgplayerProductId",
+    "pricechartingId",
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -142,10 +198,7 @@ def ok(msg: str) -> None:
 
 
 def sha256_file(path: Path) -> str:
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh)
-    canonical = json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_json_file(path: Path) -> object | None:
@@ -393,11 +446,11 @@ def check_schemas() -> None:
         err("schemas.json schemas must be a non-empty object")
 
 
-def check_catalog_placeholders() -> None:
-    print("\n[10] Catalogue placeholder check")
+def check_catalogues() -> None:
+    print("\n[10] Catalogue check")
     catalog_files = sorted((V1_DIR / "catalog").rglob("sets.json")) if (V1_DIR / "catalog").exists() else []
     if not catalog_files:
-        warn("No catalogue placeholder files found under public/v1/catalog/")
+        warn("No catalogue files found under public/v1/catalog/")
         return
     for path in catalog_files:
         rel = path.relative_to(ROOT)
@@ -405,15 +458,121 @@ def check_catalog_placeholders() -> None:
         if data is None or not isinstance(data, dict):
             err(f"{rel} must be a JSON object")
             continue
-        if check_required(data, REQUIRED_PLACEHOLDER_CATALOG_FIELDS, str(rel)):
-            ok(f"{rel} has required placeholder fields")
-        if data.get("catalogueStatus") != "not_built_yet":
-            err(f"{rel} catalogueStatus must be not_built_yet for the placeholder catalogue")
-        if data.get("cardsAvailable") is not False:
-            err(f"{rel} cardsAvailable must be false for the placeholder catalogue")
+
+        is_en_catalogue = data.get("game") == "pokemon" and data.get("language") == "en"
+        if is_en_catalogue:
+            if check_required(data, REQUIRED_EN_CATALOG_FIELDS, str(rel)):
+                ok(f"{rel} has required EN catalogue fields")
+            if data.get("catalogueStatus") not in {"built", "partial_built", "not_built_yet"}:
+                err(f"{rel} catalogueStatus must be built, partial_built, or not_built_yet")
+            if data.get("catalogueStatus") in {"built", "partial_built"}:
+                if data.get("source") != "pokemon_tcg_api":
+                    err(f"{rel} source must be pokemon_tcg_api when built")
+                if data.get("cardsAvailable") is not True:
+                    err(f"{rel} cardsAvailable must be true when EN catalogue card files exist")
+            if data.get("setCount") != len(data.get("sets", [])):
+                err(f"{rel} setCount must equal sets length")
+            failed_set_ids = data.get("failedSetIds", [])
+            if not isinstance(failed_set_ids, list):
+                err(f"{rel} failedSetIds must be a list")
+            elif data.get("failedSetCount") != len(failed_set_ids):
+                err(f"{rel} failedSetCount must equal failedSetIds length")
+            if data.get("catalogueStatus") == "built" and data.get("failedSetCount") != 0:
+                err(f"{rel} built catalogue must not have failed sets")
+        else:
+            if check_required(data, REQUIRED_PLACEHOLDER_CATALOG_FIELDS, str(rel)):
+                ok(f"{rel} has required placeholder fields")
+            if data.get("catalogueStatus") != "not_built_yet":
+                err(f"{rel} catalogueStatus must be not_built_yet for the placeholder catalogue")
+            if data.get("cardsAvailable") is not False:
+                err(f"{rel} cardsAvailable must be false for the placeholder catalogue")
+
         sets = data.get("sets", [])
         if not isinstance(sets, list):
             err(f"{rel} sets must be a list")
+
+    check_catalog_card_files()
+
+
+def check_catalog_card_files() -> None:
+    cards_dir = V1_DIR / "catalog" / "pokemon" / "en" / "cards"
+    card_files = sorted(cards_dir.glob("*.json")) if cards_dir.exists() else []
+    if not card_files:
+        warn("No EN catalogue card files found under public/v1/catalog/pokemon/en/cards")
+        return
+
+    for path in card_files:
+        rel = path.relative_to(ROOT)
+        data = load_json_file(path)
+        if data is None or not isinstance(data, dict):
+            err(f"{rel} must be a JSON object")
+            continue
+        if not check_required(data, REQUIRED_CATALOG_CARD_FIELDS, str(rel)):
+            continue
+        if data.get("game") != "pokemon":
+            err(f"{rel} game must be pokemon")
+        if data.get("language") != "en":
+            err(f"{rel} language must be en")
+        if data.get("source") != "pokemon_tcg_api":
+            err(f"{rel} source must be pokemon_tcg_api")
+        if data.get("catalogueStatus") != "built":
+            err(f"{rel} catalogueStatus must be built")
+
+        cards = data.get("cards", [])
+        if not isinstance(cards, list):
+            err(f"{rel} cards must be a list")
+            continue
+        if data.get("cardCount") != len(cards):
+            err(f"{rel} cardCount must equal cards length")
+
+        seen_base_ids: set[str] = set()
+        entry_errors = 0
+        for i, card in enumerate(cards):
+            label = f"{rel} cards[{i}]"
+            if not isinstance(card, dict):
+                err(f"{label} is not an object")
+                entry_errors += 1
+                continue
+            missing = REQUIRED_CATALOG_CARD_ENTRY_FIELDS - set(card.keys())
+            if missing:
+                err(f"{label} missing fields: {sorted(missing)}")
+                entry_errors += 1
+            canonical_base_id = card.get("canonicalBaseId")
+            if canonical_base_id in seen_base_ids:
+                err(f"{rel}: duplicate canonicalBaseId: {canonical_base_id}")
+                entry_errors += 1
+            elif canonical_base_id:
+                seen_base_ids.add(canonical_base_id)
+            if card.get("imageCached") is not False:
+                err(f"{label} imageCached must be false")
+                entry_errors += 1
+            if "imageSmall" not in card or "imageLarge" not in card:
+                err(f"{label} imageSmall and imageLarge fields must exist")
+                entry_errors += 1
+            if card.get("imageSource") != "pokemon_tcg_api":
+                err(f"{label} imageSource must be pokemon_tcg_api")
+                entry_errors += 1
+            external_ids = card.get("externalIds")
+            if not isinstance(external_ids, dict):
+                err(f"{label} externalIds must be an object")
+                entry_errors += 1
+            else:
+                missing_external = REQUIRED_CATALOG_EXTERNAL_ID_FIELDS - set(external_ids.keys())
+                if missing_external:
+                    err(f"{label} externalIds missing fields: {sorted(missing_external)}")
+                    entry_errors += 1
+            if not isinstance(card.get("subtypes"), list):
+                err(f"{label} subtypes must be a list")
+                entry_errors += 1
+            if not isinstance(card.get("types"), list):
+                err(f"{label} types must be a list")
+                entry_errors += 1
+            if not isinstance(card.get("availableVariants"), list):
+                err(f"{label} availableVariants must be a list")
+                entry_errors += 1
+
+        if entry_errors == 0:
+            ok(f"{rel}: {len(cards)} catalogue cards validated")
 
 
 # ---------------------------------------------------------------------------
@@ -529,7 +688,7 @@ def main() -> None:
     check_api_manifest()
     check_api_notes()
     check_schemas()
-    check_catalog_placeholders()
+    check_catalogues()
     check_history()
 
     print("\n" + "=" * 60)

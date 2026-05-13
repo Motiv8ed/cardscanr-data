@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +39,7 @@ HISTORY_ROOT_DIR = PUBLIC_DIR / "history"
 HISTORY_DIR = HISTORY_ROOT_DIR / "daily"
 TRACKED_CARDS_PATH = HISTORY_ROOT_DIR / "tracked-cards.json"
 CATALOG_DIR = PUBLIC_DIR / "catalog"
+CATALOG_CONFIG_PATH = DATA_DIR / "catalog_config.json"
 API_MANIFEST_PATH = PUBLIC_DIR / "api-manifest.json"
 API_NOTES_PATH = PUBLIC_DIR / "api-notes.json"
 SCHEMAS_PATH = PUBLIC_DIR / "schemas.json"
@@ -51,6 +53,7 @@ PRICE_CACHE_TTL_SECONDS = 43200
 DIAGNOSTICS_CACHE_TTL_SECONDS = 900
 HISTORY_CACHE_TTL_SECONDS = 86400
 CATALOG_CACHE_TTL_SECONDS = 86400
+POKEMON_TCG_API_BASE = "https://api.pokemontcg.io/v2"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -69,10 +72,7 @@ def now_utc() -> str:
 
 
 def sha256_file(path: Path) -> str:
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh)
-    canonical = json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def write_json(path: Path, obj: object) -> None:
@@ -85,6 +85,27 @@ def write_json(path: Path, obj: object) -> None:
 def load_json(path: Path) -> object:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def load_catalog_config() -> dict:
+    defaults = {
+        "fullCatalogueEnabled": True,
+        "buildEnglishFromPokemonTcgApi": True,
+        "englishCatalogueFetchStrategy": "set_by_set",
+        "maxSetsPerRun": 9999,
+        "maxPagesPerSet": 50,
+        "continueOnSetError": True,
+        "catalogueRequestSleepSeconds": 0.15,
+        "pageSize": 250,
+        "maxPagesPerRun": 1000,
+    }
+    if not CATALOG_CONFIG_PATH.exists():
+        return defaults
+
+    config = load_json(CATALOG_CONFIG_PATH)
+    if not isinstance(config, dict):
+        return defaults
+    return {**defaults, **config}
 
 
 def normalize_price_snapshot(price: dict, ts: str) -> dict:
@@ -190,6 +211,11 @@ def tcgdex_language(code: str) -> str:
 
 def normalize_text(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", str(value).lower())
+
+
+def normalize_catalog_name(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", str(value).lower()).strip("_")
+    return re.sub(r"_+", "_", normalized)
 
 
 def normalize_number(value: str) -> str:
@@ -456,12 +482,26 @@ def build_schemas(ts: str) -> dict:
                     "source",
                     "notes",
                 ],
-                "notes": ["Placeholder file until full catalogue cache generation is implemented."],
+                "notes": [
+                    "English Pokemon catalogue sets are built from official PokemonTCG API endpoints.",
+                    "Japanese catalogue coverage may remain a placeholder until implemented.",
+                ],
             },
             "catalogue_cards_file": {
-                "requiredFields": ["schemaVersion", "generatedAtUtc", "game", "language", "cards"],
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "game",
+                    "language",
+                    "setId",
+                    "setName",
+                    "source",
+                    "catalogueStatus",
+                    "cardCount",
+                    "cards",
+                ],
                 "notes": [
-                    "When implemented, catalogue card records should store image URLs only.",
+                    "Catalogue card records store image URLs only.",
                     "Use imageSmall, imageLarge, imageSource, and imageCached: false.",
                 ],
             },
@@ -533,6 +573,238 @@ def build_catalog_sets_placeholder(game: str, language: str, ts: str) -> dict:
             "Card records should store image URLs only when implemented.",
         ],
     }
+
+
+def pokemon_tcg_headers() -> dict:
+    headers = {}
+    api_key = os.getenv("POKEMON_TCG_API_KEY")
+    if api_key:
+        headers["X-Api-Key"] = api_key
+    return headers
+
+
+def pokemon_tcg_get(endpoint: str, params: dict | None = None) -> dict:
+    response = requests.get(
+        f"{POKEMON_TCG_API_BASE}/{endpoint.lstrip('/')}",
+        params=params or {},
+        headers=pokemon_tcg_headers(),
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError(f"PokemonTCG API returned non-object payload for {endpoint}")
+    return payload
+
+
+def fetch_pokemon_tcg_paginated(
+    endpoint: str,
+    *,
+    base_params: dict | None = None,
+    page_size: int = 250,
+    max_pages: int = 1000,
+    sleep_seconds: float = 0.0,
+) -> tuple[list[dict], int | None, int]:
+    records: list[dict] = []
+    total_count: int | None = None
+    pages_fetched = 0
+
+    for page in range(1, max_pages + 1):
+        params = dict(base_params or {})
+        params.update({"page": page, "pageSize": page_size})
+        payload = pokemon_tcg_get(endpoint, params=params)
+        data = payload.get("data", [])
+        if not isinstance(data, list):
+            raise ValueError(f"PokemonTCG API returned non-list data for {endpoint}")
+
+        records.extend([item for item in data if isinstance(item, dict)])
+        pages_fetched += 1
+
+        if isinstance(payload.get("totalCount"), int):
+            total_count = payload["totalCount"]
+        if total_count is not None and len(records) >= total_count:
+            break
+        if len(data) < page_size:
+            break
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+
+    return records, total_count, pages_fetched
+
+
+def build_catalog_set_record(set_data: dict) -> dict:
+    images = set_data.get("images") if isinstance(set_data.get("images"), dict) else {}
+    return {
+        "id": set_data.get("id"),
+        "name": set_data.get("name"),
+        "series": set_data.get("series"),
+        "printedTotal": set_data.get("printedTotal"),
+        "total": set_data.get("total"),
+        "releaseDate": set_data.get("releaseDate"),
+        "updatedAt": set_data.get("updatedAt"),
+        "ptcgoCode": set_data.get("ptcgoCode"),
+        "symbolUrl": images.get("symbol"),
+        "logoUrl": images.get("logo"),
+        "imageSource": "pokemon_tcg_api",
+        "imageCached": False,
+    }
+
+
+def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
+    images = card.get("images") if isinstance(card.get("images"), dict) else {}
+    normalized_name = normalize_catalog_name(card.get("name", ""))
+    collector_number = str(card.get("number") or "")
+
+    return {
+        "canonicalBaseId": f"pokemon|en|{set_id}|{collector_number}|{normalized_name}",
+        "game": "pokemon",
+        "language": "en",
+        "setId": set_id,
+        "setName": set_name,
+        "collectorNumber": collector_number,
+        "name": card.get("name"),
+        "normalizedName": normalized_name,
+        "rarity": card.get("rarity"),
+        "supertype": card.get("supertype"),
+        "subtypes": card.get("subtypes") if isinstance(card.get("subtypes"), list) else [],
+        "types": card.get("types") if isinstance(card.get("types"), list) else [],
+        "hp": card.get("hp"),
+        "artist": card.get("artist"),
+        "imageSmall": images.get("small"),
+        "imageLarge": images.get("large"),
+        "imageSource": "pokemon_tcg_api",
+        "imageCached": False,
+        "externalIds": {
+            "pokemonTcgApiId": card.get("id"),
+            "tcgdexCardId": None,
+            "tcgplayerProductId": None,
+            "pricechartingId": None,
+        },
+        "availableVariants": [],
+    }
+
+
+def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[tuple[str, str, Path]], dict]:
+    metrics = {
+        "catalogueEnStatus": "not_built_yet",
+        "catalogueEnFetchStrategy": "set_by_set",
+        "catalogueEnSetCount": 0,
+        "catalogueEnSetsAttempted": 0,
+        "catalogueEnSetsBuilt": 0,
+        "catalogueEnSetsFailed": 0,
+        "catalogueEnCardsFetched": 0,
+        "catalogueEnFailedSetIds": [],
+        "catalogueEnStoppedReason": None,
+    }
+
+    if not config.get("fullCatalogueEnabled", True) or not config.get("buildEnglishFromPokemonTcgApi", True):
+        metrics["catalogueEnStoppedReason"] = "disabled_by_config"
+        return build_catalog_sets_placeholder("pokemon", "en", ts), [], metrics
+
+    page_size = int(config.get("pageSize", 250))
+    max_pages_per_run = int(config.get("maxPagesPerRun", 1000))
+    max_pages_per_set = int(config.get("maxPagesPerSet", 50))
+    max_sets_per_run = int(config.get("maxSetsPerRun", 9999))
+    sleep_seconds = float(config.get("catalogueRequestSleepSeconds", 0.15))
+
+    print("[build_price_cache] Fetching PokemonTCG API sets for EN catalogue")
+    sets, total_sets, _pages = fetch_pokemon_tcg_paginated(
+        "sets",
+        page_size=page_size,
+        max_pages=max_pages_per_run,
+        sleep_seconds=sleep_seconds,
+    )
+    sets.sort(key=lambda item: (str(item.get("releaseDate") or ""), str(item.get("id") or "")))
+    if max_sets_per_run > 0:
+        sets = sets[:max_sets_per_run]
+
+    metrics["catalogueEnSetCount"] = len(sets)
+    if total_sets is not None and len(sets) < total_sets:
+        metrics["catalogueEnStoppedReason"] = "max_sets_per_run_reached"
+
+    card_files: list[tuple[str, str, Path]] = []
+    failed_set_ids: list[str] = []
+    cards_dir = CATALOG_DIR / "pokemon" / "en" / "cards"
+    cards_dir.mkdir(parents=True, exist_ok=True)
+
+    for set_data in sets:
+        set_id = str(set_data.get("id") or "")
+        set_name = str(set_data.get("name") or "")
+        if not set_id:
+            continue
+
+        metrics["catalogueEnSetsAttempted"] += 1
+        print(f"  Fetching cards for set {set_id} ({set_name})")
+
+        try:
+            cards, _total_cards, _pages = fetch_pokemon_tcg_paginated(
+                "cards",
+                base_params={"q": f"set.id:{set_id}"},
+                page_size=page_size,
+                max_pages=max_pages_per_set,
+                sleep_seconds=sleep_seconds,
+            )
+            card_records = [build_catalog_card_record(card, set_id, set_name) for card in cards]
+            card_records.sort(key=lambda item: (normalize_number(item["collectorNumber"]), item["collectorNumber"], item["normalizedName"]))
+
+            card_payload = {
+                "schemaVersion": SCHEMA_VERSION,
+                "generatedAtUtc": ts,
+                "game": "pokemon",
+                "language": "en",
+                "setId": set_id,
+                "setName": set_name,
+                "source": "pokemon_tcg_api",
+                "catalogueStatus": "built",
+                "cardCount": len(card_records),
+                "cards": card_records,
+            }
+            card_path = cards_dir / f"{set_id}.json"
+            write_json(card_path, card_payload)
+            card_files.append((set_id, set_name, card_path))
+            metrics["catalogueEnSetsBuilt"] += 1
+            metrics["catalogueEnCardsFetched"] += len(card_records)
+        except (requests.RequestException, ValueError) as exc:
+            print(f"  [WARN] Failed to build catalogue cards for set {set_id}: {exc}")
+            failed_set_ids.append(set_id)
+            if not config.get("continueOnSetError", True):
+                metrics["catalogueEnStoppedReason"] = f"set_error:{set_id}"
+                break
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+
+    failed_set_ids.sort()
+    metrics["catalogueEnFailedSetIds"] = failed_set_ids
+    metrics["catalogueEnSetsFailed"] = len(failed_set_ids)
+
+    if failed_set_ids:
+        status = "partial_built"
+    else:
+        status = "built"
+    metrics["catalogueEnStatus"] = status
+    if metrics["catalogueEnStoppedReason"] is None:
+        metrics["catalogueEnStoppedReason"] = "completed"
+
+    sets_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "game": "pokemon",
+        "language": "en",
+        "catalogueStatus": status,
+        "cardsAvailable": len(card_files) > 0,
+        "source": "pokemon_tcg_api",
+        "setCount": len(sets),
+        "cardCount": metrics["catalogueEnCardsFetched"],
+        "partialSetCount": len(failed_set_ids),
+        "failedSetCount": len(failed_set_ids),
+        "failedSetIds": failed_set_ids,
+        "sets": [build_catalog_set_record(item) for item in sets],
+        "notes": [
+            "English catalogue is built from official PokemonTCG API endpoints.",
+            "Card records store image URLs only; images are not mirrored into this cache.",
+        ],
+    }
+    return sets_payload, card_files, metrics
 
 
 def build_index_dataset_entry(
@@ -809,6 +1081,15 @@ def build() -> None:
         "dailyHistoryFilesWritten": 0,
         "firstTrackedCreatedCount": 0,
         "trackedCardsUpdatedCount": 0,
+        "catalogueEnStatus": "not_built_yet",
+        "catalogueEnFetchStrategy": "set_by_set",
+        "catalogueEnSetCount": 0,
+        "catalogueEnSetsAttempted": 0,
+        "catalogueEnSetsBuilt": 0,
+        "catalogueEnSetsFailed": 0,
+        "catalogueEnCardsFetched": 0,
+        "catalogueEnFailedSetIds": [],
+        "catalogueEnStoppedReason": None,
     }
 
     cards_by_id: dict[str, dict] = {}
@@ -880,8 +1161,10 @@ def build() -> None:
     api_manifest = build_api_manifest(ts)
     api_notes = build_api_notes(ts)
     schemas = build_schemas(ts)
-    catalog_en = build_catalog_sets_placeholder("pokemon", "en", ts)
+    catalog_config = load_catalog_config()
+    catalog_en, catalog_en_card_files, catalog_metrics = build_english_pokemon_catalogue(ts, catalog_config)
     catalog_jp = build_catalog_sets_placeholder("pokemon", "jp", ts)
+    diagnostics.update(catalog_metrics)
 
     diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
@@ -981,16 +1264,39 @@ def build() -> None:
         ("pokemon", "jp", CATALOG_DIR / "pokemon" / "jp" / "sets.json"),
     ]:
         dataset_id = f"catalog_{game}_{language}_sets"
+        is_real_en_catalog = game == "pokemon" and language == "en" and catalog_en.get("catalogueStatus") in {
+            "built",
+            "partial_built",
+        }
+        description = (
+            "Pokemon TCG EN catalogue sets"
+            if is_real_en_catalog
+            else f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder"
+        )
         index_entries.append(
             build_index_dataset_entry(
                 dataset_id=dataset_id,
                 file_path=catalog_path,
                 dataset_type="catalogue_sets",
-                description=f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder",
+                description=description,
                 ts=ts,
                 ttl_seconds=CATALOG_CACHE_TTL_SECONDS,
                 game=game,
                 language=language,
+            )
+        )
+
+    for set_id, set_name, card_path in catalog_en_card_files:
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=f"catalog_pokemon_en_cards_{set_id}",
+                file_path=card_path,
+                dataset_type="catalogue_cards",
+                description=f"Pokemon TCG EN catalogue cards for {set_name}",
+                ts=ts,
+                ttl_seconds=CATALOG_CACHE_TTL_SECONDS,
+                game="pokemon",
+                language="en",
             )
         )
 
