@@ -1,14 +1,14 @@
 {
-  "cacheVersion": "2026.05.13.0644",
+  "cacheVersion": "2026.05.13.1302",
   "datasets": [
     {
       "description": "CardScanR internal data API manifest",
       "id": "api_manifest",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "33f6576b83034cfbef44698c79b0eda2b27632a4515d8026891aa365d73e36a6",
+      "sha256": "e2e00eb60e6744cfd99e5c83f168a4fcdbd10979f7adf31b9f668c1eda803ad6",
       "type": "api_manifest",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/api-manifest.json"
     },
     {
@@ -16,9 +16,9 @@
       "id": "api_notes",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "336d45d7ba7a6df6746b1081b0bc30be04ab619d921fca92acb4f3963ad9b5d0",
+      "sha256": "b99fd3a220427195d84a38f19d81edb5b4335f72249b382bd7e10d97cbf6ca7e",
       "type": "api_notes",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/api-notes.json"
     },
     {
@@ -27,7 +27,7 @@
       "recommendedCacheTtlSeconds": 86400,
       "sha256": "eafe1f19eb703600762d7221a3a91adc21d7bda3c40b9de87f63547d4b662f7c",
       "type": "app_config",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/app-config.json"
     },
     {
@@ -37,9 +37,9 @@
       "language": "en",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "e92b8ee6a875436efe6e99f57c633dcaf092423ce11621b7d165b2d3c5c39800",
+      "sha256": "3e3664f9c9c70a7628a5b6548de553890c627fe6f8263f8b64bcb9ba44660af1",
       "type": "catalogue_sets",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/catalog/pokemon/en/sets.json"
     },
     {
@@ -49,9 +49,9 @@
       "language": "jp",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "dff537a83ac6a0ce6b6ca4fcc8f63f47062b8c0eab55580509401671fdbab09b",
+      "sha256": "3c323cbd6837d341f6155fe2136552382bc2e1a967df466ad84eb96d830ea9a0",
       "type": "catalogue_sets",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/catalog/pokemon/jp/sets.json"
     },
     {
@@ -62,9 +62,9 @@
       "language": "en",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "92eb1de87debc04f3ec7cc22170a2cb63dae054bfcb1f5355024e087147a5479",
+      "sha256": "a463657c479eee0ef0a3129ab2a8aebe7a4a329f4834d6ed5483f74d43da53f0",
       "type": "daily_tracked_history",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/history/daily/2026-05-13/pokemon/en/tracked.json"
     },
     {
@@ -75,9 +75,9 @@
       "language": "jp",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "f7b1377d9c6232d3c207b54dfd1ae25b5260e2ce0d67d0e62da72c9fd0c79beb",
+      "sha256": "d5731890e55b748944c63c0db4deaa113695b244582b244264cc57a8d740ec09",
       "type": "daily_tracked_history",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/history/daily/2026-05-13/pokemon/jp/tracked.json"
     },
     {
@@ -85,9 +85,9 @@
       "id": "diagnostics",
       "recommendedCacheTtlSeconds": 900,
       "schemaVersion": "1.0.0",
-      "sha256": "c58d537685bdd9c1e23df7772159502464753b4a7dd432f9b7d2ea9940aab76f",
+      "sha256": "afd5b41827d16ccaecc41bbc129030b00ebfb06c6833fda7bd57c9f0a2e2a6c3",
       "type": "diagnostics",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/diagnostics/latest-build.json"
     },
     {
@@ -97,9 +97,9 @@
       "language": "en",
       "recommendedCacheTtlSeconds": 43200,
       "schemaVersion": "1.0.0",
-      "sha256": "c4cbbb345cbff4d5146c567cffd48a9a184ccd9c960e216f7f581bb70015d6b2",
+      "sha256": "d6c7322c2d7052f484121f50460732b319722dcdda3c2094d2576216335a3f77",
       "type": "price_current",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/prices/pokemon/en/sample.json"
     },
     {
@@ -109,9 +109,9 @@
       "language": "jp",
       "recommendedCacheTtlSeconds": 43200,
       "schemaVersion": "1.0.0",
-      "sha256": "1c992ecaf2d787d3cf7dfa123eaddfdd4f8bb5fa6320dbc8f347c6bfb2f310e6",
+      "sha256": "096694530201dca4fd568e69eea3014256ac07e0742530bc16bb353f8f5ef46a",
       "type": "price_current",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/prices/pokemon/jp/sample.json"
     },
     {
@@ -119,9 +119,9 @@
       "id": "schemas",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "029f0f3e9adbbedae2496860c6dd8e15e702fbc5134bd89ac7e58cacfb1e7e18",
+      "sha256": "350b56e3921bfbe4bf2e2457ff3984e3183afe5e709a9f23938a7c2c1bae9dae",
       "type": "schemas",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/schemas.json"
     },
     {
@@ -129,12 +129,12 @@
       "id": "tracked_history",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "1e3ed04fe8a13494cae9c2cd36513a928431bf7d2ad6e42e3e4a4193600c6ae7",
+      "sha256": "301250804fada9abeebaae914488cc10bd62e371f57d97af48d7eb2d890e2f41",
       "type": "tracked_history",
-      "updatedAtUtc": "2026-05-13T06:44:06Z",
+      "updatedAtUtc": "2026-05-13T13:02:48Z",
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-13T06:44:06Z",
+  "generatedAtUtc": "2026-05-13T13:02:48Z",
   "schemaVersion": "1.0.0"
 }
