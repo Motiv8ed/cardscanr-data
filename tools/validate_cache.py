@@ -99,6 +99,7 @@ REQUIRED_DIAGNOSTICS_FIELDS = {
 
 OPTIONAL_JP_DIAGNOSTICS_FIELDS = {
     "catalogueJpStatus",
+    "catalogueJpSourceStrategy",
     "catalogueJpProviderLanguage",
     "catalogueJpFetchStrategy",
     "catalogueJpSetCount",
@@ -106,7 +107,17 @@ OPTIONAL_JP_DIAGNOSTICS_FIELDS = {
     "catalogueJpSetsBuilt",
     "catalogueJpSetsFailed",
     "catalogueJpCardsFetched",
+    "catalogueJpCardsFromSetDetails",
+    "catalogueJpCardsFromGlobalList",
+    "catalogueJpCardsMergedTotal",
+    "catalogueJpDuplicateCardsRemoved",
+    "catalogueJpGlobalCardsFetched",
+    "catalogueJpGlobalCardsGrouped",
+    "catalogueJpGlobalCardsSkippedUnparseableId",
+    "catalogueJpGlobalCardsSkippedUnknownSet",
+    "catalogueJpCoverageImprovedByGlobalFallback",
     "catalogueJpSetsSkippedEmptyCards",
+    "catalogueJpEmptySetIds",
     "catalogueJpFailedSetIds",
     "catalogueJpSkippedEmptySetIds",
     "catalogueJpStoppedReason",
@@ -649,6 +660,7 @@ def check_catalog_card_files() -> None:
                 err(f"{rel} cardCount must equal cards length")
 
             seen_base_ids: set[str] = set()
+            seen_tcgdex_ids: set[str] = set()
             entry_errors = 0
             for i, card in enumerate(cards):
                 label = f"{rel} cards[{i}]"
@@ -684,6 +696,16 @@ def check_catalog_card_files() -> None:
                     if missing_external:
                         err(f"{label} externalIds missing fields: {sorted(missing_external)}")
                         entry_errors += 1
+                    if language == "jp":
+                        tcgdex_id = external_ids.get("tcgdexCardId")
+                        if not isinstance(tcgdex_id, str) or not tcgdex_id:
+                            err(f"{label} externalIds.tcgdexCardId must be a non-empty string for JP")
+                            entry_errors += 1
+                        elif tcgdex_id in seen_tcgdex_ids:
+                            err(f"{rel}: duplicate tcgdexCardId: {tcgdex_id}")
+                            entry_errors += 1
+                        else:
+                            seen_tcgdex_ids.add(tcgdex_id)
                 if language == "en":
                     if not isinstance(card.get("subtypes"), list):
                         err(f"{label} subtypes must be a list")

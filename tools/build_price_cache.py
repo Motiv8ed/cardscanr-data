@@ -878,21 +878,112 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
     }
 
 
+def parse_tcgdex_card_id(card_id: str) -> tuple[str, str] | None:
+    if not isinstance(card_id, str) or "-" not in card_id:
+        return None
+    set_id, local_id = card_id.rsplit("-", 1)
+    set_id = set_id.strip()
+    local_id = local_id.strip()
+    if not set_id or not local_id:
+        return None
+    return set_id, local_id
+
+
+def build_japanese_global_card_record(card: dict, set_id: str, set_name: str, local_id: str) -> dict:
+    name = card.get("name")
+    normalized_name = normalize_catalog_name_multilingual(name)
+    image = card.get("image")
+    if image is None:
+        images = card.get("images") if isinstance(card.get("images"), dict) else {}
+        image = images.get("small") or images.get("large")
+    return {
+        "canonicalBaseId": f"pokemon|jp|{set_id}|{local_id}|{normalized_name}",
+        "game": "pokemon",
+        "language": "jp",
+        "setId": set_id,
+        "setName": set_name,
+        "collectorNumber": local_id,
+        "name": name,
+        "normalizedName": normalized_name,
+        "rarity": card.get("rarity"),
+        "category": card.get("category"),
+        "illustrator": card.get("illustrator"),
+        "imageSmall": image,
+        "imageLarge": image,
+        "imageSource": "tcgdex",
+        "imageCached": False,
+        "externalIds": {
+            "pokemonTcgApiId": None,
+            "tcgdexCardId": card.get("id"),
+            "tcgplayerProductId": None,
+            "pricechartingId": None,
+        },
+        "availableVariants": [],
+    }
+
+
+def merge_japanese_set_cards(set_detail_records: list[dict], global_records: list[dict]) -> tuple[list[dict], int]:
+    merged: list[dict] = []
+    seen_canonical_base_ids: set[str] = set()
+    seen_tcgdex_ids: set[str] = set()
+    duplicates_removed = 0
+
+    for record in set_detail_records + global_records:
+        external_ids = record.get("externalIds") if isinstance(record.get("externalIds"), dict) else {}
+        tcgdex_id = str(external_ids.get("tcgdexCardId") or "").strip()
+        canonical_base_id = str(record.get("canonicalBaseId") or "").strip()
+        if tcgdex_id and tcgdex_id in seen_tcgdex_ids:
+            duplicates_removed += 1
+            continue
+        if canonical_base_id and canonical_base_id in seen_canonical_base_ids:
+            duplicates_removed += 1
+            continue
+        if tcgdex_id:
+            seen_tcgdex_ids.add(tcgdex_id)
+        if canonical_base_id:
+            seen_canonical_base_ids.add(canonical_base_id)
+        merged.append(record)
+
+    return merged, duplicates_removed
+
+
+def fetch_global_jp_cards(max_probe: int) -> list[dict]:
+    response = requests.get("https://api.tcgdex.net/v2/ja/cards", timeout=90)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, list):
+        raise ValueError("TCGdex returned non-list payload for /v2/ja/cards")
+    if max_probe > 0:
+        return [item for item in payload[:max_probe] if isinstance(item, dict)]
+    return [item for item in payload if isinstance(item, dict)]
+
+
 def build_japanese_pokemon_catalogue(
     ts: str, config: dict
 ) -> tuple[dict, list[tuple[str, str, Path]], dict, list[tuple[str, str, Path]], dict]:
     metrics = {
         "catalogueJpStatus": "not_built_yet",
         "catalogueJpProviderLanguage": "ja",
+        "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
         "catalogueJpFetchStrategy": str(config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
         "catalogueJpSetCount": 0,
         "catalogueJpSetsAttempted": 0,
         "catalogueJpSetsBuilt": 0,
         "catalogueJpSetsFailed": 0,
         "catalogueJpCardsFetched": 0,
+        "catalogueJpCardsFromSetDetails": 0,
+        "catalogueJpCardsFromGlobalList": 0,
+        "catalogueJpCardsMergedTotal": 0,
+        "catalogueJpDuplicateCardsRemoved": 0,
+        "catalogueJpGlobalCardsFetched": 0,
+        "catalogueJpGlobalCardsGrouped": 0,
+        "catalogueJpGlobalCardsSkippedUnparseableId": 0,
+        "catalogueJpGlobalCardsSkippedUnknownSet": 0,
+        "catalogueJpCoverageImprovedByGlobalFallback": False,
         "catalogueJpSetsSkippedEmptyCards": 0,
         "catalogueJpFailedSetIds": [],
         "catalogueJpSkippedEmptySetIds": [],
+        "catalogueJpEmptySetIds": [],
         "catalogueJpStoppedReason": None,
     }
     current_price_metrics = {
@@ -935,42 +1026,65 @@ def build_japanese_pokemon_catalogue(
     if max_sets_per_run > 0:
         unique_sets = unique_sets[:max_sets_per_run]
 
-    # Pre-filter sets: exclude those with 0 cards in metadata
-    sets_with_cards: list[dict] = []
-    skipped_empty_set_ids: list[str] = []
-    for item in unique_sets:
-        card_count = item.get("cardCount")
-        if isinstance(card_count, dict):
-            total = int(card_count.get("total") or 0)
-        else:
-            total = int(card_count or 0)
-        if total > 0:
-            sets_with_cards.append(item)
-        else:
-            skipped_empty_set_ids.append(str(item.get("id") or ""))
-            metrics["catalogueJpSetsSkippedEmptyCards"] += 1
-
-    metrics["catalogueJpSkippedEmptySetIds"] = skipped_empty_set_ids
-    unique_sets = sets_with_cards
-
     metrics["catalogueJpSetCount"] = len(unique_sets)
     if max_sets_per_run > 0 and len(unique_sets) < len(sets):
         metrics["catalogueJpStoppedReason"] = "max_sets_per_run_reached"
 
+    set_name_by_id_lower: dict[str, str] = {}
+    canonical_set_id_by_lower: dict[str, str] = {}
+    for item in unique_sets:
+        set_id = str(item.get("id") or "").strip()
+        if not set_id:
+            continue
+        key = set_id.lower()
+        canonical_set_id_by_lower[key] = set_id
+        set_name_by_id_lower[key] = str(item.get("name") or set_id)
+
+    grouped_global_cards: dict[str, list[dict]] = {}
+    use_global_fallback = bool(
+        config.get("japaneseCatalogueFallbackCardListEnabled", True)
+        and config.get("jpUseGlobalCardListFallback", True)
+    )
+    if use_global_fallback:
+        max_global_cards_probe = int(config.get("jpMaxGlobalCardsProbe", 100000) or 0)
+        log_line("[build_price_cache] Fetching TCGdex global JP cards from /v2/ja/cards")
+        try:
+            global_cards = fetch_global_jp_cards(max_global_cards_probe)
+            metrics["catalogueJpGlobalCardsFetched"] = len(global_cards)
+            for card in global_cards:
+                parsed = parse_tcgdex_card_id(str(card.get("id") or ""))
+                if not parsed:
+                    metrics["catalogueJpGlobalCardsSkippedUnparseableId"] += 1
+                    continue
+                parsed_set_id, local_id = parsed
+                key = parsed_set_id.lower()
+                canonical_set_id = canonical_set_id_by_lower.get(key)
+                if canonical_set_id is None:
+                    metrics["catalogueJpGlobalCardsSkippedUnknownSet"] += 1
+                    continue
+                set_name = set_name_by_id_lower.get(key, canonical_set_id)
+                global_record = build_japanese_global_card_record(card, canonical_set_id, set_name, local_id)
+                grouped_global_cards.setdefault(canonical_set_id, []).append(global_record)
+                metrics["catalogueJpGlobalCardsGrouped"] += 1
+        except (requests.RequestException, ValueError) as exc:
+            log_line(f"  [WARN] Failed global JP card fallback fetch: {exc}")
+
     card_files: list[tuple[str, str, Path]] = []
     current_price_files: list[tuple[str, str, Path]] = []
     failed_set_ids: list[str] = []
+    empty_set_ids: list[str] = []
     cards_dir = CATALOG_DIR / "pokemon" / "jp" / "cards"
     cards_dir.mkdir(parents=True, exist_ok=True)
 
-    for set_summary in unique_sets:
+    for idx, set_summary in enumerate(unique_sets, start=1):
         set_id = str(set_summary.get("id") or "")
         set_name = str(set_summary.get("name") or set_id)
         if not set_id:
             continue
 
         metrics["catalogueJpSetsAttempted"] += 1
-        log_line(f"  Fetching JP cards for set {set_id} ({set_name})")
+        if idx == 1 or idx % 25 == 0 or idx == len(unique_sets):
+            log_line(f"  Fetching JP cards progress: {idx}/{len(unique_sets)} (latest set {set_id})")
 
         try:
             set_response = requests.get(f"https://api.tcgdex.net/v2/ja/sets/{set_id}", timeout=30)
@@ -981,21 +1095,26 @@ def build_japanese_pokemon_catalogue(
 
             serie = set_payload.get("serie") if isinstance(set_payload.get("serie"), dict) else {}
             serie_id = str(serie.get("id") or "") or None
-            card_records = [
+            set_detail_records = [
                 build_japanese_catalog_card_record(card, set_id, set_name, serie_id)
                 for card in set_payload.get("cards", [])
                 if isinstance(card, dict)
             ]
-            
-            # Skip sets that have no cards in the set detail response
+
+            global_records = grouped_global_cards.get(set_id, [])
+            card_records, duplicates_removed = merge_japanese_set_cards(set_detail_records, global_records)
+            metrics["catalogueJpCardsFromSetDetails"] += len(set_detail_records)
+            metrics["catalogueJpCardsFromGlobalList"] += len(global_records)
+            metrics["catalogueJpDuplicateCardsRemoved"] += duplicates_removed
+
             if not card_records:
-                log_line(f"  [SKIP] No cards in set detail for {set_id}, skipping")
                 metrics["catalogueJpSetsSkippedEmptyCards"] += 1
                 metrics["catalogueJpSkippedEmptySetIds"].append(set_id)
+                empty_set_ids.append(set_id)
                 if sleep_seconds > 0:
                     time.sleep(sleep_seconds)
                 continue
-            
+
             card_records.sort(key=catalogue_card_sort_key)
 
             card_file_payload = {
@@ -1015,6 +1134,7 @@ def build_japanese_pokemon_catalogue(
             card_files.append((set_id, set_name, card_path))
             metrics["catalogueJpSetsBuilt"] += 1
             metrics["catalogueJpCardsFetched"] += len(card_records)
+            metrics["catalogueJpCardsMergedTotal"] += len(card_records)
             current_price_metrics["currentPriceJpSkippedNoPriceSets"] += 1
         except (requests.RequestException, ValueError) as exc:
             log_line(f"  [WARN] Failed to build JP catalogue cards for set {set_id}: {exc}")
@@ -1027,18 +1147,24 @@ def build_japanese_pokemon_catalogue(
             time.sleep(sleep_seconds)
 
     failed_set_ids.sort()
+    empty_set_ids.sort()
     metrics["catalogueJpFailedSetIds"] = failed_set_ids
     metrics["catalogueJpSetsFailed"] = len(failed_set_ids)
+    metrics["catalogueJpSkippedEmptySetIds"] = sorted(metrics["catalogueJpSkippedEmptySetIds"])
+    metrics["catalogueJpEmptySetIds"] = empty_set_ids
+    metrics["catalogueJpCoverageImprovedByGlobalFallback"] = metrics["catalogueJpCardsFromGlobalList"] > metrics[
+        "catalogueJpDuplicateCardsRemoved"
+    ]
 
     # Calculate status based on what was actually built
-    sets_attempted_successfully = (
-        metrics["catalogueJpSetsBuilt"] +
-        metrics["catalogueJpSetsSkippedEmptyCards"] +
-        metrics["catalogueJpSetsFailed"]
-    )
-    
     if card_files:
-        metrics["catalogueJpStatus"] = "partial_built" if (failed_set_ids or metrics["catalogueJpSetsSkippedEmptyCards"] > 0) else "built"
+        has_skip_or_failure = (
+            bool(failed_set_ids)
+            or metrics["catalogueJpSetsSkippedEmptyCards"] > 0
+            or metrics["catalogueJpGlobalCardsSkippedUnparseableId"] > 0
+            or metrics["catalogueJpGlobalCardsSkippedUnknownSet"] > 0
+        )
+        metrics["catalogueJpStatus"] = "partial_built" if has_skip_or_failure else "built"
     else:
         metrics["catalogueJpStatus"] = "not_built_yet"
     
@@ -1064,7 +1190,7 @@ def build_japanese_pokemon_catalogue(
         "source": "tcgdex",
         "setCount": len(unique_sets),
         "cardCount": metrics["catalogueJpCardsFetched"],
-        "partialSetCount": 0,
+        "partialSetCount": metrics["catalogueJpSetsSkippedEmptyCards"],
         "failedSetCount": len(failed_set_ids),
         "failedSetIds": failed_set_ids,
         "sets": [build_japanese_catalog_set_record(item) for item in unique_sets],
@@ -1762,12 +1888,26 @@ def build() -> None:
         "catalogueEnFailedSetIds": [],
         "catalogueEnStoppedReason": None,
         "catalogueJpStatus": "not_built_yet",
+        "catalogueJpProviderLanguage": "ja",
+        "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
         "catalogueJpFetchStrategy": str(catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
         "catalogueJpSetCount": 0,
         "catalogueJpSetsAttempted": 0,
         "catalogueJpSetsBuilt": 0,
         "catalogueJpSetsFailed": 0,
         "catalogueJpCardsFetched": 0,
+        "catalogueJpCardsFromSetDetails": 0,
+        "catalogueJpCardsFromGlobalList": 0,
+        "catalogueJpCardsMergedTotal": 0,
+        "catalogueJpDuplicateCardsRemoved": 0,
+        "catalogueJpGlobalCardsFetched": 0,
+        "catalogueJpGlobalCardsGrouped": 0,
+        "catalogueJpGlobalCardsSkippedUnparseableId": 0,
+        "catalogueJpGlobalCardsSkippedUnknownSet": 0,
+        "catalogueJpCoverageImprovedByGlobalFallback": False,
+        "catalogueJpEmptySetIds": [],
+        "catalogueJpSetsSkippedEmptyCards": 0,
+        "catalogueJpSkippedEmptySetIds": [],
         "catalogueJpFailedSetIds": [],
         "catalogueJpStoppedReason": None,
         "currentPriceEnStatus": "not_built_yet",
@@ -1917,12 +2057,26 @@ def build() -> None:
         jp_current_price_files = load_existing_current_price_files("jp")
         catalog_jp_metrics = {
             "catalogueJpStatus": catalog_jp.get("catalogueStatus", "not_built_yet"),
+            "catalogueJpProviderLanguage": "ja",
+            "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
             "catalogueJpFetchStrategy": str(catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
             "catalogueJpSetCount": int(catalog_jp.get("setCount", 0) or 0),
             "catalogueJpSetsAttempted": 0,
             "catalogueJpSetsBuilt": 0,
             "catalogueJpSetsFailed": int(catalog_jp.get("failedSetCount", 0) or 0),
             "catalogueJpCardsFetched": int(catalog_jp.get("cardCount", 0) or 0),
+            "catalogueJpCardsFromSetDetails": int(catalog_jp.get("cardCount", 0) or 0),
+            "catalogueJpCardsFromGlobalList": 0,
+            "catalogueJpCardsMergedTotal": int(catalog_jp.get("cardCount", 0) or 0),
+            "catalogueJpDuplicateCardsRemoved": 0,
+            "catalogueJpGlobalCardsFetched": 0,
+            "catalogueJpGlobalCardsGrouped": 0,
+            "catalogueJpGlobalCardsSkippedUnparseableId": 0,
+            "catalogueJpGlobalCardsSkippedUnknownSet": 0,
+            "catalogueJpCoverageImprovedByGlobalFallback": False,
+            "catalogueJpSetsSkippedEmptyCards": int(catalog_jp.get("partialSetCount", 0) or 0),
+            "catalogueJpSkippedEmptySetIds": [],
+            "catalogueJpEmptySetIds": [],
             "catalogueJpFailedSetIds": catalog_jp.get("failedSetIds", []),
             "catalogueJpStoppedReason": "not_rebuilt",
         }
