@@ -127,6 +127,50 @@ OPTIONAL_JP_DIAGNOSTICS_FIELDS = {
     "currentPriceJpPriceRecordsWritten",
     "currentPriceJpSkippedNoPriceSets",
 }
+REQUIRED_POKEWALLET_PROBE_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "status",
+    "apiKeyPresent",
+    "requestsAttempted",
+    "requestsSucceeded",
+    "requestsFailed",
+    "searchTermsTested",
+    "totalResultsFound",
+    "possibleJapaneseResults",
+    "priceResultsFound",
+    "sampleResults",
+    "coverageSignals",
+    "recommendation",
+}
+REQUIRED_POKEWALLET_COVERAGE_SIGNAL_FIELDS = {
+    "hasJapaneseCards",
+    "hasPrices",
+    "hasImages",
+    "hasSetCodes",
+    "canMapToCanonicalId",
+}
+REQUIRED_POKEWALLET_SAMPLE_FIELDS = {
+    "providerId",
+    "name",
+    "setName",
+    "setCode",
+    "number",
+    "language",
+    "imagePresent",
+    "pricePresent",
+    "currency",
+    "rawKeys",
+}
+ALLOWED_POKEWALLET_PROBE_STATUSES = {
+    "key_missing",
+    "ok",
+    "partial",
+    "error",
+    "endpoint_mapping_required",
+    "disabled",
+}
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
 REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
@@ -487,6 +531,66 @@ def check_diagnostics() -> None:
             ok("diagnostics/latest-build.json has all JP diagnostics fields")
 
 
+def check_provider_probe_diagnostics() -> None:
+    print("\n[6b] Provider probe diagnostics check")
+    path = V1_DIR / "diagnostics" / "pokewallet-probe-latest.json"
+    if not path.exists():
+        warn(f"PokéWallet probe diagnostics not found: {path.relative_to(ROOT)}")
+        return
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("diagnostics/pokewallet-probe-latest.json must be a JSON object")
+        return
+    if check_required(data, REQUIRED_POKEWALLET_PROBE_FIELDS, "diagnostics/pokewallet-probe-latest.json"):
+        ok("diagnostics/pokewallet-probe-latest.json has all required fields")
+    if data.get("provider") != "pokewallet":
+        err("diagnostics/pokewallet-probe-latest.json provider must be pokewallet")
+    if data.get("status") not in ALLOWED_POKEWALLET_PROBE_STATUSES:
+        err(
+            "diagnostics/pokewallet-probe-latest.json status must be one of "
+            f"{sorted(ALLOWED_POKEWALLET_PROBE_STATUSES)}"
+        )
+    for field in [
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "totalResultsFound",
+        "possibleJapaneseResults",
+        "priceResultsFound",
+    ]:
+        if not isinstance(data.get(field), int) or data.get(field) < 0:
+            err(f"diagnostics/pokewallet-probe-latest.json {field} must be a non-negative integer")
+    if not isinstance(data.get("searchTermsTested"), list):
+        err("diagnostics/pokewallet-probe-latest.json searchTermsTested must be a list")
+    signals = data.get("coverageSignals")
+    if not isinstance(signals, dict):
+        err("diagnostics/pokewallet-probe-latest.json coverageSignals must be an object")
+    elif check_required(signals, REQUIRED_POKEWALLET_COVERAGE_SIGNAL_FIELDS, "diagnostics/pokewallet-probe-latest.json coverageSignals"):
+        for key in REQUIRED_POKEWALLET_COVERAGE_SIGNAL_FIELDS:
+            if not isinstance(signals.get(key), bool):
+                err(f"diagnostics/pokewallet-probe-latest.json coverageSignals.{key} must be boolean")
+    samples = data.get("sampleResults")
+    if not isinstance(samples, list):
+        err("diagnostics/pokewallet-probe-latest.json sampleResults must be a list")
+        return
+    for index, sample in enumerate(samples):
+        label = f"diagnostics/pokewallet-probe-latest.json sampleResults[{index}]"
+        if not isinstance(sample, dict):
+            err(f"{label} must be an object")
+            continue
+        if check_required(sample, REQUIRED_POKEWALLET_SAMPLE_FIELDS, label):
+            extra_keys = set(sample.keys()) - REQUIRED_POKEWALLET_SAMPLE_FIELDS
+            if extra_keys:
+                err(f"{label} includes unexpected fields: {sorted(extra_keys)}")
+            if not isinstance(sample.get("imagePresent"), bool):
+                err(f"{label} imagePresent must be boolean")
+            if not isinstance(sample.get("pricePresent"), bool):
+                err(f"{label} pricePresent must be boolean")
+            if not isinstance(sample.get("rawKeys"), list):
+                err(f"{label} rawKeys must be a list")
+    ok(f"diagnostics/pokewallet-probe-latest.json: {len(samples)} sample result(s) validated")
+
+
 def check_api_manifest() -> None:
     print("\n[7] API manifest check")
     path = V1_DIR / "api-manifest.json"
@@ -831,6 +935,7 @@ def main() -> None:
     check_index()
     check_price_files()
     check_diagnostics()
+    check_provider_probe_diagnostics()
     check_api_manifest()
     check_api_notes()
     check_schemas()
