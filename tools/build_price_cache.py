@@ -883,13 +883,16 @@ def build_japanese_pokemon_catalogue(
 ) -> tuple[dict, list[tuple[str, str, Path]], dict, list[tuple[str, str, Path]], dict]:
     metrics = {
         "catalogueJpStatus": "not_built_yet",
+        "catalogueJpProviderLanguage": "ja",
         "catalogueJpFetchStrategy": str(config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
         "catalogueJpSetCount": 0,
         "catalogueJpSetsAttempted": 0,
         "catalogueJpSetsBuilt": 0,
         "catalogueJpSetsFailed": 0,
         "catalogueJpCardsFetched": 0,
+        "catalogueJpSetsSkippedEmptyCards": 0,
         "catalogueJpFailedSetIds": [],
+        "catalogueJpSkippedEmptySetIds": [],
         "catalogueJpStoppedReason": None,
     }
     current_price_metrics = {
@@ -932,6 +935,24 @@ def build_japanese_pokemon_catalogue(
     if max_sets_per_run > 0:
         unique_sets = unique_sets[:max_sets_per_run]
 
+    # Pre-filter sets: exclude those with 0 cards in metadata
+    sets_with_cards: list[dict] = []
+    skipped_empty_set_ids: list[str] = []
+    for item in unique_sets:
+        card_count = item.get("cardCount")
+        if isinstance(card_count, dict):
+            total = int(card_count.get("total") or 0)
+        else:
+            total = int(card_count or 0)
+        if total > 0:
+            sets_with_cards.append(item)
+        else:
+            skipped_empty_set_ids.append(str(item.get("id") or ""))
+            metrics["catalogueJpSetsSkippedEmptyCards"] += 1
+
+    metrics["catalogueJpSkippedEmptySetIds"] = skipped_empty_set_ids
+    unique_sets = sets_with_cards
+
     metrics["catalogueJpSetCount"] = len(unique_sets)
     if max_sets_per_run > 0 and len(unique_sets) < len(sets):
         metrics["catalogueJpStoppedReason"] = "max_sets_per_run_reached"
@@ -965,6 +986,16 @@ def build_japanese_pokemon_catalogue(
                 for card in set_payload.get("cards", [])
                 if isinstance(card, dict)
             ]
+            
+            # Skip sets that have no cards in the set detail response
+            if not card_records:
+                log_line(f"  [SKIP] No cards in set detail for {set_id}, skipping")
+                metrics["catalogueJpSetsSkippedEmptyCards"] += 1
+                metrics["catalogueJpSkippedEmptySetIds"].append(set_id)
+                if sleep_seconds > 0:
+                    time.sleep(sleep_seconds)
+                continue
+            
             card_records.sort(key=catalogue_card_sort_key)
 
             card_file_payload = {
@@ -999,12 +1030,27 @@ def build_japanese_pokemon_catalogue(
     metrics["catalogueJpFailedSetIds"] = failed_set_ids
     metrics["catalogueJpSetsFailed"] = len(failed_set_ids)
 
-    if failed_set_ids or metrics["catalogueJpSetsBuilt"] != len(unique_sets):
-        metrics["catalogueJpStatus"] = "partial_built" if card_files else "not_built_yet"
+    # Calculate status based on what was actually built
+    sets_attempted_successfully = (
+        metrics["catalogueJpSetsBuilt"] +
+        metrics["catalogueJpSetsSkippedEmptyCards"] +
+        metrics["catalogueJpSetsFailed"]
+    )
+    
+    if card_files:
+        metrics["catalogueJpStatus"] = "partial_built" if (failed_set_ids or metrics["catalogueJpSetsSkippedEmptyCards"] > 0) else "built"
     else:
-        metrics["catalogueJpStatus"] = "built"
+        metrics["catalogueJpStatus"] = "not_built_yet"
+    
     if metrics["catalogueJpStoppedReason"] is None:
         metrics["catalogueJpStoppedReason"] = "completed"
+
+    # Add endpoint examples for diagnostics
+    metrics["catalogueJpEndpointExamples"] = [
+        "https://api.tcgdex.net/v2/ja/sets",
+        "https://api.tcgdex.net/v2/ja/sets/{setId}",
+        "https://api.tcgdex.net/v2/ja/cards",
+    ]
 
     current_price_metrics["currentPriceJpStatus"] = "skipped_no_set_level_pricing"
 

@@ -99,14 +99,18 @@ REQUIRED_DIAGNOSTICS_FIELDS = {
 
 OPTIONAL_JP_DIAGNOSTICS_FIELDS = {
     "catalogueJpStatus",
+    "catalogueJpProviderLanguage",
     "catalogueJpFetchStrategy",
     "catalogueJpSetCount",
     "catalogueJpSetsAttempted",
     "catalogueJpSetsBuilt",
     "catalogueJpSetsFailed",
     "catalogueJpCardsFetched",
+    "catalogueJpSetsSkippedEmptyCards",
     "catalogueJpFailedSetIds",
+    "catalogueJpSkippedEmptySetIds",
     "catalogueJpStoppedReason",
+    "catalogueJpEndpointExamples",
     "currentPriceJpStatus",
     "currentPriceJpSetsWritten",
     "currentPriceJpPriceRecordsWritten",
