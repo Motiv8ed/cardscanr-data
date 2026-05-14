@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +36,7 @@ DATA_DIR = ROOT / "data"
 PUBLIC_DIR = ROOT / "public" / "v1"
 PRICES_DIR = PUBLIC_DIR / "prices"
 CURRENT_PRICES_EN_DIR = PRICES_DIR / "current" / "pokemon" / "en"
+CURRENT_PRICES_JP_DIR = PRICES_DIR / "current" / "pokemon" / "jp"
 DIAGNOSTICS_DIR = PUBLIC_DIR / "diagnostics"
 HISTORY_ROOT_DIR = PUBLIC_DIR / "history"
 HISTORY_DIR = HISTORY_ROOT_DIR / "daily"
@@ -92,6 +94,14 @@ def write_json(path: Path, obj: object) -> None:
         fh.write("\n")
 
 
+def log_line(message: str) -> None:
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        # Keep builds resilient on Windows cp1252 consoles.
+        print(message.encode("ascii", "backslashreplace").decode("ascii"))
+
+
 def load_json(path: Path) -> object:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
@@ -102,6 +112,13 @@ def load_catalog_config() -> dict:
         "fullCatalogueEnabled": True,
         "buildEnglishFromPokemonTcgApi": True,
         "buildCurrentPricesFromPokemonTcgApi": True,
+        "buildJapaneseFromTcgdex": True,
+        "japaneseCatalogueFetchStrategy": "tcgdex_set_by_set",
+        "jpMaxSetsPerRun": 9999,
+        "jpMaxPagesPerSet": 50,
+        "jpContinueOnSetError": True,
+        "jpCatalogueRequestSleepSeconds": 0.15,
+        "scheduledJapaneseCatalogueEnabled": False,
         "rebuildFullCatalogueOnScheduled": False,
         "englishCatalogueFetchStrategy": "set_by_set",
         "maxSetsPerRun": 9999,
@@ -228,6 +245,13 @@ def normalize_text(value: str) -> str:
 def normalize_catalog_name(value: str) -> str:
     normalized = re.sub(r"[^a-z0-9]+", "_", str(value).lower()).strip("_")
     return re.sub(r"_+", "_", normalized)
+
+
+def normalize_catalog_name_multilingual(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", str(value or "")).strip().lower()
+    normalized = re.sub(r"[^\w]+", "_", normalized, flags=re.UNICODE).strip("_")
+    normalized = re.sub(r"_+", "_", normalized)
+    return normalized or "unknown"
 
 
 def normalize_number(value: str) -> str:
@@ -401,6 +425,46 @@ def build_api_manifest(ts: str) -> dict:
                 "cacheable": True,
             },
             {
+                "id": "catalog_pokemon_en_sets",
+                "method": "GET",
+                "path": "/catalog/pokemon/en/sets.json",
+                "description": "English Pokemon catalogue set manifest built from official PokemonTCG API data",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "catalog_pokemon_en_cards",
+                "method": "GET",
+                "path": "/catalog/pokemon/en/cards/{setId}.json",
+                "description": "English Pokemon catalogue cards for a single set",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "catalog_pokemon_jp_sets",
+                "method": "GET",
+                "path": "/catalog/pokemon/jp/sets.json",
+                "description": "Japanese Pokemon catalogue set manifest built from official TCGdex data",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "catalog_pokemon_jp_cards",
+                "method": "GET",
+                "path": "/catalog/pokemon/jp/cards/{setId}.json",
+                "description": "Japanese Pokemon catalogue cards for a single set built from official TCGdex data",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "current_prices_by_set_jp",
+                "method": "GET",
+                "path": "/prices/current/pokemon/jp/{setId}.json",
+                "description": "Latest-known Japanese Pokemon current prices by set when official/free source pricing is available",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
                 "id": "tracked_history",
                 "method": "GET",
                 "path": "/history/tracked-cards.json",
@@ -434,6 +498,9 @@ def build_api_notes(ts: str) -> dict:
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
             "Images are referenced by URL and are not mirrored into this cache yet.",
+            "Japanese Pokemon catalogue files are built from official TCGdex REST endpoints using the ja API language path.",
+            "CardScanR cache language remains jp even when the upstream TCGdex API language path is ja.",
+            "Japanese current price files are optional and are only written when official/free source pricing is available.",
             "Future authenticated app routes may be served by Cloudflare Workers or Supabase.",
         ],
     }
@@ -524,7 +591,7 @@ def build_schemas(ts: str) -> dict:
                 ],
                 "notes": [
                     "English Pokemon catalogue sets are built from official PokemonTCG API endpoints.",
-                    "Japanese catalogue coverage may remain a placeholder until implemented.",
+                    "Japanese Pokemon catalogue sets are built from official TCGdex REST endpoints using the ja upstream language path.",
                 ],
             },
             "catalogue_cards_file": {
@@ -543,6 +610,7 @@ def build_schemas(ts: str) -> dict:
                 "notes": [
                     "Catalogue card records store image URLs only.",
                     "Use imageSmall, imageLarge, imageSource, and imageCached: false.",
+                    "Japanese catalogue card records may include null values for metadata that is not present in set-level TCGdex responses.",
                 ],
             },
             "current_price_record": {
@@ -565,6 +633,7 @@ def build_schemas(ts: str) -> dict:
                     "Per-set current price files are latest-known snapshots and may be overwritten each build.",
                     "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
                     "Currency is stored per price record.",
+                    "Japanese price files are only emitted when official/free source pricing is actually available.",
                 ],
             },
             "current_price_set_file": {
@@ -582,6 +651,7 @@ def build_schemas(ts: str) -> dict:
                 ],
                 "notes": [
                     "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
+                    "Japanese Pokemon current prices by set are optional and only appear when official/free source pricing is available.",
                     "These files are latest-known current snapshots, not lifetime/all-time price history.",
                     "Tracked historical movement remains limited to CardScanR-tracked cards.",
                 ],
@@ -748,6 +818,219 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
     }
 
 
+def build_tcgdex_card_image_url(language: str, serie_id: str | None, set_id: str, local_id: str, quality: str) -> str | None:
+    if not serie_id or not set_id or not local_id:
+        return None
+    return f"https://assets.tcgdex.net/{language}/{serie_id}/{set_id}/{local_id}/{quality}.webp"
+
+
+def build_japanese_catalog_set_record(set_data: dict) -> dict:
+    card_count = set_data.get("cardCount") if isinstance(set_data.get("cardCount"), dict) else {}
+    serie = set_data.get("serie") if isinstance(set_data.get("serie"), dict) else {}
+    return {
+        "id": set_data.get("id"),
+        "name": set_data.get("name"),
+        "series": serie.get("name"),
+        "printedTotal": card_count.get("official"),
+        "total": card_count.get("total"),
+        "releaseDate": set_data.get("releaseDate"),
+        "updatedAt": set_data.get("updated"),
+        "ptcgoCode": None,
+        "symbolUrl": set_data.get("symbol"),
+        "logoUrl": set_data.get("logo"),
+        "imageSource": "tcgdex",
+        "imageCached": False,
+    }
+
+
+def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, serie_id: str | None) -> dict:
+    collector_number = str(card.get("localId") or "")
+    normalized_name = normalize_catalog_name_multilingual(card.get("name", ""))
+    available_variants = []
+    variants = card.get("variants") if isinstance(card.get("variants"), dict) else {}
+    for variant_name, is_available in sorted(variants.items()):
+        if is_available:
+            available_variants.append(variant_name)
+
+    return {
+        "canonicalBaseId": f"pokemon|jp|{set_id}|{collector_number}|{normalized_name}",
+        "game": "pokemon",
+        "language": "jp",
+        "setId": set_id,
+        "setName": set_name,
+        "collectorNumber": collector_number,
+        "name": card.get("name"),
+        "normalizedName": normalized_name,
+        "rarity": card.get("rarity"),
+        "category": card.get("category"),
+        "illustrator": card.get("illustrator"),
+        "imageSmall": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low"),
+        "imageLarge": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high"),
+        "imageSource": "tcgdex",
+        "imageCached": False,
+        "externalIds": {
+            "pokemonTcgApiId": None,
+            "tcgdexCardId": card.get("id"),
+            "tcgplayerProductId": None,
+            "pricechartingId": None,
+        },
+        "availableVariants": available_variants,
+    }
+
+
+def build_japanese_pokemon_catalogue(
+    ts: str, config: dict
+) -> tuple[dict, list[tuple[str, str, Path]], dict, list[tuple[str, str, Path]], dict]:
+    metrics = {
+        "catalogueJpStatus": "not_built_yet",
+        "catalogueJpFetchStrategy": str(config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
+        "catalogueJpSetCount": 0,
+        "catalogueJpSetsAttempted": 0,
+        "catalogueJpSetsBuilt": 0,
+        "catalogueJpSetsFailed": 0,
+        "catalogueJpCardsFetched": 0,
+        "catalogueJpFailedSetIds": [],
+        "catalogueJpStoppedReason": None,
+    }
+    current_price_metrics = {
+        "currentPriceJpStatus": "not_built_yet",
+        "currentPriceJpSetsWritten": 0,
+        "currentPriceJpPriceRecordsWritten": 0,
+        "currentPriceJpSkippedNoPriceSets": 0,
+    }
+
+    if not config.get("fullCatalogueEnabled", True) or not config.get("buildJapaneseFromTcgdex", True):
+        metrics["catalogueJpStoppedReason"] = "disabled_by_config"
+        current_price_metrics["currentPriceJpStatus"] = "disabled_by_config"
+        return build_catalog_sets_placeholder("pokemon", "jp", ts), [], metrics, [], current_price_metrics
+
+    max_sets_per_run = int(config.get("jpMaxSetsPerRun", 9999))
+    sleep_seconds = float(config.get("jpCatalogueRequestSleepSeconds", 0.15))
+
+    print("[build_price_cache] Fetching TCGdex sets for JP catalogue")
+    response = requests.get("https://api.tcgdex.net/v2/ja/sets", timeout=30)
+    response.raise_for_status()
+    sets = response.json()
+    if not isinstance(sets, list):
+        raise ValueError("TCGdex returned non-list payload for /v2/ja/sets")
+
+    filtered_sets = [item for item in sets if isinstance(item, dict) and item.get("id")]
+    filtered_sets.sort(key=lambda item: (str(item.get("releaseDate") or ""), str(item.get("id") or "")))
+
+    unique_sets: list[dict] = []
+    seen_set_ids: set[str] = set()
+    for item in filtered_sets:
+        raw_id = str(item.get("id") or "").strip()
+        if not raw_id:
+            continue
+        key = raw_id.lower()
+        if key in seen_set_ids:
+            continue
+        seen_set_ids.add(key)
+        unique_sets.append(item)
+
+    if max_sets_per_run > 0:
+        unique_sets = unique_sets[:max_sets_per_run]
+
+    metrics["catalogueJpSetCount"] = len(unique_sets)
+    if max_sets_per_run > 0 and len(unique_sets) < len(sets):
+        metrics["catalogueJpStoppedReason"] = "max_sets_per_run_reached"
+
+    card_files: list[tuple[str, str, Path]] = []
+    current_price_files: list[tuple[str, str, Path]] = []
+    failed_set_ids: list[str] = []
+    cards_dir = CATALOG_DIR / "pokemon" / "jp" / "cards"
+    cards_dir.mkdir(parents=True, exist_ok=True)
+
+    for set_summary in unique_sets:
+        set_id = str(set_summary.get("id") or "")
+        set_name = str(set_summary.get("name") or set_id)
+        if not set_id:
+            continue
+
+        metrics["catalogueJpSetsAttempted"] += 1
+        log_line(f"  Fetching JP cards for set {set_id} ({set_name})")
+
+        try:
+            set_response = requests.get(f"https://api.tcgdex.net/v2/ja/sets/{set_id}", timeout=30)
+            set_response.raise_for_status()
+            set_payload = set_response.json()
+            if not isinstance(set_payload, dict):
+                raise ValueError(f"TCGdex returned non-object payload for set {set_id}")
+
+            serie = set_payload.get("serie") if isinstance(set_payload.get("serie"), dict) else {}
+            serie_id = str(serie.get("id") or "") or None
+            card_records = [
+                build_japanese_catalog_card_record(card, set_id, set_name, serie_id)
+                for card in set_payload.get("cards", [])
+                if isinstance(card, dict)
+            ]
+            card_records.sort(key=catalogue_card_sort_key)
+
+            card_file_payload = {
+                "schemaVersion": SCHEMA_VERSION,
+                "generatedAtUtc": ts,
+                "game": "pokemon",
+                "language": "jp",
+                "setId": set_id,
+                "setName": set_name,
+                "source": "tcgdex",
+                "catalogueStatus": "built",
+                "cardCount": len(card_records),
+                "cards": card_records,
+            }
+            card_path = cards_dir / f"{set_id}.json"
+            write_json(card_path, card_file_payload)
+            card_files.append((set_id, set_name, card_path))
+            metrics["catalogueJpSetsBuilt"] += 1
+            metrics["catalogueJpCardsFetched"] += len(card_records)
+            current_price_metrics["currentPriceJpSkippedNoPriceSets"] += 1
+        except (requests.RequestException, ValueError) as exc:
+            log_line(f"  [WARN] Failed to build JP catalogue cards for set {set_id}: {exc}")
+            failed_set_ids.append(set_id)
+            if not config.get("jpContinueOnSetError", True):
+                metrics["catalogueJpStoppedReason"] = f"set_error:{set_id}"
+                break
+
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+
+    failed_set_ids.sort()
+    metrics["catalogueJpFailedSetIds"] = failed_set_ids
+    metrics["catalogueJpSetsFailed"] = len(failed_set_ids)
+
+    if failed_set_ids or metrics["catalogueJpSetsBuilt"] != len(unique_sets):
+        metrics["catalogueJpStatus"] = "partial_built" if card_files else "not_built_yet"
+    else:
+        metrics["catalogueJpStatus"] = "built"
+    if metrics["catalogueJpStoppedReason"] is None:
+        metrics["catalogueJpStoppedReason"] = "completed"
+
+    current_price_metrics["currentPriceJpStatus"] = "skipped_no_set_level_pricing"
+
+    sets_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "game": "pokemon",
+        "language": "jp",
+        "catalogueStatus": metrics["catalogueJpStatus"],
+        "cardsAvailable": len(card_files) > 0,
+        "source": "tcgdex",
+        "setCount": len(unique_sets),
+        "cardCount": metrics["catalogueJpCardsFetched"],
+        "partialSetCount": 0,
+        "failedSetCount": len(failed_set_ids),
+        "failedSetIds": failed_set_ids,
+        "sets": [build_japanese_catalog_set_record(item) for item in unique_sets],
+        "notes": [
+            "Japanese catalogue is built from official TCGdex set endpoints using the ja upstream language path.",
+            "Card records store image URLs only; images are not mirrored into this cache.",
+            "Some JP card metadata remains null when it is not available from set-level TCGdex responses.",
+        ],
+    }
+    return sets_payload, card_files, metrics, current_price_files, current_price_metrics
+
+
 def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[tuple[str, str, Path]], dict]:
     metrics = {
         "catalogueEnStatus": "not_built_yet",
@@ -881,6 +1164,25 @@ def load_existing_catalogue_sets() -> dict:
 
 def load_existing_catalogue_card_files() -> list[tuple[str, str, Path]]:
     cards_dir = CATALOG_DIR / "pokemon" / "en" / "cards"
+    if not cards_dir.exists():
+        return []
+
+    card_files: list[tuple[str, str, Path]] = []
+    for path in sorted(cards_dir.glob("*.json")):
+        try:
+            payload = load_json(path)
+        except OSError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        set_id = str(payload.get("setId") or path.stem)
+        set_name = str(payload.get("setName") or set_id)
+        card_files.append((set_id, set_name, path))
+    return card_files
+
+
+def load_existing_japanese_catalogue_card_files() -> list[tuple[str, str, Path]]:
+    cards_dir = CATALOG_DIR / "pokemon" / "jp" / "cards"
     if not cards_dir.exists():
         return []
 
@@ -1070,12 +1372,13 @@ def build_english_current_prices_by_set(
     return written_files, metrics
 
 
-def load_existing_current_price_files() -> list[tuple[str, str, Path]]:
-    if not CURRENT_PRICES_EN_DIR.exists():
+def load_existing_current_price_files(language: str = "en") -> list[tuple[str, str, Path]]:
+    current_dir = CURRENT_PRICES_EN_DIR if language == "en" else CURRENT_PRICES_JP_DIR
+    if not current_dir.exists():
         return []
 
     files: list[tuple[str, str, Path]] = []
-    for path in sorted(CURRENT_PRICES_EN_DIR.glob("*.json")):
+    for path in sorted(current_dir.glob("*.json")):
         payload = load_json(path)
         if not isinstance(payload, dict):
             continue
@@ -1327,7 +1630,7 @@ def resolve_build_mode(config: dict) -> str:
         mode = sys.argv[1]
     mode = mode or os.getenv("CACHE_BUILD_MODE") or config.get("buildMode") or "scheduled"
     mode = str(mode).strip().lower().replace("-", "_")
-    allowed_modes = {"scheduled", "current_prices", "full_catalogue", "tracked_history"}
+    allowed_modes = {"scheduled", "current_prices", "full_catalogue", "tracked_history", "japanese_catalogue"}
     if mode not in allowed_modes:
         raise ValueError(f"Unsupported build mode '{mode}'. Expected one of {sorted(allowed_modes)}")
     return mode
@@ -1348,6 +1651,18 @@ def should_build_full_catalogue(mode: str, config: dict) -> bool:
         return True
     if mode == "scheduled" and config.get("rebuildFullCatalogueOnScheduled", False):
         return True
+    return False
+
+
+def should_build_japanese_catalogue(mode: str, config: dict) -> bool:
+    if mode == "japanese_catalogue":
+        return bool(config.get("buildJapaneseFromTcgdex", True))
+    if mode == "full_catalogue":
+        return bool(config.get("buildJapaneseFromTcgdex", True))
+    if mode == "scheduled" and config.get("rebuildFullCatalogueOnScheduled", False):
+        return bool(config.get("buildJapaneseFromTcgdex", True)) and bool(
+            config.get("scheduledJapaneseCatalogueEnabled", False)
+        )
     return False
 
 
@@ -1400,6 +1715,15 @@ def build() -> None:
         "catalogueEnCardsFetched": 0,
         "catalogueEnFailedSetIds": [],
         "catalogueEnStoppedReason": None,
+        "catalogueJpStatus": "not_built_yet",
+        "catalogueJpFetchStrategy": str(catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
+        "catalogueJpSetCount": 0,
+        "catalogueJpSetsAttempted": 0,
+        "catalogueJpSetsBuilt": 0,
+        "catalogueJpSetsFailed": 0,
+        "catalogueJpCardsFetched": 0,
+        "catalogueJpFailedSetIds": [],
+        "catalogueJpStoppedReason": None,
         "currentPriceEnStatus": "not_built_yet",
         "currentPriceEnSetsAttempted": 0,
         "currentPriceEnSetsWritten": 0,
@@ -1407,6 +1731,10 @@ def build() -> None:
         "currentPriceEnSkippedNoPriceSets": 0,
         "currentPriceEnSource": CURRENT_PRICE_SOURCE,
         "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+        "currentPriceJpStatus": "not_built_yet",
+        "currentPriceJpSetsWritten": 0,
+        "currentPriceJpPriceRecordsWritten": 0,
+        "currentPriceJpSkippedNoPriceSets": 0,
     }
 
     cards_by_id: dict[str, dict] = {}
@@ -1528,7 +1856,38 @@ def build() -> None:
         }
     diagnostics.update(current_price_metrics)
 
-    catalog_jp = load_existing_japanese_catalogue(ts)
+    if should_build_japanese_catalogue(mode, catalog_config):
+        (
+            catalog_jp,
+            catalog_jp_card_files,
+            catalog_jp_metrics,
+            jp_current_price_files,
+            jp_current_price_metrics,
+        ) = build_japanese_pokemon_catalogue(ts, catalog_config)
+        write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
+    else:
+        catalog_jp = load_existing_japanese_catalogue(ts)
+        catalog_jp_card_files = load_existing_japanese_catalogue_card_files()
+        jp_current_price_files = load_existing_current_price_files("jp")
+        catalog_jp_metrics = {
+            "catalogueJpStatus": catalog_jp.get("catalogueStatus", "not_built_yet"),
+            "catalogueJpFetchStrategy": str(catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
+            "catalogueJpSetCount": int(catalog_jp.get("setCount", 0) or 0),
+            "catalogueJpSetsAttempted": 0,
+            "catalogueJpSetsBuilt": 0,
+            "catalogueJpSetsFailed": int(catalog_jp.get("failedSetCount", 0) or 0),
+            "catalogueJpCardsFetched": int(catalog_jp.get("cardCount", 0) or 0),
+            "catalogueJpFailedSetIds": catalog_jp.get("failedSetIds", []),
+            "catalogueJpStoppedReason": "not_rebuilt",
+        }
+        jp_current_price_metrics = {
+            "currentPriceJpStatus": "not_rebuilt",
+            "currentPriceJpSetsWritten": len(jp_current_price_files),
+            "currentPriceJpPriceRecordsWritten": 0,
+            "currentPriceJpSkippedNoPriceSets": 0,
+        }
+    diagnostics.update(catalog_jp_metrics)
+    diagnostics.update(jp_current_price_metrics)
 
     diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
@@ -1609,6 +1968,20 @@ def build() -> None:
             )
         )
 
+    for set_id, set_name, price_path in jp_current_price_files:
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=f"prices_current_pokemon_jp_{set_id}",
+                file_path=price_path,
+                dataset_type="price_current",
+                description=f"Pokemon TCG JP latest-known current prices for {set_name}",
+                ts=ts,
+                ttl_seconds=PRICE_CACHE_TTL_SECONDS,
+                game="pokemon",
+                language="jp",
+            )
+        )
+
     if TRACKED_CARDS_PATH.exists():
         index_entries.append(
             build_index_dataset_entry(
@@ -1646,10 +2019,18 @@ def build() -> None:
             "built",
             "partial_built",
         }
+        is_real_jp_catalog = game == "pokemon" and language == "jp" and catalog_jp.get("catalogueStatus") in {
+            "built",
+            "partial_built",
+        }
         description = (
             "Pokemon TCG EN catalogue sets"
             if is_real_en_catalog
-            else f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder"
+            else (
+                "Pokemon TCG JP catalogue sets"
+                if is_real_jp_catalog
+                else f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder"
+            )
         )
         index_entries.append(
             build_index_dataset_entry(
@@ -1678,6 +2059,24 @@ def build() -> None:
             )
         )
 
+    for set_id, set_name, card_path in catalog_jp_card_files:
+        index_entries.append(
+            build_index_dataset_entry(
+                dataset_id=f"catalog_pokemon_jp_cards_{set_id}",
+                file_path=card_path,
+                dataset_type="catalogue_cards",
+                description=f"Pokemon TCG JP catalogue cards for {set_name}",
+                ts=ts,
+                ttl_seconds=CATALOG_CACHE_TTL_SECONDS,
+                game="pokemon",
+                language="jp",
+            )
+        )
+
+    deduped_index_entries: dict[str, dict] = {}
+    for entry in index_entries:
+        deduped_index_entries[entry["id"]] = entry
+    index_entries = list(deduped_index_entries.values())
     index_entries.sort(key=lambda entry: entry["id"])
     diagnostics["datasetsBuilt"] = [entry["id"] for entry in index_entries] + ["diagnostics"]
 
