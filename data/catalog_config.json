@@ -31,5 +31,10 @@
     "storeImageUrlsOnly": true,
     "mirrorImages": false,
     "cacheImagesInGit": false
-  }
+  },
+  "japaneseCatalogueFallbackCardListEnabled": true,
+  "jpUseGlobalCardListFallback": true,
+  "jpGlobalCardListEndpoint": "/v2/ja/cards",
+  "jpGroupGlobalCardsBySet": true,
+  "jpMaxGlobalCardsProbe": 100000
 }
