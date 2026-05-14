@@ -1,14 +1,91 @@
 {
-  "cardsAvailable": false,
-  "catalogueStatus": "not_built_yet",
+  "cardCount": 0,
+  "cardsAvailable": true,
+  "catalogueStatus": "built",
+  "failedSetCount": 0,
+  "failedSetIds": [],
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-13T22:25:42Z",
+  "generatedAtUtc": "2026-05-14T04:51:35Z",
   "language": "jp",
   "notes": [
-    "Full catalogue cache is planned but not built yet.",
-    "Card records should store image URLs only when implemented."
+    "Japanese catalogue is built from official TCGdex set endpoints using the ja upstream language path.",
+    "Card records store image URLs only; images are not mirrored into this cache.",
+    "Some JP card metadata remains null when it is not available from set-level TCGdex responses."
   ],
+  "partialSetCount": 0,
   "schemaVersion": "1.0.0",
-  "sets": [],
-  "source": null
+  "setCount": 5,
+  "sets": [
+    {
+      "id": "ADV1",
+      "imageCached": false,
+      "imageSource": "tcgdex",
+      "logoUrl": null,
+      "name": "拡張パック",
+      "printedTotal": 55,
+      "ptcgoCode": null,
+      "releaseDate": null,
+      "series": null,
+      "symbolUrl": null,
+      "total": 55,
+      "updatedAt": null
+    },
+    {
+      "id": "ADV2",
+      "imageCached": false,
+      "imageSource": "tcgdex",
+      "logoUrl": null,
+      "name": "砂漠のきせき",
+      "printedTotal": 53,
+      "ptcgoCode": null,
+      "releaseDate": null,
+      "series": null,
+      "symbolUrl": null,
+      "total": 53,
+      "updatedAt": null
+    },
+    {
+      "id": "ADV3",
+      "imageCached": false,
+      "imageSource": "tcgdex",
+      "logoUrl": null,
+      "name": "天空の覇者",
+      "printedTotal": 54,
+      "ptcgoCode": null,
+      "releaseDate": null,
+      "series": null,
+      "symbolUrl": null,
+      "total": 54,
+      "updatedAt": null
+    },
+    {
+      "id": "ADV4",
+      "imageCached": false,
+      "imageSource": "tcgdex",
+      "logoUrl": null,
+      "name": "強化拡張パックex1マグマVSアクア ふたつの野望",
+      "printedTotal": 80,
+      "ptcgoCode": null,
+      "releaseDate": null,
+      "series": null,
+      "symbolUrl": null,
+      "total": 80,
+      "updatedAt": null
+    },
+    {
+      "id": "ADV5",
+      "imageCached": false,
+      "imageSource": "tcgdex",
+      "logoUrl": null,
+      "name": "とかれた封印",
+      "printedTotal": 83,
+      "ptcgoCode": null,
+      "releaseDate": null,
+      "series": null,
+      "symbolUrl": null,
+      "total": 83,
+      "updatedAt": null
+    }
+  ],
+  "source": "tcgdex"
 }

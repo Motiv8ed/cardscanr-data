@@ -62,6 +62,46 @@
     {
       "authRequired": false,
       "cacheable": true,
+      "description": "English Pokemon catalogue set manifest built from official PokemonTCG API data",
+      "id": "catalog_pokemon_en_sets",
+      "method": "GET",
+      "path": "/catalog/pokemon/en/sets.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "English Pokemon catalogue cards for a single set",
+      "id": "catalog_pokemon_en_cards",
+      "method": "GET",
+      "path": "/catalog/pokemon/en/cards/{setId}.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Japanese Pokemon catalogue set manifest built from official TCGdex data",
+      "id": "catalog_pokemon_jp_sets",
+      "method": "GET",
+      "path": "/catalog/pokemon/jp/sets.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Japanese Pokemon catalogue cards for a single set built from official TCGdex data",
+      "id": "catalog_pokemon_jp_cards",
+      "method": "GET",
+      "path": "/catalog/pokemon/jp/cards/{setId}.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Latest-known Japanese Pokemon current prices by set when official/free source pricing is available",
+      "id": "current_prices_by_set_jp",
+      "method": "GET",
+      "path": "/prices/current/pokemon/jp/{setId}.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "method": "GET",
@@ -74,7 +114,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-14T01:15:36Z",
+  "generatedAtUtc": "2026-05-14T04:51:35Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [

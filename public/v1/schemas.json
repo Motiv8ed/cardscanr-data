@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-14T01:15:36Z",
+  "generatedAtUtc": "2026-05-14T04:51:35Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -50,7 +50,8 @@
     "catalogue_cards_file": {
       "notes": [
         "Catalogue card records store image URLs only.",
-        "Use imageSmall, imageLarge, imageSource, and imageCached: false."
+        "Use imageSmall, imageLarge, imageSource, and imageCached: false.",
+        "Japanese catalogue card records may include null values for metadata that is not present in set-level TCGdex responses."
       ],
       "requiredFields": [
         "schemaVersion",
@@ -68,7 +69,7 @@
     "catalogue_sets_file": {
       "notes": [
         "English Pokemon catalogue sets are built from official PokemonTCG API endpoints.",
-        "Japanese catalogue coverage may remain a placeholder until implemented."
+        "Japanese Pokemon catalogue sets are built from official TCGdex REST endpoints using the ja upstream language path."
       ],
       "requiredFields": [
         "schemaVersion",
@@ -87,7 +88,8 @@
         "Current price cache entry.",
         "Per-set current price files are latest-known snapshots and may be overwritten each build.",
         "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
-        "Currency is stored per price record."
+        "Currency is stored per price record.",
+        "Japanese price files are only emitted when official/free source pricing is actually available."
       ],
       "requiredFields": [
         "canonicalId",
@@ -107,6 +109,7 @@
     "current_price_set_file": {
       "notes": [
         "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
+        "Japanese Pokemon current prices by set are optional and only appear when official/free source pricing is available.",
         "These files are latest-known current snapshots, not lifetime/all-time price history.",
         "Tracked historical movement remains limited to CardScanR-tracked cards."
       ],
