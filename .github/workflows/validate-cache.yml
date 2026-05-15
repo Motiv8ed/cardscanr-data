@@ -13,6 +13,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -32,4 +33,4 @@ jobs:
         run: python tools/build_price_cache.py
 
       - name: Validate cache
-        run: python tools/validate_cache.py
+        run: CARDSCANR_VALIDATE_QUIET=1 python tools/validate_cache.py

@@ -24,6 +24,7 @@ Exit code
 
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -290,6 +291,12 @@ REQUIRED_CATALOG_EXTERNAL_ID_FIELDS = {
 # ---------------------------------------------------------------------------
 errors: list[str] = []
 warnings: list[str] = []
+QUIET = False
+
+
+def parse_bool_env(name: str) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 def err(msg: str) -> None:
@@ -303,7 +310,8 @@ def warn(msg: str) -> None:
 
 
 def ok(msg: str) -> None:
-    print(f"  [ok] {msg}")
+    if not QUIET:
+        print(f"  [ok] {msg}")
 
 
 def sha256_file(path: Path) -> str:
@@ -927,8 +935,13 @@ def check_history() -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
+    global QUIET
+    QUIET = "--quiet" in sys.argv[1:] or parse_bool_env("CARDSCANR_VALIDATE_QUIET")
+
     print("=" * 60)
     print("CardScanR cache validation")
+    if QUIET:
+        print("Mode: quiet")
     print("=" * 60)
 
     check_all_json_syntax()
