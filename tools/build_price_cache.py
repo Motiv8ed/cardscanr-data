@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import unicodedata
@@ -66,6 +67,7 @@ CURRENT_PRICE_VARIANTS = [
     ("1stEditionHolofoil", "first_edition_holo"),
     ("1stEditionNormal", "first_edition_normal"),
 ]
+TMP_BUILD_ROOT = ROOT / ".cache_build_tmp"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -92,6 +94,67 @@ def write_json(path: Path, obj: object) -> None:
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(obj, fh, indent=2, sort_keys=True, ensure_ascii=False)
         fh.write("\n")
+
+
+def parse_positive_int_env(name: str) -> int:
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return 0
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive integer when set") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+    return value
+
+
+def reset_tmp_build_root(tmp_root: Path) -> None:
+    if tmp_root.exists():
+        shutil.rmtree(tmp_root)
+    tmp_root.mkdir(parents=True, exist_ok=True)
+
+
+def cleanup_tmp_build_root(tmp_root: Path) -> None:
+    if not tmp_root.exists():
+        return
+    try:
+        shutil.rmtree(tmp_root)
+    except OSError:
+        # Best-effort cleanup only; build correctness does not depend on this.
+        pass
+
+
+def prepare_empty_dir(path: Path) -> Path:
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def publish_staged_directory(staged_dir: Path, target_dir: Path) -> None:
+    if not staged_dir.exists() or not staged_dir.is_dir():
+        raise RuntimeError(f"Staged directory does not exist: {staged_dir}")
+
+    backup_dir = target_dir.with_name(f"{target_dir.name}.bak")
+    if backup_dir.exists():
+        shutil.rmtree(backup_dir)
+
+    target_parent = target_dir.parent
+    target_parent.mkdir(parents=True, exist_ok=True)
+
+    if target_dir.exists():
+        target_dir.rename(backup_dir)
+
+    try:
+        staged_dir.rename(target_dir)
+    except Exception:
+        if backup_dir.exists() and not target_dir.exists():
+            backup_dir.rename(target_dir)
+        raise
+    finally:
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
 
 
 def log_line(message: str) -> None:
@@ -1380,16 +1443,6 @@ def load_existing_japanese_catalogue(ts: str) -> dict:
     return data if isinstance(data, dict) else build_catalog_sets_placeholder("pokemon", "jp", ts)
 
 
-def cleanup_current_price_files() -> None:
-    CURRENT_PRICES_EN_DIR.mkdir(parents=True, exist_ok=True)
-    root = CURRENT_PRICES_EN_DIR.resolve()
-    for path in CURRENT_PRICES_EN_DIR.glob("*.json"):
-        resolved = path.resolve()
-        if resolved.parent != root:
-            raise RuntimeError(f"Refusing to delete unexpected current price path: {resolved}")
-        path.unlink()
-
-
 def compact_current_price(pricing: dict) -> dict | None:
     market = to_float(pricing.get("market") if pricing.get("market") is not None else pricing.get("mid"))
     low = to_float(pricing.get("low"))
@@ -1454,6 +1507,8 @@ def build_english_current_prices_by_set(
     ts: str,
     config: dict,
     catalog_sets: dict,
+    output_dir: Path,
+    fail_after_set_count: int = 0,
 ) -> tuple[list[tuple[str, str, Path]], dict]:
     metrics = {
         "currentPriceEnStatus": "not_built_yet",
@@ -1478,7 +1533,7 @@ def build_english_current_prices_by_set(
         metrics["currentPriceEnStatus"] = "skipped_no_sets"
         return [], metrics
 
-    cleanup_current_price_files()
+    prepare_empty_dir(output_dir)
 
     page_size = int(config.get("pageSize", 250))
     max_pages_per_set = int(config.get("maxPagesPerSet", 50))
@@ -1515,7 +1570,7 @@ def build_english_current_prices_by_set(
         if not prices:
             metrics["currentPriceEnSkippedNoPriceSets"] += 1
         else:
-            price_path = CURRENT_PRICES_EN_DIR / f"{set_id}.json"
+            price_path = output_dir / f"{set_id}.json"
             payload = {
                 "schemaVersion": SCHEMA_VERSION,
                 "generatedAtUtc": ts,
@@ -1532,14 +1587,24 @@ def build_english_current_prices_by_set(
             written_files.append((set_id, set_name, price_path))
             metrics["currentPriceEnSetsWritten"] += 1
             metrics["currentPriceEnPriceRecordsWritten"] += len(prices)
+            if fail_after_set_count > 0 and metrics["currentPriceEnSetsWritten"] >= fail_after_set_count:
+                raise RuntimeError(
+                    "Intentional failure for local safety testing via "
+                    "CARDSCANR_FAIL_AFTER_EN_PRICE_SET_COUNT"
+                )
 
         if sleep_seconds > 0:
             time.sleep(sleep_seconds)
 
     if failed_set_ids:
         metrics["currentPriceEnStatus"] = "partial_built"
-    else:
-        metrics["currentPriceEnStatus"] = "built"
+        failed_preview = ", ".join(failed_set_ids[:10])
+        raise RuntimeError(
+            "Failed to build EN current prices for one or more sets; "
+            f"leaving existing public current-price cache untouched. sets={failed_preview}"
+        )
+
+    metrics["currentPriceEnStatus"] = "built"
 
     return written_files, metrics
 
@@ -1846,6 +1911,8 @@ def build() -> None:
     day = ts[:10]
     catalog_config = load_catalog_config()
     mode = resolve_build_mode(catalog_config)
+    fail_after_en_count = parse_positive_int_env("CARDSCANR_FAIL_AFTER_EN_PRICE_SET_COUNT")
+    reset_tmp_build_root(TMP_BUILD_ROOT)
     print(f"[build_price_cache] Starting {mode} build at {ts}")
 
     cards: list[dict] = load_json(CARDS_PATH).get("cards", [])
@@ -1928,177 +1995,186 @@ def build() -> None:
     daily_history_files: list[tuple[str, str, Path]] = []
     sample_price_files: list[tuple[str, str, Path]] = []
 
-    if should_build_tracked_history(mode):
-        for (game, language), group_cards in sorted(groups.items()):
-            price_path = PRICES_DIR / game / language / "sample.json"
-            history_path = HISTORY_DIR / day / game / language / "tracked.json"
+    pending_json_writes: list[tuple[Path, dict]] = []
 
-            seen: set[str] = set()
-            prices = []
-            for card in group_cards:
-                cid = card["canonicalId"]
-                if cid in seen:
-                    print(f"  [WARN] Duplicate canonicalId skipped: {cid}")
-                    continue
+    try:
+        if should_build_tracked_history(mode):
+            for (game, language), group_cards in sorted(groups.items()):
+                price_path = PRICES_DIR / game / language / "sample.json"
+                history_path = HISTORY_DIR / day / game / language / "tracked.json"
 
-                seen.add(cid)
-                price_info = fetch_live_price_info(card, diagnostics)
-                diagnostics["sourcesUsed"].add(price_info["source"])
+                seen: set[str] = set()
+                prices = []
+                for card in group_cards:
+                    cid = card["canonicalId"]
+                    if cid in seen:
+                        print(f"  [WARN] Duplicate canonicalId skipped: {cid}")
+                        continue
 
-                if price_info["source"] != "manual_seed":
-                    diagnostics["livePriceCount"] += 1
+                    seen.add(cid)
+                    price_info = fetch_live_price_info(card, diagnostics)
+                    diagnostics["sourcesUsed"].add(price_info["source"])
 
-                diagnostics["cardsPriced"] += 1
-                price_entry = build_price_entry(card, ts, price_info)
-                prices.append(price_entry)
-                cards_by_id[cid] = card
-                latest_prices_by_id[cid] = price_entry
+                    if price_info["source"] != "manual_seed":
+                        diagnostics["livePriceCount"] += 1
 
-            payload = {
-                "schemaVersion": SCHEMA_VERSION,
-                "generatedAtUtc": ts,
-                "game": game,
-                "language": language,
-                "prices": prices,
-            }
-            write_json(price_path, payload)
+                    diagnostics["cardsPriced"] += 1
+                    price_entry = build_price_entry(card, ts, price_info)
+                    prices.append(price_entry)
+                    cards_by_id[cid] = card
+                    latest_prices_by_id[cid] = price_entry
 
-            history_payload = {
-                "schemaVersion": SCHEMA_VERSION,
-                "generatedAtUtc": ts,
-                "date": day,
-                "game": game,
-                "language": language,
-                "prices": prices,
-            }
-            write_json(history_path, history_payload)
-            diagnostics["dailyHistoryFilesWritten"] += 1
-            daily_history_files.append((game, language, history_path))
-            sample_price_files.append((game, language, price_path))
+                payload = {
+                    "schemaVersion": SCHEMA_VERSION,
+                    "generatedAtUtc": ts,
+                    "game": game,
+                    "language": language,
+                    "prices": prices,
+                }
+                pending_json_writes.append((price_path, payload))
 
-            digest = sha256_file(price_path)
-            print(f"  Wrote {price_path}  sha256={digest}")
-            print(f"  Wrote {history_path}")
-
-        tracked_payload, first_created, tracked_updated = update_tracked_cards_history(
-            ts=ts,
-            cards_by_id=cards_by_id,
-            latest_prices_by_id=latest_prices_by_id,
-        )
-        diagnostics["trackedHistoryWritten"] = True
-        diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
-        diagnostics["firstTrackedCreatedCount"] = first_created
-        diagnostics["trackedCardsUpdatedCount"] = tracked_updated
-        write_json(TRACKED_CARDS_PATH, tracked_payload)
-    else:
-        for game, language in sorted(groups.keys()):
-            price_path = PRICES_DIR / game / language / "sample.json"
-            if price_path.exists():
+                history_payload = {
+                    "schemaVersion": SCHEMA_VERSION,
+                    "generatedAtUtc": ts,
+                    "date": day,
+                    "game": game,
+                    "language": language,
+                    "prices": prices,
+                }
+                pending_json_writes.append((history_path, history_payload))
+                diagnostics["dailyHistoryFilesWritten"] += 1
+                daily_history_files.append((game, language, history_path))
                 sample_price_files.append((game, language, price_path))
-        if TRACKED_CARDS_PATH.exists():
-            tracked_payload = load_json(TRACKED_CARDS_PATH)
-            if isinstance(tracked_payload, dict):
-                diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
 
-    api_manifest = build_api_manifest(ts)
-    api_notes = build_api_notes(ts)
-    schemas = build_schemas(ts)
+            tracked_payload, first_created, tracked_updated = update_tracked_cards_history(
+                ts=ts,
+                cards_by_id=cards_by_id,
+                latest_prices_by_id=latest_prices_by_id,
+            )
+            diagnostics["trackedHistoryWritten"] = True
+            diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
+            diagnostics["firstTrackedCreatedCount"] = first_created
+            diagnostics["trackedCardsUpdatedCount"] = tracked_updated
+            pending_json_writes.append((TRACKED_CARDS_PATH, tracked_payload))
+        else:
+            for game, language in sorted(groups.keys()):
+                price_path = PRICES_DIR / game / language / "sample.json"
+                if price_path.exists():
+                    sample_price_files.append((game, language, price_path))
+            if TRACKED_CARDS_PATH.exists():
+                tracked_payload = load_json(TRACKED_CARDS_PATH)
+                if isinstance(tracked_payload, dict):
+                    diagnostics["trackedCardsTotal"] = len(tracked_payload.get("cards", []))
 
-    if should_build_full_catalogue(mode, catalog_config):
-        catalog_en, catalog_en_card_files, catalog_metrics = build_english_pokemon_catalogue(ts, catalog_config)
-        write_json(CATALOG_DIR / "pokemon" / "en" / "sets.json", catalog_en)
-    else:
-        catalog_en = load_existing_catalogue_sets()
-        catalog_en_card_files = load_existing_catalogue_card_files()
-        catalog_metrics = {
-            "catalogueEnStatus": catalog_en.get("catalogueStatus", "not_built_yet"),
-            "catalogueEnFetchStrategy": "set_by_set",
-            "catalogueEnSetCount": int(catalog_en.get("setCount", 0) or 0),
-            "catalogueEnSetsAttempted": 0,
-            "catalogueEnSetsBuilt": 0,
-            "catalogueEnSetsFailed": int(catalog_en.get("failedSetCount", 0) or 0),
-            "catalogueEnCardsFetched": int(catalog_en.get("cardCount", 0) or 0),
-            "catalogueEnFailedSetIds": catalog_en.get("failedSetIds", []),
-            "catalogueEnStoppedReason": "not_rebuilt",
-        }
-    diagnostics.update(catalog_metrics)
+        api_manifest = build_api_manifest(ts)
+        api_notes = build_api_notes(ts)
+        schemas = build_schemas(ts)
 
-    if should_build_current_prices(mode, catalog_config):
-        broad_current_price_files, current_price_metrics = build_english_current_prices_by_set(
-            ts,
-            catalog_config,
-            catalog_en,
-        )
-    else:
-        broad_current_price_files = load_existing_current_price_files()
-        current_price_metrics = {
-            "currentPriceEnStatus": "not_rebuilt",
-            "currentPriceEnSetsAttempted": 0,
-            "currentPriceEnSetsWritten": len(broad_current_price_files),
-            "currentPriceEnPriceRecordsWritten": 0,
-            "currentPriceEnSkippedNoPriceSets": 0,
-            "currentPriceEnSource": CURRENT_PRICE_SOURCE,
-            "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
-        }
-    diagnostics.update(current_price_metrics)
+        if should_build_full_catalogue(mode, catalog_config):
+            catalog_en, catalog_en_card_files, catalog_metrics = build_english_pokemon_catalogue(ts, catalog_config)
+            write_json(CATALOG_DIR / "pokemon" / "en" / "sets.json", catalog_en)
+        else:
+            catalog_en = load_existing_catalogue_sets()
+            catalog_en_card_files = load_existing_catalogue_card_files()
+            catalog_metrics = {
+                "catalogueEnStatus": catalog_en.get("catalogueStatus", "not_built_yet"),
+                "catalogueEnFetchStrategy": "set_by_set",
+                "catalogueEnSetCount": int(catalog_en.get("setCount", 0) or 0),
+                "catalogueEnSetsAttempted": 0,
+                "catalogueEnSetsBuilt": 0,
+                "catalogueEnSetsFailed": int(catalog_en.get("failedSetCount", 0) or 0),
+                "catalogueEnCardsFetched": int(catalog_en.get("cardCount", 0) or 0),
+                "catalogueEnFailedSetIds": catalog_en.get("failedSetIds", []),
+                "catalogueEnStoppedReason": "not_rebuilt",
+            }
+        diagnostics.update(catalog_metrics)
 
-    if should_build_japanese_catalogue(mode, catalog_config):
-        (
-            catalog_jp,
-            catalog_jp_card_files,
-            catalog_jp_metrics,
-            jp_current_price_files,
-            jp_current_price_metrics,
-        ) = build_japanese_pokemon_catalogue(ts, catalog_config)
-        write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
-    else:
-        catalog_jp = load_existing_japanese_catalogue(ts)
-        catalog_jp_card_files = load_existing_japanese_catalogue_card_files()
-        jp_current_price_files = load_existing_current_price_files("jp")
-        catalog_jp_metrics = {
-            "catalogueJpStatus": catalog_jp.get("catalogueStatus", "not_built_yet"),
-            "catalogueJpProviderLanguage": "ja",
-            "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
-            "catalogueJpFetchStrategy": str(catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")),
-            "catalogueJpSetCount": int(catalog_jp.get("setCount", 0) or 0),
-            "catalogueJpSetsAttempted": 0,
-            "catalogueJpSetsBuilt": 0,
-            "catalogueJpSetsFailed": int(catalog_jp.get("failedSetCount", 0) or 0),
-            "catalogueJpCardsFetched": int(catalog_jp.get("cardCount", 0) or 0),
-            "catalogueJpCardsFromSetDetails": int(catalog_jp.get("cardCount", 0) or 0),
-            "catalogueJpCardsFromGlobalList": 0,
-            "catalogueJpCardsMergedTotal": int(catalog_jp.get("cardCount", 0) or 0),
-            "catalogueJpDuplicateCardsRemoved": 0,
-            "catalogueJpGlobalCardsFetched": 0,
-            "catalogueJpGlobalCardsGrouped": 0,
-            "catalogueJpGlobalCardsSkippedUnparseableId": 0,
-            "catalogueJpGlobalCardsSkippedUnknownSet": 0,
-            "catalogueJpCoverageImprovedByGlobalFallback": False,
-            "catalogueJpSetsSkippedEmptyCards": int(catalog_jp.get("partialSetCount", 0) or 0),
-            "catalogueJpSkippedEmptySetIds": [],
-            "catalogueJpEmptySetIds": [],
-            "catalogueJpFailedSetIds": catalog_jp.get("failedSetIds", []),
-            "catalogueJpStoppedReason": "not_rebuilt",
-        }
-        jp_current_price_metrics = {
-            "currentPriceJpStatus": "not_rebuilt",
-            "currentPriceJpSetsWritten": len(jp_current_price_files),
-            "currentPriceJpPriceRecordsWritten": 0,
-            "currentPriceJpSkippedNoPriceSets": 0,
-        }
-    diagnostics.update(catalog_jp_metrics)
-    diagnostics.update(jp_current_price_metrics)
+        if should_build_current_prices(mode, catalog_config):
+            staged_en_current_dir = prepare_empty_dir(TMP_BUILD_ROOT / "prices" / "current" / "pokemon" / "en")
+            _staged_price_files, current_price_metrics = build_english_current_prices_by_set(
+                ts,
+                catalog_config,
+                catalog_en,
+                staged_en_current_dir,
+                fail_after_set_count=fail_after_en_count,
+            )
+            publish_staged_directory(staged_en_current_dir, CURRENT_PRICES_EN_DIR)
+            broad_current_price_files = load_existing_current_price_files("en")
+        else:
+            broad_current_price_files = load_existing_current_price_files("en")
+            current_price_metrics = {
+                "currentPriceEnStatus": "not_rebuilt",
+                "currentPriceEnSetsAttempted": 0,
+                "currentPriceEnSetsWritten": len(broad_current_price_files),
+                "currentPriceEnPriceRecordsWritten": 0,
+                "currentPriceEnSkippedNoPriceSets": 0,
+                "currentPriceEnSource": CURRENT_PRICE_SOURCE,
+                "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+            }
+        diagnostics.update(current_price_metrics)
 
-    diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
+        if should_build_japanese_catalogue(mode, catalog_config):
+            (
+                catalog_jp,
+                catalog_jp_card_files,
+                catalog_jp_metrics,
+                jp_current_price_files,
+                jp_current_price_metrics,
+            ) = build_japanese_pokemon_catalogue(ts, catalog_config)
+            write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
+        else:
+            catalog_jp = load_existing_japanese_catalogue(ts)
+            catalog_jp_card_files = load_existing_japanese_catalogue_card_files()
+            jp_current_price_files = load_existing_current_price_files("jp")
+            catalog_jp_metrics = {
+                "catalogueJpStatus": catalog_jp.get("catalogueStatus", "not_built_yet"),
+                "catalogueJpProviderLanguage": "ja",
+                "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
+                "catalogueJpFetchStrategy": str(
+                    catalog_config.get("japaneseCatalogueFetchStrategy", "tcgdex_set_by_set")
+                ),
+                "catalogueJpSetCount": int(catalog_jp.get("setCount", 0) or 0),
+                "catalogueJpSetsAttempted": 0,
+                "catalogueJpSetsBuilt": 0,
+                "catalogueJpSetsFailed": int(catalog_jp.get("failedSetCount", 0) or 0),
+                "catalogueJpCardsFetched": int(catalog_jp.get("cardCount", 0) or 0),
+                "catalogueJpCardsFromSetDetails": int(catalog_jp.get("cardCount", 0) or 0),
+                "catalogueJpCardsFromGlobalList": 0,
+                "catalogueJpCardsMergedTotal": int(catalog_jp.get("cardCount", 0) or 0),
+                "catalogueJpDuplicateCardsRemoved": 0,
+                "catalogueJpGlobalCardsFetched": 0,
+                "catalogueJpGlobalCardsGrouped": 0,
+                "catalogueJpGlobalCardsSkippedUnparseableId": 0,
+                "catalogueJpGlobalCardsSkippedUnknownSet": 0,
+                "catalogueJpCoverageImprovedByGlobalFallback": False,
+                "catalogueJpSetsSkippedEmptyCards": int(catalog_jp.get("partialSetCount", 0) or 0),
+                "catalogueJpSkippedEmptySetIds": [],
+                "catalogueJpEmptySetIds": [],
+                "catalogueJpFailedSetIds": catalog_jp.get("failedSetIds", []),
+                "catalogueJpStoppedReason": "not_rebuilt",
+            }
+            jp_current_price_metrics = {
+                "currentPriceJpStatus": "not_rebuilt",
+                "currentPriceJpSetsWritten": len(jp_current_price_files),
+                "currentPriceJpPriceRecordsWritten": 0,
+                "currentPriceJpSkippedNoPriceSets": 0,
+            }
+        diagnostics.update(catalog_jp_metrics)
+        diagnostics.update(jp_current_price_metrics)
 
-    write_json(API_MANIFEST_PATH, api_manifest)
-    write_json(API_NOTES_PATH, api_notes)
-    write_json(SCHEMAS_PATH, schemas)
-    if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
-        write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
+        diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
-    index_entries = []
-    index_entries.append(
+        for path, payload in pending_json_writes:
+            write_json(path, payload)
+
+        write_json(API_MANIFEST_PATH, api_manifest)
+        write_json(API_NOTES_PATH, api_notes)
+        write_json(SCHEMAS_PATH, schemas)
+        if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
+            write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
+
+        index_entries = []
+        index_entries.append(
         build_index_dataset_entry(
             dataset_id="app_config",
             file_path=APP_CONFIG_PATH,
@@ -2109,7 +2185,7 @@ def build() -> None:
             schema_version=None,
         )
     )
-    index_entries.append(
+        index_entries.append(
         build_index_dataset_entry(
             dataset_id="api_manifest",
             file_path=API_MANIFEST_PATH,
@@ -2119,7 +2195,7 @@ def build() -> None:
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )
     )
-    index_entries.append(
+        index_entries.append(
         build_index_dataset_entry(
             dataset_id="api_notes",
             file_path=API_NOTES_PATH,
@@ -2129,7 +2205,7 @@ def build() -> None:
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )
     )
-    index_entries.append(
+        index_entries.append(
         build_index_dataset_entry(
             dataset_id="schemas",
             file_path=SCHEMAS_PATH,
@@ -2139,9 +2215,9 @@ def build() -> None:
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )
     )
-    for game, language, price_path in sample_price_files:
-        dataset_id = f"prices_{game}_{language}"
-        index_entries.append(
+        for game, language, price_path in sample_price_files:
+            dataset_id = f"prices_{game}_{language}"
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=dataset_id,
                 file_path=price_path,
@@ -2154,8 +2230,8 @@ def build() -> None:
             )
         )
 
-    for set_id, set_name, price_path in broad_current_price_files:
-        index_entries.append(
+        for set_id, set_name, price_path in broad_current_price_files:
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=f"prices_current_pokemon_en_{set_id}",
                 file_path=price_path,
@@ -2168,8 +2244,8 @@ def build() -> None:
             )
         )
 
-    for set_id, set_name, price_path in jp_current_price_files:
-        index_entries.append(
+        for set_id, set_name, price_path in jp_current_price_files:
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=f"prices_current_pokemon_jp_{set_id}",
                 file_path=price_path,
@@ -2182,8 +2258,8 @@ def build() -> None:
             )
         )
 
-    if TRACKED_CARDS_PATH.exists():
-        index_entries.append(
+        if TRACKED_CARDS_PATH.exists():
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id="tracked_history",
                 file_path=TRACKED_CARDS_PATH,
@@ -2194,9 +2270,9 @@ def build() -> None:
             )
         )
 
-    for game, language, history_path in daily_history_files:
-        dataset_id = f"daily_tracked_history_{game}_{language}_{day}"
-        index_entries.append(
+        for game, language, history_path in daily_history_files:
+            dataset_id = f"daily_tracked_history_{game}_{language}_{day}"
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=dataset_id,
                 file_path=history_path,
@@ -2210,29 +2286,29 @@ def build() -> None:
             )
         )
 
-    for game, language, catalog_path in [
-        ("pokemon", "en", CATALOG_DIR / "pokemon" / "en" / "sets.json"),
-        ("pokemon", "jp", CATALOG_DIR / "pokemon" / "jp" / "sets.json"),
-    ]:
-        dataset_id = f"catalog_{game}_{language}_sets"
-        is_real_en_catalog = game == "pokemon" and language == "en" and catalog_en.get("catalogueStatus") in {
-            "built",
-            "partial_built",
-        }
-        is_real_jp_catalog = game == "pokemon" and language == "jp" and catalog_jp.get("catalogueStatus") in {
-            "built",
-            "partial_built",
-        }
-        description = (
-            "Pokemon TCG EN catalogue sets"
-            if is_real_en_catalog
-            else (
-                "Pokemon TCG JP catalogue sets"
-                if is_real_jp_catalog
-                else f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder"
+        for game, language, catalog_path in [
+            ("pokemon", "en", CATALOG_DIR / "pokemon" / "en" / "sets.json"),
+            ("pokemon", "jp", CATALOG_DIR / "pokemon" / "jp" / "sets.json"),
+        ]:
+            dataset_id = f"catalog_{game}_{language}_sets"
+            is_real_en_catalog = game == "pokemon" and language == "en" and catalog_en.get("catalogueStatus") in {
+                "built",
+                "partial_built",
+            }
+            is_real_jp_catalog = game == "pokemon" and language == "jp" and catalog_jp.get("catalogueStatus") in {
+                "built",
+                "partial_built",
+            }
+            description = (
+                "Pokemon TCG EN catalogue sets"
+                if is_real_en_catalog
+                else (
+                    "Pokemon TCG JP catalogue sets"
+                    if is_real_jp_catalog
+                    else f"{game.capitalize()} TCG {language.upper()} catalogue sets placeholder"
+                )
             )
-        )
-        index_entries.append(
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=dataset_id,
                 file_path=catalog_path,
@@ -2245,8 +2321,8 @@ def build() -> None:
             )
         )
 
-    for set_id, set_name, card_path in catalog_en_card_files:
-        index_entries.append(
+        for set_id, set_name, card_path in catalog_en_card_files:
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=f"catalog_pokemon_en_cards_{set_id}",
                 file_path=card_path,
@@ -2259,8 +2335,8 @@ def build() -> None:
             )
         )
 
-    for set_id, set_name, card_path in catalog_jp_card_files:
-        index_entries.append(
+        for set_id, set_name, card_path in catalog_jp_card_files:
+            index_entries.append(
             build_index_dataset_entry(
                 dataset_id=f"catalog_pokemon_jp_cards_{set_id}",
                 file_path=card_path,
@@ -2273,16 +2349,16 @@ def build() -> None:
             )
         )
 
-    deduped_index_entries: dict[str, dict] = {}
-    for entry in index_entries:
-        deduped_index_entries[entry["id"]] = entry
-    index_entries = list(deduped_index_entries.values())
-    index_entries.sort(key=lambda entry: entry["id"])
-    diagnostics["datasetsBuilt"] = [entry["id"] for entry in index_entries] + ["diagnostics"]
+        deduped_index_entries: dict[str, dict] = {}
+        for entry in index_entries:
+            deduped_index_entries[entry["id"]] = entry
+        index_entries = list(deduped_index_entries.values())
+        index_entries.sort(key=lambda entry: entry["id"])
+        diagnostics["datasetsBuilt"] = [entry["id"] for entry in index_entries] + ["diagnostics"]
 
-    write_json(DIAG_PATH, diagnostics)
+        write_json(DIAG_PATH, diagnostics)
 
-    index_entries.append(
+        index_entries.append(
         build_index_dataset_entry(
             dataset_id="diagnostics",
             file_path=DIAG_PATH,
@@ -2292,20 +2368,22 @@ def build() -> None:
             ttl_seconds=DIAGNOSTICS_CACHE_TTL_SECONDS,
         )
     )
-    index_entries.sort(key=lambda entry: entry["id"])
+        index_entries.sort(key=lambda entry: entry["id"])
 
-    index = {
-        "schemaVersion": SCHEMA_VERSION,
-        "generatedAtUtc": ts,
-        "cacheVersion": diagnostics["cacheVersion"],
-        "datasets": index_entries,
-    }
-    write_json(INDEX_PATH, index)
-    print(f"  Updated {INDEX_PATH}")
-    print(f"  Updated {TRACKED_CARDS_PATH}")
-    print(f"  Updated {DIAG_PATH}")
+        index = {
+            "schemaVersion": SCHEMA_VERSION,
+            "generatedAtUtc": ts,
+            "cacheVersion": diagnostics["cacheVersion"],
+            "datasets": index_entries,
+        }
+        write_json(INDEX_PATH, index)
+        print(f"  Updated {INDEX_PATH}")
+        print(f"  Updated {TRACKED_CARDS_PATH}")
+        print(f"  Updated {DIAG_PATH}")
 
-    print("[build_price_cache] Build complete.")
+        print("[build_price_cache] Build complete.")
+    finally:
+        cleanup_tmp_build_root(TMP_BUILD_ROOT)
 
 
 if __name__ == "__main__":
