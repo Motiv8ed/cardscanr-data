@@ -1,23 +1,204 @@
 {
-  "apiKeyPresent": false,
+  "apiKeyPresent": true,
   "coverageSignals": {
-    "canMapToCanonicalId": false,
+    "canMapToCanonicalId": true,
     "hasImages": false,
-    "hasJapaneseCards": false,
-    "hasPrices": false,
-    "hasSetCodes": false
+    "hasJapaneseCards": true,
+    "hasPrices": true,
+    "hasSetCodes": true
   },
-  "generatedAtUtc": "2026-05-14T20:45:10Z",
-  "possibleJapaneseResults": 0,
-  "priceResultsFound": 0,
+  "generatedAtUtc": "2026-05-15T09:17:01Z",
+  "possibleJapaneseResults": 10,
+  "priceResultsFound": 7,
   "provider": "pokewallet",
-  "recommendation": "Set POKEWALLET_API_KEY to run the safe provider probe. No catalogue or price files were changed.",
-  "requestsAttempted": 0,
+  "recommendation": "PokéWallet looks promising for a follow-up JP gap-fill experiment, but this probe did not modify the main cache.",
+  "requestsAttempted": 14,
   "requestsFailed": 0,
-  "requestsSucceeded": 0,
-  "sampleResults": [],
+  "requestsSucceeded": 14,
+  "sampleResults": [
+    {
+      "currency": null,
+      "imagePresent": false,
+      "language": null,
+      "name": "Charizard (Japanese Meiji Chocolate Exclusive Promo)",
+      "number": "054/ADV-P",
+      "pricePresent": false,
+      "providerId": "pk_e52adab2aa2db68d39c8c2d9fa13300da886daa2dcf8cc0d40447641ed8c7eaf03928f18449110775750618a194b5dfc",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "MCAP",
+      "setName": "Miscellaneous Cards & Products"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Charizard",
+      "number": null,
+      "pricePresent": true,
+      "providerId": "pk_553c1b04bc1587da81ed8c33c4e834b5047c011df659cd8aad7c156e2c0a096edd0073c2f963f9d067f1",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "Ja",
+      "setName": "Japanese CD Promo"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Pikachu (Japanese 11th Movie Commemoration Set)",
+      "number": "003/009",
+      "pricePresent": true,
+      "providerId": "pk_f53def88986257a8705a8a8c134ac4881c08a68859153850bc192d662d15d4a0fa742f34d3f406dad7e51e0fbe",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "MCAP",
+      "setName": "Miscellaneous Cards & Products"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Pikachu (Japanese)",
+      "number": "PW 5",
+      "pricePresent": true,
+      "providerId": "pk_5f1222483bcbbda82c1fd44c1042313cd390b9c692f350f40a73340100b580fd52b15c215cf911adab973093",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "PWCP",
+      "setName": "Pikachu World Collection Promos"
+    },
+    {
+      "currency": null,
+      "imagePresent": false,
+      "language": null,
+      "name": "Pikachu (Japanese) (Green)",
+      "number": "PW 5",
+      "pricePresent": false,
+      "providerId": "pk_1345505d1c704f09a320941c058d126c504439005a7de7583ba598d811010bb6ae196b59906096b83530f2b9",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "PWCP",
+      "setName": "Pikachu World Collection Promos"
+    },
+    {
+      "currency": null,
+      "imagePresent": false,
+      "language": null,
+      "name": "Red's Pikachu (Japanese Exclusive)",
+      "number": "270/SM-P",
+      "pricePresent": false,
+      "providerId": "pk_ca9f025ac178148fbbd97f4efb05cc9fc72ef1fc376d395de671175585e431be1c2721ca8c3044ff0923bb47582fde49",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "SMP",
+      "setName": "SM Promos"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Ancient Mew (Japanese Exclusive Print)",
+      "number": "1",
+      "pricePresent": true,
+      "providerId": "pk_eacdcaff82f134bbf97647d389229e8f7382a8bd6227fa27a8ea5eb4e7659cc311f2f24f25e48c5f0c",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "MCAP",
+      "setName": "Miscellaneous Cards & Products"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Grumpig",
+      "number": "045/063",
+      "pricePresent": true,
+      "providerId": "pk_379932dda6100914a9262550e5cff7c8834cf372a991e425271f48c12a3c5c0fc67db4d4564d9b906c4d61d1934ba6",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "m1S",
+      "setName": "m1S: Mega Symphonia"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Acerola's Mischief - 059/063",
+      "number": "059/063",
+      "pricePresent": true,
+      "providerId": "pk_7b8849bed24ad35e9f0cdc6fe9c61ab543177c0698a254464817424c713107c52767c450cfa7f1a11d3287200dffbd",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "m1S",
+      "setName": "m1S: Mega Symphonia"
+    },
+    {
+      "currency": "USD",
+      "imagePresent": false,
+      "language": null,
+      "name": "Mystery Garden - 086/063",
+      "number": "086/063",
+      "pricePresent": true,
+      "providerId": "pk_3c31e4f9b366f92243e2599e3399deb5382485c5c8203e35a1a2cfed06d5d76a109b3b930c238168d0524d30fae7a8",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "setCode": "m1S",
+      "setName": "m1S: Mega Symphonia"
+    }
+  ],
   "schemaVersion": "1.0.0",
-  "searchTermsTested": [],
-  "status": "key_missing",
-  "totalResultsFound": 0
+  "searchTermsTested": [
+    "charizard japanese",
+    "pikachu japanese",
+    "mew japanese",
+    "mega symphonia",
+    "battle partners",
+    "sv10",
+    "sv11",
+    "ADV1",
+    "PMCG1"
+  ],
+  "status": "ok",
+  "totalResultsFound": 1479
 }
