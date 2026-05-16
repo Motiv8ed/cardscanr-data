@@ -1,4 +1,5 @@
 param(
+    [switch]$ShowLogs,
     [string]$RepoRoot = ""
 )
 
@@ -41,15 +42,32 @@ function Read-JsonFile {
     }
 }
 
-function Format-DateValue {
-    param([string]$Value)
+function Get-AestTimeZone {
+    try {
+        return [System.TimeZoneInfo]::FindSystemTimeZoneById('E. Australia Standard Time')
+    }
+    catch {
+        return $null
+    }
+}
+
+function Format-DateAest {
+    param(
+        [string]$Value,
+        [System.TimeZoneInfo]$AestTimeZone
+    )
 
     if ([string]::IsNullOrWhiteSpace($Value)) {
         return 'None'
     }
 
     try {
-        return ([datetime]::Parse($Value).ToLocalTime()).ToString('yyyy-MM-dd HH:mm:ss')
+        $parsed = [datetimeoffset]::Parse($Value)
+        if ($AestTimeZone) {
+            $converted = [System.TimeZoneInfo]::ConvertTime($parsed, $AestTimeZone)
+            return $converted.ToString('dd/MM/yyyy h:mm tt') + ' AEST'
+        }
+        return $parsed.LocalDateTime.ToString('dd/MM/yyyy h:mm tt') + ' Local'
     }
     catch {
         return $Value
@@ -124,12 +142,51 @@ function Write-DashboardLine {
         [string]$Value
     )
 
-    Write-Host ('{0,-16} {1}' -f ($Label + ':'), $Value)
+    Write-Host ('{0,-12} {1}' -f ($Label + ':'), $Value)
+}
+
+function Get-PhaseLabel {
+    param([string]$Phase)
+
+    $phaseValue = ''
+    if (-not [string]::IsNullOrWhiteSpace($Phase)) {
+        $phaseValue = $Phase.ToLowerInvariant()
+    }
+
+    switch ($phaseValue) {
+        'sleeping' { return 'Sleeping' }
+        'starting' { return 'Starting' }
+        'pulling' { return 'Pulling latest' }
+        'updating' { return 'Updating prices' }
+        'validating' { return 'Validating' }
+        'committing' { return 'Committing' }
+        'pushing' { return 'Pushing' }
+        'error' { return 'Error' }
+        'stopped' { return 'Stopped' }
+        default { return 'Unknown' }
+    }
+}
+
+function Truncate-SetList {
+    param([object[]]$SetIds)
+
+    if (-not $SetIds -or $SetIds.Count -eq 0) {
+        return 'None'
+    }
+
+    $maxItems = 10
+    $head = @($SetIds | Select-Object -First $maxItems)
+    $joined = ($head -join ', ')
+    if ($SetIds.Count -gt $maxItems) {
+        return "$joined..."
+    }
+    return $joined
 }
 
 $lockData = Read-JsonFile -Path $lockPath
 $statusData = Read-JsonFile -Path $statusPath
 $resultData = Read-JsonFile -Path $resultPath
+$aestTimeZone = Get-AestTimeZone
 
 $running = $false
 $displayPid = $null
@@ -165,7 +222,15 @@ $timeRemainingSeconds = if ($running -and $statusData) { Get-SecondsUntil -UtcVa
 $currentUpdateStartedUtc = if ($statusData) { $statusData.currentUpdateStartedAtUtc } else { $null }
 $currentUpdateElapsedSeconds = if ($statusData -and $statusData.currentUpdateStartedAtUtc) { Get-ElapsedSince -UtcValue $statusData.currentUpdateStartedAtUtc } else { $null }
 $estimatedFinishUtc = if ($statusData) { $statusData.estimatedCurrentUpdateFinishAtUtc } else { $null }
-$lastError = if ($statusData -and $statusData.lastError) { [string]$statusData.lastError } elseif ($resultData -and $resultData.error) { [string]$resultData.error } else { $null }
+$rawError = if ($statusData -and $statusData.lastError) { [string]$statusData.lastError } elseif ($resultData -and $resultData.error) { [string]$resultData.error } else { $null }
+$rawWarning = if ($statusData -and $statusData.PSObject.Properties.Name -contains 'lastWarning' -and $statusData.lastWarning) { [string]$statusData.lastWarning } else { $null }
+$lastWarning = $rawWarning
+$lastError = $rawError
+if (-not $lastWarning -and $lastError -and $lastError -like 'Skipped cycle*') {
+    $lastWarning = $lastError
+    $lastError = $null
+}
+
 $lastSets = @()
 if ($statusData -and $statusData.lastBatchSetIds) {
     $lastSets = @($statusData.lastBatchSetIds)
@@ -177,59 +242,64 @@ elseif ($resultData -and $resultData.plannedSetIds) {
     $lastSets = @($resultData.plannedSetIds)
 }
 
-Write-Host 'CardScanR Local Price Updater'
-Write-Host '============================='
-Write-DashboardLine -Label 'Running' -Value ($(if ($running) { 'YES' } else { 'NO' }))
-Write-DashboardLine -Label 'PID' -Value ($(if ($displayPid) { [string]$displayPid } else { 'None' }))
-Write-DashboardLine -Label 'Phase' -Value $phase
-Write-DashboardLine -Label 'State' -Value ($(if ($phase -eq 'sleeping') { 'sleeping' } elseif ($running) { 'updating' } else { 'stopped' }))
-Write-DashboardLine -Label 'Batch size' -Value $batchSize
-Write-DashboardLine -Label 'Interval' -Value ($(if ($intervalMinutes -ne 'Unknown') { "$intervalMinutes minutes" } else { 'Unknown' }))
-Write-DashboardLine -Label 'Started' -Value ($(if ($statusData) { Format-DateValue -Value $statusData.startedAtUtc } else { 'Unknown' }))
-Write-DashboardLine -Label 'Cycle number' -Value ($(if ($statusData) { [string]$statusData.cycleNumber } else { 'Unknown' }))
-Write-Host ''
-Write-DashboardLine -Label 'Update start' -Value ($(if ($currentUpdateStartedUtc) { Format-DateValue -Value $currentUpdateStartedUtc } else { 'None' }))
-Write-DashboardLine -Label 'Update elapsed' -Value ($(if ($currentUpdateElapsedSeconds -ne $null) { Format-DurationValue -Seconds $currentUpdateElapsedSeconds } else { 'None' }))
-Write-DashboardLine -Label 'Est. finish' -Value ($(if ($estimatedFinishUtc) { (Format-DateValue -Value $estimatedFinishUtc) + ' (estimate)' } else { 'None' }))
-Write-DashboardLine -Label 'Last update' -Value (Format-DateValue -Value $lastUpdateUtc)
-Write-DashboardLine -Label 'Last push' -Value (Format-DateValue -Value $lastPushUtc)
-Write-DashboardLine -Label 'Last commit' -Value ($(if ($lastCommitHash) { $lastCommitHash } else { 'None' }))
-Write-DashboardLine -Label 'Last duration' -Value ($(if ($lastDurationSeconds -ne $null) { Format-DurationValue -Seconds $lastDurationSeconds } else { 'Unknown' }))
-Write-Host ''
-Write-DashboardLine -Label 'Next update' -Value ($(if ($nextRunUtc) { Format-DateValue -Value $nextRunUtc } else { 'None' }))
-Write-DashboardLine -Label 'Time remaining' -Value ($(if ($timeRemainingSeconds -ne $null) { Format-DurationValue -Seconds $timeRemainingSeconds } else { 'None' }))
-Write-Host ''
-Write-Host 'Last sets:'
-if ($lastSets.Count -gt 0) {
-    foreach ($setId in $lastSets) {
-        Write-Host "- $setId"
+$statusLabel = if ($running) { 'RUNNING' } else { 'STOPPED' }
+$currentLabel = Get-PhaseLabel -Phase $phase
+
+if (-not $running) {
+    $nextAction = 'Start updater'
+}
+elseif ($phase -eq 'sleeping') {
+    if ($timeRemainingSeconds -ne $null) {
+        $nextAction = "Update prices in $(Format-DurationValue -Seconds $timeRemainingSeconds)"
+    }
+    else {
+        $nextAction = 'Update prices soon'
     }
 }
 else {
-    Write-Host 'None'
+    $nextAction = 'Finish current update'
+}
+
+Write-Host 'CardScanR Price Updater'
+Write-Host '======================='
+Write-Host ''
+Write-DashboardLine -Label 'Status' -Value $statusLabel
+Write-DashboardLine -Label 'Current' -Value $currentLabel
+Write-DashboardLine -Label 'Next action' -Value $nextAction
+Write-DashboardLine -Label 'Next update' -Value ($(if ($phase -eq 'sleeping' -and $nextRunUtc) { Format-DateAest -Value $nextRunUtc -AestTimeZone $aestTimeZone } else { 'None' }))
+
+Write-Host ''
+Write-DashboardLine -Label 'Last success' -Value (Format-DateAest -Value $lastUpdateUtc -AestTimeZone $aestTimeZone)
+Write-DashboardLine -Label 'Last push' -Value (Format-DateAest -Value $lastPushUtc -AestTimeZone $aestTimeZone)
+Write-DashboardLine -Label 'Last commit' -Value ($(if ($lastCommitHash) { $lastCommitHash } else { 'None' }))
+Write-DashboardLine -Label 'Last duration' -Value ($(if ($lastDurationSeconds -ne $null) { Format-DurationValue -Seconds $lastDurationSeconds } else { 'Unknown' }))
+
+if ($running -and $phase -ne 'sleeping' -and $phase -ne 'stopped') {
+    Write-DashboardLine -Label 'Elapsed' -Value ($(if ($currentUpdateElapsedSeconds -ne $null) { Format-DurationValue -Seconds $currentUpdateElapsedSeconds } else { 'None' }))
+    Write-DashboardLine -Label 'Est. finish' -Value ($(if ($estimatedFinishUtc) { (Format-DateAest -Value $estimatedFinishUtc -AestTimeZone $aestTimeZone) + ' (estimate)' } else { 'None' }))
 }
 
 Write-Host ''
-Write-Host 'Last error:'
-if ($lastError) {
-    Write-Host $lastError
-}
-else {
-    Write-Host 'None'
+Write-DashboardLine -Label 'Batch' -Value ($(if ($batchSize -ne 'Unknown' -and $intervalMinutes -ne 'Unknown') { "$batchSize sets every $intervalMinutes minutes" } else { 'Unknown' }))
+Write-DashboardLine -Label 'Last sets' -Value (Truncate-SetList -SetIds $lastSets)
+
+Write-Host ''
+Write-DashboardLine -Label 'Warning' -Value ($(if ($lastWarning) { $lastWarning } else { 'None' }))
+Write-DashboardLine -Label 'Error' -Value ($(if ($lastError) { $lastError } else { 'None' }))
+
+if ($ShowLogs) {
+    Write-Host ''
+    Write-Host 'Recent logs, may include old resolved messages:'
+    if (Test-Path $logPath) {
+        Get-Content -Path $logPath -Tail 20
+    }
+    else {
+        Write-Host "No log file found at $logPath"
+    }
 }
 
 Write-Host ''
-Write-Host 'Recent logs:'
-if (Test-Path $logPath) {
-    Get-Content -Path $logPath -Tail 20
-}
-else {
-    Write-Host "No log file found at $logPath"
-}
-
-Write-Host ''
-Write-Host 'Useful commands:'
-Write-Host '.\scripts\start_local_price_updater.ps1'
-Write-Host '.\scripts\stop_local_price_updater.ps1'
-Write-Host '.\scripts\watch_local_price_updater.ps1'
-Write-Host 'Get-Content .\logs\local_price_updater.log -Tail 80 -Wait'
+Write-Host 'Commands:'
+Write-Host '  Watch: .\scripts\watch_local_price_updater.ps1'
+Write-Host '  Logs:  Get-Content .\logs\local_price_updater.log -Tail 80 -Wait'
+Write-Host '  Stop:  .\scripts\stop_local_price_updater.ps1'

@@ -214,6 +214,7 @@ function Set-Phase {
     }
     if ($null -ne $ErrorMessage) {
         $updates.lastError = $ErrorMessage
+        $updates.lastWarning = $null
     }
     Set-StatusValues -Values $updates
 }
@@ -246,6 +247,7 @@ function Update-StatusFromResult {
         lastCycleDurationSeconds = $Result.durationSeconds
         lastExitCode = [int]$Result.exitCode
         lastError = $Result.error
+        lastWarning = if ([int]$Result.exitCode -eq 0) { $null } else { $script:statusState.lastWarning }
         lastBatchSetIds = $lastBatchSetIds
         currentUpdateStartedAtUtc = $null
         currentUpdateElapsedSeconds = $null
@@ -369,6 +371,7 @@ $script:statusState = [ordered]@{
     currentUpdateElapsedSeconds = $null
     estimatedCurrentUpdateFinishAtUtc = $null
     lastError = if ($previousStatus) { $previousStatus.lastError } else { $null }
+    lastWarning = if ($previousStatus -and $previousStatus.PSObject.Properties.Name -contains 'lastWarning') { $previousStatus.lastWarning } elseif ($previousStatus -and $previousStatus.lastError -and [string]$previousStatus.lastError -like 'Skipped cycle*') { $previousStatus.lastError } else { $null }
     lastExitCode = if ($previousStatus) { $previousStatus.lastExitCode } else { 0 }
 }
 
@@ -393,6 +396,7 @@ try {
                 currentUpdateElapsedSeconds = $null
                 estimatedCurrentUpdateFinishAtUtc = $null
                 lastError = $null
+                lastWarning = $null
                 lastExitCode = 0
             }
 
@@ -406,7 +410,8 @@ try {
                 Set-StatusValues -Values @{
                     currentPhase = 'sleeping'
                     lastCycleFinishedAtUtc = Get-UtcIso
-                    lastError = 'Skipped cycle because uncommitted changes were present before update.'
+                    lastWarning = 'Uncommitted changes caused the last cycle to be skipped.'
+                    lastError = $null
                     lastExitCode = 0
                 }
             }
@@ -432,6 +437,7 @@ try {
                         currentPhase = 'updating'
                         currentUpdateStartedAtUtc = Get-UtcIso
                         lastError = $null
+                        lastWarning = $null
                         lastExitCode = 0
                     }
                     Write-LoopLog -Level 'INFO' -Message "Starting update cycle."
@@ -449,6 +455,7 @@ try {
                                 Set-StatusValues -Values @{
                                     currentPhase = $phase
                                     lastError = $null
+                                    lastWarning = $null
                                     lastExitCode = 0
                                 }
                             }
@@ -480,6 +487,7 @@ try {
                             currentPhase = 'sleeping'
                             lastExitCode = 0
                             lastError = $null
+                            lastWarning = $null
                         }
                     }
                 }

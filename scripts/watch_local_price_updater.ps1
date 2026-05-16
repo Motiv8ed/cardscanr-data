@@ -1,5 +1,6 @@
 param(
-    [int]$RefreshSeconds = 10,
+    [int]$RefreshSeconds = 1,
+    [switch]$ShowLogs,
     [string]$RepoRoot = ""
 )
 
@@ -15,7 +16,12 @@ $statusScript = Join-Path $RepoRoot 'scripts\status_local_price_updater.ps1'
 try {
     while ($true) {
         Clear-Host
-        & $statusScript -RepoRoot $RepoRoot
+        if ($ShowLogs) {
+            & $statusScript -RepoRoot $RepoRoot -ShowLogs
+        }
+        else {
+            & $statusScript -RepoRoot $RepoRoot
+        }
         Write-Host ''
         Write-Host "Refreshing every $RefreshSeconds second(s). Press Ctrl+C to exit."
         Start-Sleep -Seconds $RefreshSeconds

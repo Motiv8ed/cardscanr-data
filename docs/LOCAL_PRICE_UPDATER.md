@@ -86,6 +86,12 @@ Live watch:
 .\scripts\watch_local_price_updater.ps1
 ```
 
+Status with logs:
+
+```powershell
+.\scripts\status_local_price_updater.ps1 -ShowLogs
+```
+
 Logs:
 
 ```text
@@ -122,6 +128,12 @@ Live watch dashboard:
 .\scripts\watch_local_price_updater.ps1
 ```
 
+Show recent logs in status:
+
+```powershell
+.\scripts\status_local_price_updater.ps1 -ShowLogs
+```
+
 Raw log tail:
 
 ```powershell
@@ -130,17 +142,14 @@ Get-Content .\logs\local_price_updater.log -Tail 80 -Wait
 
 Status fields:
 
-- `Running` tells you whether the updater PID is still alive.
-- `PID` is the current background process ID.
-- `Phase` shows the current loop stage: starting, pulling, updating, validating, committing, pushing, sleeping, error, or stopped.
-- `State` summarizes whether the updater is actively working or sleeping.
-- `Batch size` and `Interval` show the active loop settings.
-- `Update start`, `Update elapsed`, and `Est. finish` describe the current cycle. The finish time is only an estimate based on the previous completed cycle duration.
-- `Last update`, `Last push`, `Last commit`, and `Last duration` summarize the most recent successful cycle.
-- `Next update` and `Time remaining` show when the next sleep window ends.
-- `Last sets` lists the most recent planned or updated set IDs captured by the updater.
-- `Last error` shows the most recent failure or skipped-cycle reason, if any.
-- `Recent logs` shows the last 20 lines from the local updater log.
+- Times are shown in AEST (`E. Australia Standard Time`) when available, with local-time fallback if timezone conversion fails.
+- `Status`, `Current`, and `Next action` provide the key at-a-glance state.
+- `Next update` and countdown are emphasized when sleeping.
+- `Elapsed` and `Est. finish` are shown while an active update is in progress.
+- `Last success`, `Last push`, `Last commit`, and `Last duration` summarize the latest successful cycle.
+- `Last sets` shows a compact summary of the latest batch.
+- Skipped cycles caused by uncommitted changes are warnings, not errors.
+- Recent logs are hidden by default; use `-ShowLogs` when needed.
 
 Local runtime files:
 
