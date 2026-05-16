@@ -84,15 +84,17 @@ function Invoke-NativeCommandSafe {
     $stderrPath = [System.IO.Path]::GetTempFileName()
 
     try {
-        $process = Start-Process \
-            -FilePath $FilePath \
-            -ArgumentList $Arguments \
-            -WorkingDirectory $WorkingDirectory \
-            -NoNewWindow \
-            -Wait \
-            -PassThru \
-            -RedirectStandardOutput $stdoutPath \
-            -RedirectStandardError $stderrPath
+        $startProcessParams = @{
+            FilePath = $FilePath
+            ArgumentList = $Arguments
+            WorkingDirectory = $WorkingDirectory
+            NoNewWindow = $true
+            Wait = $true
+            PassThru = $true
+            RedirectStandardOutput = $stdoutPath
+            RedirectStandardError = $stderrPath
+        }
+        $process = Start-Process @startProcessParams
 
         $stdoutLines = @()
         if (Test-Path $stdoutPath) {
