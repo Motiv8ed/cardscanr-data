@@ -29,8 +29,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build cache
-        run: python tools/build_price_cache.py
-
       - name: Validate cache
         run: CARDSCANR_VALIDATE_QUIET=1 python tools/validate_cache.py
