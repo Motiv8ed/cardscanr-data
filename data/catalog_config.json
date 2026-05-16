@@ -36,5 +36,12 @@
   "jpUseGlobalCardListFallback": true,
   "jpGlobalCardListEndpoint": "/v2/ja/cards",
   "jpGroupGlobalCardsBySet": true,
-  "jpMaxGlobalCardsProbe": 100000
+  "jpMaxGlobalCardsProbe": 100000,
+  "localUpdaterEnabled": true,
+  "localUpdaterDefaultBatchSize": 10,
+  "localUpdaterRefreshStrategy": "rotating_set_batch",
+  "scheduledCurrentPriceBatchEnabled": true,
+  "scheduledCurrentPriceBatchSize": 10,
+  "scheduledCurrentPriceRefreshStrategy": "rotating_set_batch",
+  "scheduledCurrentPriceStatePath": "data/scheduled_price_refresh_state.json"
 }

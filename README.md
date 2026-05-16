@@ -32,8 +32,8 @@ tools/
   validate_cache.py            ← Validates JSON, sha256, required fields, etc.
 
 .github/workflows/
-  update-price-cache.yml       ← Runs every 6 h (+ manual trigger), commits changes
-  validate-cache.yml           ← Runs on every push / PR
+  update-price-cache.yml       ← Runs every 12 h (+ manual trigger), commits changes
+  validate-cache.yml           ← Runs on pull requests (+ manual trigger)
 ```
 
 ---
@@ -54,8 +54,14 @@ Example: `pokemon|en|base1|4|charizard|holo|near_mint`
 # Build the price cache
 python tools/build_price_cache.py
 
+# Build only EN current prices (batch-friendly mode)
+python tools/build_price_cache.py current_prices
+
 # Validate the cache
 python tools/validate_cache.py
+
+# Local-first batch updater (build + validate)
+python tools/run_local_price_update.py --batch-size 10
 ```
 
 No third-party packages are required.  

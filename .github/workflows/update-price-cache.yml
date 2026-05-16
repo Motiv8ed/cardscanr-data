@@ -33,7 +33,8 @@ jobs:
           # Optional: set in repository secrets to enable live API fetches
           POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY }}
           POKEWALLET_API_KEY: ${{ secrets.POKEWALLET_API_KEY }}
-        run: python tools/build_price_cache.py
+          CARDSCANR_CURRENT_PRICE_BATCH_SIZE: "10"
+        run: python tools/build_price_cache.py current_prices
 
       - name: Validate cache
         run: CARDSCANR_VALIDATE_QUIET=1 python tools/validate_cache.py
@@ -42,7 +43,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/v1/
+          git add public/v1/ data/scheduled_price_refresh_state.json
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else

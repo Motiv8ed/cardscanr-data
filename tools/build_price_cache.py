@@ -190,6 +190,13 @@ def load_catalog_config() -> dict:
         "catalogueRequestSleepSeconds": 0.15,
         "pageSize": 250,
         "maxPagesPerRun": 1000,
+        "localUpdaterEnabled": True,
+        "localUpdaterDefaultBatchSize": 10,
+        "localUpdaterRefreshStrategy": "rotating_set_batch",
+        "scheduledCurrentPriceBatchEnabled": True,
+        "scheduledCurrentPriceBatchSize": 10,
+        "scheduledCurrentPriceRefreshStrategy": "rotating_set_batch",
+        "scheduledCurrentPriceStatePath": "data/scheduled_price_refresh_state.json",
     }
     if not CATALOG_CONFIG_PATH.exists():
         return defaults
@@ -329,6 +336,66 @@ def to_float(value: object) -> float | None:
         return round(float(value), 2)
     except (TypeError, ValueError):
         return None
+
+
+def resolve_state_path(config: dict) -> Path:
+    raw = str(config.get("scheduledCurrentPriceStatePath") or "data/scheduled_price_refresh_state.json").strip()
+    if not raw:
+        raw = "data/scheduled_price_refresh_state.json"
+    path = Path(raw)
+    if not path.is_absolute():
+        path = ROOT / path
+    return path
+
+
+def load_scheduled_refresh_state(path: Path) -> dict:
+    default_state = {
+        "schemaVersion": SCHEMA_VERSION,
+        "enCurrentPriceCursor": 0,
+        "lastUpdatedAtUtc": None,
+        "lastBatchSetIds": [],
+    }
+    if not path.exists():
+        return default_state
+
+    try:
+        payload = load_json(path)
+    except OSError:
+        return default_state
+
+    if not isinstance(payload, dict):
+        return default_state
+
+    merged = {**default_state, **payload}
+    try:
+        merged["enCurrentPriceCursor"] = max(0, int(merged.get("enCurrentPriceCursor", 0)))
+    except (TypeError, ValueError):
+        merged["enCurrentPriceCursor"] = 0
+    if not isinstance(merged.get("lastBatchSetIds"), list):
+        merged["lastBatchSetIds"] = []
+    return merged
+
+
+def save_scheduled_refresh_state(path: Path, payload: dict) -> None:
+    write_json(path, payload)
+
+
+def resolve_batch_size(config: dict) -> int:
+    env_value = os.getenv("CARDSCANR_CURRENT_PRICE_BATCH_SIZE", "").strip()
+    if env_value:
+        try:
+            parsed = int(env_value)
+            if parsed > 0:
+                return parsed
+        except ValueError:
+            pass
+
+    configured = config.get("scheduledCurrentPriceBatchSize", config.get("localUpdaterDefaultBatchSize", 10))
+    try:
+        value = int(configured)
+    except (TypeError, ValueError):
+        return 10
+    return max(1, value)
 
 
 def price_sort_key(entry: dict) -> tuple[str, str, str, str]:
@@ -1508,8 +1575,10 @@ def build_english_current_prices_by_set(
     config: dict,
     catalog_sets: dict,
     output_dir: Path,
+    mode: str,
+    refresh_state: dict,
     fail_after_set_count: int = 0,
-) -> tuple[list[tuple[str, str, Path]], dict]:
+) -> tuple[list[tuple[str, str, Path]], dict, dict]:
     metrics = {
         "currentPriceEnStatus": "not_built_yet",
         "currentPriceEnSetsAttempted": 0,
@@ -1526,14 +1595,54 @@ def build_english_current_prices_by_set(
 
     if not isinstance(catalog_sets, dict) or catalog_sets.get("catalogueStatus") not in {"built", "partial_built"}:
         metrics["currentPriceEnStatus"] = "skipped_no_built_catalogue"
-        return [], metrics
+        return [], metrics, refresh_state
 
-    sets = [item for item in catalog_sets.get("sets", []) if isinstance(item, dict) and item.get("id")]
-    if not sets:
+    sets_all = [item for item in catalog_sets.get("sets", []) if isinstance(item, dict) and item.get("id")]
+    sets_all.sort(key=lambda item: str(item.get("id") or ""))
+    if not sets_all:
         metrics["currentPriceEnStatus"] = "skipped_no_sets"
-        return [], metrics
+        return [], metrics, refresh_state
+
+    strategy = str(
+        config.get("scheduledCurrentPriceRefreshStrategy")
+        or config.get("localUpdaterRefreshStrategy")
+        or "rotating_set_batch"
+    ).strip().lower()
+    batch_enabled = bool(config.get("scheduledCurrentPriceBatchEnabled", True))
+
+    selected_sets = list(sets_all)
+    cursor_before = int(refresh_state.get("enCurrentPriceCursor", 0) or 0)
+    cursor_after = cursor_before
+    selected_set_ids: list[str] = [str(item.get("id") or "") for item in selected_sets]
+
+    if batch_enabled and strategy == "rotating_set_batch" and mode in {"scheduled", "current_prices"}:
+        batch_size = resolve_batch_size(config)
+        total_sets = len(sets_all)
+        start = cursor_before % total_sets
+        selected_sets = [sets_all[(start + idx) % total_sets] for idx in range(min(batch_size, total_sets))]
+        selected_set_ids = [str(item.get("id") or "") for item in selected_sets]
+        cursor_after = (start + len(selected_sets)) % total_sets
+        metrics["currentPriceEnBatchEnabled"] = True
+        metrics["currentPriceEnBatchStrategy"] = "rotating_set_batch"
+        metrics["currentPriceEnBatchSize"] = batch_size
+        metrics["currentPriceEnBatchCursorBefore"] = start
+        metrics["currentPriceEnBatchCursorAfter"] = cursor_after
+    else:
+        metrics["currentPriceEnBatchEnabled"] = False
+        metrics["currentPriceEnBatchStrategy"] = "all_sets"
+        metrics["currentPriceEnBatchSize"] = len(selected_sets)
+        metrics["currentPriceEnBatchCursorBefore"] = cursor_before
+        metrics["currentPriceEnBatchCursorAfter"] = cursor_before
 
     prepare_empty_dir(output_dir)
+
+    existing_current_files = load_existing_current_price_files("en")
+    selected_set_id_lookup = {str(item.get("id") or "") for item in selected_sets}
+    for existing_set_id, _existing_set_name, existing_path in existing_current_files:
+        if existing_set_id in selected_set_id_lookup:
+            continue
+        destination = output_dir / existing_path.name
+        shutil.copy2(existing_path, destination)
 
     page_size = int(config.get("pageSize", 250))
     max_pages_per_set = int(config.get("maxPagesPerSet", 50))
@@ -1541,7 +1650,7 @@ def build_english_current_prices_by_set(
     written_files: list[tuple[str, str, Path]] = []
     failed_set_ids: list[str] = []
 
-    for set_data in sets:
+    for set_data in selected_sets:
         set_id = str(set_data.get("id"))
         set_name = str(set_data.get("name") or set_id)
         metrics["currentPriceEnSetsAttempted"] += 1
@@ -1605,8 +1714,15 @@ def build_english_current_prices_by_set(
         )
 
     metrics["currentPriceEnStatus"] = "built"
+    metrics["currentPriceEnBatchSetIds"] = selected_set_ids
 
-    return written_files, metrics
+    next_state = dict(refresh_state)
+    next_state["schemaVersion"] = SCHEMA_VERSION
+    next_state["enCurrentPriceCursor"] = cursor_after
+    next_state["lastUpdatedAtUtc"] = ts
+    next_state["lastBatchSetIds"] = selected_set_ids
+
+    return written_files, metrics, next_state
 
 
 def load_existing_current_price_files(language: str = "en") -> list[tuple[str, str, Path]]:
@@ -1911,6 +2027,9 @@ def build() -> None:
     day = ts[:10]
     catalog_config = load_catalog_config()
     mode = resolve_build_mode(catalog_config)
+    refresh_state_path = resolve_state_path(catalog_config)
+    refresh_state = load_scheduled_refresh_state(refresh_state_path)
+    next_refresh_state: dict | None = None
     fail_after_en_count = parse_positive_int_env("CARDSCANR_FAIL_AFTER_EN_PRICE_SET_COUNT")
     reset_tmp_build_root(TMP_BUILD_ROOT)
     print(f"[build_price_cache] Starting {mode} build at {ts}")
@@ -1972,6 +2091,7 @@ def build() -> None:
         "catalogueJpGlobalCardsSkippedUnparseableId": 0,
         "catalogueJpGlobalCardsSkippedUnknownSet": 0,
         "catalogueJpCoverageImprovedByGlobalFallback": False,
+        "catalogueJpEndpointExamples": [],
         "catalogueJpEmptySetIds": [],
         "catalogueJpSetsSkippedEmptyCards": 0,
         "catalogueJpSkippedEmptySetIds": [],
@@ -2091,11 +2211,13 @@ def build() -> None:
 
         if should_build_current_prices(mode, catalog_config):
             staged_en_current_dir = prepare_empty_dir(TMP_BUILD_ROOT / "prices" / "current" / "pokemon" / "en")
-            _staged_price_files, current_price_metrics = build_english_current_prices_by_set(
+            _staged_price_files, current_price_metrics, next_refresh_state = build_english_current_prices_by_set(
                 ts,
                 catalog_config,
                 catalog_en,
                 staged_en_current_dir,
+                mode,
+                refresh_state,
                 fail_after_set_count=fail_after_en_count,
             )
             publish_staged_directory(staged_en_current_dir, CURRENT_PRICES_EN_DIR)
@@ -2377,6 +2499,8 @@ def build() -> None:
             "datasets": index_entries,
         }
         write_json(INDEX_PATH, index)
+        if next_refresh_state is not None:
+            save_scheduled_refresh_state(refresh_state_path, next_refresh_state)
         print(f"  Updated {INDEX_PATH}")
         print(f"  Updated {TRACKED_CARDS_PATH}")
         print(f"  Updated {DIAG_PATH}")
