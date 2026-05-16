@@ -219,3 +219,8 @@ __marimo__/
 
 # CardScanR build staging
 .cache_build_tmp/
+
+# Local updater runtime artifacts
+logs/
+.local_updater.lock
+.local_updater.pid

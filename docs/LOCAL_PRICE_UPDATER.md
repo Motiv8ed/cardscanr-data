@@ -51,3 +51,50 @@ Use a user account that has access to your git credential helper.
 
 The updater uses the same environment variables as `tools/build_price_cache.py`.
 Set them in your user/system environment (or task-level environment) before scheduling.
+
+## One-click background updater
+
+Use the background loop when you want a low-maintenance updater that sleeps between runs.
+
+Start (PowerShell):
+
+```powershell
+.\scripts\start_local_price_updater.ps1 -BatchSize 10 -IntervalMinutes 120
+```
+
+Start (double-click):
+
+```text
+scripts\start_local_price_updater.bat
+```
+
+Stop:
+
+```powershell
+.\scripts\stop_local_price_updater.ps1
+```
+
+Status:
+
+```powershell
+.\scripts\status_local_price_updater.ps1
+```
+
+Logs:
+
+```text
+logs\local_price_updater.log
+```
+
+Recommended interval:
+
+- Start with 120 minutes.
+- Move to 60 minutes later if stable in your environment.
+
+Notes:
+
+- The updater runs `git pull --ff-only` before each cycle and skips the cycle on pull failure.
+- The updater skips the cycle if unrelated uncommitted changes already exist.
+- API keys must come from environment variables; never hardcode them.
+- Cloudflare Pages deploys automatically after each successful GitHub push.
+- The loop sleeps most of the time, so CPU and memory usage should stay minimal.
