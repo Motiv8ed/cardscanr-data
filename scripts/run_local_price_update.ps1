@@ -1,5 +1,5 @@
 param(
-    [int]$BatchSize = 10,
+    [int]$BatchSize = 20,
     [switch]$DryRun,
     [switch]$Commit,
     [switch]$Push

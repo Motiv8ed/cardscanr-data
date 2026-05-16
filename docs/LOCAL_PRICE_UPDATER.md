@@ -14,25 +14,25 @@ This project now supports a local-first EN current-price refresh flow.
 From repository root:
 
 ```powershell
-.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 10
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20
 ```
 
 Dry run (no writes):
 
 ```powershell
-.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 10 --dry-run
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --dry-run
 ```
 
 Commit and push (if changed):
 
 ```powershell
-.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 10 --commit --push
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --commit --push
 ```
 
 PowerShell helper:
 
 ```powershell
-.\scripts\run_local_price_update.ps1 -BatchSize 10 -Commit -Push
+.\scripts\run_local_price_update.ps1 -BatchSize 20 -Commit -Push
 ```
 
 ## Windows Task Scheduler
@@ -59,7 +59,7 @@ Use the background loop when you want a low-maintenance updater that sleeps betw
 Start (PowerShell):
 
 ```powershell
-.\scripts\start_local_price_updater.ps1 -BatchSize 10 -IntervalMinutes 120
+.\scripts\start_local_price_updater.ps1 -BatchSize 20 -IntervalMinutes 60
 ```
 
 Start (double-click):
@@ -88,8 +88,10 @@ logs\local_price_updater.log
 
 Recommended interval:
 
-- Start with 120 minutes.
-- Move to 60 minutes later if stable in your environment.
+- Start with 60 minutes.
+- Use batch size 20 for the default local rotation.
+- With roughly 159 EN current-price files, batch size 20 every 60 minutes is about 8 hours for a full rotation.
+- A faster optional setting is batch size 30 every 60 minutes, which is roughly 5-6 hours for a full rotation.
 
 Notes:
 
@@ -98,3 +100,4 @@ Notes:
 - API keys must come from environment variables; never hardcode them.
 - Cloudflare Pages deploys automatically after each successful GitHub push.
 - The loop sleeps most of the time, so CPU and memory usage should stay minimal.
+- Very short intervals create more GitHub commits and more Cloudflare deploys.

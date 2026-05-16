@@ -1,6 +1,6 @@
 param(
-    [int]$BatchSize = 10,
-    [int]$IntervalMinutes = 120,
+    [int]$BatchSize = 20,
+    [int]$IntervalMinutes = 60,
     [string]$RepoRoot = ""
 )
 
