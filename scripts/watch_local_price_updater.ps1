@@ -1,5 +1,6 @@
 param(
-    [int]$RefreshSeconds = 1,
+    [int]$RefreshSeconds = 30,
+    [switch]$Once,
     [switch]$ShowLogs,
     [string]$RepoRoot = ""
 )
@@ -13,17 +14,26 @@ $RepoRoot = (Resolve-Path $RepoRoot).Path
 $RefreshSeconds = [Math]::Max(1, $RefreshSeconds)
 $statusScript = Join-Path $RepoRoot 'scripts\status_local_price_updater.ps1'
 
+function Invoke-StatusSnapshot {
+    if ($ShowLogs) {
+        & $statusScript -RepoRoot $RepoRoot -ShowLogs
+    }
+    else {
+        & $statusScript -RepoRoot $RepoRoot
+    }
+}
+
+if ($Once) {
+    Invoke-StatusSnapshot
+    exit 0
+}
+
 try {
     while ($true) {
         Clear-Host
-        if ($ShowLogs) {
-            & $statusScript -RepoRoot $RepoRoot -ShowLogs
-        }
-        else {
-            & $statusScript -RepoRoot $RepoRoot
-        }
+        Invoke-StatusSnapshot
         Write-Host ''
-        Write-Host "Refreshing every $RefreshSeconds second(s). Press Ctrl+C to exit."
+        Write-Host "Auto-refreshing every $RefreshSeconds seconds. Press Ctrl+C to exit."
         Start-Sleep -Seconds $RefreshSeconds
     }
 }

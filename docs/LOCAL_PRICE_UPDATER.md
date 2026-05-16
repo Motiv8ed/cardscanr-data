@@ -86,6 +86,18 @@ Live watch:
 .\scripts\watch_local_price_updater.ps1
 ```
 
+Live watch once (single snapshot):
+
+```powershell
+.\scripts\watch_local_price_updater.ps1 -Once
+```
+
+Live watch with custom refresh:
+
+```powershell
+.\scripts\watch_local_price_updater.ps1 -RefreshSeconds 60
+```
+
 Status with logs:
 
 ```powershell
@@ -128,6 +140,20 @@ Live watch dashboard:
 .\scripts\watch_local_price_updater.ps1
 ```
 
+Watch once and exit:
+
+```powershell
+.\scripts\watch_local_price_updater.ps1 -Once
+```
+
+Override watch refresh interval:
+
+```powershell
+.\scripts\watch_local_price_updater.ps1 -RefreshSeconds 30
+.\scripts\watch_local_price_updater.ps1 -RefreshSeconds 60
+.\scripts\watch_local_price_updater.ps1 -RefreshSeconds 10
+```
+
 Show recent logs in status:
 
 ```powershell
@@ -143,13 +169,15 @@ Get-Content .\logs\local_price_updater.log -Tail 80 -Wait
 Status fields:
 
 - Times are shown in AEST (`E. Australia Standard Time`) when available, with local-time fallback if timezone conversion fails.
-- `Status`, `Current`, and `Next action` provide the key at-a-glance state.
-- `Next update` and countdown are emphasized when sleeping.
-- `Elapsed` and `Est. finish` are shown while an active update is in progress.
+- `Status`, `Current state`, and the next update/push lines provide the key at-a-glance state.
+- `Next update cycle` and `Time until update` are emphasized while sleeping.
+- `Current update`, `Elapsed`, and `Estimated finish` are shown while an active update is in progress.
 - `Last success`, `Last push`, `Last commit`, and `Last duration` summarize the latest successful cycle.
 - `Last sets` shows a compact summary of the latest batch.
 - Skipped cycles caused by uncommitted changes are warnings, not errors.
 - Recent logs are hidden by default; use `-ShowLogs` when needed.
+- Watch mode defaults to a calmer 30-second auto-refresh interval.
+- `Next push` means a push will occur only after the next successful update and validation phase.
 
 Local runtime files:
 

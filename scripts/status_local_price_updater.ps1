@@ -142,7 +142,7 @@ function Write-DashboardLine {
         [string]$Value
     )
 
-    Write-Host ('{0,-12} {1}' -f ($Label + ':'), $Value)
+    Write-Host ('{0,-18} {1}' -f ($Label + ':'), $Value)
 }
 
 function Get-PhaseLabel {
@@ -244,29 +244,66 @@ elseif ($resultData -and $resultData.plannedSetIds) {
 
 $statusLabel = if ($running) { 'RUNNING' } else { 'STOPPED' }
 $currentLabel = Get-PhaseLabel -Phase $phase
+$nextUpdateCycleText = 'None'
+$timeUntilUpdateText = 'None'
+$nextPushText = 'None'
+$currentUpdateText = 'None'
+$elapsedText = 'None'
+$estimatedFinishText = 'None'
 
-if (-not $running) {
-    $nextAction = 'Start updater'
+if (-not $running -or $phase -eq 'stopped') {
+    $nextUpdateCycleText = 'Updater is stopped'
+    $timeUntilUpdateText = 'None'
+    $nextPushText = 'None until updater is started'
+    $currentUpdateText = 'Stopped'
 }
 elseif ($phase -eq 'sleeping') {
-    if ($timeRemainingSeconds -ne $null) {
-        $nextAction = "Update prices in $(Format-DurationValue -Seconds $timeRemainingSeconds)"
-    }
-    else {
-        $nextAction = 'Update prices soon'
-    }
+    $currentUpdateText = 'Sleeping'
+    $nextUpdateCycleText = if ($nextRunUtc) { Format-DateAest -Value $nextRunUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }
+    $timeUntilUpdateText = if ($timeRemainingSeconds -ne $null) { Format-DurationValue -Seconds $timeRemainingSeconds } else { 'Unknown' }
+    $nextPushText = 'After next successful update'
+}
+elseif ($phase -eq 'pushing') {
+    $currentUpdateText = 'Pushing to GitHub'
+    $elapsedText = if ($currentUpdateElapsedSeconds -ne $null) { Format-DurationValue -Seconds $currentUpdateElapsedSeconds } else { 'Unknown' }
+    $estimatedFinishText = if ($estimatedFinishUtc) { (Format-DateAest -Value $estimatedFinishUtc -AestTimeZone $aestTimeZone) + ' (estimate)' } else { 'None' }
+    $nextUpdateCycleText = 'After current cycle completes'
+    $timeUntilUpdateText = 'In progress'
+    $nextPushText = 'In progress'
+}
+elseif ($phase -in @('updating', 'pulling', 'validating', 'committing', 'starting')) {
+    $currentUpdateText = 'Running'
+    $elapsedText = if ($currentUpdateElapsedSeconds -ne $null) { Format-DurationValue -Seconds $currentUpdateElapsedSeconds } else { 'Unknown' }
+    $estimatedFinishText = if ($estimatedFinishUtc) { (Format-DateAest -Value $estimatedFinishUtc -AestTimeZone $aestTimeZone) + ' (estimate)' } else { 'None' }
+    $nextUpdateCycleText = 'After current cycle completes'
+    $timeUntilUpdateText = 'In progress'
+    $nextPushText = 'After validation succeeds'
 }
 else {
-    $nextAction = 'Finish current update'
+    $currentUpdateText = $currentLabel
+    $nextUpdateCycleText = 'After current cycle completes'
+    $timeUntilUpdateText = 'In progress'
+    $nextPushText = 'After current cycle completes'
 }
 
 Write-Host 'CardScanR Price Updater'
 Write-Host '======================='
 Write-Host ''
 Write-DashboardLine -Label 'Status' -Value $statusLabel
-Write-DashboardLine -Label 'Current' -Value $currentLabel
-Write-DashboardLine -Label 'Next action' -Value $nextAction
-Write-DashboardLine -Label 'Next update' -Value ($(if ($phase -eq 'sleeping' -and $nextRunUtc) { Format-DateAest -Value $nextRunUtc -AestTimeZone $aestTimeZone } else { 'None' }))
+Write-DashboardLine -Label 'Current state' -Value $currentLabel
+Write-DashboardLine -Label 'Batch size' -Value ($(if ($batchSize -ne 'Unknown') { "$batchSize sets" } else { 'Unknown' }))
+Write-DashboardLine -Label 'Interval' -Value ($(if ($intervalMinutes -ne 'Unknown') { "$intervalMinutes minutes" } else { 'Unknown' }))
+
+Write-Host ''
+Write-DashboardLine -Label 'Next update cycle' -Value $nextUpdateCycleText
+Write-DashboardLine -Label 'Time until update' -Value $timeUntilUpdateText
+Write-DashboardLine -Label 'Next push' -Value $nextPushText
+
+if ($running -and $phase -ne 'sleeping' -and $phase -ne 'stopped') {
+    Write-DashboardLine -Label 'Current update' -Value $currentUpdateText
+    Write-DashboardLine -Label 'Elapsed' -Value $elapsedText
+    Write-DashboardLine -Label 'Estimated finish' -Value $estimatedFinishText
+}
 
 Write-Host ''
 Write-DashboardLine -Label 'Last success' -Value (Format-DateAest -Value $lastUpdateUtc -AestTimeZone $aestTimeZone)
@@ -274,13 +311,7 @@ Write-DashboardLine -Label 'Last push' -Value (Format-DateAest -Value $lastPushU
 Write-DashboardLine -Label 'Last commit' -Value ($(if ($lastCommitHash) { $lastCommitHash } else { 'None' }))
 Write-DashboardLine -Label 'Last duration' -Value ($(if ($lastDurationSeconds -ne $null) { Format-DurationValue -Seconds $lastDurationSeconds } else { 'Unknown' }))
 
-if ($running -and $phase -ne 'sleeping' -and $phase -ne 'stopped') {
-    Write-DashboardLine -Label 'Elapsed' -Value ($(if ($currentUpdateElapsedSeconds -ne $null) { Format-DurationValue -Seconds $currentUpdateElapsedSeconds } else { 'None' }))
-    Write-DashboardLine -Label 'Est. finish' -Value ($(if ($estimatedFinishUtc) { (Format-DateAest -Value $estimatedFinishUtc -AestTimeZone $aestTimeZone) + ' (estimate)' } else { 'None' }))
-}
-
 Write-Host ''
-Write-DashboardLine -Label 'Batch' -Value ($(if ($batchSize -ne 'Unknown' -and $intervalMinutes -ne 'Unknown') { "$batchSize sets every $intervalMinutes minutes" } else { 'Unknown' }))
 Write-DashboardLine -Label 'Last sets' -Value (Truncate-SetList -SetIds $lastSets)
 
 Write-Host ''
