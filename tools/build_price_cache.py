@@ -2698,7 +2698,7 @@ def build() -> None:
         build_index_dataset_entry(
             dataset_id="prices_current_pokemon_en_status",
             file_path=EN_CURRENT_STATUS_PATH,
-            dataset_type="price_status",
+            dataset_type="price_current_status",
             description="CardScanR app-facing UTC price freshness/status for Pokemon EN",
             ts=ts,
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
@@ -2710,7 +2710,7 @@ def build() -> None:
         build_index_dataset_entry(
             dataset_id="prices_current_pokemon_jp_status",
             file_path=JP_CURRENT_STATUS_PATH,
-            dataset_type="price_status",
+            dataset_type="price_current_status",
             description="CardScanR app-facing UTC price freshness/status for Pokemon JP",
             ts=ts,
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,

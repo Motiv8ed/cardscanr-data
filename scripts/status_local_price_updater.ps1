@@ -325,6 +325,8 @@ Write-DashboardLine -Label 'EN files' -Value ("$publicEnSetCount sets, $publicEn
 Write-DashboardLine -Label 'EN next expected' -Value ($(if ($publicEnNextExpectedUtc) { Format-DateAest -Value $publicEnNextExpectedUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }))
 Write-DashboardLine -Label 'EN cadence' -Value ($(if ($publicEnIntervalMinutes -ne $null) { "$publicEnIntervalMinutes minutes" } else { 'Unknown' }))
 Write-DashboardLine -Label 'EN rotation' -Value ($(if ($publicEnRotationHours -ne $null) { "$publicEnRotationHours hours" } else { 'Unknown' }))
+Write-DashboardLine -Label 'App freshness' -Value ("Prices updated $publicEnAgeText ago")
+Write-DashboardLine -Label 'App next' -Value ($(if ($publicEnNextExpectedUtc) { "Next refresh expected around " + (Format-DateAest -Value $publicEnNextExpectedUtc -AestTimeZone $aestTimeZone) } else { 'Next refresh expected around Unknown' }))
 
 Write-Host ''
 Write-DashboardLine -Label 'Next update cycle' -Value $nextUpdateCycleText

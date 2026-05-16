@@ -223,6 +223,7 @@ REQUIRED_LANGUAGE_STATUS_FIELDS = {
 }
 ALLOWED_PRICE_STATUS_VALUES = {
     "ok",
+    "partial",
     "stale",
     "very_stale",
     "unavailable",
@@ -572,6 +573,10 @@ def check_price_status_files() -> None:
     if check_required(prices_status, REQUIRED_PRICES_STATUS_FIELDS, "prices/status.json"):
         ok("prices/status.json has required fields")
 
+    top_level_status = prices_status.get("status")
+    if top_level_status not in ALLOWED_PRICE_STATUS_VALUES:
+        err(f"prices/status.json status must be one of {sorted(ALLOWED_PRICE_STATUS_VALUES)}")
+
     languages = prices_status.get("languages")
     if not isinstance(languages, dict):
         err("prices/status.json languages must be an object")
@@ -617,6 +622,8 @@ def check_price_status_files() -> None:
             ts_value = payload.get(timestamp_field)
             if ts_value is not None and not isinstance(ts_value, str):
                 err(f"{label} {timestamp_field} must be a UTC string or null")
+            if isinstance(ts_value, str) and not ts_value.endswith("Z"):
+                err(f"{label} {timestamp_field} must end with 'Z' (UTC)")
 
         for num_field in [
             "currentPriceSetFileCount",
