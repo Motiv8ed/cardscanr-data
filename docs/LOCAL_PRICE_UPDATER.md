@@ -80,6 +80,12 @@ Status:
 .\scripts\status_local_price_updater.ps1
 ```
 
+Live watch:
+
+```powershell
+.\scripts\watch_local_price_updater.ps1
+```
+
 Logs:
 
 ```text
@@ -101,3 +107,45 @@ Notes:
 - Cloudflare Pages deploys automatically after each successful GitHub push.
 - The loop sleeps most of the time, so CPU and memory usage should stay minimal.
 - Very short intervals create more GitHub commits and more Cloudflare deploys.
+
+## Checking updater progress
+
+Status dashboard:
+
+```powershell
+.\scripts\status_local_price_updater.ps1
+```
+
+Live watch dashboard:
+
+```powershell
+.\scripts\watch_local_price_updater.ps1
+```
+
+Raw log tail:
+
+```powershell
+Get-Content .\logs\local_price_updater.log -Tail 80 -Wait
+```
+
+Status fields:
+
+- `Running` tells you whether the updater PID is still alive.
+- `PID` is the current background process ID.
+- `Phase` shows the current loop stage: starting, pulling, updating, validating, committing, pushing, sleeping, error, or stopped.
+- `State` summarizes whether the updater is actively working or sleeping.
+- `Batch size` and `Interval` show the active loop settings.
+- `Update start`, `Update elapsed`, and `Est. finish` describe the current cycle. The finish time is only an estimate based on the previous completed cycle duration.
+- `Last update`, `Last push`, `Last commit`, and `Last duration` summarize the most recent successful cycle.
+- `Next update` and `Time remaining` show when the next sleep window ends.
+- `Last sets` lists the most recent planned or updated set IDs captured by the updater.
+- `Last error` shows the most recent failure or skipped-cycle reason, if any.
+- `Recent logs` shows the last 20 lines from the local updater log.
+
+Local runtime files:
+
+- `logs\local_price_updater.log`
+- `logs\local_price_updater_status.json`
+- `logs\local_price_update_last_result.json`
+
+These files are local only and are ignored by git.
