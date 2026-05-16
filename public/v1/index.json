@@ -6,9 +6,9 @@
       "id": "api_manifest",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "de4ea91748acaffbad2e78654d24c47ed6f03cb5c8e5a823d590751f85fbe060",
+      "sha256": "b8e3ad858bc365a8f2b91d5979578e00335e51d8a916e397b70b6fc2436dca01",
       "type": "api_manifest",
-      "updatedAtUtc": "2026-05-16T23:17:53Z",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
       "url": "/v1/api-manifest.json"
     },
     {
@@ -16,9 +16,9 @@
       "id": "api_notes",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "991044b209d6406a9630af939691aee958e2201f9e7f357a4076b96160c1f008",
+      "sha256": "27dc33a6b04e426c978631885ac6177734dcdeba44eb022028786c1131527d67",
       "type": "api_notes",
-      "updatedAtUtc": "2026-05-16T23:17:53Z",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
       "url": "/v1/api-notes.json"
     },
     {
@@ -2903,9 +2903,9 @@
       "id": "diagnostics",
       "recommendedCacheTtlSeconds": 900,
       "schemaVersion": "1.0.0",
-      "sha256": "9ba8687488e385ad3f476431586d4af00c11f989fddf1753832f09e90965de5f",
+      "sha256": "d237dd3fad835f110c3dfb84f8763f2b796fe17d28790eab9f06f46ccb30ee58",
       "type": "diagnostics",
-      "updatedAtUtc": "2026-05-16T23:17:53Z",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
       "url": "/v1/diagnostics/latest-build.json"
     },
     {
@@ -4205,6 +4205,18 @@
       "url": "/v1/prices/current/pokemon/en/smp.json"
     },
     {
+      "description": "CardScanR app-facing UTC price freshness/status for Pokemon EN",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_en_status",
+      "language": "en",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "af40de63208c3d97b80ed43b0f412e1bfd2a8d2c3480c11bc2f9250e48435aa7",
+      "type": "price_status",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
+      "url": "/v1/prices/current/pokemon/en/status.json"
+    },
+    {
       "description": "Pokemon TCG EN latest-known current prices for Scarlet & Violet",
       "game": "pokemon",
       "id": "prices_current_pokemon_en_sv1",
@@ -4829,6 +4841,18 @@
       "url": "/v1/prices/current/pokemon/en/zsv10pt5.json"
     },
     {
+      "description": "CardScanR app-facing UTC price freshness/status for Pokemon JP",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_jp_status",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "90c09558c8c5a796cd624594c5a956bf170e07b967dda8bc3f97745a299ec585",
+      "type": "price_status",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
+      "url": "/v1/prices/current/pokemon/jp/status.json"
+    },
+    {
       "description": "Pokemon TCG EN current tracked prices",
       "game": "pokemon",
       "id": "prices_pokemon_en",
@@ -4853,13 +4877,24 @@
       "url": "/v1/prices/pokemon/jp/sample.json"
     },
     {
+      "description": "CardScanR app-facing UTC price freshness/status summary",
+      "game": "pokemon",
+      "id": "prices_status",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "c8295695cfc53351c2b8149f5e048814ea9c12f978e9da4d6c9798391ca8cfcd",
+      "type": "price_status",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
+      "url": "/v1/prices/status.json"
+    },
+    {
       "description": "Machine-readable CardScanR cache schema docs",
       "id": "schemas",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "76e25bcc0682a539e437dc60ed95bcbf7ca3a09e9b8ab41164e477a7f317f1dd",
+      "sha256": "70b17583d058ce209ecfe6ded837f359e46434fbe65fd2a912ee9bf973419a8c",
       "type": "schemas",
-      "updatedAtUtc": "2026-05-16T23:17:53Z",
+      "updatedAtUtc": "2026-05-16T23:24:18Z",
       "url": "/v1/schemas.json"
     },
     {
@@ -4873,6 +4908,6 @@
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-16T23:17:53Z",
+  "generatedAtUtc": "2026-05-16T23:24:18Z",
   "schemaVersion": "1.0.0"
 }

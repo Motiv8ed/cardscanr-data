@@ -206,6 +206,30 @@ REQUIRED_API_NOTES_FIELDS = {
     "notes",
 }
 REQUIRED_SCHEMAS_FIELDS = {"schemaVersion", "generatedAtUtc", "schemas"}
+REQUIRED_PRICES_STATUS_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "cacheVersion",
+    "status",
+    "languages",
+}
+REQUIRED_LANGUAGE_STATUS_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "game",
+    "language",
+    "status",
+    "staleness",
+}
+ALLOWED_PRICE_STATUS_VALUES = {
+    "ok",
+    "stale",
+    "very_stale",
+    "unavailable",
+    "not_available",
+    "catalogue_only",
+}
+ALLOWED_STALENESS_VALUES = {"fresh", "stale", "very_stale", "unavailable"}
 REQUIRED_PLACEHOLDER_CATALOG_FIELDS = {
     "schemaVersion",
     "generatedAtUtc",
@@ -402,6 +426,9 @@ def check_index() -> list[dict]:
         "tracked_history",
         "prices_pokemon_en",
         "prices_pokemon_jp",
+        "prices_status",
+        "prices_current_pokemon_en_status",
+        "prices_current_pokemon_jp_status",
         "catalog_pokemon_en_sets",
         "catalog_pokemon_jp_sets",
     }
@@ -455,6 +482,10 @@ def check_price_files() -> None:
             continue
 
         parts = path.relative_to(V1_DIR).parts
+        if parts == ("prices", "status.json") or (
+            len(parts) == 5 and parts[:3] == ("prices", "current", "pokemon") and parts[4] == "status.json"
+        ):
+            continue
         is_current_set_file = len(parts) == 5 and parts[:3] == ("prices", "current", "pokemon")
         current_language = parts[3] if is_current_set_file else None
         required_top_fields = REQUIRED_CURRENT_PRICE_SET_FIELDS if is_current_set_file else REQUIRED_PRICE_FIELDS
@@ -518,6 +549,90 @@ def check_price_files() -> None:
             err(f"{rel}: duplicate canonicalId values: {dupes}")
         elif entry_errors == 0:
             ok(f"{rel}: {len(prices)} entries, no duplicates, all fields present")
+
+
+def check_price_status_files() -> None:
+    print("\n[5b] Price status files check")
+    prices_status_path = V1_DIR / "prices" / "status.json"
+    en_status_path = V1_DIR / "prices" / "current" / "pokemon" / "en" / "status.json"
+    jp_status_path = V1_DIR / "prices" / "current" / "pokemon" / "jp" / "status.json"
+
+    for path in [prices_status_path, en_status_path, jp_status_path]:
+        if not path.exists():
+            err(f"Price status file not found: {path.relative_to(ROOT)}")
+            return
+
+    prices_status = load_json_file(prices_status_path)
+    en_status = load_json_file(en_status_path)
+    jp_status = load_json_file(jp_status_path)
+    if not isinstance(prices_status, dict) or not isinstance(en_status, dict) or not isinstance(jp_status, dict):
+        err("One or more price status files are not JSON objects")
+        return
+
+    if check_required(prices_status, REQUIRED_PRICES_STATUS_FIELDS, "prices/status.json"):
+        ok("prices/status.json has required fields")
+
+    languages = prices_status.get("languages")
+    if not isinstance(languages, dict):
+        err("prices/status.json languages must be an object")
+    else:
+        if "en" not in languages or "jp" not in languages:
+            err("prices/status.json languages must include en and jp")
+
+    for label, payload, language in [
+        ("prices/current/pokemon/en/status.json", en_status, "en"),
+        ("prices/current/pokemon/jp/status.json", jp_status, "jp"),
+    ]:
+        if check_required(payload, REQUIRED_LANGUAGE_STATUS_FIELDS, label):
+            ok(f"{label} has required fields")
+        if payload.get("language") != language:
+            err(f"{label} language must be {language}")
+
+        status_value = payload.get("status")
+        if status_value not in ALLOWED_PRICE_STATUS_VALUES:
+            err(f"{label} status must be one of {sorted(ALLOWED_PRICE_STATUS_VALUES)}")
+
+        staleness = payload.get("staleness")
+        if not isinstance(staleness, dict):
+            err(f"{label} staleness must be an object")
+        else:
+            staleness_status = staleness.get("status")
+            if staleness_status not in ALLOWED_STALENESS_VALUES:
+                err(f"{label} staleness.status must be one of {sorted(ALLOWED_STALENESS_VALUES)}")
+            for num_field in ["ageSeconds", "freshForSeconds", "staleAfterSeconds"]:
+                value = staleness.get(num_field)
+                if value is not None and not (isinstance(value, int) and value >= 0):
+                    err(f"{label} staleness.{num_field} must be null or a non-negative integer")
+
+        for timestamp_field in [
+            "generatedAtUtc",
+            "lastSuccessfulPriceUpdateAtUtc",
+            "lastSuccessfulPushAtUtc",
+            "lastBatchStartedAtUtc",
+            "lastBatchFinishedAtUtc",
+            "nextExpectedPriceUpdateAtUtc",
+        ]:
+            if timestamp_field not in payload:
+                continue
+            ts_value = payload.get(timestamp_field)
+            if ts_value is not None and not isinstance(ts_value, str):
+                err(f"{label} {timestamp_field} must be a UTC string or null")
+
+        for num_field in [
+            "currentPriceSetFileCount",
+            "currentPriceRecordCount",
+            "lastBatchSize",
+            "lastBatchDurationSeconds",
+            "expectedUpdateIntervalMinutes",
+            "fullRotationEstimatedHours",
+        ]:
+            if num_field not in payload:
+                continue
+            num_value = payload.get(num_field)
+            if num_value is not None and not (isinstance(num_value, int) and num_value >= 0):
+                err(f"{label} {num_field} must be null or a non-negative integer")
+
+    ok("Price status files validated")
 
 
 # ---------------------------------------------------------------------------
@@ -947,6 +1062,7 @@ def main() -> None:
     check_all_json_syntax()
     check_index()
     check_price_files()
+    check_price_status_files()
     check_diagnostics()
     check_provider_probe_diagnostics()
     check_api_manifest()

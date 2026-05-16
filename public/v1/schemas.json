@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-16T23:17:53Z",
+  "generatedAtUtc": "2026-05-16T23:24:18Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -81,6 +81,20 @@
         "sets",
         "source",
         "notes"
+      ]
+    },
+    "current_price_language_status_file": {
+      "notes": [
+        "Language-specific app-facing UTC price freshness metadata.",
+        "Includes expected update cadence and batch metadata for EN local-first rotation."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "game",
+        "language",
+        "status",
+        "staleness"
       ]
     },
     "current_price_record": {
@@ -178,6 +192,19 @@
         "type",
         "description",
         "updatedAtUtc"
+      ]
+    },
+    "prices_status_file": {
+      "notes": [
+        "Top-level app-facing UTC status summary for current price freshness.",
+        "Contains language-level status, staleness, and expected update metadata."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "cacheVersion",
+        "status",
+        "languages"
       ]
     },
     "tracked_cards_record": {

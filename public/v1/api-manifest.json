@@ -62,6 +62,30 @@
     {
       "authRequired": false,
       "cacheable": true,
+      "description": "App-facing UTC freshness/status summary for CardScanR current price cache",
+      "id": "prices_status",
+      "method": "GET",
+      "path": "/prices/status.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "App-facing UTC freshness/status for Pokemon EN current prices",
+      "id": "current_prices_en_status",
+      "method": "GET",
+      "path": "/prices/current/pokemon/en/status.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "App-facing UTC freshness/status for Pokemon JP current prices",
+      "id": "current_prices_jp_status",
+      "method": "GET",
+      "path": "/prices/current/pokemon/jp/status.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
       "description": "English Pokemon catalogue set manifest built from official PokemonTCG API data",
       "id": "catalog_pokemon_en_sets",
       "method": "GET",
@@ -114,7 +138,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-16T23:17:53Z",
+  "generatedAtUtc": "2026-05-16T23:24:18Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -124,6 +148,7 @@
     "Future authenticated app routes may be served through Cloudflare Workers or Supabase.",
     "Current price files may be overwritten each build.",
     "Per-set current price files are latest-known values sourced from official provider API payloads and are not guaranteed live.",
+    "Price freshness/status files provide UTC metadata for app-side update visibility.",
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",
     "Images are referenced by URL and are not mirrored into this cache yet."

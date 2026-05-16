@@ -172,8 +172,10 @@ def main() -> int:
         "durationSeconds": None,
         "batchSize": max(1, args.batch_size),
         "plannedSetIds": [],
+        "lastBatchSetIds": [],
         "updatedSetIds": [],
         "changedFiles": [],
+        "priceStatusUpdated": False,
         "validationPassed": False,
         "commitCreated": False,
         "commitHash": None,
@@ -223,6 +225,16 @@ def main() -> int:
         changed_files = git_changed_files()
         result["changedFiles"] = changed_files
         result["updatedSetIds"] = price_set_ids_from_files(changed_files)
+        result["lastBatchSetIds"] = list(result["updatedSetIds"])
+        result["priceStatusUpdated"] = any(
+            path.replace("\\", "/")
+            in {
+                "public/v1/prices/status.json",
+                "public/v1/prices/current/pokemon/en/status.json",
+                "public/v1/prices/current/pokemon/jp/status.json",
+            }
+            for path in changed_files
+        )
         if not changed_files:
             print("No repository changes detected.")
             return finalize(0)

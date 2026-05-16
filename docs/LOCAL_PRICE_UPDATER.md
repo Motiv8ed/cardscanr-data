@@ -186,3 +186,23 @@ Local runtime files:
 - `logs\local_price_update_last_result.json`
 
 These files are local only and are ignored by git.
+
+## App-facing price freshness status
+
+Public status files are now generated for the app cache layer:
+
+- `public/v1/prices/status.json`
+- `public/v1/prices/current/pokemon/en/status.json`
+- `public/v1/prices/current/pokemon/jp/status.json`
+
+These files are UTC-based and intended for mobile/web app visibility features:
+
+- EN freshness state (`fresh`, `stale`, `very_stale`, `unavailable`)
+- last successful EN update and push timestamps
+- expected next EN update timestamp
+- EN batch size, update interval, and full-rotation estimate
+
+Timezone policy:
+
+- Public API/cache timestamps remain UTC for global clients.
+- Local operator dashboard (`status_local_price_updater.ps1`) displays times in AEST.

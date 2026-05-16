@@ -24,7 +24,7 @@ import shutil
 import sys
 import time
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -38,6 +38,9 @@ PUBLIC_DIR = ROOT / "public" / "v1"
 PRICES_DIR = PUBLIC_DIR / "prices"
 CURRENT_PRICES_EN_DIR = PRICES_DIR / "current" / "pokemon" / "en"
 CURRENT_PRICES_JP_DIR = PRICES_DIR / "current" / "pokemon" / "jp"
+PRICES_STATUS_PATH = PRICES_DIR / "status.json"
+EN_CURRENT_STATUS_PATH = CURRENT_PRICES_EN_DIR / "status.json"
+JP_CURRENT_STATUS_PATH = CURRENT_PRICES_JP_DIR / "status.json"
 DIAGNOSTICS_DIR = PUBLIC_DIR / "diagnostics"
 HISTORY_ROOT_DIR = PUBLIC_DIR / "history"
 HISTORY_DIR = HISTORY_ROOT_DIR / "daily"
@@ -338,6 +341,266 @@ def to_float(value: object) -> float | None:
         return None
 
 
+def parse_utc_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def utc_iso_from_datetime(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def safe_int(value: object, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def compute_staleness(last_update_utc: str | None, now_utc: str) -> tuple[str, int | None]:
+    last_dt = parse_utc_timestamp(last_update_utc)
+    now_dt = parse_utc_timestamp(now_utc)
+    if last_dt is None or now_dt is None:
+        return "unavailable", None
+
+    age_seconds = max(0, int((now_dt - last_dt).total_seconds()))
+    if age_seconds <= 86400:
+        return "fresh", age_seconds
+    if age_seconds <= 259200:
+        return "stale", age_seconds
+    return "very_stale", age_seconds
+
+
+def summarize_current_price_files(current_dir: Path) -> tuple[int, int]:
+    if not current_dir.exists():
+        return 0, 0
+
+    set_file_count = 0
+    record_count = 0
+    for path in sorted(current_dir.glob("*.json")):
+        if path.name == "status.json":
+            continue
+        payload = load_json(path)
+        if not isinstance(payload, dict):
+            continue
+        prices = payload.get("prices")
+        if not isinstance(prices, list):
+            continue
+        set_file_count += 1
+        record_count += len(prices)
+    return set_file_count, record_count
+
+
+def estimate_full_rotation_hours(set_count: int, batch_size: int, interval_minutes: int) -> int:
+    if set_count <= 0 or batch_size <= 0 or interval_minutes <= 0:
+        return 0
+    runs = (set_count + batch_size - 1) // batch_size
+    total_minutes = runs * interval_minutes
+    return (total_minutes + 59) // 60
+
+
+def derive_last_successful_push_utc(
+    previous_prices_status: dict | None,
+    update_built: bool,
+    ts: str,
+) -> str | None:
+    if update_built:
+        return ts
+    if not isinstance(previous_prices_status, dict):
+        return None
+    languages = previous_prices_status.get("languages")
+    if not isinstance(languages, dict):
+        return None
+    en_section = languages.get("en")
+    if not isinstance(en_section, dict):
+        return None
+    last_push = en_section.get("lastSuccessfulPushAtUtc")
+    return str(last_push) if last_push else None
+
+
+def build_public_price_status_payloads(
+    *,
+    ts: str,
+    diagnostics: dict,
+    config: dict,
+    refresh_state: dict,
+    previous_prices_status: dict | None,
+) -> tuple[dict, dict, dict]:
+    en_set_count, en_record_count = summarize_current_price_files(CURRENT_PRICES_EN_DIR)
+    jp_set_count, jp_record_count = summarize_current_price_files(CURRENT_PRICES_JP_DIR)
+
+    interval_minutes = max(1, safe_int(config.get("localUpdaterIntervalMinutes"), 60))
+    batch_size = max(
+        1,
+        safe_int(
+            diagnostics.get("currentPriceEnBatchSize")
+            or config.get("localUpdaterDefaultBatchSize")
+            or config.get("scheduledCurrentPriceBatchSize"),
+            10,
+        ),
+    )
+    full_rotation_hours = estimate_full_rotation_hours(en_set_count, batch_size, interval_minutes)
+
+    built_this_run = str(diagnostics.get("currentPriceEnStatus")) == "built"
+    last_successful_update_utc = ts if built_this_run else (refresh_state.get("lastUpdatedAtUtc") or None)
+    last_successful_push_utc = derive_last_successful_push_utc(previous_prices_status, built_this_run, ts)
+
+    now_dt = parse_utc_timestamp(ts)
+    next_expected_utc = None
+    if now_dt is not None:
+        next_expected_utc = utc_iso_from_datetime(now_dt + timedelta(minutes=interval_minutes))
+
+    last_batch_set_ids = diagnostics.get("currentPriceEnBatchSetIds") or refresh_state.get("lastBatchSetIds") or []
+    if not isinstance(last_batch_set_ids, list):
+        last_batch_set_ids = []
+
+    last_batch_started_utc = diagnostics.get("builtAtUtc")
+    last_batch_duration_seconds = safe_int(diagnostics.get("lastCycleDurationSeconds"), 0)
+    if last_batch_duration_seconds <= 0:
+        last_batch_duration_seconds = 0
+    last_batch_finished_utc = diagnostics.get("builtAtUtc")
+
+    staleness_status, staleness_age_seconds = compute_staleness(last_successful_update_utc, ts)
+    en_status = "ok"
+    if staleness_status in {"stale", "very_stale", "unavailable"}:
+        en_status = staleness_status
+    if en_set_count <= 0:
+        en_status = "unavailable"
+
+    en_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "game": "pokemon",
+        "language": "en",
+        "status": en_status,
+        "currentPriceFilesAvailable": en_set_count > 0,
+        "currentPriceSetFileCount": en_set_count,
+        "currentPriceRecordCount": en_record_count,
+        "lastSuccessfulPriceUpdateAtUtc": last_successful_update_utc,
+        "lastSuccessfulPushAtUtc": last_successful_push_utc,
+        "lastBatchSetIds": last_batch_set_ids,
+        "lastBatchSize": batch_size,
+        "lastBatchStartedAtUtc": last_batch_started_utc,
+        "lastBatchFinishedAtUtc": last_batch_finished_utc,
+        "lastBatchDurationSeconds": last_batch_duration_seconds,
+        "nextExpectedPriceUpdateAtUtc": next_expected_utc,
+        "expectedUpdateIntervalMinutes": interval_minutes,
+        "fullRotationEstimatedHours": full_rotation_hours,
+        "currency": CURRENT_PRICE_CURRENCY,
+        "isLivePricing": False,
+        "staleness": {
+            "status": staleness_status,
+            "ageSeconds": staleness_age_seconds,
+            "freshForSeconds": 86400,
+            "staleAfterSeconds": 259200,
+        },
+        "notes": [
+            "Current prices are latest-known cached values.",
+            "Next update time is expected, not guaranteed.",
+            "Timestamps are UTC. Apps should convert to the user's local timezone.",
+        ],
+    }
+
+    jp_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "game": "pokemon",
+        "language": "jp",
+        "status": "not_available",
+        "currentPriceFilesAvailable": False,
+        "currentPriceSetFileCount": jp_set_count,
+        "currentPriceRecordCount": jp_record_count,
+        "lastSuccessfulPriceUpdateAtUtc": None,
+        "lastSuccessfulPushAtUtc": None,
+        "lastBatchSetIds": [],
+        "lastBatchSize": 0,
+        "lastBatchStartedAtUtc": None,
+        "lastBatchFinishedAtUtc": None,
+        "lastBatchDurationSeconds": None,
+        "nextExpectedPriceUpdateAtUtc": None,
+        "expectedUpdateIntervalMinutes": None,
+        "fullRotationEstimatedHours": None,
+        "currency": None,
+        "isLivePricing": False,
+        "staleness": {
+            "status": "unavailable",
+            "ageSeconds": None,
+            "freshForSeconds": 86400,
+            "staleAfterSeconds": 259200,
+        },
+        "notes": [
+            "Japanese catalogue support is partial.",
+            "Japanese current price cache is not available yet.",
+            "Timestamps are UTC. Apps should convert to the user's local timezone.",
+        ],
+    }
+
+    prices_status = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "cacheVersion": diagnostics.get("cacheVersion"),
+        "status": "ok",
+        "intendedConsumer": "cardscanr_app",
+        "priceDataMode": "batched_refresh",
+        "notes": [
+            "Timestamps are UTC. Apps should convert to the user's local timezone.",
+            "Next update times are expected, not guaranteed.",
+            "Current prices are latest-known cached values, not live market quotes.",
+        ],
+        "languages": {
+            "en": {
+                "game": "pokemon",
+                "language": "en",
+                "status": en_payload["status"],
+                "currentPriceFilesAvailable": en_payload["currentPriceFilesAvailable"],
+                "currentPriceSetFileCount": en_payload["currentPriceSetFileCount"],
+                "currentPriceRecordCount": en_payload["currentPriceRecordCount"],
+                "lastSuccessfulPriceUpdateAtUtc": en_payload["lastSuccessfulPriceUpdateAtUtc"],
+                "lastSuccessfulPushAtUtc": en_payload["lastSuccessfulPushAtUtc"],
+                "lastBatchSize": en_payload["lastBatchSize"],
+                "lastBatchSetIds": en_payload["lastBatchSetIds"],
+                "lastBatchStartedAtUtc": en_payload["lastBatchStartedAtUtc"],
+                "lastBatchFinishedAtUtc": en_payload["lastBatchFinishedAtUtc"],
+                "lastBatchDurationSeconds": en_payload["lastBatchDurationSeconds"],
+                "nextExpectedPriceUpdateAtUtc": en_payload["nextExpectedPriceUpdateAtUtc"],
+                "expectedUpdateIntervalMinutes": en_payload["expectedUpdateIntervalMinutes"],
+                "fullRotationEstimatedHours": en_payload["fullRotationEstimatedHours"],
+                "staleness": en_payload["staleness"],
+                "sourceSummary": {
+                    "primarySource": CURRENT_PRICE_SOURCE,
+                    "currency": CURRENT_PRICE_CURRENCY,
+                    "isLivePricing": False,
+                },
+            },
+            "jp": {
+                "game": "pokemon",
+                "language": "jp",
+                "status": "catalogue_only",
+                "currentPriceFilesAvailable": False,
+                "currentPriceSetFileCount": jp_payload["currentPriceSetFileCount"],
+                "currentPriceRecordCount": jp_payload["currentPriceRecordCount"],
+                "lastSuccessfulPriceUpdateAtUtc": None,
+                "nextExpectedPriceUpdateAtUtc": None,
+                "staleness": jp_payload["staleness"],
+                "sourceSummary": {
+                    "primarySource": "tcgdex",
+                    "currency": None,
+                    "isLivePricing": False,
+                },
+                "notes": jp_payload["notes"],
+            },
+        },
+    }
+
+    return prices_status, en_payload, jp_payload
+
+
 def resolve_state_path(config: dict) -> Path:
     raw = str(config.get("scheduledCurrentPriceStatePath") or "data/scheduled_price_refresh_state.json").strip()
     if not raw:
@@ -493,6 +756,7 @@ def build_api_manifest(ts: str) -> dict:
             "Future authenticated app routes may be served through Cloudflare Workers or Supabase.",
             "Current price files may be overwritten each build.",
             "Per-set current price files are latest-known values sourced from official provider API payloads and are not guaranteed live.",
+            "Price freshness/status files provide UTC metadata for app-side update visibility.",
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
             "Images are referenced by URL and are not mirrored into this cache yet.",
@@ -551,6 +815,30 @@ def build_api_manifest(ts: str) -> dict:
                 "method": "GET",
                 "path": "/prices/current/pokemon/en/{setId}.json",
                 "description": "Latest-known English Pokemon current prices by set where official API pricing is available",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "prices_status",
+                "method": "GET",
+                "path": "/prices/status.json",
+                "description": "App-facing UTC freshness/status summary for CardScanR current price cache",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "current_prices_en_status",
+                "method": "GET",
+                "path": "/prices/current/pokemon/en/status.json",
+                "description": "App-facing UTC freshness/status for Pokemon EN current prices",
+                "authRequired": False,
+                "cacheable": True,
+            },
+            {
+                "id": "current_prices_jp_status",
+                "method": "GET",
+                "path": "/prices/current/pokemon/jp/status.json",
+                "description": "App-facing UTC freshness/status for Pokemon JP current prices",
                 "authRequired": False,
                 "cacheable": True,
             },
@@ -624,6 +912,7 @@ def build_api_notes(ts: str) -> dict:
             "This is not a supported public developer API.",
             "Current price files may be overwritten each build.",
             "Per-set current price files are latest-known snapshots, not guaranteed live quotes.",
+            "Price freshness/status metadata files are UTC and intended for app visibility and countdown UX.",
             "Currency is provided on each price record.",
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
@@ -784,6 +1073,33 @@ def build_schemas(ts: str) -> dict:
                     "Japanese Pokemon current prices by set are optional and only appear when official/free source pricing is available.",
                     "These files are latest-known current snapshots, not lifetime/all-time price history.",
                     "Tracked historical movement remains limited to CardScanR-tracked cards.",
+                ],
+            },
+            "prices_status_file": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "cacheVersion",
+                    "status",
+                    "languages",
+                ],
+                "notes": [
+                    "Top-level app-facing UTC status summary for current price freshness.",
+                    "Contains language-level status, staleness, and expected update metadata.",
+                ],
+            },
+            "current_price_language_status_file": {
+                "requiredFields": [
+                    "schemaVersion",
+                    "generatedAtUtc",
+                    "game",
+                    "language",
+                    "status",
+                    "staleness",
+                ],
+                "notes": [
+                    "Language-specific app-facing UTC price freshness metadata.",
+                    "Includes expected update cadence and batch metadata for EN local-first rotation.",
                 ],
             },
             "tracked_cards_record": {
@@ -1732,6 +2048,8 @@ def load_existing_current_price_files(language: str = "en") -> list[tuple[str, s
 
     files: list[tuple[str, str, Path]] = []
     for path in sorted(current_dir.glob("*.json")):
+        if path.name == "status.json":
+            continue
         payload = load_json(path)
         if not isinstance(payload, dict):
             continue
@@ -2116,6 +2434,7 @@ def build() -> None:
     sample_price_files: list[tuple[str, str, Path]] = []
 
     pending_json_writes: list[tuple[Path, dict]] = []
+    previous_prices_status = load_json(PRICES_STATUS_PATH) if PRICES_STATUS_PATH.exists() else None
 
     try:
         if should_build_tracked_history(mode):
@@ -2284,6 +2603,15 @@ def build() -> None:
         diagnostics.update(catalog_jp_metrics)
         diagnostics.update(jp_current_price_metrics)
 
+        state_for_status = next_refresh_state if next_refresh_state is not None else refresh_state
+        prices_status, en_prices_status, jp_prices_status = build_public_price_status_payloads(
+            ts=ts,
+            diagnostics=diagnostics,
+            config=catalog_config,
+            refresh_state=state_for_status,
+            previous_prices_status=previous_prices_status,
+        )
+
         diagnostics["sourcesUsed"] = sorted(diagnostics["sourcesUsed"])
 
         for path, payload in pending_json_writes:
@@ -2292,6 +2620,9 @@ def build() -> None:
         write_json(API_MANIFEST_PATH, api_manifest)
         write_json(API_NOTES_PATH, api_notes)
         write_json(SCHEMAS_PATH, schemas)
+        write_json(PRICES_STATUS_PATH, prices_status)
+        write_json(EN_CURRENT_STATUS_PATH, en_prices_status)
+        write_json(JP_CURRENT_STATUS_PATH, jp_prices_status)
         if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
             write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
 
@@ -2351,6 +2682,42 @@ def build() -> None:
                 language=language,
             )
         )
+
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="prices_status",
+            file_path=PRICES_STATUS_PATH,
+            dataset_type="price_status",
+            description="CardScanR app-facing UTC price freshness/status summary",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+            game="pokemon",
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="prices_current_pokemon_en_status",
+            file_path=EN_CURRENT_STATUS_PATH,
+            dataset_type="price_status",
+            description="CardScanR app-facing UTC price freshness/status for Pokemon EN",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+            game="pokemon",
+            language="en",
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="prices_current_pokemon_jp_status",
+            file_path=JP_CURRENT_STATUS_PATH,
+            dataset_type="price_status",
+            description="CardScanR app-facing UTC price freshness/status for Pokemon JP",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+            game="pokemon",
+            language="jp",
+        )
+    )
 
         for set_id, set_name, price_path in broad_current_price_files:
             index_entries.append(

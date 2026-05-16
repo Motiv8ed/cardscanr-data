@@ -14,6 +14,7 @@ $lockPath = Join-Path $RepoRoot '.local_updater.lock'
 $logPath = Join-Path $RepoRoot 'logs\local_price_updater.log'
 $statusPath = Join-Path $RepoRoot 'logs\local_price_updater_status.json'
 $resultPath = Join-Path $RepoRoot 'logs\local_price_update_last_result.json'
+$publicPricesStatusPath = Join-Path $RepoRoot 'public\v1\prices\status.json'
 
 function Test-ProcessAlive {
     param([int]$ProcessId)
@@ -186,6 +187,7 @@ function Truncate-SetList {
 $lockData = Read-JsonFile -Path $lockPath
 $statusData = Read-JsonFile -Path $statusPath
 $resultData = Read-JsonFile -Path $resultPath
+$publicPricesStatus = Read-JsonFile -Path $publicPricesStatusPath
 $aestTimeZone = Get-AestTimeZone
 
 $running = $false
@@ -242,6 +244,28 @@ elseif ($resultData -and $resultData.plannedSetIds) {
     $lastSets = @($resultData.plannedSetIds)
 }
 
+$publicEnStatus = $null
+if ($publicPricesStatus -and $publicPricesStatus.languages -and $publicPricesStatus.languages.en) {
+    $publicEnStatus = $publicPricesStatus.languages.en
+}
+
+$publicEnStaleness = if ($publicEnStatus -and $publicEnStatus.staleness -and $publicEnStatus.staleness.status) { [string]$publicEnStatus.staleness.status } else { 'unavailable' }
+$publicEnAgeSeconds = if ($publicEnStatus -and $publicEnStatus.staleness -and $publicEnStatus.staleness.ageSeconds -ne $null) { [int]$publicEnStatus.staleness.ageSeconds } else { $null }
+$publicEnSetCount = if ($publicEnStatus -and $publicEnStatus.currentPriceSetFileCount -ne $null) { [int]$publicEnStatus.currentPriceSetFileCount } else { 0 }
+$publicEnRecordCount = if ($publicEnStatus -and $publicEnStatus.currentPriceRecordCount -ne $null) { [int]$publicEnStatus.currentPriceRecordCount } else { 0 }
+$publicEnNextExpectedUtc = if ($publicEnStatus -and $publicEnStatus.nextExpectedPriceUpdateAtUtc) { [string]$publicEnStatus.nextExpectedPriceUpdateAtUtc } else { $null }
+$publicEnIntervalMinutes = if ($publicEnStatus -and $publicEnStatus.expectedUpdateIntervalMinutes -ne $null) { [int]$publicEnStatus.expectedUpdateIntervalMinutes } else { $null }
+$publicEnRotationHours = if ($publicEnStatus -and $publicEnStatus.fullRotationEstimatedHours -ne $null) { [int]$publicEnStatus.fullRotationEstimatedHours } else { $null }
+$publicEnLastUpdateUtc = if ($publicEnStatus -and $publicEnStatus.lastSuccessfulPriceUpdateAtUtc) { [string]$publicEnStatus.lastSuccessfulPriceUpdateAtUtc } else { $lastUpdateUtc }
+$publicEnLastPushUtc = if ($publicEnStatus -and $publicEnStatus.lastSuccessfulPushAtUtc) { [string]$publicEnStatus.lastSuccessfulPushAtUtc } else { $lastPushUtc }
+$publicEnAgeText = if ($publicEnAgeSeconds -ne $null) { Format-DurationValue -Seconds $publicEnAgeSeconds } else { 'Unknown' }
+$publicEnFreshnessLabel = switch ($publicEnStaleness) {
+    'fresh' { 'Fresh' }
+    'stale' { 'Stale' }
+    'very_stale' { 'Very stale' }
+    default { 'Unavailable' }
+}
+
 $statusLabel = if ($running) { 'RUNNING' } else { 'STOPPED' }
 $currentLabel = Get-PhaseLabel -Phase $phase
 $nextUpdateCycleText = 'None'
@@ -295,6 +319,14 @@ Write-DashboardLine -Label 'Batch size' -Value ($(if ($batchSize -ne 'Unknown') 
 Write-DashboardLine -Label 'Interval' -Value ($(if ($intervalMinutes -ne 'Unknown') { "$intervalMinutes minutes" } else { 'Unknown' }))
 
 Write-Host ''
+Write-DashboardLine -Label 'EN freshness' -Value $publicEnFreshnessLabel
+Write-DashboardLine -Label 'EN age' -Value $publicEnAgeText
+Write-DashboardLine -Label 'EN files' -Value ("$publicEnSetCount sets, $publicEnRecordCount records")
+Write-DashboardLine -Label 'EN next expected' -Value ($(if ($publicEnNextExpectedUtc) { Format-DateAest -Value $publicEnNextExpectedUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }))
+Write-DashboardLine -Label 'EN cadence' -Value ($(if ($publicEnIntervalMinutes -ne $null) { "$publicEnIntervalMinutes minutes" } else { 'Unknown' }))
+Write-DashboardLine -Label 'EN rotation' -Value ($(if ($publicEnRotationHours -ne $null) { "$publicEnRotationHours hours" } else { 'Unknown' }))
+
+Write-Host ''
 Write-DashboardLine -Label 'Next update cycle' -Value $nextUpdateCycleText
 Write-DashboardLine -Label 'Time until update' -Value $timeUntilUpdateText
 Write-DashboardLine -Label 'Next push' -Value $nextPushText
@@ -306,8 +338,8 @@ if ($running -and $phase -ne 'sleeping' -and $phase -ne 'stopped') {
 }
 
 Write-Host ''
-Write-DashboardLine -Label 'Last success' -Value (Format-DateAest -Value $lastUpdateUtc -AestTimeZone $aestTimeZone)
-Write-DashboardLine -Label 'Last push' -Value (Format-DateAest -Value $lastPushUtc -AestTimeZone $aestTimeZone)
+Write-DashboardLine -Label 'Last success' -Value (Format-DateAest -Value $publicEnLastUpdateUtc -AestTimeZone $aestTimeZone)
+Write-DashboardLine -Label 'Last push' -Value (Format-DateAest -Value $publicEnLastPushUtc -AestTimeZone $aestTimeZone)
 Write-DashboardLine -Label 'Last commit' -Value ($(if ($lastCommitHash) { $lastCommitHash } else { 'None' }))
 Write-DashboardLine -Label 'Last duration' -Value ($(if ($lastDurationSeconds -ne $null) { Format-DurationValue -Seconds $lastDurationSeconds } else { 'Unknown' }))
 
