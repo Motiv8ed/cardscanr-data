@@ -107,7 +107,7 @@ def run_cmd(command: list[str], env: dict | None = None) -> subprocess.Completed
     if completed.stdout:
         print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
     if completed.stderr:
-        print(completed.stderr, end="" if completed.stderr.endswith("\n") else "\n", file=sys.stderr)
+        print(completed.stderr, end="" if completed.stderr.endswith("\n") else "\n")
     if completed.returncode != 0:
         raise RuntimeError(f"Command failed ({completed.returncode}): {' '.join(command)}")
     return completed

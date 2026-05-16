@@ -73,6 +73,50 @@ function Write-LoopLog {
     Add-Content -Path $logPath -Value $line -Encoding UTF8
 }
 
+function Invoke-NativeCommandSafe {
+    param(
+        [string]$FilePath,
+        [string[]]$Arguments,
+        [string]$WorkingDirectory = $RepoRoot
+    )
+
+    $stdoutPath = [System.IO.Path]::GetTempFileName()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
+
+    try {
+        $process = Start-Process \
+            -FilePath $FilePath \
+            -ArgumentList $Arguments \
+            -WorkingDirectory $WorkingDirectory \
+            -NoNewWindow \
+            -Wait \
+            -PassThru \
+            -RedirectStandardOutput $stdoutPath \
+            -RedirectStandardError $stderrPath
+
+        $stdoutLines = @()
+        if (Test-Path $stdoutPath) {
+            $stdoutLines = @(Get-Content -Path $stdoutPath)
+        }
+
+        $stderrLines = @()
+        if (Test-Path $stderrPath) {
+            $stderrLines = @(Get-Content -Path $stderrPath)
+        }
+
+        return [pscustomobject]@{
+            ExitCode = [int]$process.ExitCode
+            StdOut = $stdoutLines
+            StdErr = $stderrLines
+            Combined = @($stdoutLines + $stderrLines)
+        }
+    }
+    finally {
+        Remove-Item -Path $stdoutPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Test-ProcessAlive {
     param([int]$ProcessId)
 
@@ -366,15 +410,15 @@ try {
             }
             else {
                 Set-Phase -Phase 'pulling'
-                $pullOutput = git pull --ff-only 2>&1
-                foreach ($line in $pullOutput) {
+                $pullResult = Invoke-NativeCommandSafe -FilePath 'git' -Arguments @('pull', '--ff-only')
+                foreach ($line in $pullResult.Combined) {
                     if (-not [string]::IsNullOrWhiteSpace("$line")) {
                         Write-LoopLog -Level 'INFO' -Message "git pull: $line"
                     }
                 }
 
-                if ($LASTEXITCODE -ne 0) {
-                    Set-Phase -Phase 'error' -ErrorMessage 'git pull --ff-only failed; skipping cycle.' -ExitCode $LASTEXITCODE
+                if ($pullResult.ExitCode -ne 0) {
+                    Set-Phase -Phase 'error' -ErrorMessage 'git pull --ff-only failed; skipping cycle.' -ExitCode $pullResult.ExitCode
                     Write-LoopLog -Level 'ERROR' -Message "git pull --ff-only failed; skipping cycle."
                 }
                 elseif (-not (Test-Path $pythonPath)) {
@@ -389,10 +433,12 @@ try {
                         lastExitCode = 0
                     }
                     Write-LoopLog -Level 'INFO' -Message "Starting update cycle."
-                    & $pythonPath $updaterScript --batch-size $BatchSize --commit --push 2>&1 | ForEach-Object {
-                        $line = "$($_)"
+                    $updaterResult = Invoke-NativeCommandSafe -FilePath $pythonPath -Arguments @($updaterScript, '--batch-size', "$BatchSize", '--commit', '--push')
+
+                    foreach ($lineRaw in $updaterResult.Combined) {
+                        $line = "$lineRaw"
                         if ([string]::IsNullOrWhiteSpace($line)) {
-                            return
+                            continue
                         }
 
                         if ($line.StartsWith('CARDSCANR_PHASE ')) {
@@ -404,14 +450,14 @@ try {
                                     lastExitCode = 0
                                 }
                             }
-                            return
+                            continue
                         }
 
                         Write-LoopLog -Level 'INFO' -Message "updater: $line"
                         Write-Status
                     }
 
-                    $updaterExitCode = $LASTEXITCODE
+                    $updaterExitCode = $updaterResult.ExitCode
                     $lastResult = Read-LastResult
                     if ($lastResult) {
                         Update-StatusFromResult -Result $lastResult
