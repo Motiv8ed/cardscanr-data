@@ -1,17 +1,467 @@
 {
   "apiKeyPresent": true,
-  "currenciesSeen": [],
+  "currenciesSeen": [
+    "USD"
+  ],
+  "diagnosticEvents": [
+    {
+      "event": "tiny_pro_test_allowed",
+      "maxRequests": 20
+    },
+    {
+      "endpoint": "trending",
+      "event": "pro_endpoint_success",
+      "identifier": "sets-trending",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "trending",
+      "event": "pro_endpoint_success",
+      "identifier": "sets-trending-7d",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "trending",
+      "event": "pro_endpoint_success",
+      "identifier": "sets-trending-30d",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "topCards",
+      "event": "pro_endpoint_success",
+      "identifier": "top-cards-price-tcg",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "topCards",
+      "event": "pro_endpoint_success",
+      "identifier": "top-cards-growth-tcg",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "topCards",
+      "event": "pro_endpoint_success",
+      "identifier": "top-cards-price-cm",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "topCards",
+      "event": "pro_endpoint_success",
+      "identifier": "top-cards-growth-cm",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "setDetails",
+      "event": "pro_endpoint_success",
+      "identifier": "24026",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24026:all",
+      "statusCode": 200
+    },
+    {
+      "count": 103,
+      "event": "numeric_prices_found",
+      "language": "jp",
+      "setCode": "L1: SS"
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24026:tcg",
+      "statusCode": 200
+    },
+    {
+      "count": 103,
+      "event": "numeric_prices_found",
+      "language": "jp",
+      "setCode": "L1: SS"
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24026:cm",
+      "statusCode": 200
+    },
+    {
+      "event": "no_numeric_prices_found",
+      "language": "jp",
+      "recordCount": 172,
+      "setCode": "L1: SS"
+    },
+    {
+      "endpoint": "statistics",
+      "event": "pro_endpoint_success",
+      "identifier": "24026",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "completionValue",
+      "event": "pro_endpoint_success",
+      "identifier": "24026",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "setDetails",
+      "event": "pro_endpoint_success",
+      "identifier": "24025",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24025:all",
+      "statusCode": 200
+    },
+    {
+      "count": 173,
+      "event": "numeric_prices_found",
+      "language": "jp",
+      "setCode": "L1: HG"
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24025:tcg",
+      "statusCode": 200
+    },
+    {
+      "count": 99,
+      "event": "numeric_prices_found",
+      "language": "jp",
+      "setCode": "L1: HG"
+    },
+    {
+      "endpoint": "prices",
+      "event": "pro_endpoint_success",
+      "identifier": "24025:cm",
+      "statusCode": 200
+    },
+    {
+      "count": 173,
+      "event": "numeric_prices_found",
+      "language": "jp",
+      "setCode": "L1: HG"
+    },
+    {
+      "endpoint": "statistics",
+      "event": "pro_endpoint_success",
+      "identifier": "24025",
+      "statusCode": 200
+    }
+  ],
   "endpointCoverage": {
-    "completionValue": {},
+    "completionValue": {
+      "attempted": 1,
+      "sampleSummaries": [
+        {
+          "numericFields": [
+            "set_info.total_cards"
+          ],
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "breakdown_by_rarity",
+            "completion_cost",
+            "set_info"
+          ]
+        }
+      ],
+      "succeeded": 1
+    },
     "images": {},
     "priceHistory": {},
-    "prices": {},
-    "setDetails": {},
-    "statistics": {},
-    "topCards": {},
-    "trending": {}
+    "prices": {
+      "attempted": 6,
+      "sampleResponseShapes": [
+        {
+          "recordContainer": "data",
+          "recordCount": 172,
+          "sampleRecordKeys": [
+            "card_number",
+            "cardmarket",
+            "name",
+            "tcgplayer",
+            "variant"
+          ],
+          "topLevelKeys": [
+            "data",
+            "group_id",
+            "set_code",
+            "source",
+            "success",
+            "total"
+          ]
+        },
+        {
+          "recordContainer": "data",
+          "recordCount": 172,
+          "sampleRecordKeys": [
+            "card_number",
+            "cardmarket",
+            "name",
+            "tcgplayer",
+            "variant"
+          ],
+          "topLevelKeys": [
+            "data",
+            "group_id",
+            "set_code",
+            "source",
+            "success",
+            "total"
+          ]
+        },
+        {
+          "recordContainer": "data",
+          "recordCount": 172,
+          "sampleRecordKeys": [
+            "card_number",
+            "cardmarket",
+            "name",
+            "tcgplayer",
+            "variant"
+          ],
+          "topLevelKeys": [
+            "data",
+            "group_id",
+            "set_code",
+            "source",
+            "success",
+            "total"
+          ]
+        },
+        {
+          "recordContainer": "data",
+          "recordCount": 173,
+          "sampleRecordKeys": [
+            "card_number",
+            "cardmarket",
+            "name",
+            "tcgplayer",
+            "variant"
+          ],
+          "topLevelKeys": [
+            "data",
+            "group_id",
+            "set_code",
+            "source",
+            "success",
+            "total"
+          ]
+        },
+        {
+          "recordContainer": "data",
+          "recordCount": 173,
+          "sampleRecordKeys": [
+            "card_number",
+            "cardmarket",
+            "name",
+            "tcgplayer",
+            "variant"
+          ],
+          "topLevelKeys": [
+            "data",
+            "group_id",
+            "set_code",
+            "source",
+            "success",
+            "total"
+          ]
+        }
+      ],
+      "succeeded": 6
+    },
+    "setDetails": {
+      "attempted": 2,
+      "sampleResponseShapes": [
+        {
+          "recordContainer": "cards",
+          "recordCount": 70,
+          "sampleRecordKeys": [
+            "card_info",
+            "cardmarket",
+            "id",
+            "tcgplayer"
+          ],
+          "topLevelKeys": [
+            "cards",
+            "pagination",
+            "set",
+            "success"
+          ]
+        },
+        {
+          "recordContainer": "cards",
+          "recordCount": 69,
+          "sampleRecordKeys": [
+            "card_info",
+            "cardmarket",
+            "id",
+            "tcgplayer"
+          ],
+          "topLevelKeys": [
+            "cards",
+            "pagination",
+            "set",
+            "success"
+          ]
+        }
+      ],
+      "succeeded": 2
+    },
+    "statistics": {
+      "attempted": 2,
+      "sampleSummaries": [
+        {
+          "numericFields": [
+            "rarity_breakdown.Common",
+            "rarity_breakdown.Holo Rare",
+            "rarity_breakdown.Rare",
+            "rarity_breakdown.Rare Holo LEGEND",
+            "rarity_breakdown.Super Rare Holo",
+            "rarity_breakdown.Uncommon",
+            "rarity_breakdown.Unknown",
+            "set_info.set_code",
+            "set_info.total_cards"
+          ],
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "price_statistics",
+            "rarity_breakdown",
+            "set_info"
+          ]
+        },
+        {
+          "numericFields": [
+            "rarity_breakdown.Common",
+            "rarity_breakdown.Holo Rare",
+            "rarity_breakdown.Rare",
+            "rarity_breakdown.Rare Holo LEGEND",
+            "rarity_breakdown.Super Rare Holo",
+            "rarity_breakdown.Uncommon",
+            "rarity_breakdown.Unknown",
+            "set_info.set_code",
+            "set_info.total_cards"
+          ],
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "price_statistics",
+            "rarity_breakdown",
+            "set_info"
+          ]
+        }
+      ],
+      "succeeded": 2
+    },
+    "topCards": {
+      "attempted": 4,
+      "sampleResponseShapes": [
+        {
+          "recordContainer": "top_cards",
+          "recordCount": 20,
+          "sampleRecordKeys": [
+            "card_info",
+            "current_price",
+            "id"
+          ],
+          "topLevelKeys": [
+            "metric",
+            "source",
+            "top_cards"
+          ]
+        },
+        {
+          "recordContainer": "top_cards",
+          "recordCount": 20,
+          "sampleRecordKeys": [
+            "card_info",
+            "change_7d",
+            "current_price",
+            "id",
+            "previous_price_7d"
+          ],
+          "topLevelKeys": [
+            "metric",
+            "source",
+            "top_cards"
+          ]
+        },
+        {
+          "recordContainer": "top_cards",
+          "recordCount": 20,
+          "sampleRecordKeys": [
+            "card_info",
+            "current_price",
+            "id"
+          ],
+          "topLevelKeys": [
+            "metric",
+            "source",
+            "top_cards"
+          ]
+        },
+        {
+          "recordContainer": "top_cards",
+          "recordCount": 20,
+          "sampleRecordKeys": [
+            "card_info",
+            "change_7d",
+            "current_price",
+            "id"
+          ],
+          "topLevelKeys": [
+            "metric",
+            "source",
+            "top_cards"
+          ]
+        }
+      ],
+      "succeeded": 4
+    },
+    "trending": {
+      "attempted": 3,
+      "sampleResponseShapes": [
+        {
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "period",
+            "trending_sets"
+          ]
+        },
+        {
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "period",
+            "trending_sets"
+          ]
+        },
+        {
+          "recordContainer": null,
+          "recordCount": 0,
+          "sampleRecordKeys": [],
+          "topLevelKeys": [
+            "period",
+            "trending_sets"
+          ]
+        }
+      ],
+      "succeeded": 3
+    }
   },
-  "generatedAtUtc": "2026-05-17T05:48:31Z",
+  "generatedAtUtc": "2026-05-17T20:45:28Z",
   "imageSamplesAvailable": 0,
   "imageSamplesChecked": 0,
   "languagesSeen": {
@@ -23,25 +473,1644 @@
   "priceHistorySamplesChecked": 0,
   "priceHistorySamplesWithData": 0,
   "priceRecordsFoundByLanguage": {
-    "en": 0,
-    "jp": 0,
-    "zh-cn": 0
+    "jp": 651
   },
   "provider": "pokewallet",
   "rateLimit": {
     "limitDay": 1000,
     "limitHour": 100,
-    "remainingDay": 672,
-    "remainingHour": 97,
-    "trialDaysRemaining": null,
-    "trialExpiresAt": null
+    "remainingDay": 501,
+    "remainingHour": 45,
+    "trialDaysRemaining": 7,
+    "trialExpiresAt": "2026-05-24T20:11:20.361Z"
   },
-  "recommendation": "Discovery stopped before exhausting the provider rate window; resume later with --resume.",
-  "requestsAttempted": 1,
+  "rateSafety": {
+    "configuredMinDay": 1000,
+    "configuredMinHour": 200,
+    "effectiveMinDay": 20,
+    "effectiveMinHour": 5,
+    "forceSmallProTest": true,
+    "maxRequests": 20,
+    "tinyProTestAllowed": true
+  },
+  "recommendation": "Discovery diagnostics are ready to review before production cache integration.",
+  "requestsAttempted": 20,
   "requestsFailed": 0,
-  "requestsSucceeded": 1,
+  "requestsSucceeded": 20,
   "sampleImageChecks": [],
-  "samplePriceRecords": [],
+  "samplePriceRecords": [
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.market_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "jp",
+      "market": "US",
+      "priceFields": [
+        "tcgplayer.high_price",
+        "tcgplayer.low_price",
+        "tcgplayer.mid_price"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "source": "tcgplayer",
+      "variantFields": [
+        "variant"
+      ]
+    }
+  ],
+  "sampleResponseShapes": [
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 172,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 172,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 172,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 173,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: HG",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 173,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: HG",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "jp",
+      "recordContainer": "data",
+      "recordCount": 173,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: HG",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    }
+  ],
   "sampleSetsByLanguage": {
     "en": [
       {
@@ -172,11 +2241,347 @@
   },
   "sampleSkipped": [
     {
-      "endpoint": "/sets",
-      "reason": "remaining_hour_below_safety_threshold"
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
+    },
+    {
+      "language": "jp",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "L1: SS"
     }
   ],
-  "sampleTopCards": [],
+  "sampleTopCards": [
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id",
+        "previous_price_7d"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id",
+        "previous_price_7d"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id",
+        "previous_price_7d"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id",
+        "previous_price_7d"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id",
+        "previous_price_7d"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    },
+    {
+      "priceFields": [],
+      "recordKeys": [
+        "card_info",
+        "change_7d",
+        "current_price",
+        "id"
+      ],
+      "sourceFields": []
+    }
+  ],
   "sampleTrendingRecords": [],
   "schemaVersion": "1.0.0",
   "setsByLanguage": {
@@ -185,9 +2590,11 @@
     "zh-cn": 58
   },
   "setsFetched": 854,
-  "setsProcessedThisRun": 0,
-  "setsRemainingAfterRun": 10,
-  "setsSelectedTotal": 10,
-  "sourcesSeen": [],
-  "status": "stopped_rate_limit_safety"
+  "setsProcessedThisRun": 2,
+  "setsRemainingAfterRun": 460,
+  "setsSelectedTotal": 462,
+  "sourcesSeen": [
+    "tcgplayer"
+  ],
+  "status": "ok"
 }

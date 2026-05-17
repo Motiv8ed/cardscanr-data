@@ -286,11 +286,13 @@ REQUIRED_POKEWALLET_PRO_TRIAL_DISCOVERY_FIELDS = {
     "priceHistorySamplesChecked",
     "priceHistorySamplesWithData",
     "rateLimit",
+    "rateSafety",
     "samplePriceRecords",
     "sampleTrendingRecords",
     "sampleTopCards",
     "sampleImageChecks",
     "sampleSkipped",
+    "diagnosticEvents",
     "recommendation",
 }
 ALLOWED_POKEWALLET_PRO_TRIAL_DISCOVERY_STATUSES = {
@@ -1297,9 +1299,20 @@ def check_pokewallet_pro_trial_discovery_diagnostics() -> None:
         "endpointCoverage",
         "priceRecordsFoundByLanguage",
         "rateLimit",
+        "rateSafety",
     ]:
         if not isinstance(data.get(field), dict):
             err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json {field} must be an object")
+
+    rate_safety = data.get("rateSafety")
+    if isinstance(rate_safety, dict):
+        for field in ["configuredMinHour", "configuredMinDay", "effectiveMinHour", "effectiveMinDay", "maxRequests"]:
+            value = rate_safety.get(field)
+            if not isinstance(value, int) or value < 0:
+                err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json rateSafety.{field} must be a non-negative integer")
+        for field in ["forceSmallProTest", "tinyProTestAllowed"]:
+            if not isinstance(rate_safety.get(field), bool):
+                err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json rateSafety.{field} must be boolean")
 
     for endpoint in ["prices", "statistics", "completionValue", "trending", "topCards", "priceHistory", "images"]:
         coverage = data.get("endpointCoverage", {})
@@ -1314,9 +1327,31 @@ def check_pokewallet_pro_trial_discovery_diagnostics() -> None:
         "sampleTopCards",
         "sampleImageChecks",
         "sampleSkipped",
+        "diagnosticEvents",
     ]:
         if not isinstance(data.get(field), list):
             err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json {field} must be a list")
+
+    events = data.get("diagnosticEvents")
+    if isinstance(events, list):
+        allowed_events = {
+            "tiny_pro_test_allowed",
+            "stopped_rate_limit_safety",
+            "pro_endpoint_success",
+            "pro_required_403",
+            "rate_limited_429",
+            "numeric_prices_found",
+            "no_numeric_prices_found",
+        }
+        for idx, event in enumerate(events):
+            if not isinstance(event, dict):
+                err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json diagnosticEvents[{idx}] must be an object")
+                continue
+            event_name = event.get("event")
+            if not isinstance(event_name, str) or not event_name:
+                err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json diagnosticEvents[{idx}].event must be a non-empty string")
+            elif event_name not in allowed_events:
+                err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json diagnosticEvents[{idx}].event is not recognized")
 
     if "AUD" in set(data.get("currenciesSeen", [])):
         err("diagnostics/pokewallet-pro-trial-discovery-latest.json must not infer AUD currency")

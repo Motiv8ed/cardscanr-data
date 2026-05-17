@@ -153,6 +153,17 @@ def append_sample(container: list[dict[str, Any]], item: dict[str, Any], limit: 
         container.append(item)
 
 
+def add_diagnostic_event(report: dict[str, Any], event: str, **details: Any) -> None:
+    events = report.setdefault("diagnosticEvents", [])
+    if not isinstance(events, list) or len(events) >= MAX_SAMPLE_ITEMS * 4:
+        return
+    item = {"event": event}
+    for key, value in details.items():
+        if value is not None:
+            item[key] = value
+    events.append(item)
+
+
 def unique_append(container: list[str], value: str | None) -> None:
     if value and value not in container:
         container.append(value)
@@ -253,6 +264,7 @@ def base_report(*, status: str, api_key_present: bool, mode: str = "pro_price_pr
         "samplePriceRecords": [],
         "sampleResponseShapes": [],
         "sampleSkipped": [],
+        "diagnosticEvents": [],
         "recommendation": "",
     }
 
@@ -305,6 +317,7 @@ def base_trial_report(*, status: str, api_key_present: bool) -> dict[str, Any]:
         "sampleTopCards": [],
         "sampleImageChecks": [],
         "sampleSkipped": [],
+        "diagnosticEvents": [],
         "recommendation": "",
     }
 
@@ -514,6 +527,7 @@ def fetch_sets_for_trial(
             detail = result.error or "request_failed"
             if result.status_code == 429:
                 report["status"] = "rate_limited"
+                add_diagnostic_event(report, "rate_limited_429", endpoint="/sets", page=page)
             append_sample(report["sampleSkipped"], {"reason": "sets_fetch_failed", "page": page, "detail": detail})
             break
 
@@ -535,6 +549,7 @@ def fetch_sets_for_trial(
         stop_reason = rate_limit_stop_reason(report, trial_config)
         if stop_reason:
             report["status"] = "stopped_rate_limit_safety"
+            add_diagnostic_event(report, "stopped_rate_limit_safety", reason=stop_reason, endpoint="/sets")
             append_sample(report["sampleSkipped"], {"reason": stop_reason, "endpoint": "/sets"})
             break
         if added_this_page == 0 or len(items) < per_page:
@@ -773,9 +788,11 @@ def analyze_price_response(
     )
 
     if record_container is None:
+        add_diagnostic_event(report, "no_numeric_prices_found", language=app_language, setCode=set_item.set_code, reason="response_shape_unknown")
         append_sample(report["sampleSkipped"], {"reason": "response_shape_unknown", "language": app_language, "setCode": set_item.set_code})
         return 0, []
     if not records:
+        add_diagnostic_event(report, "no_numeric_prices_found", language=app_language, setCode=set_item.set_code, reason="no_price_records_found")
         append_sample(report["sampleSkipped"], {"reason": "no_price_records_found", "language": app_language, "setCode": set_item.set_code})
         return 0, []
 
@@ -835,6 +852,11 @@ def analyze_price_response(
             },
             limit=sample_limit,
         )
+
+    if useful_count:
+        add_diagnostic_event(report, "numeric_prices_found", language=app_language, setCode=set_item.set_code, count=useful_count)
+    else:
+        add_diagnostic_event(report, "no_numeric_prices_found", language=app_language, setCode=set_item.set_code, recordCount=len(records))
 
     return useful_count, card_ids
 
@@ -899,17 +921,40 @@ def discovery_json_request(
 
     key = endpoint_key(endpoint_name, endpoint_identifier)
     if result.ok:
+        add_diagnostic_event(
+            report,
+            "pro_endpoint_success",
+            endpoint=endpoint_name,
+            identifier=endpoint_identifier,
+            statusCode=result.status_code,
+        )
         add_state_item(state, "completedEndpointKeys", key)
     else:
         detail = result.error or "request_failed"
         if result.status_code == 429:
             report["status"] = "rate_limited"
+            add_diagnostic_event(
+                report,
+                "rate_limited_429",
+                endpoint=endpoint_name,
+                identifier=endpoint_identifier,
+                statusCode=result.status_code,
+            )
         elif result.status_code in {401, 402, 403}:
             report["status"] = "pro_required"
+            if result.status_code == 403:
+                add_diagnostic_event(
+                    report,
+                    "pro_required_403",
+                    endpoint=endpoint_name,
+                    identifier=endpoint_identifier,
+                    statusCode=result.status_code,
+                )
         append_sample(report["sampleSkipped"], {"reason": f"{endpoint_name}_failed", "detail": detail, **sample_context})
     stop_reason = rate_limit_stop_reason(report, trial_config)
     if stop_reason and report["status"] not in {"rate_limited", "pro_required"}:
         report["status"] = "stopped_rate_limit_safety"
+        add_diagnostic_event(report, "stopped_rate_limit_safety", reason=stop_reason, endpoint=endpoint_name)
         append_sample(report["sampleSkipped"], {"reason": stop_reason, **sample_context})
     persist_trial_state(state_path, state)
     return result
@@ -1079,7 +1124,8 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
 def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
     config = load_json(CONFIG_PATH)
     trial_config = config.get("trialDiscovery") if isinstance(config.get("trialDiscovery"), dict) else {}
-    state_path = trial_state_path_from_config(trial_config)
+    effective_trial_config = dict(trial_config)
+    state_path = trial_state_path_from_config(effective_trial_config)
     run_id = str(uuid.uuid4())
 
     if args.reset_trial_discovery_state:
@@ -1105,8 +1151,64 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
     sleep_seconds = max(0.0, float(trial_config.get("requestSleepSeconds") or config.get("requestSleepSeconds") or 0.0))
     max_requests = args.max_requests if args.max_requests is not None else int(trial_config.get("maxRequestsPerRun") or config.get("maxRequestsPerRun") or 25)
     max_requests = max(0, int(max_requests))
-    prefer_numeric = bool(trial_config.get("preferNumericSetId", True))
-    sample_limit = max(1, int(trial_config.get("sampleRecordLimit") or 50))
+    configured_hour_threshold = safe_int(trial_config.get("stopWhenRemainingHourBelow")) or 0
+    configured_day_threshold = safe_int(trial_config.get("stopWhenRemainingDayBelow")) or 0
+    tiny_pro_test_allowed = bool(args.force_small_pro_test and args.enable_pro and max_requests <= 25 and api_key)
+
+    if args.force_small_pro_test:
+        if tiny_pro_test_allowed:
+            add_diagnostic_event(report, "tiny_pro_test_allowed", maxRequests=max_requests)
+        else:
+            append_sample(
+                report["sampleSkipped"],
+                {
+                    "reason": "force_small_pro_test_denied",
+                    "enablePro": bool(args.enable_pro),
+                    "maxRequests": max_requests,
+                    "apiKeyPresent": bool(api_key),
+                },
+            )
+
+    requested_hour_threshold = safe_int(args.rate_safety_min_hour)
+    requested_day_threshold = safe_int(args.rate_safety_min_day)
+    if requested_hour_threshold is not None:
+        requested_hour_threshold = max(0, requested_hour_threshold)
+        if requested_hour_threshold < configured_hour_threshold and not tiny_pro_test_allowed:
+            append_sample(
+                report["sampleSkipped"],
+                {
+                    "reason": "rate_safety_hour_override_denied",
+                    "configured": configured_hour_threshold,
+                    "requested": requested_hour_threshold,
+                },
+            )
+        else:
+            effective_trial_config["stopWhenRemainingHourBelow"] = requested_hour_threshold
+    if requested_day_threshold is not None:
+        requested_day_threshold = max(0, requested_day_threshold)
+        if requested_day_threshold < configured_day_threshold and not tiny_pro_test_allowed:
+            append_sample(
+                report["sampleSkipped"],
+                {
+                    "reason": "rate_safety_day_override_denied",
+                    "configured": configured_day_threshold,
+                    "requested": requested_day_threshold,
+                },
+            )
+        else:
+            effective_trial_config["stopWhenRemainingDayBelow"] = requested_day_threshold
+
+    report["rateSafety"] = {
+        "configuredMinHour": configured_hour_threshold,
+        "configuredMinDay": configured_day_threshold,
+        "effectiveMinHour": safe_int(effective_trial_config.get("stopWhenRemainingHourBelow")) or 0,
+        "effectiveMinDay": safe_int(effective_trial_config.get("stopWhenRemainingDayBelow")) or 0,
+        "forceSmallProTest": bool(args.force_small_pro_test),
+        "tinyProTestAllowed": tiny_pro_test_allowed,
+        "maxRequests": max_requests,
+    }
+    prefer_numeric = bool(effective_trial_config.get("preferNumericSetId", True))
+    sample_limit = max(1, int(effective_trial_config.get("sampleRecordLimit") or 50))
     language_filter = str(args.language).lower() if args.language else None
     market_notes = config.get("marketNotes") if isinstance(config.get("marketNotes"), dict) else {}
 
@@ -1115,14 +1217,14 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
         report=report,
         state=state,
         sleep_seconds=sleep_seconds,
-        trial_config=trial_config,
+        trial_config=effective_trial_config,
     )
     report["setsFetched"] = len(sets)
     update_set_summaries(report, sets, config)
     selected = select_trial_sets(
         sets=sets,
         config=config,
-        trial_config=trial_config,
+        trial_config=effective_trial_config,
         language_filter=language_filter,
         all_languages=bool(args.all_languages),
     )
@@ -1154,7 +1256,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
                 seen.add(card_id)
 
     global_endpoints = []
-    if trial_config.get("testTrending", True):
+    if effective_trial_config.get("testTrending", True):
         global_endpoints.extend(
             [
                 ("trending", "/sets/trending", "sets-trending"),
@@ -1162,7 +1264,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
                 ("trending", "/sets/trending?period=30d", "sets-trending-30d"),
             ]
         )
-    if trial_config.get("testTopCards", True):
+    if effective_trial_config.get("testTopCards", True):
         for source in ("tcg", "cm"):
             for metric in ("price", "growth"):
                 global_endpoints.append(
@@ -1177,7 +1279,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             url=f"{BASE_URL}{endpoint}",
             report=report,
             state=state,
-            trial_config=trial_config,
+            trial_config=effective_trial_config,
             endpoint_name=endpoint_name,
             endpoint_identifier=identifier,
             state_path=state_path,
@@ -1225,7 +1327,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             url=f"{BASE_URL}{set_detail_endpoint}",
             report=report,
             state=state,
-            trial_config=trial_config,
+            trial_config=effective_trial_config,
             endpoint_name="setDetails",
             endpoint_identifier=set_key,
             state_path=state_path,
@@ -1238,7 +1340,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
         if sleep_seconds:
             time.sleep(sleep_seconds)
 
-        if trial_config.get("testPrices", True):
+        if effective_trial_config.get("testPrices", True):
             for suffix, label in [("", "all"), ("?source=tcg", "tcg"), ("?source=cm", "cm")]:
                 if not can_request():
                     break
@@ -1248,7 +1350,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
                     url=f"{BASE_URL}{endpoint}",
                     report=report,
                     state=state,
-                    trial_config=trial_config,
+                    trial_config=effective_trial_config,
                     endpoint_name="prices",
                     endpoint_identifier=f"{set_key}:{label}",
                     state_path=state_path,
@@ -1273,14 +1375,14 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
                 if sleep_seconds:
                     time.sleep(sleep_seconds)
 
-        if trial_config.get("testSetStatistics", True) and can_request():
+        if effective_trial_config.get("testSetStatistics", True) and can_request():
             endpoint = f"/sets/{quote(set_key, safe='')}/statistics"
             result = discovery_json_request(
                 api_key=api_key,
                 url=f"{BASE_URL}{endpoint}",
                 report=report,
                 state=state,
-                trial_config=trial_config,
+                trial_config=effective_trial_config,
                 endpoint_name="statistics",
                 endpoint_identifier=set_key,
                 state_path=state_path,
@@ -1293,14 +1395,14 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             if sleep_seconds:
                 time.sleep(sleep_seconds)
 
-        if trial_config.get("testCompletionValue", True) and can_request():
+        if effective_trial_config.get("testCompletionValue", True) and can_request():
             endpoint = f"/sets/{quote(set_key, safe='')}/completion-value"
             result = discovery_json_request(
                 api_key=api_key,
                 url=f"{BASE_URL}{endpoint}",
                 report=report,
                 state=state,
-                trial_config=trial_config,
+                trial_config=effective_trial_config,
                 endpoint_name="completionValue",
                 endpoint_identifier=set_key,
                 state_path=state_path,
@@ -1325,8 +1427,8 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             add_state_item(state, "failedSetKeys", set_key)
         persist_trial_state(state_path, state)
 
-    history_limit = max(0, int(trial_config.get("priceHistorySampleLimit") or 25))
-    if trial_config.get("testPriceHistorySamples", True) and history_limit:
+    history_limit = max(0, int(effective_trial_config.get("priceHistorySampleLimit") or 25))
+    if effective_trial_config.get("testPriceHistorySamples", True) and history_limit:
         for item in card_ids[:history_limit]:
             if not can_request():
                 break
@@ -1337,7 +1439,7 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
                 url=f"{BASE_URL}{endpoint}",
                 report=report,
                 state=state,
-                trial_config=trial_config,
+                trial_config=effective_trial_config,
                 endpoint_name="priceHistory",
                 endpoint_identifier=card_id,
                 state_path=state_path,
@@ -1355,8 +1457,8 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             if sleep_seconds:
                 time.sleep(sleep_seconds)
 
-    image_limit = max(0, int(trial_config.get("imageSampleLimit") or 25))
-    if trial_config.get("testImageSamples", True) and image_limit:
+    image_limit = max(0, int(effective_trial_config.get("imageSampleLimit") or 25))
+    if effective_trial_config.get("testImageSamples", True) and image_limit:
         for item in card_ids[:image_limit]:
             if not can_request():
                 break
@@ -1383,9 +1485,11 @@ def run_trial_discovery(args: argparse.Namespace) -> tuple[dict[str, Any], Path]
             )
             if result.status_code == 429:
                 report["status"] = "rate_limited"
-            stop_reason = rate_limit_stop_reason(report, trial_config)
+                add_diagnostic_event(report, "rate_limited_429", endpoint="images", identifier=card_id, statusCode=result.status_code)
+            stop_reason = rate_limit_stop_reason(report, effective_trial_config)
             if stop_reason and report["status"] != "rate_limited":
                 report["status"] = "stopped_rate_limit_safety"
+                add_diagnostic_event(report, "stopped_rate_limit_safety", reason=stop_reason, endpoint="/images/:id")
                 append_sample(report["sampleSkipped"], {"reason": stop_reason, "endpoint": "/images/:id"})
             persist_trial_state(state_path, state)
             if sleep_seconds:
@@ -1419,6 +1523,23 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--all-languages", action="store_true", help="Include all configured target languages in trial discovery.")
     parser.add_argument("--resume", action="store_true", help="Skip sets already completed in the trial discovery state file.")
     parser.add_argument("--reset-trial-discovery-state", action="store_true", help="Reset trial discovery state and exit.")
+    parser.add_argument(
+        "--rate-safety-min-hour",
+        type=int,
+        default=None,
+        help="Override the trial discovery hourly remaining-request safety threshold for this run.",
+    )
+    parser.add_argument(
+        "--rate-safety-min-day",
+        type=int,
+        default=None,
+        help="Override the trial discovery daily remaining-request safety threshold for this run.",
+    )
+    parser.add_argument(
+        "--force-small-pro-test",
+        action="store_true",
+        help="Allow a tiny Pro discovery run below normal safety thresholds when --enable-pro and --max-requests <= 25.",
+    )
     return parser.parse_args(argv)
 
 
