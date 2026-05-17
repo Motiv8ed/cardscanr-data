@@ -231,6 +231,35 @@ ALLOWED_POKEWALLET_PROBE_STATUSES = {
     "endpoint_mapping_required",
     "disabled",
 }
+REQUIRED_POKEWALLET_PRO_PRICE_PROBE_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "mode",
+    "status",
+    "apiKeyPresent",
+    "proEndpointUsed",
+    "requestsAttempted",
+    "requestsSucceeded",
+    "requestsFailed",
+    "setsFetched",
+    "languagesSeen",
+    "setsSelectedByLanguage",
+    "priceResponsesByLanguage",
+    "priceRecordsFoundByLanguage",
+    "currenciesSeen",
+    "sourcesSeen",
+    "samplePriceRecords",
+    "sampleSkipped",
+    "recommendation",
+}
+ALLOWED_POKEWALLET_PRO_PRICE_PROBE_STATUSES = {
+    "dry_run",
+    "ok",
+    "key_missing",
+    "pro_required",
+    "error",
+}
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
 REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
@@ -972,6 +1001,70 @@ def check_pokewallet_jp_build_diagnostics() -> None:
         err("diagnostics/pokewallet-jp-price-build-latest.json recommendation must be a non-empty string")
 
 
+def check_pokewallet_pro_price_probe_diagnostics() -> None:
+    print("\n[6d] Pokewallet Pro price probe diagnostics check")
+    path = V1_DIR / "diagnostics" / "pokewallet-pro-price-probe-latest.json"
+    if not path.exists():
+        warn(f"Pokewallet Pro price probe diagnostics not found: {path.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("diagnostics/pokewallet-pro-price-probe-latest.json must be a JSON object")
+        return
+
+    if check_required(
+        data,
+        REQUIRED_POKEWALLET_PRO_PRICE_PROBE_FIELDS,
+        "diagnostics/pokewallet-pro-price-probe-latest.json",
+    ):
+        ok("diagnostics/pokewallet-pro-price-probe-latest.json has required fields")
+
+    if data.get("provider") != "pokewallet":
+        err("diagnostics/pokewallet-pro-price-probe-latest.json provider must be pokewallet")
+    if data.get("status") not in ALLOWED_POKEWALLET_PRO_PRICE_PROBE_STATUSES:
+        err(
+            "diagnostics/pokewallet-pro-price-probe-latest.json status must be one of "
+            f"{sorted(ALLOWED_POKEWALLET_PRO_PRICE_PROBE_STATUSES)}"
+        )
+    if data.get("proEndpointUsed") != "/prices/:setCode":
+        err("diagnostics/pokewallet-pro-price-probe-latest.json proEndpointUsed must be /prices/:setCode")
+
+    for field in [
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "setsFetched",
+        "proRequestsAttempted",
+        "proRequestsSucceeded",
+        "proRequestsFailed",
+    ]:
+        value = data.get(field)
+        if value is not None and (not isinstance(value, int) or value < 0):
+            err(f"diagnostics/pokewallet-pro-price-probe-latest.json {field} must be a non-negative integer")
+
+    if not isinstance(data.get("apiKeyPresent"), bool):
+        err("diagnostics/pokewallet-pro-price-probe-latest.json apiKeyPresent must be boolean")
+
+    for field in [
+        "languagesSeen",
+        "setsSelectedByLanguage",
+        "priceResponsesByLanguage",
+        "priceRecordsFoundByLanguage",
+    ]:
+        if not isinstance(data.get(field), dict):
+            err(f"diagnostics/pokewallet-pro-price-probe-latest.json {field} must be an object")
+
+    for field in ["currenciesSeen", "sourcesSeen", "samplePriceRecords", "sampleSkipped"]:
+        if not isinstance(data.get(field), list):
+            err(f"diagnostics/pokewallet-pro-price-probe-latest.json {field} must be a list")
+
+    if "AUD" in set(data.get("currenciesSeen", [])):
+        err("diagnostics/pokewallet-pro-price-probe-latest.json must not infer AUD currency")
+    if not isinstance(data.get("recommendation"), str) or not data.get("recommendation"):
+        err("diagnostics/pokewallet-pro-price-probe-latest.json recommendation must be a non-empty string")
+
+
 def check_api_manifest() -> None:
     print("\n[7] API manifest check")
     path = V1_DIR / "api-manifest.json"
@@ -1324,6 +1417,7 @@ def main() -> None:
     check_diagnostics()
     check_provider_probe_diagnostics()
     check_pokewallet_jp_build_diagnostics()
+    check_pokewallet_pro_price_probe_diagnostics()
     check_api_manifest()
     check_api_notes()
     check_schemas()

@@ -1,0 +1,32 @@
+{
+  "apiKeyPresent": true,
+  "currenciesSeen": [],
+  "generatedAtUtc": "2026-05-17T04:35:42Z",
+  "languagesSeen": {},
+  "mode": "pro_price_probe",
+  "priceRecordsFoundByLanguage": {},
+  "priceResponsesByLanguage": {},
+  "proEndpointUsed": "/prices/:setCode",
+  "proRequestsAttempted": 0,
+  "proRequestsFailed": 0,
+  "proRequestsSucceeded": 0,
+  "provider": "pokewallet",
+  "recommendation": "Dry run made no Pro price endpoint requests, but Pokewallet /sets did not return set data; retry after the provider rate window resets.",
+  "requestsAttempted": 1,
+  "requestsFailed": 1,
+  "requestsSucceeded": 0,
+  "samplePriceRecords": [],
+  "sampleResponseShapes": [],
+  "sampleSkipped": [
+    {
+      "detail": "http_429",
+      "page": 1,
+      "reason": "sets_fetch_failed"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setsFetched": 0,
+  "setsSelectedByLanguage": {},
+  "sourcesSeen": [],
+  "status": "dry_run"
+}

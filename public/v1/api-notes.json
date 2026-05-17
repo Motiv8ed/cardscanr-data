@@ -28,7 +28,14 @@
     "If JP record is missing, show Japanese price not available yet.",
     "Provider currency is not converted; app should display provider currency as-is.",
     "EUR and USD must remain separate source currencies when both are present.",
-    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP scheduling exists."
+    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP scheduling exists.",
+    "Pokewallet prices are overseas market guide prices.",
+    "TCGPlayer usually represents US market data and is commonly USD.",
+    "CardMarket usually represents European market data and is commonly EUR.",
+    "Pokewallet prices are not Australian sold prices and must not be labelled as AUD unless a provider explicitly returns AUD.",
+    "Apps should display the source and currency for Pokewallet prices.",
+    "Currency conversion is an app-layer feature for later and is not performed in the cache.",
+    "True Australian market pricing should come from eBay AU sold listings or local sales data later."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",

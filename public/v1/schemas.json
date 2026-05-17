@@ -106,7 +106,10 @@
         "Use fetchedAtUtc and staleness fields for app card-detail freshness messaging.",
         "Japanese price files are only emitted when official/free source pricing is actually available.",
         "Pokewallet JP CardMarket prices are EUR and TCGPlayer prices are USD.",
-        "Do not combine or convert EUR and USD into a single price."
+        "Do not combine or convert EUR and USD into a single price.",
+        "Pokewallet prices are overseas market guide prices, not Australian sold prices.",
+        "Apps should display source and currency for Pokewallet prices.",
+        "Currency conversion is an app-layer feature for later and is not performed in the cache."
       ],
       "requiredFields": [
         "canonicalId",
@@ -260,6 +263,40 @@
         "sampleMatches",
         "sampleSkipped",
         "blockerReason",
+        "recommendation"
+      ]
+    },
+    "pokewallet_pro_price_probe_diagnostics": {
+      "notes": [
+        "Diagnostics-only probe for the Pokewallet Pro /prices/:setCode endpoint.",
+        "The probe must not write current price cache files.",
+        "Pokewallet prices are overseas market guide prices.",
+        "TCGPlayer usually represents US market data and is commonly USD.",
+        "CardMarket usually represents European market data and is commonly EUR.",
+        "These records are not Australian sold prices.",
+        "Apps should display source and currency; currency conversion belongs in the app layer later.",
+        "True Australian market pricing should come from eBay AU sold listings or local sales data later."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "provider",
+        "mode",
+        "status",
+        "apiKeyPresent",
+        "proEndpointUsed",
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "setsFetched",
+        "languagesSeen",
+        "setsSelectedByLanguage",
+        "priceResponsesByLanguage",
+        "priceRecordsFoundByLanguage",
+        "currenciesSeen",
+        "sourcesSeen",
+        "samplePriceRecords",
+        "sampleSkipped",
         "recommendation"
       ]
     },

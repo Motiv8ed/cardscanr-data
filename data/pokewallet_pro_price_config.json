@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0.0",
+  "enabled": false,
+  "provider": "pokewallet",
+  "apiKeyEnv": "POKEWALLET_API_KEY",
+  "mode": "pro_probe_foundation",
+  "proEndpoint": "/prices/{setCode}",
+  "requiresPro": true,
+  "maxRequestsPerRun": 25,
+  "requestSleepSeconds": 0.35,
+  "targetGame": "pokemon",
+  "targetLanguages": [
+    "eng",
+    "jap",
+    "kor",
+    "zho",
+    "chi",
+    "chs",
+    "cht"
+  ],
+  "languageMap": {
+    "eng": "en",
+    "jap": "jp",
+    "kor": "kr",
+    "ko": "kr",
+    "zho": "zh",
+    "chi": "zh",
+    "chs": "zh-cn",
+    "cht": "zh-tw",
+    "zh-cn": "zh-cn",
+    "zh-tw": "zh-tw"
+  },
+  "marketNotes": {
+    "tcgplayer": {
+      "market": "US",
+      "currency": "USD"
+    },
+    "cardmarket": {
+      "market": "EU",
+      "currency": "EUR"
+    }
+  },
+  "probeSetLimits": {
+    "en": 3,
+    "jp": 5,
+    "kr": 2,
+    "zh-cn": 2,
+    "zh-tw": 2
+  },
+  "preferredProbeSetCodes": {
+    "en": [
+      "base1",
+      "sv1",
+      "sv10"
+    ],
+    "jp": [
+      "SV10",
+      "SV11B",
+      "SV11W",
+      "SV9",
+      "SV9a"
+    ],
+    "kr": [],
+    "zh-cn": [],
+    "zh-tw": []
+  },
+  "writePriceFiles": false,
+  "diagnosticsOnly": true
+}
