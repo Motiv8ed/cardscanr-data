@@ -1,0 +1,193 @@
+{
+  "apiKeyPresent": true,
+  "currenciesSeen": [],
+  "endpointCoverage": {
+    "completionValue": {},
+    "images": {},
+    "priceHistory": {},
+    "prices": {},
+    "setDetails": {},
+    "statistics": {},
+    "topCards": {},
+    "trending": {}
+  },
+  "generatedAtUtc": "2026-05-17T05:48:31Z",
+  "imageSamplesAvailable": 0,
+  "imageSamplesChecked": 0,
+  "languagesSeen": {
+    "chn": 58,
+    "eng": 334,
+    "jap": 462
+  },
+  "mode": "pro_trial_discovery",
+  "priceHistorySamplesChecked": 0,
+  "priceHistorySamplesWithData": 0,
+  "priceRecordsFoundByLanguage": {
+    "en": 0,
+    "jp": 0,
+    "zh-cn": 0
+  },
+  "provider": "pokewallet",
+  "rateLimit": {
+    "limitDay": 1000,
+    "limitHour": 100,
+    "remainingDay": 672,
+    "remainingHour": 97,
+    "trialDaysRemaining": null,
+    "trialExpiresAt": null
+  },
+  "recommendation": "Discovery stopped before exhausting the provider rate window; resume later with --resume.",
+  "requestsAttempted": 1,
+  "requestsFailed": 0,
+  "requestsSucceeded": 1,
+  "sampleImageChecks": [],
+  "samplePriceRecords": [],
+  "sampleSetsByLanguage": {
+    "en": [
+      {
+        "cardCount": 108,
+        "name": "2022 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD22",
+        "setId": "-188"
+      },
+      {
+        "cardCount": 109,
+        "name": "2023 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD23",
+        "setId": "-189"
+      },
+      {
+        "cardCount": 102,
+        "name": "2024 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD24",
+        "setId": "-190"
+      },
+      {
+        "cardCount": 54,
+        "name": "Alternate Art Promos",
+        "pokewalletLanguage": "eng",
+        "releaseDate": "1st January, 2002",
+        "setCode": "PR",
+        "setId": "1938"
+      },
+      {
+        "cardCount": 186,
+        "name": "Aquapolis",
+        "pokewalletLanguage": "eng",
+        "releaseDate": "15th January, 2003",
+        "setCode": "AQ",
+        "setId": "1397"
+      }
+    ],
+    "jp": [
+      {
+        "cardCount": 11,
+        "name": "10th Movie Commemoration Set",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "3rd August, 2007",
+        "setCode": "10M",
+        "setId": "24146"
+      },
+      {
+        "cardCount": 9,
+        "name": "11th Movie Commemoration Set",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "1st August, 2008",
+        "setCode": "11M",
+        "setId": "24145"
+      },
+      {
+        "cardCount": 0,
+        "name": "64 Mario Stadium Best Photo Contest",
+        "pokewalletLanguage": "jap",
+        "releaseDate": null,
+        "setCode": "24197",
+        "setId": "24197"
+      },
+      {
+        "cardCount": 49,
+        "name": "ADV Expansion Pack",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "31st January, 2003",
+        "setCode": "ADV1",
+        "setId": "24129"
+      },
+      {
+        "cardCount": 43,
+        "name": "ADV-P Promotional Cards",
+        "pokewalletLanguage": "jap",
+        "releaseDate": null,
+        "setCode": "ADV-P",
+        "setId": "24140"
+      }
+    ],
+    "zh-cn": [
+      {
+        "cardCount": 9,
+        "name": "30th Anniversary Celebration Simplified Chinese Singles",
+        "pokewalletLanguage": "chn",
+        "releaseDate": "20th March, 2026",
+        "setCode": "30th-P",
+        "setId": "-241"
+      },
+      {
+        "cardCount": 23,
+        "name": "Ancient Roar",
+        "pokewalletLanguage": "chn",
+        "releaseDate": "27th October, 2023",
+        "setCode": "CS5.1C",
+        "setId": "-38"
+      },
+      {
+        "cardCount": 79,
+        "name": "Brilliant Counterattack",
+        "pokewalletLanguage": "chn",
+        "releaseDate": "29th September, 2023",
+        "setCode": "CS2.5C",
+        "setId": "-28"
+      },
+      {
+        "cardCount": 115,
+        "name": "Chinese Booster Box 1",
+        "pokewalletLanguage": "chn",
+        "releaseDate": null,
+        "setCode": "CBB1C",
+        "setId": "-13"
+      },
+      {
+        "cardCount": 140,
+        "name": "Chinese Booster Box 2",
+        "pokewalletLanguage": "chn",
+        "releaseDate": null,
+        "setCode": "CBB2C",
+        "setId": "-14"
+      }
+    ]
+  },
+  "sampleSkipped": [
+    {
+      "endpoint": "/sets",
+      "reason": "remaining_hour_below_safety_threshold"
+    }
+  ],
+  "sampleTopCards": [],
+  "sampleTrendingRecords": [],
+  "schemaVersion": "1.0.0",
+  "setsByLanguage": {
+    "en": 334,
+    "jp": 462,
+    "zh-cn": 58
+  },
+  "setsFetched": 854,
+  "setsProcessedThisRun": 0,
+  "setsRemainingAfterRun": 10,
+  "setsSelectedTotal": 10,
+  "sourcesSeen": [],
+  "status": "stopped_rate_limit_safety"
+}

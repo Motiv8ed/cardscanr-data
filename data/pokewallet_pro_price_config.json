@@ -13,6 +13,7 @@
     "eng",
     "jap",
     "kor",
+    "chn",
     "zho",
     "chi",
     "chs",
@@ -23,6 +24,7 @@
     "jap": "jp",
     "kor": "kr",
     "ko": "kr",
+    "chn": "zh-cn",
     "zho": "zh",
     "chi": "zh",
     "chs": "zh-cn",
@@ -65,5 +67,38 @@
     "zh-tw": []
   },
   "writePriceFiles": false,
-  "diagnosticsOnly": true
+  "diagnosticsOnly": true,
+  "trialDiscovery": {
+    "enabled": false,
+    "diagnosticsOnly": true,
+    "statePath": "data/pokewallet_pro_trial_discovery_state.json",
+    "maxRequestsPerRun": 3000,
+    "requestSleepSeconds": 0.2,
+    "stopWhenRemainingHourBelow": 200,
+    "stopWhenRemainingDayBelow": 1000,
+    "includeLanguages": [
+      "eng",
+      "jap",
+      "kor",
+      "chn",
+      "zho",
+      "chi",
+      "chs",
+      "cht"
+    ],
+    "preferNumericSetId": true,
+    "testPrices": true,
+    "testSetStatistics": true,
+    "testCompletionValue": true,
+    "testTrending": true,
+    "testTopCards": true,
+    "testPriceHistorySamples": true,
+    "testImageSamples": true,
+    "imageSampleLimit": 25,
+    "priceHistorySampleLimit": 25,
+    "sampleRecordLimit": 50,
+    "writeRawResponses": false,
+    "writeProductionPriceFiles": false,
+    "writeImagesToRepo": false
+  }
 }

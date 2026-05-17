@@ -52,6 +52,64 @@ Use a user account that has access to your git credential helper.
 The updater uses the same environment variables as `tools/build_price_cache.py`.
 Set them in your user/system environment (or task-level environment) before scheduling.
 
+Pokewallet diagnostics use `POKEWALLET_API_KEY` from the environment only.
+
+## Pokewallet Pro trial discovery
+
+The Pokewallet Pro trial discovery runner is diagnostics-only. It tests provider coverage and response shapes before any production cache integration is built.
+
+Dry run:
+
+```powershell
+python tools\probe_pokewallet_pro_prices.py --dry-run --trial-discovery
+```
+
+After a Pro trial is active:
+
+```powershell
+python tools\probe_pokewallet_pro_prices.py --enable-pro --trial-discovery --all-languages --max-requests 3000
+```
+
+Japanese-only trial pass:
+
+```powershell
+python tools\probe_pokewallet_pro_prices.py --enable-pro --trial-discovery --language jp --max-requests 1000
+```
+
+Resume:
+
+```powershell
+python tools\probe_pokewallet_pro_prices.py --enable-pro --trial-discovery --resume
+```
+
+Reset local discovery state:
+
+```powershell
+python tools\probe_pokewallet_pro_prices.py --reset-trial-discovery-state
+```
+
+Discovery writes:
+
+- `public/v1/diagnostics/pokewallet-pro-trial-discovery-latest.json`
+- `data/pokewallet_pro_trial_discovery_state.json`
+
+It does not write production files under `public/v1/prices/current/...`.
+
+Pricing notes:
+
+- TCGPlayer usually represents US market guide data in USD.
+- CardMarket usually represents European market guide data in EUR.
+- Pokewallet prices are overseas market guide prices, not Australian sold prices.
+- Provider currencies are recorded as returned; the cache does not convert currency.
+- Apps should display source and currency. App-layer currency conversion can come later.
+- True Australian market pricing should come from eBay AU sold listings or local sales data later.
+
+Image notes:
+
+- The Pokewallet image endpoint requires an API key.
+- Discovery checks only small image samples and records response metadata.
+- Images are not stored in the repository.
+
 ## One-click background updater
 
 Use the background loop when you want a low-maintenance updater that sleeps between runs.

@@ -260,6 +260,67 @@ ALLOWED_POKEWALLET_PRO_PRICE_PROBE_STATUSES = {
     "pro_required",
     "error",
 }
+REQUIRED_POKEWALLET_PRO_TRIAL_DISCOVERY_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "mode",
+    "status",
+    "apiKeyPresent",
+    "requestsAttempted",
+    "requestsSucceeded",
+    "requestsFailed",
+    "setsFetched",
+    "languagesSeen",
+    "setsByLanguage",
+    "sampleSetsByLanguage",
+    "setsSelectedTotal",
+    "setsProcessedThisRun",
+    "setsRemainingAfterRun",
+    "endpointCoverage",
+    "priceRecordsFoundByLanguage",
+    "currenciesSeen",
+    "sourcesSeen",
+    "imageSamplesChecked",
+    "imageSamplesAvailable",
+    "priceHistorySamplesChecked",
+    "priceHistorySamplesWithData",
+    "rateLimit",
+    "samplePriceRecords",
+    "sampleTrendingRecords",
+    "sampleTopCards",
+    "sampleImageChecks",
+    "sampleSkipped",
+    "recommendation",
+}
+ALLOWED_POKEWALLET_PRO_TRIAL_DISCOVERY_STATUSES = {
+    "dry_run",
+    "ok",
+    "partial",
+    "key_missing",
+    "pro_required",
+    "rate_limited",
+    "stopped_rate_limit_safety",
+    "error",
+}
+REQUIRED_POKEWALLET_PRO_TRIAL_STATE_FIELDS = {
+    "schemaVersion",
+    "updatedAtUtc",
+    "mode",
+    "completedSetKeys",
+    "failedSetKeys",
+    "skippedSetKeys",
+    "completedEndpointKeys",
+    "lastProcessedSetKey",
+    "requestsAttemptedTotal",
+    "requestsSucceededTotal",
+    "requestsFailedTotal",
+    "priceRecordsFoundTotal",
+    "imageSamplesCheckedTotal",
+    "priceHistorySamplesCheckedTotal",
+    "languagesCompleted",
+    "lastRunId",
+}
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
 REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
@@ -1065,6 +1126,123 @@ def check_pokewallet_pro_price_probe_diagnostics() -> None:
         err("diagnostics/pokewallet-pro-price-probe-latest.json recommendation must be a non-empty string")
 
 
+def check_pokewallet_pro_trial_discovery_diagnostics() -> None:
+    print("\n[6e] Pokewallet Pro trial discovery diagnostics check")
+    path = V1_DIR / "diagnostics" / "pokewallet-pro-trial-discovery-latest.json"
+    if not path.exists():
+        warn(f"Pokewallet Pro trial discovery diagnostics not found: {path.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json must be a JSON object")
+        return
+
+    if check_required(
+        data,
+        REQUIRED_POKEWALLET_PRO_TRIAL_DISCOVERY_FIELDS,
+        "diagnostics/pokewallet-pro-trial-discovery-latest.json",
+    ):
+        ok("diagnostics/pokewallet-pro-trial-discovery-latest.json has required fields")
+
+    if data.get("provider") != "pokewallet":
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json provider must be pokewallet")
+    if data.get("mode") != "pro_trial_discovery":
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json mode must be pro_trial_discovery")
+    if data.get("status") not in ALLOWED_POKEWALLET_PRO_TRIAL_DISCOVERY_STATUSES:
+        err(
+            "diagnostics/pokewallet-pro-trial-discovery-latest.json status must be one of "
+            f"{sorted(ALLOWED_POKEWALLET_PRO_TRIAL_DISCOVERY_STATUSES)}"
+        )
+    if not isinstance(data.get("apiKeyPresent"), bool):
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json apiKeyPresent must be boolean")
+
+    for field in [
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "setsFetched",
+        "setsSelectedTotal",
+        "setsProcessedThisRun",
+        "setsRemainingAfterRun",
+        "imageSamplesChecked",
+        "imageSamplesAvailable",
+        "priceHistorySamplesChecked",
+        "priceHistorySamplesWithData",
+    ]:
+        value = data.get(field)
+        if not isinstance(value, int) or value < 0:
+            err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json {field} must be a non-negative integer")
+
+    for field in [
+        "languagesSeen",
+        "setsByLanguage",
+        "sampleSetsByLanguage",
+        "endpointCoverage",
+        "priceRecordsFoundByLanguage",
+        "rateLimit",
+    ]:
+        if not isinstance(data.get(field), dict):
+            err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json {field} must be an object")
+
+    for endpoint in ["prices", "statistics", "completionValue", "trending", "topCards", "priceHistory", "images"]:
+        coverage = data.get("endpointCoverage", {})
+        if isinstance(coverage, dict) and endpoint not in coverage:
+            err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json endpointCoverage missing {endpoint}")
+
+    for field in [
+        "currenciesSeen",
+        "sourcesSeen",
+        "samplePriceRecords",
+        "sampleTrendingRecords",
+        "sampleTopCards",
+        "sampleImageChecks",
+        "sampleSkipped",
+    ]:
+        if not isinstance(data.get(field), list):
+            err(f"diagnostics/pokewallet-pro-trial-discovery-latest.json {field} must be a list")
+
+    if "AUD" in set(data.get("currenciesSeen", [])):
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json must not infer AUD currency")
+    if not isinstance(data.get("recommendation"), str) or not data.get("recommendation"):
+        err("diagnostics/pokewallet-pro-trial-discovery-latest.json recommendation must be a non-empty string")
+
+
+def check_pokewallet_pro_trial_discovery_state() -> None:
+    print("\n[6f] Pokewallet Pro trial discovery state check")
+    path = ROOT / "data" / "pokewallet_pro_trial_discovery_state.json"
+    if not path.exists():
+        warn(f"Pokewallet Pro trial discovery state not found: {path.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("data/pokewallet_pro_trial_discovery_state.json must be a JSON object")
+        return
+
+    if check_required(data, REQUIRED_POKEWALLET_PRO_TRIAL_STATE_FIELDS, "data/pokewallet_pro_trial_discovery_state.json"):
+        ok("data/pokewallet_pro_trial_discovery_state.json has required fields")
+    if data.get("mode") != "trial_discovery":
+        err("data/pokewallet_pro_trial_discovery_state.json mode must be trial_discovery")
+
+    for field in ["completedSetKeys", "failedSetKeys", "skippedSetKeys", "completedEndpointKeys"]:
+        if not isinstance(data.get(field), list):
+            err(f"data/pokewallet_pro_trial_discovery_state.json {field} must be a list")
+    for field in [
+        "requestsAttemptedTotal",
+        "requestsSucceededTotal",
+        "requestsFailedTotal",
+        "priceRecordsFoundTotal",
+        "imageSamplesCheckedTotal",
+        "priceHistorySamplesCheckedTotal",
+    ]:
+        value = data.get(field)
+        if not isinstance(value, int) or value < 0:
+            err(f"data/pokewallet_pro_trial_discovery_state.json {field} must be a non-negative integer")
+    if not isinstance(data.get("languagesCompleted"), dict):
+        err("data/pokewallet_pro_trial_discovery_state.json languagesCompleted must be an object")
+
+
 def check_api_manifest() -> None:
     print("\n[7] API manifest check")
     path = V1_DIR / "api-manifest.json"
@@ -1418,6 +1596,8 @@ def main() -> None:
     check_provider_probe_diagnostics()
     check_pokewallet_jp_build_diagnostics()
     check_pokewallet_pro_price_probe_diagnostics()
+    check_pokewallet_pro_trial_discovery_diagnostics()
+    check_pokewallet_pro_trial_discovery_state()
     check_api_manifest()
     check_api_notes()
     check_schemas()

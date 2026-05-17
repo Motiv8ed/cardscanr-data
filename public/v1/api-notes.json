@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T01:58:13Z",
+  "generatedAtUtc": "2026-05-17T02:20:00Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -35,7 +35,11 @@
     "Pokewallet prices are not Australian sold prices and must not be labelled as AUD unless a provider explicitly returns AUD.",
     "Apps should display the source and currency for Pokewallet prices.",
     "Currency conversion is an app-layer feature for later and is not performed in the cache.",
-    "True Australian market pricing should come from eBay AU sold listings or local sales data later."
+    "True Australian market pricing should come from eBay AU sold listings or local sales data later.",
+    "Pokewallet Pro trial discovery is diagnostics-only and must not write production price files.",
+    "Pokewallet image endpoints require an API key; discovery checks small image samples by response metadata only.",
+    "Pokewallet images are not stored in this repository by the Pro trial discovery probe.",
+    "Pokewallet production cache integration across languages comes later after diagnostics are reviewed."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",
