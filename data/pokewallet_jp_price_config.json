@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0.0",
+  "enabled": true,
+  "provider": "pokewallet",
+  "apiKeyEnv": "POKEWALLET_API_KEY",
+  "mode": "controlled_test",
+  "maxRequestsPerRun": 25,
+  "requestSleepSeconds": 0.35,
+  "targetLanguages": [
+    "jp"
+  ],
+  "targetGame": "pokemon",
+  "confidenceThreshold": 0.82,
+  "writeOnlyConfidentMatches": true,
+  "searchTargets": [
+    {
+      "query": "charizard japanese",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "pikachu japanese",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "mew japanese",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "mega symphonia",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "battle partners",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "sv10 japanese pokemon",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "sv11 japanese pokemon",
+      "expectedLanguage": "jp"
+    },
+    {
+      "query": "pmcg1 japanese pokemon",
+      "expectedLanguage": "jp"
+    }
+  ]
+}

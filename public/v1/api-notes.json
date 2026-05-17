@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T00:20:47Z",
+  "generatedAtUtc": "2026-05-17T00:28:15Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -20,7 +20,12 @@
     "Japanese Pokemon catalogue files are built from official TCGdex REST endpoints using the ja API language path.",
     "CardScanR cache language remains jp even when the upstream TCGdex API language path is ja.",
     "Japanese current price files are optional and are only written when official/free source pricing is available.",
-    "Future authenticated app routes may be served by Cloudflare Workers or Supabase."
+    "Future authenticated app routes may be served by Cloudflare Workers or Supabase.",
+    "JP current prices may be partial and sourced from a controlled Pokewallet test builder.",
+    "App should display JP price data only when a matching JP record exists.",
+    "If JP record is missing, show Japanese price not available yet.",
+    "Provider currency is not converted; app should display provider currency as-is.",
+    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP scheduling exists."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",

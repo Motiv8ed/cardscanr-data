@@ -174,6 +174,28 @@ REQUIRED_POKEWALLET_SAMPLE_FIELDS = {
     "currency",
     "rawKeys",
 }
+REQUIRED_POKEWALLET_JP_BUILD_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "mode",
+    "apiKeyPresent",
+    "requestsAttempted",
+    "requestsSucceeded",
+    "requestsFailed",
+    "searchTargetsTested",
+    "resultsFound",
+    "possibleJapaneseResults",
+    "confidentMatches",
+    "lowConfidenceMatches",
+    "unmappedResults",
+    "priceRecordsWritten",
+    "priceFilesWritten",
+    "currenciesSeen",
+    "sampleMatches",
+    "sampleSkipped",
+    "recommendation",
+}
 ALLOWED_POKEWALLET_PROBE_STATUSES = {
     "key_missing",
     "ok",
@@ -521,8 +543,12 @@ def check_price_files() -> None:
             if data.get("isLivePricing") is not False:
                 err(f"{rel}: isLivePricing must be false")
             interval = data.get("expectedUpdateIntervalMinutes")
-            if not isinstance(interval, int) or interval <= 0:
-                err(f"{rel}: expectedUpdateIntervalMinutes must be a positive integer")
+            if current_language == "en":
+                if not isinstance(interval, int) or interval <= 0:
+                    err(f"{rel}: expectedUpdateIntervalMinutes must be a positive integer for EN")
+            elif current_language == "jp":
+                if interval is not None and (not isinstance(interval, int) or interval <= 0):
+                    err(f"{rel}: expectedUpdateIntervalMinutes must be null or a positive integer for JP")
 
             for ts_field in ["generatedAtUtc", "lastSuccessfulPriceUpdateAtUtc", "nextExpectedPriceUpdateAtUtc"]:
                 ts_value = data.get(ts_field)
@@ -594,6 +620,13 @@ def check_price_files() -> None:
                 next_expected = entry.get("nextExpectedPriceUpdateAtUtc")
                 if next_expected is not None and (not isinstance(next_expected, str) or not next_expected.endswith("Z")):
                     err(f"{rel}: prices[{i}] nextExpectedPriceUpdateAtUtc must be null or UTC 'Z' string")
+                    entry_errors += 1
+                record_currency = entry.get("currency")
+                if not isinstance(record_currency, str) or len(record_currency) != 3 or record_currency.upper() != record_currency:
+                    err(f"{rel}: prices[{i}] currency must be a 3-letter uppercase string")
+                    entry_errors += 1
+                if isinstance(data.get("currency"), str) and isinstance(record_currency, str) and data.get("currency") != record_currency:
+                    err(f"{rel}: prices[{i}] currency must match top-level currency")
                     entry_errors += 1
                 entry_staleness = entry.get("staleness")
                 if not isinstance(entry_staleness, dict):
@@ -783,6 +816,52 @@ def check_provider_probe_diagnostics() -> None:
             if not isinstance(sample.get("rawKeys"), list):
                 err(f"{label} rawKeys must be a list")
     ok(f"diagnostics/pokewallet-probe-latest.json: {len(samples)} sample result(s) validated")
+
+
+def check_pokewallet_jp_build_diagnostics() -> None:
+    print("\n[6c] Pokewallet JP build diagnostics check")
+    path = V1_DIR / "diagnostics" / "pokewallet-jp-price-build-latest.json"
+    if not path.exists():
+        warn(f"Pokewallet JP build diagnostics not found: {path.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("diagnostics/pokewallet-jp-price-build-latest.json must be a JSON object")
+        return
+
+    if check_required(data, REQUIRED_POKEWALLET_JP_BUILD_FIELDS, "diagnostics/pokewallet-jp-price-build-latest.json"):
+        ok("diagnostics/pokewallet-jp-price-build-latest.json has required fields")
+
+    if data.get("provider") != "pokewallet":
+        err("diagnostics/pokewallet-jp-price-build-latest.json provider must be pokewallet")
+
+    for field in [
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "resultsFound",
+        "possibleJapaneseResults",
+        "confidentMatches",
+        "lowConfidenceMatches",
+        "unmappedResults",
+        "priceRecordsWritten",
+        "priceFilesWritten",
+    ]:
+        value = data.get(field)
+        if not isinstance(value, int) or value < 0:
+            err(f"diagnostics/pokewallet-jp-price-build-latest.json {field} must be a non-negative integer")
+
+    for field in ["searchTargetsTested", "currenciesSeen", "sampleMatches", "sampleSkipped"]:
+        if not isinstance(data.get(field), list):
+            err(f"diagnostics/pokewallet-jp-price-build-latest.json {field} must be a list")
+
+    if not isinstance(data.get("apiKeyPresent"), bool):
+        err("diagnostics/pokewallet-jp-price-build-latest.json apiKeyPresent must be boolean")
+    if not isinstance(data.get("mode"), str) or not data.get("mode"):
+        err("diagnostics/pokewallet-jp-price-build-latest.json mode must be a non-empty string")
+    if not isinstance(data.get("recommendation"), str) or not data.get("recommendation"):
+        err("diagnostics/pokewallet-jp-price-build-latest.json recommendation must be a non-empty string")
 
 
 def check_api_manifest() -> None:
@@ -1136,6 +1215,7 @@ def main() -> None:
     check_price_status_files()
     check_diagnostics()
     check_provider_probe_diagnostics()
+    check_pokewallet_jp_build_diagnostics()
     check_api_manifest()
     check_api_notes()
     check_schemas()
