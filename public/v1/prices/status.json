@@ -1,36 +1,46 @@
 {
-  "cacheVersion": "2026.05.17.0117",
-  "generatedAtUtc": "2026-05-17T01:58:13Z",
+  "cacheVersion": "2026.05.17.1215",
+  "generatedAtUtc": "2026-05-17T12:15:32Z",
   "intendedConsumer": "cardscanr_app",
   "languages": {
     "en": {
       "currentPriceFilesAvailable": true,
-      "currentPriceRecordCount": 2085,
-      "currentPriceSetFileCount": 9,
+      "currentPriceRecordCount": 5323,
+      "currentPriceSetFileCount": 29,
       "expectedUpdateIntervalMinutes": 60,
-      "fullRotationEstimatedHours": 1,
+      "fullRotationEstimatedHours": 2,
       "game": "pokemon",
       "language": "en",
       "lastBatchDurationSeconds": 0,
-      "lastBatchFinishedAtUtc": "2026-05-17T01:17:00Z",
+      "lastBatchFinishedAtUtc": "2026-05-17T12:15:32Z",
       "lastBatchSetIds": [
-        "swshp",
-        "tk1a",
-        "tk1b",
-        "tk2a",
-        "tk2b",
-        "xy0",
-        "xy1",
-        "xy10",
-        "xy11",
-        "xy12"
+        "xy2",
+        "xy3",
+        "xy4",
+        "xy5",
+        "xy6",
+        "xy7",
+        "xy8",
+        "xy9",
+        "xyp",
+        "zsv10pt5",
+        "base1",
+        "base2",
+        "base3",
+        "base4",
+        "base5",
+        "base6",
+        "basep",
+        "bp",
+        "bw1",
+        "bw10"
       ],
-      "lastBatchSize": 10,
-      "lastBatchStartedAtUtc": "2026-05-17T01:17:00Z",
-      "lastSuccessfulPriceUpdateAtUtc": "2026-05-17T01:17:00Z",
-      "lastSuccessfulPushAtUtc": "2026-05-17T01:17:00Z",
-      "newestSetPriceUpdateAtUtc": "2026-05-17T01:17:00Z",
-      "nextExpectedPriceUpdateAtUtc": "2026-05-17T02:17:00Z",
+      "lastBatchSize": 20,
+      "lastBatchStartedAtUtc": "2026-05-17T12:15:32Z",
+      "lastSuccessfulPriceUpdateAtUtc": "2026-05-17T12:15:32Z",
+      "lastSuccessfulPushAtUtc": "2026-05-17T12:15:32Z",
+      "newestSetPriceUpdateAtUtc": "2026-05-17T12:15:32Z",
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T13:15:32Z",
       "oldestSetPriceUpdateAtUtc": "2026-05-17T00:20:47Z",
       "sourceSummary": {
         "currency": "USD",
@@ -54,19 +64,19 @@
       "lastSuccessfulPriceUpdateAtUtc": null,
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
-        "Pokewallet JP set details were available, but no usable numeric prices were written.",
-        "Japanese catalogue coverage exists without JP current price files yet.",
-        "Provider currency is passed through as-is and is not converted."
+        "Japanese catalogue support is partial.",
+        "Japanese current price cache is not available yet.",
+        "Timestamps are UTC. Apps should convert to the user's local timezone."
       ],
       "sourceSummary": {
         "currency": null,
         "isLivePricing": false,
-        "primarySource": "pokewallet"
+        "primarySource": "tcgdex"
       },
       "staleness": {
         "ageSeconds": null,
         "freshForSeconds": 86400,
-        "staleAfterSeconds": 172800,
+        "staleAfterSeconds": 259200,
         "status": "unavailable"
       },
       "status": "catalogue_only"
