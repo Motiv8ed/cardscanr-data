@@ -1,32 +1,198 @@
 {
   "apiKeyPresent": true,
   "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T04:35:42Z",
-  "languagesSeen": {},
+  "generatedAtUtc": "2026-05-17T06:46:09Z",
+  "languagesSeen": {
+    "en": 334,
+    "jp": 462,
+    "zh-cn": 58
+  },
   "mode": "pro_price_probe",
-  "priceRecordsFoundByLanguage": {},
-  "priceResponsesByLanguage": {},
+  "priceRecordsFoundByLanguage": {
+    "en": 0,
+    "jp": 0,
+    "zh-cn": 0
+  },
+  "priceResponsesByLanguage": {
+    "en": {
+      "attempted": 3,
+      "failed": 3,
+      "succeeded": 0
+    },
+    "jp": {
+      "attempted": 5,
+      "failed": 5,
+      "succeeded": 0
+    },
+    "zh-cn": {
+      "attempted": 2,
+      "failed": 2,
+      "succeeded": 0
+    }
+  },
   "proEndpointUsed": "/prices/:setCode",
-  "proRequestsAttempted": 0,
-  "proRequestsFailed": 0,
+  "proRequestsAttempted": 10,
+  "proRequestsFailed": 10,
   "proRequestsSucceeded": 0,
   "provider": "pokewallet",
-  "recommendation": "Dry run made no Pro price endpoint requests, but Pokewallet /sets did not return set data; retry after the provider rate window resets.",
-  "requestsAttempted": 1,
-  "requestsFailed": 1,
-  "requestsSucceeded": 0,
+  "recommendation": "Pass --enable-pro after activating Pokewallet Pro to test /prices/:setCode.",
+  "requestsAttempted": 12,
+  "requestsFailed": 10,
+  "requestsSucceeded": 2,
   "samplePriceRecords": [],
   "sampleResponseShapes": [],
   "sampleSkipped": [
     {
-      "detail": "http_429",
-      "page": 1,
-      "reason": "sets_fetch_failed"
+      "detail": "http_403",
+      "language": "en",
+      "reason": "price_endpoint_failed",
+      "setCode": "WCD22"
+    },
+    {
+      "detail": "http_403",
+      "language": "en",
+      "reason": "price_endpoint_failed",
+      "setCode": "WCD23"
+    },
+    {
+      "detail": "http_403",
+      "language": "en",
+      "reason": "price_endpoint_failed",
+      "setCode": "WCD24"
+    },
+    {
+      "detail": "http_403",
+      "language": "jp",
+      "reason": "price_endpoint_failed",
+      "setCode": "SV10"
+    },
+    {
+      "detail": "http_403",
+      "language": "jp",
+      "reason": "price_endpoint_failed",
+      "setCode": "SV11B"
+    },
+    {
+      "detail": "http_403",
+      "language": "jp",
+      "reason": "price_endpoint_failed",
+      "setCode": "SV11W"
+    },
+    {
+      "detail": "http_403",
+      "language": "jp",
+      "reason": "price_endpoint_failed",
+      "setCode": "SV9"
+    },
+    {
+      "detail": "http_403",
+      "language": "jp",
+      "reason": "price_endpoint_failed",
+      "setCode": "SV9a"
+    },
+    {
+      "detail": "http_403",
+      "language": "zh-cn",
+      "reason": "price_endpoint_failed",
+      "setCode": "30th-P"
+    },
+    {
+      "detail": "http_403",
+      "language": "zh-cn",
+      "reason": "price_endpoint_failed",
+      "setCode": "CS5.1C"
     }
   ],
   "schemaVersion": "1.0.0",
-  "setsFetched": 0,
-  "setsSelectedByLanguage": {},
+  "setsFetched": 854,
+  "setsSelectedByLanguage": {
+    "en": [
+      {
+        "cardCount": 108,
+        "name": "2022 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD22",
+        "setId": "-188"
+      },
+      {
+        "cardCount": 109,
+        "name": "2023 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD23",
+        "setId": "-189"
+      },
+      {
+        "cardCount": 102,
+        "name": "2024 World Championship Decks",
+        "pokewalletLanguage": "eng",
+        "releaseDate": null,
+        "setCode": "WCD24",
+        "setId": "-190"
+      }
+    ],
+    "jp": [
+      {
+        "cardCount": 132,
+        "name": "SV10: The Glory of Team Rocket",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "18th April, 2025",
+        "setCode": "SV10",
+        "setId": "24310"
+      },
+      {
+        "cardCount": 174,
+        "name": "SV11B: Black Bolt",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "18th July, 2025",
+        "setCode": "SV11B",
+        "setId": "24349"
+      },
+      {
+        "cardCount": 174,
+        "name": "SV11W: White Flare",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "18th July, 2025",
+        "setCode": "SV11W",
+        "setId": "24350"
+      },
+      {
+        "cardCount": 131,
+        "name": "SV9: Battle Partners",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "24th January, 2025",
+        "setCode": "SV9",
+        "setId": "24173"
+      },
+      {
+        "cardCount": 92,
+        "name": "SV9a: Heat Wave Arena",
+        "pokewalletLanguage": "jap",
+        "releaseDate": "14th March, 2025",
+        "setCode": "SV9a",
+        "setId": "24260"
+      }
+    ],
+    "zh-cn": [
+      {
+        "cardCount": 9,
+        "name": "30th Anniversary Celebration Simplified Chinese Singles",
+        "pokewalletLanguage": "chn",
+        "releaseDate": "20th March, 2026",
+        "setCode": "30th-P",
+        "setId": "-241"
+      },
+      {
+        "cardCount": 23,
+        "name": "Ancient Roar",
+        "pokewalletLanguage": "chn",
+        "releaseDate": "27th October, 2023",
+        "setCode": "CS5.1C",
+        "setId": "-38"
+      }
+    ]
+  },
   "sourcesSeen": [],
-  "status": "dry_run"
+  "status": "pro_required"
 }

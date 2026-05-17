@@ -31,8 +31,8 @@ jobs:
       - name: Build price cache
         env:
           # Optional: set in repository secrets to enable live API fetches
-          POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY }}
-          POKEWALLET_API_KEY: ${{ secrets.POKEWALLET_API_KEY }}
+          POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY || '' }}
+          POKEWALLET_API_KEY: ${{ secrets.POKEWALLET_API_KEY || '' }}
           CARDSCANR_CURRENT_PRICE_BATCH_SIZE: "10"
         run: python tools/build_price_cache.py current_prices
 
