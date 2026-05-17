@@ -1,0 +1,129 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-17T14:19:18Z",
+  "isLivePricing": false,
+  "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-17T14:19:18Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+  "priceCount": 5,
+  "prices": [
+    {
+      "canonicalId": "pokemon|en|fut20|1|pikachu_on_the_ball|normal|near_mint",
+      "collectorNumber": "1",
+      "condition": "near_mint",
+      "currency": "USD",
+      "fetchedAtUtc": "2026-05-17T14:19:18Z",
+      "highPrice": 500.0,
+      "lowPrice": 43.0,
+      "marketPrice": 86.29,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+      "normalizedName": "pikachu_on_the_ball",
+      "setId": "fut20",
+      "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "variant": "normal"
+    },
+    {
+      "canonicalId": "pokemon|en|fut20|2|eevee_on_the_ball|normal|near_mint",
+      "collectorNumber": "2",
+      "condition": "near_mint",
+      "currency": "USD",
+      "fetchedAtUtc": "2026-05-17T14:19:18Z",
+      "highPrice": 59.95,
+      "lowPrice": 42.0,
+      "marketPrice": 52.38,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+      "normalizedName": "eevee_on_the_ball",
+      "setId": "fut20",
+      "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "variant": "normal"
+    },
+    {
+      "canonicalId": "pokemon|en|fut20|3|grookey_on_the_ball|normal|near_mint",
+      "collectorNumber": "3",
+      "condition": "near_mint",
+      "currency": "USD",
+      "fetchedAtUtc": "2026-05-17T14:19:18Z",
+      "highPrice": 99.99,
+      "lowPrice": 40.0,
+      "marketPrice": 36.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+      "normalizedName": "grookey_on_the_ball",
+      "setId": "fut20",
+      "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "variant": "normal"
+    },
+    {
+      "canonicalId": "pokemon|en|fut20|4|scorbunny_on_the_ball|normal|near_mint",
+      "collectorNumber": "4",
+      "condition": "near_mint",
+      "currency": "USD",
+      "fetchedAtUtc": "2026-05-17T14:19:18Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "marketPrice": 37.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+      "normalizedName": "scorbunny_on_the_ball",
+      "setId": "fut20",
+      "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "variant": "normal"
+    },
+    {
+      "canonicalId": "pokemon|en|fut20|5|sobble_on_the_ball|normal|near_mint",
+      "collectorNumber": "5",
+      "condition": "near_mint",
+      "currency": "USD",
+      "fetchedAtUtc": "2026-05-17T14:19:18Z",
+      "highPrice": 99.99,
+      "lowPrice": 48.0,
+      "marketPrice": 55.31,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-17T23:19:18Z",
+      "normalizedName": "sobble_on_the_ball",
+      "setId": "fut20",
+      "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "fut20",
+  "setName": "Pokémon Futsal Collection",
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
+}
