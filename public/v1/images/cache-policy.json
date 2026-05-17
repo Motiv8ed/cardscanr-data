@@ -1,0 +1,23 @@
+{
+  "binaryImagesStored": false,
+  "cacheKeyRule": "{game}|{language}|{setId}|{collectorNumber}|{normalizedName}|{variant}",
+  "defaultPolicy": {
+    "recommendedLocalCacheDays": 365,
+    "recheckAfterDays": 180,
+    "strategy": "cache_once_recheck_on_failure"
+  },
+  "generatedAtUtc": "2026-05-17T09:05:00Z",
+  "imageStorageMode": "provider_reference_only",
+  "notes": [
+    "Card images are treated as mostly static reference assets.",
+    "Images should be cached by exact card identity, not by card name alone.",
+    "This repository stores image metadata and references only, not binary image files."
+  ],
+  "recommendedFutureStorage": [
+    "cloudflare_r2",
+    "supabase_storage",
+    "firebase_storage"
+  ],
+  "schemaVersion": "1.0.0",
+  "status": "metadata_only"
+}

@@ -6,9 +6,9 @@
       "id": "api_manifest",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "196f3ac004846259a6429ee42326a8167d821cdf9dca644d1346a98eebb4117d",
+      "sha256": "26d9308c0c1003e1966c65b9212a90764e0097a2a1aee487adcbf7a0bd84e059",
       "type": "api_manifest",
-      "updatedAtUtc": "2026-05-17T07:05:00Z",
+      "updatedAtUtc": "2026-05-17T09:05:00Z",
       "url": "/v1/api-manifest.json"
     },
     {
@@ -16,9 +16,9 @@
       "id": "api_notes",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "725cd2ad07a97f4c3885331b4e766928c60014325119ad3563fbcdad3ffa71aa",
+      "sha256": "bf7262b46ff3fb08cf1b6a78ba9c1a23c80319784c4fe41ef27c052d913406f7",
       "type": "api_notes",
-      "updatedAtUtc": "2026-05-17T07:05:00Z",
+      "updatedAtUtc": "2026-05-17T09:05:00Z",
       "url": "/v1/api-notes.json"
     },
     {
@@ -2930,6 +2930,17 @@
       "url": "/v1/diagnostics/pokewallet-jp-price-build-latest.json"
     },
     {
+      "description": "CardScanR image cache policy and canonical cache key rule",
+      "game": "pokemon",
+      "id": "images_cache_policy",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "7645ff8d029d1434a3e3affc65c9a88af333624dfa35e88f605e944c8df2ec49",
+      "type": "image_cache_policy",
+      "updatedAtUtc": "2026-05-17T09:05:00Z",
+      "url": "/v1/images/cache-policy.json"
+    },
+    {
       "description": "CardScanR app-facing UTC price freshness/status for Pokemon EN",
       "game": "pokemon",
       "id": "prices_current_pokemon_en_status",
@@ -3102,9 +3113,9 @@
       "id": "provider_catalog_pokewallet_cards_sample",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "fc88263baf8c5cf0be0a08337be269bce4b6fee153f198936b92b9b05de9f83a",
+      "sha256": "8f78217ec568e70ef00ed385b758cb56e41a6a156be4a67386cf624c202b8876",
       "type": "provider_catalog",
-      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "updatedAtUtc": "2026-05-17T09:05:00Z",
       "url": "/v1/provider-catalog/pokewallet/cards-sample.json"
     },
     {
@@ -3145,9 +3156,9 @@
       "id": "schemas",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "48fbcc3883e6f7d3656548129d49ebb8dfd0db33f364fc6e58fd2f1e3a480266",
+      "sha256": "be4ddced0b5f84726e18765bfc9774ca6cf583a18581bca854b9408a16dd2d9d",
       "type": "schemas",
-      "updatedAtUtc": "2026-05-17T07:05:00Z",
+      "updatedAtUtc": "2026-05-17T09:05:00Z",
       "url": "/v1/schemas.json"
     },
     {
@@ -3161,6 +3172,6 @@
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-17T08:47:31Z",
+  "generatedAtUtc": "2026-05-17T09:05:00Z",
   "schemaVersion": "1.0.0"
 }

@@ -462,6 +462,20 @@ def string_value(value: Any) -> str:
     return str(value or "").strip()
 
 
+def normalized_key_part(value: Any) -> str:
+    text = string_value(value).lower()
+    cleaned = []
+    previous_dash = False
+    for char in text:
+        if char.isalnum():
+            cleaned.append(char)
+            previous_dash = False
+        elif not previous_dash:
+            cleaned.append("-")
+            previous_dash = True
+    return "".join(cleaned).strip("-") or "unknown"
+
+
 def variant_values(record: dict[str, Any]) -> list[str]:
     found: list[str] = []
     for key in ("variant", "variant_type", "variantType", "sub_type_name", "subTypeName", "finish", "condition"):
@@ -509,6 +523,27 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
     rarity = string_value(info.get("rarity") or record.get("rarity"))
     low_endpoint = f"/images/{provider_card_id}?size=low" if provider_card_id else None
     high_endpoint = f"/images/{provider_card_id}?size=high" if provider_card_id else None
+    variants = variant_values(record)
+    variant = normalized_key_part(variants[0] if variants else "normal")
+    identity_basis = {
+        "game": "pokemon",
+        "language": set_item.app_language,
+        "setId": provider_set_code or provider_set_id,
+        "collectorNumber": number,
+        "normalizedName": normalized_key_part(clean_name or name),
+        "variant": variant,
+        "basisConfidence": "provider_catalog_candidate",
+    }
+    cache_key = "|".join(
+        [
+            identity_basis["game"],
+            identity_basis["language"],
+            normalized_key_part(identity_basis["setId"]),
+            normalized_key_part(identity_basis["collectorNumber"]),
+            identity_basis["normalizedName"],
+            identity_basis["variant"],
+        ]
+    )
     return {
         "providerCardId": provider_card_id,
         "providerSetId": provider_set_id,
@@ -520,12 +555,20 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
         "cleanName": clean_name,
         "cardNumber": number,
         "rarity": rarity,
-        "variants": variant_values(record),
+        "variants": variants,
+        "providerCanonicalImageKey": cache_key,
+        "cardScanRImageCacheCandidateKey": cache_key,
+        "canonicalImageKey": None,
+        "imageCacheKey": cache_key,
+        "imageCacheIdentityBasis": identity_basis,
         "imageEndpoint": f"/images/{provider_card_id}" if provider_card_id else None,
         "imageEndpointLow": low_endpoint,
         "imageEndpointHigh": high_endpoint,
+        "imageAvailable": None,
         "imageLowAvailable": None,
         "imageHighAvailable": None,
+        "imageLastCheckedAtUtc": None,
+        "imageCacheStrategy": "cache_once_recheck_on_failure",
         "hasPriceFields": has_price_fields(record),
         "hasTcgplayerFields": isinstance(record.get("tcgplayer"), dict),
         "hasCardmarketFields": isinstance(record.get("cardmarket"), dict),
@@ -617,6 +660,8 @@ def check_images(
             content_type = header_value(result.headers, "Content-Type")
             available = bool(result.ok and str(content_type or "").lower().startswith("image/"))
             card[field] = available
+            card["imageAvailable"] = bool(card.get("imageLowAvailable") or card.get("imageHighAvailable"))
+            card["imageLastCheckedAtUtc"] = now_utc()
             diag["imageSamplesChecked"] += 1
             if available:
                 diag["imageSamplesAvailable"] += 1

@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T07:05:00Z",
+  "generatedAtUtc": "2026-05-17T09:05:00Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -81,6 +81,34 @@
         "sets",
         "source",
         "notes"
+      ]
+    },
+    "card_image_metadata": {
+      "notes": [
+        "App-facing metadata for a card image reference.",
+        "Images are cached by exact card identity, not by card name alone.",
+        "Provider image IDs are references and should resolve to a CardScanR card identity.",
+        "Public timestamps are UTC; Flutter converts times locally.",
+        "Binary image files are not included in this cache.",
+        "Future CardScanR CDN image URLs can be added later beside provider references."
+      ],
+      "requiredFields": [
+        "canonicalId",
+        "game",
+        "language",
+        "setId",
+        "collectorNumber",
+        "normalizedName",
+        "variant",
+        "provider",
+        "providerCardId",
+        "providerSetId",
+        "providerSetCode",
+        "imageEndpointLow",
+        "imageEndpointHigh",
+        "imageAvailable",
+        "imageLastCheckedAtUtc",
+        "imageCachePolicy"
       ]
     },
     "current_price_language_status_file": {
@@ -213,6 +241,24 @@
         "updatedAtUtc"
       ]
     },
+    "images_cache_policy": {
+      "notes": [
+        "Repository-level image cache policy for app and future CDN use.",
+        "The cache key rule is {game}|{language}|{setId}|{collectorNumber}|{normalizedName}|{variant}.",
+        "binaryImagesStored must remain false while this repository stores metadata and references only."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "status",
+        "binaryImagesStored",
+        "imageStorageMode",
+        "recommendedFutureStorage",
+        "cacheKeyRule",
+        "defaultPolicy",
+        "notes"
+      ]
+    },
     "pokewallet_jp_price_build_diagnostics": {
       "notes": [
         "Controlled Pokewallet JP price build diagnostics without secrets or raw payload dumps.",
@@ -323,11 +369,19 @@
         "cardNumber",
         "rarity",
         "variants",
+        "providerCanonicalImageKey",
+        "cardScanRImageCacheCandidateKey",
+        "canonicalImageKey",
+        "imageCacheKey",
+        "imageCacheIdentityBasis",
         "imageEndpoint",
         "imageEndpointLow",
         "imageEndpointHigh",
+        "imageAvailable",
         "imageLowAvailable",
         "imageHighAvailable",
+        "imageLastCheckedAtUtc",
+        "imageCacheStrategy",
         "hasPriceFields",
         "hasTcgplayerFields",
         "hasCardmarketFields",
@@ -366,9 +420,19 @@
         "cardNumber",
         "rarity",
         "variants",
+        "providerCanonicalImageKey",
+        "cardScanRImageCacheCandidateKey",
+        "canonicalImageKey",
+        "imageCacheKey",
+        "imageCacheIdentityBasis",
         "imageEndpoint",
+        "imageEndpointLow",
+        "imageEndpointHigh",
+        "imageAvailable",
         "imageLowAvailable",
         "imageHighAvailable",
+        "imageLastCheckedAtUtc",
+        "imageCacheStrategy",
         "hasPriceFields",
         "hasTcgplayerFields",
         "hasCardmarketFields",

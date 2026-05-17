@@ -166,6 +166,14 @@
     {
       "authRequired": false,
       "cacheable": true,
+      "description": "CardScanR image cache policy and canonical cache key rule",
+      "id": "images_cache_policy",
+      "method": "GET",
+      "path": "/images/cache-policy.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "method": "GET",
@@ -194,7 +202,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-17T07:05:00Z",
+  "generatedAtUtc": "2026-05-17T09:05:00Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -222,6 +230,9 @@
     "Pokewallet provider metadata is not official CardScanR canonical catalogue data yet.",
     "CardScanR may use provider metadata for scan and match assistance after review.",
     "Pricing integration is separate from provider catalogue metadata.",
+    "Image cache metadata uses exact card identity: game, language, setId, collectorNumber, normalizedName, and variant.",
+    "Provider image IDs are references and should be resolved to CardScanR card identity before long-term app caching.",
+    "Binary image files are not included in this static cache.",
     "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,

@@ -390,9 +390,19 @@ REQUIRED_POKEWALLET_PROVIDER_CARD_FIELDS = {
     "cardNumber",
     "rarity",
     "variants",
+    "providerCanonicalImageKey",
+    "cardScanRImageCacheCandidateKey",
+    "canonicalImageKey",
+    "imageCacheKey",
+    "imageCacheIdentityBasis",
     "imageEndpoint",
+    "imageEndpointLow",
+    "imageEndpointHigh",
+    "imageAvailable",
     "imageLowAvailable",
     "imageHighAvailable",
+    "imageLastCheckedAtUtc",
+    "imageCacheStrategy",
     "hasPriceFields",
     "hasTcgplayerFields",
     "hasCardmarketFields",
@@ -415,6 +425,17 @@ REQUIRED_POKEWALLET_PROVIDER_SET_FILE_FIELDS = {
 REQUIRED_POKEWALLET_PROVIDER_SET_CARD_FIELDS = REQUIRED_POKEWALLET_PROVIDER_CARD_FIELDS | {
     "imageEndpointLow",
     "imageEndpointHigh",
+}
+REQUIRED_IMAGE_CACHE_POLICY_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "status",
+    "binaryImagesStored",
+    "imageStorageMode",
+    "recommendedFutureStorage",
+    "cacheKeyRule",
+    "defaultPolicy",
+    "notes",
 }
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
@@ -1494,6 +1515,18 @@ def check_pokewallet_provider_catalog() -> None:
                     err(f"{path.relative_to(ROOT)} cards[{i}] missing fields: {sorted(missing_fields)}")
                 if card.get("imageEndpoint") is not None and not str(card.get("imageEndpoint")).startswith("/images/"):
                     err(f"{path.relative_to(ROOT)} cards[{i}] imageEndpoint must be an /images/ endpoint or null")
+                for field in ["imageEndpointLow", "imageEndpointHigh"]:
+                    value = card.get(field)
+                    if value is not None and not str(value).startswith("/images/"):
+                        err(f"{path.relative_to(ROOT)} cards[{i}] {field} must be an /images/ endpoint or null")
+                if card.get("imageAvailable") is not None and not isinstance(card.get("imageAvailable"), bool):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] imageAvailable must be boolean or null")
+                if not isinstance(card.get("imageCacheIdentityBasis"), dict):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] imageCacheIdentityBasis must be an object")
+                if not isinstance(card.get("imageCacheKey"), str) or "|" not in card.get("imageCacheKey", ""):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] imageCacheKey must be a pipe-delimited string")
+                if card.get("imageCacheStrategy") != "cache_once_recheck_on_failure":
+                    err(f"{path.relative_to(ROOT)} cards[{i}] imageCacheStrategy is invalid")
                 if not isinstance(card.get("rawKeys"), list):
                     err(f"{path.relative_to(ROOT)} cards[{i}] rawKeys must be a list")
                 for field in ["hasPriceFields", "hasTcgplayerFields", "hasCardmarketFields"]:
@@ -1552,11 +1585,52 @@ def check_pokewallet_provider_catalog() -> None:
             for field in ["imageLowAvailable", "imageHighAvailable"]:
                 if card.get(field) is not None and not isinstance(card.get(field), bool):
                     err(f"{card_label} {field} must be boolean or null")
+            if card.get("imageAvailable") is not None and not isinstance(card.get("imageAvailable"), bool):
+                err(f"{card_label} imageAvailable must be boolean or null")
+            if not isinstance(card.get("imageCacheIdentityBasis"), dict):
+                err(f"{card_label} imageCacheIdentityBasis must be an object")
+            if not isinstance(card.get("imageCacheKey"), str) or "|" not in card.get("imageCacheKey", ""):
+                err(f"{card_label} imageCacheKey must be a pipe-delimited string")
+            if card.get("imageCacheStrategy") != "cache_once_recheck_on_failure":
+                err(f"{card_label} imageCacheStrategy is invalid")
             if not isinstance(card.get("rawKeys"), list):
                 err(f"{card_label} rawKeys must be a list")
             for field in ["hasPriceFields", "hasTcgplayerFields", "hasCardmarketFields"]:
                 if not isinstance(card.get(field), bool):
                     err(f"{card_label} {field} must be boolean")
+
+
+def check_image_cache_policy() -> None:
+    print("\n[6j] Image cache policy check")
+    images_root = V1_DIR / "images"
+    path = images_root / "cache-policy.json"
+    if not path.exists():
+        err(f"Image cache policy file not found: {path.relative_to(ROOT)}")
+        return
+
+    disallowed_suffixes = {".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
+    for image_path in sorted(images_root.rglob("*")):
+        if image_path.is_file() and image_path.suffix.lower() in disallowed_suffixes:
+            err(f"public/v1/images must not contain image binary files: {image_path.relative_to(ROOT)}")
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("images/cache-policy.json must be a JSON object")
+        return
+    if check_required(data, REQUIRED_IMAGE_CACHE_POLICY_FIELDS, "images/cache-policy.json"):
+        ok("images/cache-policy.json has required fields")
+    if data.get("binaryImagesStored") is not False:
+        err("images/cache-policy.json binaryImagesStored must be false")
+    if data.get("imageStorageMode") != "provider_reference_only":
+        err("images/cache-policy.json imageStorageMode must be provider_reference_only")
+    if not isinstance(data.get("cacheKeyRule"), str) or "{game}" not in data.get("cacheKeyRule", ""):
+        err("images/cache-policy.json cacheKeyRule must describe the card identity key")
+    if not isinstance(data.get("recommendedFutureStorage"), list):
+        err("images/cache-policy.json recommendedFutureStorage must be a list")
+    if not isinstance(data.get("defaultPolicy"), dict):
+        err("images/cache-policy.json defaultPolicy must be an object")
+    if not isinstance(data.get("notes"), list):
+        err("images/cache-policy.json notes must be a list")
 
 
 def check_api_manifest() -> None:
@@ -1917,6 +1991,7 @@ def main() -> None:
     check_pokewallet_catalog_full_state()
     check_pokewallet_catalog_foundation_diagnostics()
     check_pokewallet_provider_catalog()
+    check_image_cache_policy()
     check_api_manifest()
     check_api_notes()
     check_schemas()

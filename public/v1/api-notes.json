@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T07:05:00Z",
+  "generatedAtUtc": "2026-05-17T09:05:00Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -49,6 +49,13 @@
     "Pokewallet provider metadata is not official CardScanR canonical catalogue data yet.",
     "CardScanR may use provider metadata for scan and match assistance after review.",
     "Pricing integration is separate from provider catalogue metadata.",
+    "Card images are mostly static reference assets and should be cached by exact card identity.",
+    "The recommended image cache key is {game}|{language}|{setId}|{collectorNumber}|{normalizedName}|{variant}.",
+    "Provider image IDs are references and are not the main CardScanR app identity.",
+    "Public image timestamps are UTC; Flutter should convert times locally where display is needed.",
+    "Binary image files are not included in this cache.",
+    "Image references may require provider access depending on source.",
+    "Future CardScanR CDN image URLs can be added later beside provider references.",
     "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,
