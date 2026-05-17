@@ -210,16 +210,31 @@ def choose_sample_cards(
     preferred_set_ids: list[str],
     sample_limit: int,
 ) -> tuple[list[TargetCard], list[str]]:
-    preferred = {normalize_set_code(item) for item in preferred_set_ids if str(item).strip()}
+    preferred_order = [normalize_set_code(item) for item in preferred_set_ids if str(item).strip()]
+    preferred_rank = {set_code: idx for idx, set_code in enumerate(preferred_order)}
+
+    def card_order_key(card: TargetCard) -> tuple[int, str, str]:
+        return (
+            0 if (card.image_small or card.image_large) else 1,
+            normalize_collector(card.collector_number),
+            normalize_name_key(card.normalized_name),
+        )
+
+    by_set: dict[str, list[TargetCard]] = {}
+    for card in cards:
+        set_code = normalize_set_code(card.set_id)
+        by_set.setdefault(set_code, []).append(card)
+
     ordered: list[TargetCard] = []
+    for set_code in preferred_order:
+        preferred_cards = sorted(by_set.get(set_code, []), key=card_order_key)
+        if preferred_cards:
+            ordered.extend(preferred_cards)
 
-    def score(card: TargetCard) -> tuple[int, int]:
-        preferred_hit = 0 if normalize_set_code(card.set_id) in preferred else 1
-        has_image = 0 if (card.image_small or card.image_large) else 1
-        return (preferred_hit, has_image)
-
-    for card in sorted(cards, key=score):
-        ordered.append(card)
+    for set_code, set_cards in sorted(by_set.items(), key=lambda item: item[0]):
+        if set_code in preferred_rank:
+            continue
+        ordered.extend(sorted(set_cards, key=card_order_key))
 
     seen: set[tuple[str, str, str]] = set()
     selected: list[TargetCard] = []
@@ -232,7 +247,7 @@ def choose_sample_cards(
         if len(selected) >= sample_limit:
             break
 
-    preferred_used = sorted({card.set_id for card in selected if normalize_set_code(card.set_id) in preferred})
+    preferred_used = sorted({card.set_id for card in selected if normalize_set_code(card.set_id) in preferred_rank})
     return selected, preferred_used
 
 

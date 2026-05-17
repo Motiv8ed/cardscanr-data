@@ -2,13 +2,13 @@
   "apiKeyPresent": true,
   "catalogueCardsLoaded": 6246,
   "cataloguePreferredSetIdsUsed": [
-    "E1"
+    "SV10"
   ],
   "catalogueSampleTargetsBuilt": 25,
   "catalogueSearchQueriesBuilt": 25,
   "confidentMatches": 0,
   "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T00:37:47Z",
+  "generatedAtUtc": "2026-05-17T00:47:12Z",
   "lowConfidenceMatches": 0,
   "matchScoreDistribution": {
     "0.00-0.59": 0,
@@ -24,112 +24,118 @@
   "provider": "pokewallet",
   "recommendation": "Pokewallet did not produce enough confident priced JP matches this run; keep as controlled test only.",
   "requestsAttempted": 25,
-  "requestsFailed": 0,
-  "requestsSucceeded": 25,
+  "requestsFailed": 1,
+  "requestsSucceeded": 24,
   "resultsFound": 0,
   "sampleMatches": [],
   "sampleSearchTargets": [
     {
       "collectorNumber": "001",
-      "name": "Koffing",
-      "query": "Koffing 基本拡張パック 001 japanese pokemon",
-      "setId": "E1"
+      "name": "クヌギダマ",
+      "query": "クヌギダマ ロケット団の栄光 001 japanese pokemon",
+      "setId": "SV10"
     },
     {
       "collectorNumber": "001",
-      "name": "Koffing",
-      "query": "Koffing 001 japanese pokemon",
-      "setId": "E1"
+      "name": "クヌギダマ",
+      "query": "クヌギダマ 001 japanese pokemon",
+      "setId": "SV10"
     },
     {
       "collectorNumber": "001",
-      "name": "Koffing",
-      "query": "Koffing 基本拡張パック pokemon card",
-      "setId": "E1"
+      "name": "クヌギダマ",
+      "query": "クヌギダマ ロケット団の栄光 pokemon card",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "010",
-      "name": "クラビー",
-      "query": "クラビー 基本拡張パック 010 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "002",
+      "name": "キノココ",
+      "query": "キノココ ロケット団の栄光 002 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "010",
-      "name": "クラビー",
-      "query": "クラビー 010 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "002",
+      "name": "キノココ",
+      "query": "キノココ 002 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "010",
-      "name": "クラビー",
-      "query": "クラビー 基本拡張パック pokemon card",
-      "setId": "E1"
+      "collectorNumber": "002",
+      "name": "キノココ",
+      "query": "キノココ ロケット団の栄光 pokemon card",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "100",
-      "name": "vileplume",
-      "query": "vileplume 基本拡張パック 100 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "003",
+      "name": "キノガッサ",
+      "query": "キノガッサ ロケット団の栄光 003 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "100",
-      "name": "vileplume",
-      "query": "vileplume 100 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "003",
+      "name": "キノガッサ",
+      "query": "キノガッサ 003 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "100",
-      "name": "vileplume",
-      "query": "vileplume 基本拡張パック pokemon card",
-      "setId": "E1"
+      "collectorNumber": "003",
+      "name": "キノガッサ",
+      "query": "キノガッサ ロケット団の栄光 pokemon card",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "101",
-      "name": "おしっこ",
-      "query": "おしっこ 基本拡張パック 101 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "004",
+      "name": "カットロトム",
+      "query": "カットロトム ロケット団の栄光 004 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "101",
-      "name": "おしっこ",
-      "query": "おしっこ 101 japanese pokemon",
-      "setId": "E1"
+      "collectorNumber": "004",
+      "name": "カットロトム",
+      "query": "カットロトム 004 japanese pokemon",
+      "setId": "SV10"
     },
     {
-      "collectorNumber": "101",
-      "name": "おしっこ",
-      "query": "おしっこ 基本拡張パック pokemon card",
-      "setId": "E1"
+      "collectorNumber": "004",
+      "name": "カットロトム",
+      "query": "カットロトム ロケット団の栄光 pokemon card",
+      "setId": "SV10"
     }
   ],
-  "sampleSkipped": [],
+  "sampleSkipped": [
+    {
+      "detail": "HTTP Error 429: Too Many Requests",
+      "query": "ロケット団のワナイダー ロケット団の栄光 009 japanese pokemon",
+      "reason": "request_failed"
+    }
+  ],
   "schemaVersion": "1.0.0",
   "searchTargetsTested": [
-    "Koffing 基本拡張パック 001 japanese pokemon",
-    "Koffing 001 japanese pokemon",
-    "Koffing 基本拡張パック pokemon card",
-    "クラビー 基本拡張パック 010 japanese pokemon",
-    "クラビー 010 japanese pokemon",
-    "クラビー 基本拡張パック pokemon card",
-    "vileplume 基本拡張パック 100 japanese pokemon",
-    "vileplume 100 japanese pokemon",
-    "vileplume 基本拡張パック pokemon card",
-    "おしっこ 基本拡張パック 101 japanese pokemon",
-    "おしっこ 101 japanese pokemon",
-    "おしっこ 基本拡張パック pokemon card",
-    "ミーガニウム 基本拡張パック 102 japanese pokemon",
-    "ミーガニウム 102 japanese pokemon",
-    "ミーガニウム 基本拡張パック pokemon card",
-    "カリザード 基本拡張パック 103 japanese pokemon",
-    "カリザード 103 japanese pokemon",
-    "カリザード 基本拡張パック pokemon card",
-    "ニネタール 基本拡張パック 104 japanese pokemon",
-    "ニネタール 104 japanese pokemon",
-    "ニネタール 基本拡張パック pokemon card",
-    "Rapidash 基本拡張パック 105 japanese pokemon",
-    "Rapidash 105 japanese pokemon",
-    "Rapidash 基本拡張パック pokemon card",
-    "染色 基本拡張パック 106 japanese pokemon"
+    "クヌギダマ ロケット団の栄光 001 japanese pokemon",
+    "クヌギダマ 001 japanese pokemon",
+    "クヌギダマ ロケット団の栄光 pokemon card",
+    "キノココ ロケット団の栄光 002 japanese pokemon",
+    "キノココ 002 japanese pokemon",
+    "キノココ ロケット団の栄光 pokemon card",
+    "キノガッサ ロケット団の栄光 003 japanese pokemon",
+    "キノガッサ 003 japanese pokemon",
+    "キノガッサ ロケット団の栄光 pokemon card",
+    "カットロトム ロケット団の栄光 004 japanese pokemon",
+    "カットロトム 004 japanese pokemon",
+    "カットロトム ロケット団の栄光 pokemon card",
+    "カリキリ ロケット団の栄光 005 japanese pokemon",
+    "カリキリ 005 japanese pokemon",
+    "カリキリ ロケット団の栄光 pokemon card",
+    "ラランテス ロケット団の栄光 006 japanese pokemon",
+    "ラランテス 006 japanese pokemon",
+    "ラランテス ロケット団の栄光 pokemon card",
+    "ロケット団のサッチムシ ロケット団の栄光 007 japanese pokemon",
+    "ロケット団のサッチムシ 007 japanese pokemon",
+    "ロケット団のサッチムシ ロケット団の栄光 pokemon card",
+    "ロケット団のタマンチュラ ロケット団の栄光 008 japanese pokemon",
+    "ロケット団のタマンチュラ 008 japanese pokemon",
+    "ロケット団のタマンチュラ ロケット団の栄光 pokemon card",
+    "ロケット団のワナイダー ロケット団の栄光 009 japanese pokemon"
   ],
   "skippedLowConfidence": 0,
   "skippedNoCanonicalMatch": 0,
