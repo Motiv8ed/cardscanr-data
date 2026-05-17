@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T00:47:12Z",
+  "generatedAtUtc": "2026-05-17T01:17:00Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -203,41 +203,6 @@
         "type",
         "description",
         "updatedAtUtc"
-      ]
-    },
-    "pokewallet_jp_price_build_diagnostics": {
-      "notes": [
-        "Controlled Pokewallet JP price build diagnostics without secrets or raw payload dumps.",
-        "Records partial JP test coverage and confidence-based mapping outcomes."
-      ],
-      "requiredFields": [
-        "schemaVersion",
-        "generatedAtUtc",
-        "provider",
-        "mode",
-        "apiKeyPresent",
-        "requestsAttempted",
-        "requestsSucceeded",
-        "requestsFailed",
-        "resultsFound",
-        "possibleJapaneseResults",
-        "confidentMatches",
-        "lowConfidenceMatches",
-        "unmappedResults",
-        "priceRecordsWritten",
-        "priceFilesWritten",
-        "catalogueCardsLoaded",
-        "catalogueSampleTargetsBuilt",
-        "catalogueSearchQueriesBuilt",
-        "cataloguePreferredSetIdsUsed",
-        "matchScoreDistribution",
-        "skippedNoPrice",
-        "skippedLowConfidence",
-        "skippedNoCanonicalMatch",
-        "skippedNoCurrency",
-        "sampleSearchTargets",
-        "sampleMatches",
-        "sampleSkipped"
       ]
     },
     "prices_status_file": {

@@ -130,14 +130,6 @@
       "id": "tracked_history",
       "method": "GET",
       "path": "/history/tracked-cards.json"
-    },
-    {
-      "authRequired": false,
-      "cacheable": true,
-      "description": "Controlled Pokewallet JP current price build diagnostics",
-      "id": "diagnostics_pokewallet_jp_price_build",
-      "method": "GET",
-      "path": "/diagnostics/pokewallet-jp-price-build-latest.json"
     }
   ],
   "futureInternalDynamicRoutes": [
@@ -146,7 +138,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-17T00:47:12Z",
+  "generatedAtUtc": "2026-05-17T01:17:00Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -159,10 +151,7 @@
     "Price freshness/status files provide UTC metadata for app-side update visibility.",
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",
-    "Images are referenced by URL and are not mirrored into this cache yet.",
-    "JP current prices may be present as partial controlled-test coverage sourced from Pokewallet.",
-    "Provider currency is passed through as-is and is not converted.",
-    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP refresh scheduling exists."
+    "Images are referenced by URL and are not mirrored into this cache yet."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",
