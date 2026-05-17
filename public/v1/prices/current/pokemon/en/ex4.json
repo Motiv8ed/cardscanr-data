@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T22:40:07Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T22:40:07Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
   "priceCount": 183,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 250.0,
       "lowPrice": 18.0,
       "marketPrice": 26.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_cacturne",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 29.95,
       "lowPrice": 29.95,
       "marketPrice": 14.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_cacturne",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 1492.5,
       "lowPrice": 198.0,
       "marketPrice": 130.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndoom",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 689.8,
       "lowPrice": 64.99,
       "marketPrice": 58.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndoom",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 399.9,
       "lowPrice": 23.0,
       "marketPrice": 36.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhydon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 400.0,
       "lowPrice": 13.0,
       "marketPrice": 33.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhydon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 999.9,
       "lowPrice": 29.21,
       "marketPrice": 29.54,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_torkoal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 44.95,
       "lowPrice": 44.95,
       "marketPrice": 52.5,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_torkoal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -126,9 +186,16 @@
       "highPrice": 104.9,
       "lowPrice": 7.0,
       "marketPrice": 10.86,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "raichu",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -140,9 +207,16 @@
       "highPrice": 400.0,
       "lowPrice": 27.99,
       "marketPrice": 40.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "raichu",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -154,9 +228,16 @@
       "highPrice": 29.58,
       "lowPrice": 1.37,
       "marketPrice": 1.94,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_crawdaunt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -168,9 +249,16 @@
       "highPrice": 82.4,
       "lowPrice": 5.0,
       "marketPrice": 7.57,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_crawdaunt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -182,9 +270,16 @@
       "highPrice": 96.85,
       "lowPrice": 2.34,
       "marketPrice": 2.44,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -196,9 +291,16 @@
       "highPrice": 106.29,
       "lowPrice": 4.0,
       "marketPrice": 16.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -210,9 +312,16 @@
       "highPrice": 31.6,
       "lowPrice": 1.25,
       "marketPrice": 2.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sealeo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -224,9 +333,16 @@
       "highPrice": 190.0,
       "lowPrice": 13.3,
       "marketPrice": 19.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sealeo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -238,9 +354,16 @@
       "highPrice": 50.6,
       "lowPrice": 2.34,
       "marketPrice": 3.51,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_seviper",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -252,9 +375,16 @@
       "highPrice": 19.98,
       "lowPrice": 6.5,
       "marketPrice": 9.13,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_seviper",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -266,9 +396,16 @@
       "highPrice": 42.3,
       "lowPrice": 2.75,
       "marketPrice": 3.51,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sharpedo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -280,9 +417,16 @@
       "highPrice": 99.5,
       "lowPrice": 15.49,
       "marketPrice": 10.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sharpedo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -294,9 +438,16 @@
       "highPrice": 60.0,
       "lowPrice": 2.49,
       "marketPrice": 2.75,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_camerupt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -308,9 +459,16 @@
       "highPrice": 289.99,
       "lowPrice": 19.95,
       "marketPrice": 11.59,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_camerupt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -322,9 +480,16 @@
       "highPrice": 89.99,
       "lowPrice": 13.69,
       "marketPrice": 19.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_crawdaunt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -336,9 +501,16 @@
       "highPrice": 132.9,
       "lowPrice": 11.95,
       "marketPrice": 17.49,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_crawdaunt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -350,9 +522,16 @@
       "highPrice": 37.2,
       "lowPrice": 1.71,
       "marketPrice": 2.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_lairon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -364,9 +543,16 @@
       "highPrice": 229.8,
       "lowPrice": 11.0,
       "marketPrice": 17.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_lairon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -378,9 +564,16 @@
       "highPrice": 96.83,
       "lowPrice": 1.99,
       "marketPrice": 3.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -392,9 +585,16 @@
       "highPrice": 199.9,
       "lowPrice": 16.4,
       "marketPrice": 17.66,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -406,9 +606,16 @@
       "highPrice": 37.4,
       "lowPrice": 2.41,
       "marketPrice": 2.71,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhydon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -420,9 +627,16 @@
       "highPrice": 142.0,
       "lowPrice": 5.3,
       "marketPrice": 11.46,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhydon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -434,9 +648,16 @@
       "highPrice": 89.9,
       "lowPrice": 6.0,
       "marketPrice": 6.55,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_zangoose",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -448,9 +669,16 @@
       "highPrice": 692.92,
       "lowPrice": 15.41,
       "marketPrice": 68.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_zangoose",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -462,9 +690,16 @@
       "highPrice": 35.9,
       "lowPrice": 1.93,
       "marketPrice": 2.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_cacnea",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -476,9 +711,16 @@
       "highPrice": 97.5,
       "lowPrice": 7.35,
       "marketPrice": 8.59,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_cacnea",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -490,9 +732,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.66,
       "marketPrice": 1.35,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -504,9 +753,16 @@
       "highPrice": 60.0,
       "lowPrice": 1.0,
       "marketPrice": 4.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -518,9 +774,16 @@
       "highPrice": 40.9,
       "lowPrice": 0.98,
       "marketPrice": 1.46,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -532,9 +795,16 @@
       "highPrice": 59.92,
       "lowPrice": 4.99,
       "marketPrice": 4.98,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -546,9 +816,16 @@
       "highPrice": 30.88,
       "lowPrice": 1.0,
       "marketPrice": 1.91,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -560,9 +837,16 @@
       "highPrice": 203.3,
       "lowPrice": 9.79,
       "marketPrice": 15.48,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -574,9 +858,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.37,
       "marketPrice": 1.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_lanturn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -588,9 +879,16 @@
       "highPrice": 239.9,
       "lowPrice": 4.34,
       "marketPrice": 29.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_lanturn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -602,9 +900,16 @@
       "highPrice": 41.3,
       "lowPrice": 2.0,
       "marketPrice": 2.51,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_manectric",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -616,9 +921,16 @@
       "highPrice": 253.0,
       "lowPrice": 3.59,
       "marketPrice": 11.82,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_manectric",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -630,9 +942,16 @@
       "highPrice": 542.6,
       "lowPrice": 49.51,
       "marketPrice": 55.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_kyogre",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -644,9 +963,16 @@
       "highPrice": 27.49,
       "lowPrice": 17.71,
       "marketPrice": 53.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_kyogre",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -658,9 +984,16 @@
       "highPrice": 96.85,
       "lowPrice": 0.49,
       "marketPrice": 1.51,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -672,9 +1005,16 @@
       "highPrice": 102.5,
       "lowPrice": 7.5,
       "marketPrice": 7.53,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -686,9 +1026,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.28,
       "marketPrice": 0.94,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sealeo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -700,9 +1047,16 @@
       "highPrice": 117.1,
       "lowPrice": 16.39,
       "marketPrice": 4.32,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sealeo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -714,9 +1068,16 @@
       "highPrice": 24.9,
       "lowPrice": 1.32,
       "marketPrice": 1.37,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -728,9 +1089,16 @@
       "highPrice": 83.88,
       "lowPrice": 4.5,
       "marketPrice": 4.76,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -742,9 +1110,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.35,
       "marketPrice": 0.79,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_claydol",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -756,9 +1131,16 @@
       "highPrice": 58.0,
       "lowPrice": 1.95,
       "marketPrice": 5.34,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_claydol",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -770,9 +1152,16 @@
       "highPrice": 35.1,
       "lowPrice": 1.38,
       "marketPrice": 2.31,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndoom",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -784,9 +1173,16 @@
       "highPrice": 2009.83,
       "lowPrice": 30.0,
       "marketPrice": 25.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndoom",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -798,9 +1194,16 @@
       "highPrice": 54.4,
       "lowPrice": 3.75,
       "marketPrice": 4.48,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -812,9 +1215,16 @@
       "highPrice": 172.8,
       "lowPrice": 34.99,
       "marketPrice": 18.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -826,9 +1236,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.45,
       "marketPrice": 0.79,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_lairon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -840,9 +1257,16 @@
       "highPrice": 75.9,
       "lowPrice": 14.99,
       "marketPrice": 7.69,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_lairon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -854,9 +1278,16 @@
       "highPrice": 42.5,
       "lowPrice": 3.25,
       "marketPrice": 2.52,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -868,9 +1299,16 @@
       "highPrice": 134.0,
       "lowPrice": 12.73,
       "marketPrice": 12.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_mightyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -882,9 +1320,16 @@
       "highPrice": 48.6,
       "lowPrice": 1.5,
       "marketPrice": 2.77,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -896,9 +1341,16 @@
       "highPrice": 235.2,
       "lowPrice": 19.22,
       "marketPrice": 13.83,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -910,9 +1362,16 @@
       "highPrice": 119.95,
       "lowPrice": 13.28,
       "marketPrice": 17.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "bulbasaur",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -924,9 +1383,16 @@
       "highPrice": 399.99,
       "lowPrice": 379.99,
       "marketPrice": 72.55,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "bulbasaur",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -938,9 +1404,16 @@
       "highPrice": 660.0,
       "lowPrice": 26.44,
       "marketPrice": 22.37,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_manectric",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -952,9 +1425,16 @@
       "highPrice": 483.05,
       "lowPrice": 29.95,
       "marketPrice": 18.59,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_manectric",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -966,9 +1446,16 @@
       "highPrice": 449.8,
       "lowPrice": 14.99,
       "marketPrice": 16.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "cubone",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -980,9 +1467,16 @@
       "highPrice": 419.97,
       "lowPrice": 249.0,
       "marketPrice": 44.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "cubone",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -994,9 +1488,16 @@
       "highPrice": 96.78,
       "lowPrice": 7.42,
       "marketPrice": 7.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "jigglypuff",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1008,9 +1509,16 @@
       "highPrice": 359.88,
       "lowPrice": 1.59,
       "marketPrice": 3.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "meowth",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1022,9 +1530,16 @@
       "highPrice": 991.74,
       "lowPrice": 8.76,
       "marketPrice": 17.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "pikachu",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1036,9 +1551,16 @@
       "highPrice": 299.99,
       "lowPrice": 119.39,
       "marketPrice": 47.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "pikachu",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1050,9 +1572,16 @@
       "highPrice": 459.7,
       "lowPrice": 26.5,
       "marketPrice": 26.57,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "psyduck",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1064,9 +1593,16 @@
       "highPrice": 1299.62,
       "lowPrice": 450.0,
       "marketPrice": 249.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "psyduck",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1078,9 +1614,16 @@
       "highPrice": 84.6,
       "lowPrice": 5.22,
       "marketPrice": 8.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "slowpoke",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1092,9 +1635,16 @@
       "highPrice": 80.0,
       "lowPrice": 69.99,
       "marketPrice": 27.88,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "slowpoke",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1106,9 +1656,16 @@
       "highPrice": 365.9,
       "lowPrice": 55.99,
       "marketPrice": 32.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "squirtle",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1120,9 +1677,16 @@
       "highPrice": 99.99,
       "lowPrice": 99.99,
       "marketPrice": 250.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "squirtle",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1134,9 +1698,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.34,
       "marketPrice": 0.8,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1148,9 +1719,16 @@
       "highPrice": 77.0,
       "lowPrice": 6.0,
       "marketPrice": 3.44,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1162,9 +1740,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.17,
       "marketPrice": 0.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1176,9 +1761,16 @@
       "highPrice": 89.6,
       "lowPrice": 6.8,
       "marketPrice": 8.79,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_carvanha",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1190,9 +1782,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.18,
       "marketPrice": 0.49,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_chinchou",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1204,9 +1803,16 @@
       "highPrice": 61.0,
       "lowPrice": 28.11,
       "marketPrice": 5.44,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_chinchou",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1218,9 +1824,16 @@
       "highPrice": 555.43,
       "lowPrice": 54.99,
       "marketPrice": 46.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sharpedo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1232,9 +1845,16 @@
       "highPrice": 614.8,
       "lowPrice": 39.99,
       "marketPrice": 50.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_sharpedo",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1246,9 +1866,16 @@
       "highPrice": 19.76,
       "lowPrice": 0.5,
       "marketPrice": 0.83,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1260,9 +1887,16 @@
       "highPrice": 140.0,
       "lowPrice": 14.0,
       "marketPrice": 12.93,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1274,9 +1908,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.39,
       "marketPrice": 0.85,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1288,9 +1929,16 @@
       "highPrice": 104.46,
       "lowPrice": 10.45,
       "marketPrice": 10.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_corphish",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1302,9 +1950,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.39,
       "marketPrice": 0.87,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1316,9 +1971,16 @@
       "highPrice": 122.1,
       "lowPrice": 8.42,
       "marketPrice": 14.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1330,9 +1992,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.51,
       "marketPrice": 0.89,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1344,9 +2013,16 @@
       "highPrice": 99.0,
       "lowPrice": 5.98,
       "marketPrice": 11.98,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_electrike",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1358,9 +2034,16 @@
       "highPrice": 19.88,
       "lowPrice": 0.2,
       "marketPrice": 0.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1372,9 +2055,16 @@
       "highPrice": 4.99,
       "lowPrice": 4.92,
       "marketPrice": 6.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1386,9 +2076,16 @@
       "highPrice": 26.44,
       "lowPrice": 1.0,
       "marketPrice": 1.51,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1400,9 +2097,16 @@
       "highPrice": 69.1,
       "lowPrice": 4.79,
       "marketPrice": 9.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1414,9 +2118,16 @@
       "highPrice": 18.9,
       "lowPrice": 0.32,
       "marketPrice": 1.64,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_spheal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1428,9 +2139,16 @@
       "highPrice": 250.0,
       "lowPrice": 25.0,
       "marketPrice": 21.43,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_spheal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1442,9 +2160,16 @@
       "highPrice": 18.46,
       "lowPrice": 1.11,
       "marketPrice": 2.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_spheal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1456,9 +2181,16 @@
       "highPrice": 280.0,
       "lowPrice": 189.99,
       "marketPrice": 26.01,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_spheal",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1470,9 +2202,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.2,
       "marketPrice": 0.75,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1484,9 +2223,16 @@
       "highPrice": 215.8,
       "lowPrice": 16.99,
       "marketPrice": 17.02,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1498,9 +2244,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.52,
       "marketPrice": 1.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1512,9 +2265,16 @@
       "highPrice": 193.1,
       "lowPrice": 6.01,
       "marketPrice": 10.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1526,9 +2286,16 @@
       "highPrice": 99.0,
       "lowPrice": 4.97,
       "marketPrice": 9.43,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_walrein",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1540,9 +2307,16 @@
       "highPrice": 12.75,
       "lowPrice": 7.95,
       "marketPrice": 14.82,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_s_walrein",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1554,9 +2328,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.14,
       "marketPrice": 0.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1568,9 +2349,16 @@
       "highPrice": 8.99,
       "lowPrice": 5.0,
       "marketPrice": 8.57,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1582,9 +2370,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.3,
       "marketPrice": 0.73,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1596,9 +2391,16 @@
       "highPrice": 90.0,
       "lowPrice": 4.42,
       "marketPrice": 5.91,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_baltoy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1610,9 +2412,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.24,
       "marketPrice": 0.93,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1624,9 +2433,16 @@
       "highPrice": 270.81,
       "lowPrice": 20.0,
       "marketPrice": 25.81,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1638,9 +2454,16 @@
       "highPrice": 31.9,
       "lowPrice": 0.5,
       "marketPrice": 2.02,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1652,9 +2475,16 @@
       "highPrice": 561.39,
       "lowPrice": 561.39,
       "marketPrice": 12.58,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_houndour",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1666,9 +2496,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.75,
       "marketPrice": 0.91,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_numel",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1680,9 +2517,16 @@
       "highPrice": 59.2,
       "lowPrice": 3.8,
       "marketPrice": 13.62,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_numel",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1694,9 +2538,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.47,
       "marketPrice": 1.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1708,9 +2559,16 @@
       "highPrice": 116.8,
       "lowPrice": 7.78,
       "marketPrice": 14.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1722,9 +2580,16 @@
       "highPrice": 96.95,
       "lowPrice": 0.75,
       "marketPrice": 1.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1736,9 +2601,16 @@
       "highPrice": 67.0,
       "lowPrice": 4.2,
       "marketPrice": 6.33,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_poochyena",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1750,9 +2622,16 @@
       "highPrice": 501.5,
       "lowPrice": 0.35,
       "marketPrice": 0.82,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1764,9 +2643,16 @@
       "highPrice": 150.0,
       "lowPrice": 7.72,
       "marketPrice": 14.44,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1778,9 +2664,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.25,
       "marketPrice": 0.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1792,9 +2685,16 @@
       "highPrice": 100.0,
       "lowPrice": 6.48,
       "marketPrice": 9.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_rhyhorn",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1806,9 +2706,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.12,
       "marketPrice": 0.36,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_schemer",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1820,9 +2727,16 @@
       "highPrice": 59.8,
       "lowPrice": 2.43,
       "marketPrice": 5.62,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_schemer",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1834,9 +2748,16 @@
       "highPrice": 288.89,
       "lowPrice": 15.0,
       "marketPrice": 21.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aggron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1848,9 +2769,16 @@
       "highPrice": 892.5,
       "lowPrice": 31.21,
       "marketPrice": 27.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_aggron",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1862,9 +2790,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.12,
       "marketPrice": 0.53,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_schemer",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1876,9 +2811,16 @@
       "highPrice": 69.9,
       "lowPrice": 3.1,
       "marketPrice": 7.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_schemer",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1890,9 +2832,16 @@
       "highPrice": 79.7,
       "lowPrice": 3.55,
       "marketPrice": 4.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "archie",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1904,9 +2853,16 @@
       "highPrice": 70.0,
       "lowPrice": 3.0,
       "marketPrice": 5.36,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "archie",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1918,9 +2874,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.66,
       "marketPrice": 1.34,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "dual_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1932,9 +2895,16 @@
       "highPrice": 100.0,
       "lowPrice": 1.5,
       "marketPrice": 7.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "dual_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1946,9 +2916,16 @@
       "highPrice": 82.2,
       "lowPrice": 3.52,
       "marketPrice": 4.38,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "maxie",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1960,9 +2937,16 @@
       "highPrice": 89.9,
       "lowPrice": 5.82,
       "marketPrice": 6.73,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "maxie",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1974,9 +2958,16 @@
       "highPrice": 96.29,
       "lowPrice": 0.95,
       "marketPrice": 1.58,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "strength_charm",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1988,9 +2979,16 @@
       "highPrice": 200.0,
       "lowPrice": 6.25,
       "marketPrice": 10.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "strength_charm",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2002,9 +3000,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.41,
       "marketPrice": 1.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2016,9 +3021,16 @@
       "highPrice": 80.0,
       "lowPrice": 4.9,
       "marketPrice": 7.41,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2030,9 +3042,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.69,
       "marketPrice": 1.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_belt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2044,9 +3063,16 @@
       "highPrice": 200.0,
       "lowPrice": 4.0,
       "marketPrice": 6.53,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_belt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2058,9 +3084,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.29,
       "marketPrice": 0.7,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_conspirator",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2072,9 +3105,16 @@
       "highPrice": 53.6,
       "lowPrice": 2.18,
       "marketPrice": 4.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_conspirator",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2086,9 +3126,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.6,
       "marketPrice": 0.89,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_hideout",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2100,9 +3147,16 @@
       "highPrice": 84.0,
       "lowPrice": 8.83,
       "marketPrice": 11.8,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_hideout",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2114,9 +3168,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.75,
       "marketPrice": 1.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_technical_machine_01",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2128,9 +3189,16 @@
       "highPrice": 55.8,
       "lowPrice": 3.0,
       "marketPrice": 5.69,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_aqua_technical_machine_01",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2142,9 +3210,16 @@
       "highPrice": 232.9,
       "lowPrice": 30.0,
       "marketPrice": 19.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_claydol",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2156,9 +3231,16 @@
       "highPrice": 252.9,
       "lowPrice": 19.8,
       "marketPrice": 25.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_claydol",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2170,9 +3252,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.55,
       "marketPrice": 1.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2184,9 +3273,16 @@
       "highPrice": 192.7,
       "lowPrice": 5.97,
       "marketPrice": 16.34,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_ball",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2198,9 +3294,16 @@
       "highPrice": 28.4,
       "lowPrice": 0.46,
       "marketPrice": 1.72,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_belt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2212,9 +3315,16 @@
       "highPrice": 52.6,
       "lowPrice": 1.25,
       "marketPrice": 4.41,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_belt",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2226,9 +3336,16 @@
       "highPrice": 19.66,
       "lowPrice": 0.49,
       "marketPrice": 1.3,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_conspirator",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2240,9 +3357,16 @@
       "highPrice": 150.0,
       "lowPrice": 5.75,
       "marketPrice": 17.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_conspirator",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2254,9 +3378,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.35,
       "marketPrice": 0.54,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_hideout",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2268,9 +3399,16 @@
       "highPrice": 95.0,
       "lowPrice": 8.0,
       "marketPrice": 10.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_hideout",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2282,9 +3420,16 @@
       "highPrice": 33.0,
       "lowPrice": 1.41,
       "marketPrice": 2.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_technical_machine_01",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2296,9 +3441,16 @@
       "highPrice": 80.0,
       "lowPrice": 2.51,
       "marketPrice": 8.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_technical_machine_01",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2310,9 +3462,16 @@
       "highPrice": 25.5,
       "lowPrice": 0.9,
       "marketPrice": 1.64,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "warp_point",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2324,9 +3483,16 @@
       "highPrice": 396.3,
       "lowPrice": 6.63,
       "marketPrice": 34.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "warp_point",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2338,9 +3504,16 @@
       "highPrice": 127.4,
       "lowPrice": 1.25,
       "marketPrice": 4.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "aqua_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2352,9 +3525,16 @@
       "highPrice": 330.0,
       "lowPrice": 28.0,
       "marketPrice": 28.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "aqua_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2366,9 +3546,16 @@
       "highPrice": 104.9,
       "lowPrice": 8.63,
       "marketPrice": 8.63,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "magma_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2380,9 +3567,16 @@
       "highPrice": 330.0,
       "lowPrice": 20.82,
       "marketPrice": 30.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "magma_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2394,9 +3588,16 @@
       "highPrice": 125.1,
       "lowPrice": 6.0,
       "marketPrice": 7.64,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "double_rainbow_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2408,9 +3609,16 @@
       "highPrice": 49.95,
       "lowPrice": 16.0,
       "marketPrice": 28.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "double_rainbow_energy",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2422,9 +3630,16 @@
       "highPrice": 1028.76,
       "lowPrice": 124.98,
       "marketPrice": 207.95,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "blaziken_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2436,9 +3651,16 @@
       "highPrice": 1329.84,
       "lowPrice": 125.0,
       "marketPrice": 122.82,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_groudon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2450,9 +3672,16 @@
       "highPrice": 499.99,
       "lowPrice": 79.99,
       "marketPrice": 125.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "team_magma_s_groudon",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2464,9 +3693,16 @@
       "highPrice": 76.99,
       "lowPrice": 69.99,
       "marketPrice": 70.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "cradily_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2478,9 +3714,16 @@
       "highPrice": 999.99,
       "lowPrice": 439.99,
       "marketPrice": 272.41,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "entei_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2492,9 +3735,16 @@
       "highPrice": 500.0,
       "lowPrice": 224.99,
       "marketPrice": 199.98,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "raikou_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2506,9 +3756,16 @@
       "highPrice": 499.99,
       "lowPrice": 174.99,
       "marketPrice": 249.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "sceptile_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2520,9 +3777,16 @@
       "highPrice": 699.99,
       "lowPrice": 275.0,
       "marketPrice": 301.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "suicune_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2534,9 +3798,16 @@
       "highPrice": 400.0,
       "lowPrice": 225.0,
       "marketPrice": 280.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "swampert_ex",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2548,9 +3819,16 @@
       "highPrice": 149.99,
       "lowPrice": 149.99,
       "marketPrice": 161.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "absol",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2562,14 +3840,28 @@
       "highPrice": 1750.0,
       "lowPrice": 149.0,
       "marketPrice": 142.34,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T12:40:07Z",
       "normalizedName": "jirachi",
       "setId": "ex4",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 5301,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "ex4",
   "setName": "Team Magma vs Team Aqua",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 5301,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }

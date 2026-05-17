@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T12:39:06Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T12:39:06Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
   "priceCount": 18,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 1223.9,
       "lowPrice": 109.04,
       "marketPrice": 139.71,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_alakazam",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 1117.9,
       "lowPrice": 98.0,
       "marketPrice": 94.62,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_machamp",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 1088.77,
       "lowPrice": 87.22,
       "marketPrice": 96.94,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_magneton",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 1279.5,
       "lowPrice": 90.0,
       "marketPrice": 89.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_slowbro",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 754.94,
       "lowPrice": 56.97,
       "marketPrice": 63.3,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_vileplume",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 439.32,
       "lowPrice": 30.99,
       "marketPrice": 45.03,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_weezing",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 455.1,
       "lowPrice": 46.9,
       "marketPrice": 59.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "here_comes_team_rocket",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 444.8,
       "lowPrice": 30.01,
       "marketPrice": 40.35,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rocket_s_sneak_attack",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -126,9 +186,16 @@
       "highPrice": 471.34,
       "lowPrice": 27.3,
       "marketPrice": 44.04,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rainbow_energy",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -140,9 +207,16 @@
       "highPrice": 799.8,
       "lowPrice": 50.0,
       "marketPrice": 47.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_arbok",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -154,9 +228,16 @@
       "highPrice": 4474.88,
       "lowPrice": 449.99,
       "marketPrice": 383.53,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_blastoise",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -168,9 +249,16 @@
       "highPrice": 4999.99,
       "lowPrice": 521.75,
       "marketPrice": 707.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_charizard",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -182,9 +270,16 @@
       "highPrice": 660.0,
       "lowPrice": 349.98,
       "marketPrice": 281.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_dragonite",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -196,9 +291,16 @@
       "highPrice": 750.0,
       "lowPrice": 65.0,
       "marketPrice": 69.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_dugtrio",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -210,9 +312,16 @@
       "highPrice": 489.6,
       "lowPrice": 55.69,
       "marketPrice": 56.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_golbat",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -224,9 +333,16 @@
       "highPrice": 3309.41,
       "lowPrice": 142.51,
       "marketPrice": 153.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_gyarados",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -238,9 +354,16 @@
       "highPrice": 1512.5,
       "lowPrice": 400.0,
       "marketPrice": 222.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_raichu",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -252,14 +375,28 @@
       "highPrice": 728.1,
       "lowPrice": 76.0,
       "marketPrice": 81.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_hypno",
       "setId": "base5",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "base5",
   "setName": "Team Rocket",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 41362,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }

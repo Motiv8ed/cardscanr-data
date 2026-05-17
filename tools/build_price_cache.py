@@ -377,6 +377,190 @@ def compute_staleness(last_update_utc: str | None, now_utc: str) -> tuple[str, i
     return "very_stale", age_seconds
 
 
+def compute_staleness_with_windows(
+    last_update_utc: str | None,
+    now_utc: str,
+    fresh_for_seconds: int,
+    stale_after_seconds: int,
+) -> tuple[str, int | None]:
+    last_dt = parse_utc_timestamp(last_update_utc)
+    now_dt = parse_utc_timestamp(now_utc)
+    if last_dt is None or now_dt is None:
+        return "unavailable", None
+
+    age_seconds = max(0, int((now_dt - last_dt).total_seconds()))
+    if age_seconds <= fresh_for_seconds:
+        return "fresh", age_seconds
+    if age_seconds <= stale_after_seconds:
+        return "stale", age_seconds
+    return "very_stale", age_seconds
+
+
+def expected_next_refresh_utc(last_update_utc: str | None, full_rotation_hours: int) -> str | None:
+    if full_rotation_hours <= 0:
+        return None
+    last_dt = parse_utc_timestamp(last_update_utc)
+    if last_dt is None:
+        return None
+    return utc_iso_from_datetime(last_dt + timedelta(hours=full_rotation_hours))
+
+
+def ensure_price_record_freshness(
+    record: dict,
+    *,
+    now_utc: str,
+    set_next_expected_utc: str | None,
+    fallback_fetched_utc: str | None,
+    fresh_for_seconds: int,
+    stale_after_seconds: int,
+) -> dict:
+    fetched_at_utc = record.get("fetchedAtUtc") or fallback_fetched_utc
+    if fetched_at_utc is None:
+        fetched_at_utc = now_utc
+    fetched_at_utc = str(fetched_at_utc)
+    record["fetchedAtUtc"] = fetched_at_utc
+
+    record["nextExpectedPriceUpdateAtUtc"] = set_next_expected_utc
+    status, age_seconds = compute_staleness_with_windows(
+        fetched_at_utc,
+        now_utc,
+        fresh_for_seconds,
+        stale_after_seconds,
+    )
+    record["staleness"] = {
+        "status": status,
+        "ageSeconds": age_seconds,
+        "freshForSeconds": fresh_for_seconds,
+        "staleAfterSeconds": stale_after_seconds,
+    }
+    return record
+
+
+def enrich_en_current_set_payload(
+    payload: dict,
+    *,
+    now_utc: str,
+    expected_update_interval_minutes: int,
+    full_rotation_hours: int,
+    force_last_successful_update_utc: str | None = None,
+    force_next_expected_update_utc: str | None = None,
+) -> dict:
+    prices = payload.get("prices")
+    if not isinstance(prices, list):
+        prices = []
+        payload["prices"] = prices
+
+    last_update_utc = force_last_successful_update_utc
+    if last_update_utc is None:
+        existing_last = payload.get("lastSuccessfulPriceUpdateAtUtc")
+        if isinstance(existing_last, str) and existing_last:
+            last_update_utc = existing_last
+    if last_update_utc is None:
+        candidate_values = []
+        generated_at = payload.get("generatedAtUtc")
+        if isinstance(generated_at, str) and generated_at:
+            candidate_values.append(generated_at)
+        for entry in prices:
+            if not isinstance(entry, dict):
+                continue
+            fetched_at = entry.get("fetchedAtUtc")
+            if isinstance(fetched_at, str) and fetched_at:
+                candidate_values.append(fetched_at)
+
+        latest_dt: datetime | None = None
+        latest_value: str | None = None
+        for value in candidate_values:
+            parsed = parse_utc_timestamp(value)
+            if parsed is None:
+                continue
+            if latest_dt is None or parsed > latest_dt:
+                latest_dt = parsed
+                latest_value = value
+        last_update_utc = latest_value or now_utc
+
+    set_next_expected_utc = force_next_expected_update_utc
+    if set_next_expected_utc is None:
+        existing_next = payload.get("nextExpectedPriceUpdateAtUtc")
+        if isinstance(existing_next, str) and existing_next:
+            set_next_expected_utc = existing_next
+    if set_next_expected_utc is None:
+        set_next_expected_utc = expected_next_refresh_utc(last_update_utc, full_rotation_hours)
+
+    fresh_for_seconds = 86400
+    stale_after_seconds = 172800
+    set_staleness_status, set_age_seconds = compute_staleness_with_windows(
+        last_update_utc,
+        now_utc,
+        fresh_for_seconds,
+        stale_after_seconds,
+    )
+
+    payload["schemaVersion"] = SCHEMA_VERSION
+    payload["generatedAtUtc"] = now_utc
+    payload["status"] = "ok" if set_staleness_status == "fresh" else set_staleness_status
+    payload["priceCount"] = len(prices)
+    payload["lastSuccessfulPriceUpdateAtUtc"] = last_update_utc
+    payload["nextExpectedPriceUpdateAtUtc"] = set_next_expected_utc
+    payload["expectedUpdateIntervalMinutes"] = expected_update_interval_minutes
+    payload["isLivePricing"] = False
+    payload["staleness"] = {
+        "status": set_staleness_status,
+        "ageSeconds": set_age_seconds,
+        "freshForSeconds": fresh_for_seconds,
+        "staleAfterSeconds": stale_after_seconds,
+    }
+
+    enriched_prices: list[dict] = []
+    for entry in prices:
+        if not isinstance(entry, dict):
+            continue
+        enriched_prices.append(
+            ensure_price_record_freshness(
+                entry,
+                now_utc=now_utc,
+                set_next_expected_utc=set_next_expected_utc,
+                fallback_fetched_utc=last_update_utc,
+                fresh_for_seconds=fresh_for_seconds,
+                stale_after_seconds=stale_after_seconds,
+            )
+        )
+    payload["prices"] = enriched_prices
+    return payload
+
+
+def summarize_en_set_freshness(current_dir: Path) -> dict:
+    oldest_update_dt: datetime | None = None
+    oldest_update_utc: str | None = None
+    newest_update_dt: datetime | None = None
+    newest_update_utc: str | None = None
+
+    for path in sorted(current_dir.glob("*.json")):
+        if path.name == "status.json":
+            continue
+        payload = load_json(path)
+        if not isinstance(payload, dict):
+            continue
+
+        set_update_utc = payload.get("lastSuccessfulPriceUpdateAtUtc") or payload.get("generatedAtUtc")
+        if not isinstance(set_update_utc, str) or not set_update_utc:
+            continue
+        parsed = parse_utc_timestamp(set_update_utc)
+        if parsed is None:
+            continue
+
+        if oldest_update_dt is None or parsed < oldest_update_dt:
+            oldest_update_dt = parsed
+            oldest_update_utc = set_update_utc
+        if newest_update_dt is None or parsed > newest_update_dt:
+            newest_update_dt = parsed
+            newest_update_utc = set_update_utc
+
+    return {
+        "oldestSetPriceUpdateAtUtc": oldest_update_utc,
+        "newestSetPriceUpdateAtUtc": newest_update_utc,
+    }
+
+
 def summarize_current_price_files(current_dir: Path) -> tuple[int, int]:
     if not current_dir.exists():
         return 0, 0
@@ -434,6 +618,7 @@ def build_public_price_status_payloads(
 ) -> tuple[dict, dict, dict]:
     en_set_count, en_record_count = summarize_current_price_files(CURRENT_PRICES_EN_DIR)
     jp_set_count, jp_record_count = summarize_current_price_files(CURRENT_PRICES_JP_DIR)
+    en_set_freshness = summarize_en_set_freshness(CURRENT_PRICES_EN_DIR)
 
     interval_minutes = max(1, safe_int(config.get("localUpdaterIntervalMinutes"), 60))
     batch_size = max(
@@ -490,6 +675,8 @@ def build_public_price_status_payloads(
         "lastBatchFinishedAtUtc": last_batch_finished_utc,
         "lastBatchDurationSeconds": last_batch_duration_seconds,
         "nextExpectedPriceUpdateAtUtc": next_expected_utc,
+        "oldestSetPriceUpdateAtUtc": en_set_freshness["oldestSetPriceUpdateAtUtc"],
+        "newestSetPriceUpdateAtUtc": en_set_freshness["newestSetPriceUpdateAtUtc"],
         "expectedUpdateIntervalMinutes": interval_minutes,
         "fullRotationEstimatedHours": full_rotation_hours,
         "currency": CURRENT_PRICE_CURRENCY,
@@ -569,6 +756,8 @@ def build_public_price_status_payloads(
                 "lastBatchFinishedAtUtc": en_payload["lastBatchFinishedAtUtc"],
                 "lastBatchDurationSeconds": en_payload["lastBatchDurationSeconds"],
                 "nextExpectedPriceUpdateAtUtc": en_payload["nextExpectedPriceUpdateAtUtc"],
+                "oldestSetPriceUpdateAtUtc": en_payload["oldestSetPriceUpdateAtUtc"],
+                "newestSetPriceUpdateAtUtc": en_payload["newestSetPriceUpdateAtUtc"],
                 "expectedUpdateIntervalMinutes": en_payload["expectedUpdateIntervalMinutes"],
                 "fullRotationEstimatedHours": en_payload["fullRotationEstimatedHours"],
                 "staleness": en_payload["staleness"],
@@ -913,6 +1102,12 @@ def build_api_notes(ts: str) -> dict:
             "Current price files may be overwritten each build.",
             "Per-set current price files are latest-known snapshots, not guaranteed live quotes.",
             "Price freshness/status metadata files are UTC and intended for app visibility and countdown UX.",
+            "Card detail freshness should use priceRecord.fetchedAtUtc, priceRecord.nextExpectedPriceUpdateAtUtc, and priceRecord.staleness.status.",
+            "Set-level freshness should use setFile.lastSuccessfulPriceUpdateAtUtc and setFile.nextExpectedPriceUpdateAtUtc.",
+            "Current prices are cached latest-known values and are not guaranteed live quotes.",
+            "Manual refresh in the app should fetch latest cache first, then optionally try live lookup when enabled.",
+            "Manual refresh must never overwrite a valid saved price with no result, unavailable, or error responses.",
+            "Future backend manual refresh may queue card-level priority refresh when backend support exists.",
             "Currency is provided on each price record.",
             "Tracked history means history since CardScanR started tracking the card.",
             "Lifetime/all-time market history is not currently provided.",
@@ -1046,12 +1241,15 @@ def build_schemas(ts: str) -> dict:
                     "highPrice",
                     "source",
                     "fetchedAtUtc",
+                    "nextExpectedPriceUpdateAtUtc",
+                    "staleness",
                 ],
                 "notes": [
                     "Current price cache entry.",
                     "Per-set current price files are latest-known snapshots and may be overwritten each build.",
                     "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
                     "Currency is stored per price record.",
+                    "Use fetchedAtUtc and staleness fields for app card-detail freshness messaging.",
                     "Japanese price files are only emitted when official/free source pricing is actually available.",
                 ],
             },
@@ -1065,13 +1263,21 @@ def build_schemas(ts: str) -> dict:
                     "setName",
                     "source",
                     "currency",
+                    "status",
                     "priceCount",
+                    "lastSuccessfulPriceUpdateAtUtc",
+                    "nextExpectedPriceUpdateAtUtc",
+                    "expectedUpdateIntervalMinutes",
+                    "isLivePricing",
+                    "staleness",
                     "prices",
                 ],
                 "notes": [
                     "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
                     "Japanese Pokemon current prices by set are optional and only appear when official/free source pricing is available.",
                     "These files are latest-known current snapshots, not lifetime/all-time price history.",
+                    "App card detail freshness should combine set-level and record-level freshness timestamps.",
+                    "Manual refresh should check cache first and never overwrite valid values with no-result/error data.",
                     "Tracked historical movement remains limited to CardScanR-tracked cards.",
                 ],
             },
@@ -1950,6 +2156,12 @@ def build_english_current_prices_by_set(
         metrics["currentPriceEnBatchCursorBefore"] = cursor_before
         metrics["currentPriceEnBatchCursorAfter"] = cursor_before
 
+    interval_minutes = max(1, safe_int(config.get("localUpdaterIntervalMinutes"), 60))
+    effective_batch_size = max(1, safe_int(metrics.get("currentPriceEnBatchSize"), len(selected_sets)))
+    full_rotation_hours = estimate_full_rotation_hours(len(sets_all), effective_batch_size, interval_minutes)
+    metrics["currentPriceEnExpectedUpdateIntervalMinutes"] = interval_minutes
+    metrics["currentPriceEnFullRotationEstimatedHours"] = full_rotation_hours
+
     prepare_empty_dir(output_dir)
 
     existing_current_files = load_existing_current_price_files("en")
@@ -1958,7 +2170,16 @@ def build_english_current_prices_by_set(
         if existing_set_id in selected_set_id_lookup:
             continue
         destination = output_dir / existing_path.name
-        shutil.copy2(existing_path, destination)
+        existing_payload = load_json(existing_path)
+        if not isinstance(existing_payload, dict):
+            continue
+        enriched_existing_payload = enrich_en_current_set_payload(
+            existing_payload,
+            now_utc=ts,
+            expected_update_interval_minutes=interval_minutes,
+            full_rotation_hours=full_rotation_hours,
+        )
+        write_json(destination, enriched_existing_payload)
 
     page_size = int(config.get("pageSize", 250))
     max_pages_per_set = int(config.get("maxPagesPerSet", 50))
@@ -1996,6 +2217,7 @@ def build_english_current_prices_by_set(
             metrics["currentPriceEnSkippedNoPriceSets"] += 1
         else:
             price_path = output_dir / f"{set_id}.json"
+            set_next_expected_utc = expected_next_refresh_utc(ts, full_rotation_hours)
             payload = {
                 "schemaVersion": SCHEMA_VERSION,
                 "generatedAtUtc": ts,
@@ -2008,7 +2230,15 @@ def build_english_current_prices_by_set(
                 "priceCount": len(prices),
                 "prices": prices,
             }
-            write_json(price_path, payload)
+            enriched_payload = enrich_en_current_set_payload(
+                payload,
+                now_utc=ts,
+                expected_update_interval_minutes=interval_minutes,
+                full_rotation_hours=full_rotation_hours,
+                force_last_successful_update_utc=ts,
+                force_next_expected_update_utc=set_next_expected_utc,
+            )
+            write_json(price_path, enriched_payload)
             written_files.append((set_id, set_name, price_path))
             metrics["currentPriceEnSetsWritten"] += 1
             metrics["currentPriceEnPriceRecordsWritten"] += len(prices)

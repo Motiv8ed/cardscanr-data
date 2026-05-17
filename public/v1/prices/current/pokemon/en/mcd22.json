@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T23:10:30Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T23:10:30Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
   "priceCount": 15,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.05,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "ledyba",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.06,
       "marketPrice": 0.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "tynamo",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.05,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "cutiefly",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.08,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "bewear",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.05,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "pangoro",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.12,
       "marketPrice": 0.37,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "drampa",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.3,
       "marketPrice": 0.95,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "smeargle",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 165.0,
       "lowPrice": 0.19,
       "marketPrice": 0.64,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "rowlet",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -126,9 +186,16 @@
       "highPrice": 165.0,
       "lowPrice": 0.1,
       "marketPrice": 0.35,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "gossifleur",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -140,9 +207,16 @@
       "highPrice": 165.0,
       "lowPrice": 0.39,
       "marketPrice": 1.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "growlithe",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -154,9 +228,16 @@
       "highPrice": 500.0,
       "lowPrice": 0.3,
       "marketPrice": 1.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "victini",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -168,9 +249,16 @@
       "highPrice": 22.99,
       "lowPrice": 0.1,
       "marketPrice": 0.35,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "lapras",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -182,9 +270,16 @@
       "highPrice": 165.0,
       "lowPrice": 1.89,
       "marketPrice": 5.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "pikachu",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -196,9 +291,16 @@
       "highPrice": 19.98,
       "lowPrice": 0.05,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "chinchou",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -210,14 +312,28 @@
       "highPrice": 19.98,
       "lowPrice": 0.09,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:10:30Z",
       "normalizedName": "flaaffy",
       "setId": "mcd22",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3478,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "mcd22",
   "setName": "McDonald's Collection 2022",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 3478,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }

@@ -201,6 +201,31 @@ These files are UTC-based and intended for mobile/web app visibility features:
 - last successful EN update and push timestamps
 - expected next EN update timestamp
 - EN batch size, update interval, and full-rotation estimate
+- EN oldest/newest set refresh timestamps
+- per-set and per-card freshness metadata in EN set files
+
+Card detail freshness fields (EN set files):
+
+- set-level: `lastSuccessfulPriceUpdateAtUtc`, `nextExpectedPriceUpdateAtUtc`, `status`, `staleness`
+- card-level: `fetchedAtUtc`, `nextExpectedPriceUpdateAtUtc`, `staleness`
+
+Flutter card detail wording examples:
+
+- Price checked 41 minutes ago
+- Next check expected around 10:14 AM
+- Cached latest-known price, not a live quote
+- Manual refresh checks the latest cache first
+
+Manual refresh semantics (current app behavior):
+
+1. Re-fetch the latest Cloudflare cache file for the card's set.
+2. If unchanged and live provider usage is enabled, optionally try live lookup.
+3. Never overwrite a valid saved price with no result, unavailable, or error responses.
+
+Future backend manual refresh (not implemented yet):
+
+- Queue card-level priority refresh.
+- Update refresh status when backend queue support exists.
 
 Timezone policy:
 

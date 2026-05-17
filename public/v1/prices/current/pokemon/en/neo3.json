@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T23:12:48Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T23:12:48Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
   "priceCount": 14,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 999.98,
       "lowPrice": 149.99,
       "marketPrice": 90.46,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ampharos",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 804.98,
       "lowPrice": 49.99,
       "marketPrice": 57.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "magneton",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 9999.0,
       "lowPrice": 99.99,
       "marketPrice": 138.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "misdreavus",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 9999.0,
       "lowPrice": 70.0,
       "marketPrice": 98.5,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "porygon2",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 9999.0,
       "lowPrice": 498.0,
       "marketPrice": 173.38,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "raikou",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 9999.0,
       "lowPrice": 339.99,
       "marketPrice": 461.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "suicune",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 1703.5,
       "lowPrice": 275.99,
       "marketPrice": 172.5,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "blissey",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 9999.0,
       "lowPrice": 199.95,
       "marketPrice": 349.99,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "celebi",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -126,9 +186,16 @@
       "highPrice": 1199.9,
       "lowPrice": 399.99,
       "marketPrice": 86.97,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "crobat",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -140,9 +207,16 @@
       "highPrice": 135.0,
       "lowPrice": 99.0,
       "marketPrice": 70.35,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "delibird",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -154,9 +228,16 @@
       "highPrice": 10000.0,
       "lowPrice": 646.39,
       "marketPrice": 324.68,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "entei",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -168,9 +249,16 @@
       "highPrice": 488.52,
       "lowPrice": 414.99,
       "marketPrice": 350.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ho_oh",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -182,9 +270,16 @@
       "highPrice": 999.96,
       "lowPrice": 999.96,
       "marketPrice": 243.94,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "houndoom",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     },
     {
@@ -196,14 +291,28 @@
       "highPrice": 459.9,
       "lowPrice": 29.99,
       "marketPrice": 49.68,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "jumpluff",
       "setId": "neo3",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "first_edition_holo"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "neo3",
   "setName": "Neo Revelation",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 3340,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }

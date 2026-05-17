@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T23:12:48Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T23:12:48Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
   "priceCount": 214,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "oddish",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "oddish",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lokix",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lokix",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 999.0,
       "lowPrice": 2.73,
       "marketPrice": 3.84,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "zacian",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 999.0,
       "lowPrice": 3.7,
       "marketPrice": 4.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "flygon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 999.0,
       "lowPrice": 2.75,
       "marketPrice": 4.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "paldean_wooper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.05,
       "marketPrice": 2.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "toxtricity",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -126,9 +186,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.38,
       "marketPrice": 2.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "togedemaru",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -140,9 +207,16 @@
       "highPrice": 999.0,
       "lowPrice": 4.97,
       "marketPrice": 6.75,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "wigglytuff",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -154,9 +228,16 @@
       "highPrice": 999.0,
       "lowPrice": 20.0,
       "marketPrice": 23.02,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "meowth",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -168,9 +249,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.3,
       "marketPrice": 2.29,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ambipom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -182,9 +270,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.49,
       "marketPrice": 2.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_heracross_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -196,9 +291,16 @@
       "highPrice": 999.0,
       "lowPrice": 34.5,
       "marketPrice": 38.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_charizard_x_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -210,9 +312,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charmander",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -224,9 +333,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.29,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charmander",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -238,9 +354,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.85,
       "marketPrice": 1.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "oricorio_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -252,9 +375,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.49,
       "marketPrice": 1.37,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "rotom_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -266,9 +396,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.85,
       "marketPrice": 1.52,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mismagius_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -280,9 +417,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.5,
       "marketPrice": 2.39,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_sharpedo_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -294,9 +438,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.1,
       "marketPrice": 1.87,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "empoleon_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -308,9 +459,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.75,
       "marketPrice": 2.9,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_lopunny_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -322,9 +480,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.4,
       "marketPrice": 2.13,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "battle_cage",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -336,9 +501,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.44,
       "marketPrice": 0.9,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "blowtorch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -350,9 +522,16 @@
       "highPrice": 999.0,
       "lowPrice": 4.0,
       "marketPrice": 7.39,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dawn",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -364,9 +543,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.5,
       "marketPrice": 1.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "firebreather",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -378,9 +564,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charmeleon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -392,9 +585,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charmeleon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -406,9 +606,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.45,
       "marketPrice": 0.98,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "grimsley_s_move",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -420,9 +627,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.41,
       "marketPrice": 0.86,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "punk_helmet",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -434,9 +648,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.3,
       "marketPrice": 0.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sacred_charm",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -448,9 +669,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.65,
       "marketPrice": 1.3,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "switch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -462,9 +690,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.49,
       "marketPrice": 2.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ignition_energy",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -476,9 +711,16 @@
       "highPrice": 10000.0,
       "lowPrice": 849.0,
       "marketPrice": 873.54,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_charizard_x_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -490,9 +732,16 @@
       "highPrice": 999.0,
       "lowPrice": 18.0,
       "marketPrice": 19.86,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "rotom_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -504,9 +753,16 @@
       "highPrice": 999.0,
       "lowPrice": 21.0,
       "marketPrice": 25.67,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_sharpedo_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -518,9 +774,16 @@
       "highPrice": 999.0,
       "lowPrice": 18.0,
       "marketPrice": 19.93,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_lopunny_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -532,9 +795,16 @@
       "highPrice": 999.0,
       "lowPrice": 27.49,
       "marketPrice": 28.79,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dawn",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -546,9 +816,16 @@
       "highPrice": 999.0,
       "lowPrice": 3.86,
       "marketPrice": 4.72,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_charizard_x_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -560,9 +837,16 @@
       "highPrice": 99999.0,
       "lowPrice": 329.99,
       "marketPrice": 353.66,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_charizard_x_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -574,9 +858,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "moltres",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -588,9 +879,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.02,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "moltres",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -602,9 +900,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "darumaka",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -616,9 +921,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "darumaka",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -630,9 +942,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.03,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "darmanitan",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -644,9 +963,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "darmanitan",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -658,9 +984,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "reshiram",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -672,9 +1005,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "reshiram",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -686,9 +1026,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.09,
       "marketPrice": 0.58,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "oricorio_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -700,9 +1047,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.13,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charcadet",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -714,9 +1068,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "charcadet",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -728,9 +1089,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.03,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gloom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -742,9 +1110,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gloom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -756,9 +1131,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ceruledge",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -770,9 +1152,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ceruledge",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -784,9 +1173,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "seel",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -798,9 +1194,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "seel",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -812,9 +1215,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dewgong",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -826,9 +1236,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dewgong",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -840,9 +1257,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "swinub",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -854,9 +1278,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "swinub",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -868,9 +1299,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "piloswine",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -882,9 +1320,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "piloswine",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -896,9 +1341,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mamoswine",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -910,9 +1362,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mamoswine",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -924,9 +1383,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "suicune",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -938,9 +1404,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "suicune",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -952,9 +1425,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "piplup",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -966,9 +1446,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "piplup",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -980,9 +1467,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "prinplup",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -994,9 +1488,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "prinplup",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1008,9 +1509,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.02,
       "marketPrice": 0.54,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "rotom_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1022,9 +1530,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "vileplume",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1036,9 +1551,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "vileplume",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1050,9 +1572,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "yamper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1064,9 +1593,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "yamper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1078,9 +1614,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.03,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "boltund",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1092,9 +1635,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "boltund",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1106,9 +1656,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmi",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1120,9 +1677,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmi",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1134,9 +1698,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmo",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1148,9 +1719,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmo",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1162,9 +1740,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmot",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1176,9 +1761,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "pawmot",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1190,9 +1782,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "misdreavus",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1204,9 +1803,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.02,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "misdreavus",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1218,9 +1824,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.1,
       "marketPrice": 0.55,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mismagius_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1232,9 +1845,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "snubbull",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1246,9 +1866,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "snubbull",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1260,9 +1887,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "granbull",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1274,9 +1908,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "granbull",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1288,9 +1929,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "cresselia",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1302,9 +1950,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "cresselia",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1316,9 +1971,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.2,
       "marketPrice": 0.56,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_heracross_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1330,9 +1992,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "meloetta",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1344,9 +2013,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.04,
       "marketPrice": 0.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "meloetta",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1358,9 +2034,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.05,
       "marketPrice": 0.69,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_diancie_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1372,9 +2055,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mimikyu",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1386,9 +2076,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.04,
       "marketPrice": 0.32,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mimikyu",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1400,9 +2097,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "milcery",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1414,9 +2118,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "milcery",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1428,9 +2139,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "alcremie",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1442,9 +2160,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "alcremie",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1456,9 +2181,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "zacian",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1470,9 +2202,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.02,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "zacian",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1484,9 +2223,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bramblin",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1498,9 +2244,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bramblin",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1512,9 +2265,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "brambleghast",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1526,9 +2286,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "brambleghast",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1540,9 +2307,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "paldean_tauros",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1554,9 +2328,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "paldean_tauros",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1568,9 +2349,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gligar",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1582,9 +2370,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gligar",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1596,9 +2391,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lotad",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1610,9 +2412,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lotad",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1624,9 +2433,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gliscor",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1638,9 +2454,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.03,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gliscor",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1652,9 +2475,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "trapinch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1666,9 +2496,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "trapinch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1680,9 +2517,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "vibrava",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1694,9 +2538,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.03,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "vibrava",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1708,9 +2559,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "flygon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1722,9 +2580,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "flygon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1736,9 +2601,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.13,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gastly",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1750,9 +2622,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "gastly",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1764,9 +2643,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "haunter",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1778,9 +2664,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "haunter",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1792,9 +2685,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.67,
       "marketPrice": 2.92,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_gengar_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1806,9 +2706,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "murkrow",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1820,9 +2727,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "murkrow",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1834,9 +2748,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "honchkrow",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1848,9 +2769,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "honchkrow",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1862,9 +2790,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sableye",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1876,9 +2811,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sableye",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1890,9 +2832,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lombre",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1904,9 +2853,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "lombre",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1918,9 +2874,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "carvanha",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1932,9 +2895,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "carvanha",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1946,9 +2916,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.15,
       "marketPrice": 0.74,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_sharpedo_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -1960,9 +2937,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "seviper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -1974,9 +2958,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "seviper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -1988,9 +2979,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "absol",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2002,9 +3000,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "absol",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2016,9 +3021,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.04,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sandile",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2030,9 +3042,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sandile",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2044,9 +3063,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "krokorok",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2058,9 +3084,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "krokorok",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2072,9 +3105,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "krookodile",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2086,9 +3126,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "krookodile",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2100,9 +3147,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "toxel",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2114,9 +3168,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "toxel",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2128,9 +3189,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "toxtricity",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2142,9 +3210,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "toxtricity",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2156,9 +3231,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "eternatus",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2170,9 +3252,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.05,
       "marketPrice": 0.28,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "eternatus",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2184,9 +3273,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ludicolo",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2198,9 +3294,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.21,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ludicolo",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2212,9 +3315,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.05,
       "marketPrice": 0.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "empoleon_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2226,9 +3336,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bronzor",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2240,9 +3357,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.15,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bronzor",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2254,9 +3378,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bronzong",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2268,9 +3399,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.24,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "bronzong",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2282,9 +3420,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "togedemaru",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2296,9 +3441,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "togedemaru",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2310,9 +3462,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.1,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "duraludon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2324,9 +3483,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "duraludon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2338,9 +3504,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "archaludon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2352,9 +3525,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "archaludon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2366,9 +3546,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "jigglypuff",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2380,9 +3567,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "jigglypuff",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2394,9 +3588,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "wigglytuff",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2408,9 +3609,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "wigglytuff",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2422,9 +3630,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "aipom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2436,9 +3651,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "aipom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2450,9 +3672,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.05,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ambipom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2464,9 +3693,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ambipom",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2478,9 +3714,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "genesect",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2492,9 +3735,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "genesect",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2506,9 +3756,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "smeargle",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2520,9 +3777,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "smeargle",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2534,9 +3798,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "zigzagoon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2548,9 +3819,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.14,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "zigzagoon",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2562,9 +3840,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.03,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "linoone",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2576,9 +3861,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "linoone",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2590,9 +3882,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.16,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "buneary",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2604,9 +3903,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.03,
       "marketPrice": 0.3,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "buneary",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2618,9 +3924,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.25,
       "marketPrice": 0.65,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "mega_lopunny_ex",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2632,9 +3945,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "battle_cage",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2646,9 +3966,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.32,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "battle_cage",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2660,9 +3987,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "blowtorch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2674,9 +4008,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "blowtorch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2688,9 +4029,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dawn",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2702,9 +4050,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.05,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dawn",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2716,9 +4071,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.08,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dizzying_valley",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2730,9 +4092,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dizzying_valley",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2744,9 +4113,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.13,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "firebreather",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2758,9 +4134,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.18,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "firebreather",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2772,9 +4155,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "nymble",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2786,9 +4176,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.22,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "nymble",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2800,9 +4197,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "grimsley_s_move",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2814,9 +4218,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "grimsley_s_move",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2828,9 +4239,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.19,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "jumbo_ice_cream",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2842,9 +4260,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.27,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "jumbo_ice_cream",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2856,9 +4281,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.11,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "punk_helmet",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2870,9 +4302,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.26,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "punk_helmet",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2884,9 +4323,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.09,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sacred_charm",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2898,9 +4344,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "sacred_charm",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2912,9 +4365,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.23,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "wondrous_patch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -2926,9 +4386,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.01,
       "marketPrice": 0.3,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "wondrous_patch",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -2940,9 +4407,16 @@
       "highPrice": 999.0,
       "lowPrice": 1.7,
       "marketPrice": 2.38,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "ludicolo",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2954,9 +4428,16 @@
       "highPrice": 999.0,
       "lowPrice": 0.9,
       "marketPrice": 1.6,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "nymble",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2968,9 +4449,16 @@
       "highPrice": 999.0,
       "lowPrice": 3.5,
       "marketPrice": 5.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "dewgong",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2982,9 +4470,16 @@
       "highPrice": 999.0,
       "lowPrice": 15.93,
       "marketPrice": 18.71,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "piplup",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     },
     {
@@ -2996,14 +4491,28 @@
       "highPrice": 999.0,
       "lowPrice": 1.73,
       "marketPrice": 3.25,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T13:12:48Z",
       "normalizedName": "yamper",
       "setId": "me2",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 3340,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "holo"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "me2",
   "setName": "Phantasmal Flames",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 3340,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }

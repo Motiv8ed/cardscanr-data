@@ -47,7 +47,13 @@ REQUIRED_CURRENT_PRICE_SET_FIELDS = REQUIRED_PRICE_FIELDS | {
     "setName",
     "source",
     "currency",
+    "status",
     "priceCount",
+    "lastSuccessfulPriceUpdateAtUtc",
+    "nextExpectedPriceUpdateAtUtc",
+    "expectedUpdateIntervalMinutes",
+    "isLivePricing",
+    "staleness",
 }
 REQUIRED_PRICE_ENTRY_FIELDS = {
     "canonicalId",
@@ -59,6 +65,10 @@ REQUIRED_PRICE_ENTRY_FIELDS = {
     "currency",
     "source",
     "fetchedAtUtc",
+}
+REQUIRED_CURRENT_PRICE_ENTRY_FIELDS = REQUIRED_PRICE_ENTRY_FIELDS | {
+    "nextExpectedPriceUpdateAtUtc",
+    "staleness",
 }
 REQUIRED_DIAGNOSTICS_FIELDS = {
     "buildStatus",
@@ -231,6 +241,7 @@ ALLOWED_PRICE_STATUS_VALUES = {
     "catalogue_only",
 }
 ALLOWED_STALENESS_VALUES = {"fresh", "stale", "very_stale", "unavailable"}
+ALLOWED_SET_PRICE_STATUS_VALUES = {"ok", "partial", "stale", "very_stale", "unavailable"}
 REQUIRED_PLACEHOLDER_CATALOG_FIELDS = {
     "schemaVersion",
     "generatedAtUtc",
@@ -505,6 +516,33 @@ def check_price_files() -> None:
                 if not isinstance(currency, str) or len(currency) != 3:
                     err(f"{rel}: currency must be a 3-letter string")
 
+            if data.get("status") not in ALLOWED_SET_PRICE_STATUS_VALUES:
+                err(f"{rel}: status must be one of {sorted(ALLOWED_SET_PRICE_STATUS_VALUES)}")
+            if data.get("isLivePricing") is not False:
+                err(f"{rel}: isLivePricing must be false")
+            interval = data.get("expectedUpdateIntervalMinutes")
+            if not isinstance(interval, int) or interval <= 0:
+                err(f"{rel}: expectedUpdateIntervalMinutes must be a positive integer")
+
+            for ts_field in ["generatedAtUtc", "lastSuccessfulPriceUpdateAtUtc", "nextExpectedPriceUpdateAtUtc"]:
+                ts_value = data.get(ts_field)
+                if ts_value is not None and (not isinstance(ts_value, str) or not ts_value.endswith("Z")):
+                    err(f"{rel}: {ts_field} must be a UTC string ending with 'Z' or null")
+
+            set_staleness = data.get("staleness")
+            if not isinstance(set_staleness, dict):
+                err(f"{rel}: staleness must be an object")
+            else:
+                if set_staleness.get("status") not in ALLOWED_STALENESS_VALUES:
+                    err(f"{rel}: staleness.status must be one of {sorted(ALLOWED_STALENESS_VALUES)}")
+                age_value = set_staleness.get("ageSeconds")
+                if age_value is not None and not (isinstance(age_value, int) and age_value >= 0):
+                    err(f"{rel}: staleness.ageSeconds must be null or a non-negative integer")
+                for number_field in ["freshForSeconds", "staleAfterSeconds"]:
+                    number_value = set_staleness.get(number_field)
+                    if not isinstance(number_value, int) or number_value <= 0:
+                        err(f"{rel}: staleness.{number_field} must be a positive integer")
+
         prices = data.get("prices", [])
         if not isinstance(prices, list):
             err(f"{rel}: 'prices' must be a list")
@@ -520,7 +558,8 @@ def check_price_files() -> None:
                 err(f"{rel}: prices[{i}] is not an object")
                 entry_errors += 1
                 continue
-            missing = REQUIRED_PRICE_ENTRY_FIELDS - set(entry.keys())
+            required_entry_fields = REQUIRED_CURRENT_PRICE_ENTRY_FIELDS if is_current_set_file else REQUIRED_PRICE_ENTRY_FIELDS
+            missing = required_entry_fields - set(entry.keys())
             if missing:
                 err(f"{rel}: prices[{i}] missing fields: {sorted(missing)}")
                 entry_errors += 1
@@ -545,6 +584,31 @@ def check_price_files() -> None:
             if not useful_price_found:
                 err(f"{rel}: prices[{i}] must include at least one numeric marketPrice, lowPrice, or highPrice")
                 entry_errors += 1
+
+            fetched_at = entry.get("fetchedAtUtc")
+            if not isinstance(fetched_at, str) or not fetched_at.endswith("Z"):
+                err(f"{rel}: prices[{i}] fetchedAtUtc must be a UTC string ending with 'Z'")
+                entry_errors += 1
+
+            if is_current_set_file:
+                next_expected = entry.get("nextExpectedPriceUpdateAtUtc")
+                if next_expected is not None and (not isinstance(next_expected, str) or not next_expected.endswith("Z")):
+                    err(f"{rel}: prices[{i}] nextExpectedPriceUpdateAtUtc must be null or UTC 'Z' string")
+                    entry_errors += 1
+                entry_staleness = entry.get("staleness")
+                if not isinstance(entry_staleness, dict):
+                    err(f"{rel}: prices[{i}] staleness must be an object")
+                    entry_errors += 1
+                else:
+                    if entry_staleness.get("status") not in ALLOWED_STALENESS_VALUES:
+                        err(
+                            f"{rel}: prices[{i}] staleness.status must be one of {sorted(ALLOWED_STALENESS_VALUES)}"
+                        )
+                        entry_errors += 1
+                    entry_age = entry_staleness.get("ageSeconds")
+                    if entry_age is not None and not (isinstance(entry_age, int) and entry_age >= 0):
+                        err(f"{rel}: prices[{i}] staleness.ageSeconds must be null or non-negative integer")
+                        entry_errors += 1
 
         if dupes:
             err(f"{rel}: duplicate canonicalId values: {dupes}")

@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-16T23:24:18Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -103,6 +103,7 @@
         "Per-set current price files are latest-known snapshots and may be overwritten each build.",
         "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
         "Currency is stored per price record.",
+        "Use fetchedAtUtc and staleness fields for app card-detail freshness messaging.",
         "Japanese price files are only emitted when official/free source pricing is actually available."
       ],
       "requiredFields": [
@@ -117,7 +118,9 @@
         "lowPrice",
         "highPrice",
         "source",
-        "fetchedAtUtc"
+        "fetchedAtUtc",
+        "nextExpectedPriceUpdateAtUtc",
+        "staleness"
       ]
     },
     "current_price_set_file": {
@@ -125,6 +128,8 @@
         "English Pokemon current prices by set are built from PokemonTCG API card pricing fields.",
         "Japanese Pokemon current prices by set are optional and only appear when official/free source pricing is available.",
         "These files are latest-known current snapshots, not lifetime/all-time price history.",
+        "App card detail freshness should combine set-level and record-level freshness timestamps.",
+        "Manual refresh should check cache first and never overwrite valid values with no-result/error data.",
         "Tracked historical movement remains limited to CardScanR-tracked cards."
       ],
       "requiredFields": [
@@ -136,7 +141,13 @@
         "setName",
         "source",
         "currency",
+        "status",
         "priceCount",
+        "lastSuccessfulPriceUpdateAtUtc",
+        "nextExpectedPriceUpdateAtUtc",
+        "expectedUpdateIntervalMinutes",
+        "isLivePricing",
+        "staleness",
         "prices"
       ]
     },

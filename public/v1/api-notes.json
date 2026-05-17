@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-16T23:24:18Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -7,6 +7,12 @@
     "Current price files may be overwritten each build.",
     "Per-set current price files are latest-known snapshots, not guaranteed live quotes.",
     "Price freshness/status metadata files are UTC and intended for app visibility and countdown UX.",
+    "Card detail freshness should use priceRecord.fetchedAtUtc, priceRecord.nextExpectedPriceUpdateAtUtc, and priceRecord.staleness.status.",
+    "Set-level freshness should use setFile.lastSuccessfulPriceUpdateAtUtc and setFile.nextExpectedPriceUpdateAtUtc.",
+    "Current prices are cached latest-known values and are not guaranteed live quotes.",
+    "Manual refresh in the app should fetch latest cache first, then optionally try live lookup when enabled.",
+    "Manual refresh must never overwrite a valid saved price with no result, unavailable, or error responses.",
+    "Future backend manual refresh may queue card-level priority refresh when backend support exists.",
     "Currency is provided on each price record.",
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",

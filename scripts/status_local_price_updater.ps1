@@ -256,9 +256,13 @@ $publicEnRecordCount = if ($publicEnStatus -and $publicEnStatus.currentPriceReco
 $publicEnNextExpectedUtc = if ($publicEnStatus -and $publicEnStatus.nextExpectedPriceUpdateAtUtc) { [string]$publicEnStatus.nextExpectedPriceUpdateAtUtc } else { $null }
 $publicEnIntervalMinutes = if ($publicEnStatus -and $publicEnStatus.expectedUpdateIntervalMinutes -ne $null) { [int]$publicEnStatus.expectedUpdateIntervalMinutes } else { $null }
 $publicEnRotationHours = if ($publicEnStatus -and $publicEnStatus.fullRotationEstimatedHours -ne $null) { [int]$publicEnStatus.fullRotationEstimatedHours } else { $null }
+$publicEnOldestSetUpdateUtc = if ($publicEnStatus -and $publicEnStatus.oldestSetPriceUpdateAtUtc) { [string]$publicEnStatus.oldestSetPriceUpdateAtUtc } else { $null }
+$publicEnNewestSetUpdateUtc = if ($publicEnStatus -and $publicEnStatus.newestSetPriceUpdateAtUtc) { [string]$publicEnStatus.newestSetPriceUpdateAtUtc } else { $null }
 $publicEnLastUpdateUtc = if ($publicEnStatus -and $publicEnStatus.lastSuccessfulPriceUpdateAtUtc) { [string]$publicEnStatus.lastSuccessfulPriceUpdateAtUtc } else { $lastUpdateUtc }
 $publicEnLastPushUtc = if ($publicEnStatus -and $publicEnStatus.lastSuccessfulPushAtUtc) { [string]$publicEnStatus.lastSuccessfulPushAtUtc } else { $lastPushUtc }
 $publicEnAgeText = if ($publicEnAgeSeconds -ne $null) { Format-DurationValue -Seconds $publicEnAgeSeconds } else { 'Unknown' }
+$publicEnNextExpectedCountdownSeconds = if ($publicEnNextExpectedUtc) { Get-SecondsUntil -UtcValue $publicEnNextExpectedUtc } else { $null }
+$publicEnNextExpectedCountdownText = if ($publicEnNextExpectedCountdownSeconds -ne $null) { Format-DurationValue -Seconds $publicEnNextExpectedCountdownSeconds } else { 'Unknown' }
 $publicEnFreshnessLabel = switch ($publicEnStaleness) {
     'fresh' { 'Fresh' }
     'stale' { 'Stale' }
@@ -323,10 +327,14 @@ Write-DashboardLine -Label 'EN freshness' -Value $publicEnFreshnessLabel
 Write-DashboardLine -Label 'EN age' -Value $publicEnAgeText
 Write-DashboardLine -Label 'EN files' -Value ("$publicEnSetCount sets, $publicEnRecordCount records")
 Write-DashboardLine -Label 'EN next expected' -Value ($(if ($publicEnNextExpectedUtc) { Format-DateAest -Value $publicEnNextExpectedUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }))
+Write-DashboardLine -Label 'EN next countdown' -Value $publicEnNextExpectedCountdownText
+Write-DashboardLine -Label 'EN newest set' -Value ($(if ($publicEnNewestSetUpdateUtc) { Format-DateAest -Value $publicEnNewestSetUpdateUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }))
+Write-DashboardLine -Label 'EN oldest set' -Value ($(if ($publicEnOldestSetUpdateUtc) { Format-DateAest -Value $publicEnOldestSetUpdateUtc -AestTimeZone $aestTimeZone } else { 'Unknown' }))
 Write-DashboardLine -Label 'EN cadence' -Value ($(if ($publicEnIntervalMinutes -ne $null) { "$publicEnIntervalMinutes minutes" } else { 'Unknown' }))
 Write-DashboardLine -Label 'EN rotation' -Value ($(if ($publicEnRotationHours -ne $null) { "$publicEnRotationHours hours" } else { 'Unknown' }))
 Write-DashboardLine -Label 'App freshness' -Value ("Prices updated $publicEnAgeText ago")
 Write-DashboardLine -Label 'App next' -Value ($(if ($publicEnNextExpectedUtc) { "Next refresh expected around " + (Format-DateAest -Value $publicEnNextExpectedUtc -AestTimeZone $aestTimeZone) } else { 'Next refresh expected around Unknown' }))
+Write-DashboardLine -Label 'App quote note' -Value 'Cached latest-known price, not a live quote'
 
 Write-Host ''
 Write-DashboardLine -Label 'Next update cycle' -Value $nextUpdateCycleText

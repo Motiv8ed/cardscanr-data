@@ -1,8 +1,12 @@
 {
   "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-16T12:39:06Z",
+  "generatedAtUtc": "2026-05-17T00:08:28Z",
+  "isLivePricing": false,
   "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-16T12:39:06Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
   "priceCount": 9,
   "prices": [
     {
@@ -14,9 +18,16 @@
       "highPrice": 396.9,
       "lowPrice": 37.99,
       "marketPrice": 30.07,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "electabuzz",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -28,9 +39,16 @@
       "highPrice": 341.9,
       "lowPrice": 27.3,
       "marketPrice": 37.42,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "hitmonchan",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -42,9 +60,16 @@
       "highPrice": 259.9,
       "lowPrice": 15.85,
       "marketPrice": 26.2,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "professor_elm",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -56,9 +81,16 @@
       "highPrice": 1272.06,
       "lowPrice": 27.92,
       "marketPrice": 30.17,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rocket_s_scizor",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -70,9 +102,16 @@
       "highPrice": 219.5,
       "lowPrice": 13.08,
       "marketPrice": 18.66,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rocket_s_sneasel",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -84,9 +123,16 @@
       "highPrice": 650.0,
       "lowPrice": 60.0,
       "marketPrice": 36.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_ivysaur",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -98,9 +144,16 @@
       "highPrice": 499.99,
       "lowPrice": 130.0,
       "marketPrice": 125.48,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "dark_venusaur",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "normal"
     },
     {
@@ -112,9 +165,16 @@
       "highPrice": 2400.0,
       "lowPrice": 649.97,
       "marketPrice": 500.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rocket_s_mewtwo",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     },
     {
@@ -126,14 +186,28 @@
       "highPrice": 1849.8,
       "lowPrice": 220.0,
       "marketPrice": 133.84,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-20T02:39:06Z",
       "normalizedName": "rocket_s_hitmonchan",
       "setId": "bp",
       "source": "pokemon_tcg_api",
+      "staleness": {
+        "ageSeconds": 41362,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
       "variant": "reverse"
     }
   ],
   "schemaVersion": "1.0.0",
   "setId": "bp",
   "setName": "Best of Game",
-  "source": "pokemon_tcg_api"
+  "source": "pokemon_tcg_api",
+  "staleness": {
+    "ageSeconds": 41362,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
 }
