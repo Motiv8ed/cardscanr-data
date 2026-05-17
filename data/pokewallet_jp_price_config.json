@@ -12,6 +12,25 @@
   "targetGame": "pokemon",
   "confidenceThreshold": 0.82,
   "writeOnlyConfidentMatches": true,
+  "useCatalogueSampleTargets": true,
+  "catalogueSampleLimit": 25,
+  "catalogueSampleStrategy": "known_popular_and_recent",
+  "cataloguePreferredSetIds": [
+    "SV10",
+    "SV11B",
+    "SV11W",
+    "SV9",
+    "SV9a",
+    "S12a",
+    "PMCG1",
+    "E1",
+    "E2"
+  ],
+  "catalogueSearchTemplates": [
+    "{name} {setName} {collectorNumber} japanese pokemon",
+    "{name} {collectorNumber} japanese pokemon",
+    "{name} {setName} pokemon card"
+  ],
   "searchTargets": [
     {
       "query": "charizard japanese",

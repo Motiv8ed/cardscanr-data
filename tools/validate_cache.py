@@ -192,6 +192,16 @@ REQUIRED_POKEWALLET_JP_BUILD_FIELDS = {
     "priceRecordsWritten",
     "priceFilesWritten",
     "currenciesSeen",
+    "catalogueCardsLoaded",
+    "catalogueSampleTargetsBuilt",
+    "catalogueSearchQueriesBuilt",
+    "cataloguePreferredSetIdsUsed",
+    "matchScoreDistribution",
+    "skippedNoPrice",
+    "skippedLowConfidence",
+    "skippedNoCanonicalMatch",
+    "skippedNoCurrency",
+    "sampleSearchTargets",
     "sampleMatches",
     "sampleSkipped",
     "recommendation",
@@ -643,6 +653,28 @@ def check_price_files() -> None:
                         err(f"{rel}: prices[{i}] staleness.ageSeconds must be null or non-negative integer")
                         entry_errors += 1
 
+                if current_language == "jp":
+                    provider_ids = entry.get("providerIds")
+                    if not isinstance(provider_ids, dict):
+                        err(f"{rel}: prices[{i}] providerIds must be an object for JP entries")
+                        entry_errors += 1
+                    elif not isinstance(provider_ids.get("pokewalletId"), str) or not provider_ids.get("pokewalletId"):
+                        err(f"{rel}: prices[{i}] providerIds.pokewalletId must be a non-empty string")
+                        entry_errors += 1
+
+                    match_confidence = entry.get("matchConfidence")
+                    if not isinstance(match_confidence, (int, float)) or isinstance(match_confidence, bool):
+                        err(f"{rel}: prices[{i}] matchConfidence must be numeric for JP entries")
+                        entry_errors += 1
+                    elif match_confidence < 0 or match_confidence > 1:
+                        err(f"{rel}: prices[{i}] matchConfidence must be between 0 and 1")
+                        entry_errors += 1
+
+                    match_signals = entry.get("matchSignals")
+                    if not isinstance(match_signals, list):
+                        err(f"{rel}: prices[{i}] matchSignals must be a list for JP entries")
+                        entry_errors += 1
+
         if dupes:
             err(f"{rel}: duplicate canonicalId values: {dupes}")
         elif entry_errors == 0:
@@ -847,14 +879,46 @@ def check_pokewallet_jp_build_diagnostics() -> None:
         "unmappedResults",
         "priceRecordsWritten",
         "priceFilesWritten",
+        "catalogueCardsLoaded",
+        "catalogueSampleTargetsBuilt",
+        "catalogueSearchQueriesBuilt",
+        "skippedNoPrice",
+        "skippedLowConfidence",
+        "skippedNoCanonicalMatch",
+        "skippedNoCurrency",
     ]:
         value = data.get(field)
         if not isinstance(value, int) or value < 0:
             err(f"diagnostics/pokewallet-jp-price-build-latest.json {field} must be a non-negative integer")
 
-    for field in ["searchTargetsTested", "currenciesSeen", "sampleMatches", "sampleSkipped"]:
+    for field in [
+        "searchTargetsTested",
+        "currenciesSeen",
+        "cataloguePreferredSetIdsUsed",
+        "sampleSearchTargets",
+        "sampleMatches",
+        "sampleSkipped",
+    ]:
         if not isinstance(data.get(field), list):
             err(f"diagnostics/pokewallet-jp-price-build-latest.json {field} must be a list")
+
+    distribution = data.get("matchScoreDistribution")
+    if not isinstance(distribution, dict):
+        err("diagnostics/pokewallet-jp-price-build-latest.json matchScoreDistribution must be an object")
+    else:
+        required_buckets = {"0.90-1.00", "0.80-0.89", "0.70-0.79", "0.60-0.69", "0.00-0.59"}
+        missing = required_buckets - set(distribution.keys())
+        if missing:
+            err(
+                "diagnostics/pokewallet-jp-price-build-latest.json matchScoreDistribution missing buckets: "
+                f"{sorted(missing)}"
+            )
+        for bucket, value in distribution.items():
+            if not isinstance(value, int) or value < 0:
+                err(
+                    "diagnostics/pokewallet-jp-price-build-latest.json "
+                    f"matchScoreDistribution.{bucket} must be a non-negative integer"
+                )
 
     if not isinstance(data.get("apiKeyPresent"), bool):
         err("diagnostics/pokewallet-jp-price-build-latest.json apiKeyPresent must be boolean")
