@@ -2,144 +2,476 @@
   "apiKeyPresent": true,
   "catalogueCardsLoaded": 6246,
   "cataloguePreferredSetIdsUsed": [
-    "SV10"
+    "SV10",
+    "SV11B",
+    "SV11W",
+    "SV9",
+    "SV9a"
   ],
   "catalogueSampleTargetsBuilt": 25,
-  "catalogueSearchQueriesBuilt": 25,
+  "catalogueSearchQueriesBuilt": 39,
   "confidentMatches": 0,
   "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T00:47:12Z",
+  "generatedAtUtc": "2026-05-17T01:29:23Z",
   "lowConfidenceMatches": 0,
   "matchScoreDistribution": {
-    "0.00-0.59": 0,
+    "0.00-0.59": 13,
     "0.60-0.69": 0,
-    "0.70-0.79": 0,
+    "0.70-0.79": 26,
     "0.80-0.89": 0,
     "0.90-1.00": 0
   },
   "mode": "controlled_test",
-  "possibleJapaneseResults": 0,
+  "pokewalletJapaneseLikeSets": 127,
+  "pokewalletSetLanguagesSeen": [
+    "chn",
+    "eng",
+    "jap"
+  ],
+  "pokewalletSetsFetched": 854,
+  "possibleJapaneseResults": 39,
   "priceFilesWritten": 0,
   "priceRecordsWritten": 0,
   "provider": "pokewallet",
   "recommendation": "Pokewallet did not produce enough confident priced JP matches this run; keep as controlled test only.",
-  "requestsAttempted": 25,
-  "requestsFailed": 1,
-  "requestsSucceeded": 24,
-  "resultsFound": 0,
+  "requestsAttempted": 40,
+  "requestsFailed": 0,
+  "requestsSucceeded": 40,
+  "resultsFound": 39,
   "sampleMatches": [],
   "sampleSearchTargets": [
     {
       "collectorNumber": "001",
       "name": "クヌギダマ",
-      "query": "クヌギダマ ロケット団の栄光 001 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "24310 001",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_id_plus_card_number"
     },
     {
       "collectorNumber": "001",
       "name": "クヌギダマ",
-      "query": "クヌギダマ 001 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "SV10 001",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_code_plus_card_number"
     },
     {
       "collectorNumber": "001",
       "name": "クヌギダマ",
-      "query": "クヌギダマ ロケット団の栄光 pokemon card",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "クヌギダマ SV10",
+      "setId": "SV10",
+      "strategy": "name_plus_pokewallet_set_code"
     },
     {
       "collectorNumber": "002",
       "name": "キノココ",
-      "query": "キノココ ロケット団の栄光 002 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "24310 002",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_id_plus_card_number"
     },
     {
       "collectorNumber": "002",
       "name": "キノココ",
-      "query": "キノココ 002 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "SV10 002",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_code_plus_card_number"
     },
     {
       "collectorNumber": "002",
       "name": "キノココ",
-      "query": "キノココ ロケット団の栄光 pokemon card",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "キノココ SV10",
+      "setId": "SV10",
+      "strategy": "name_plus_pokewallet_set_code"
     },
     {
       "collectorNumber": "003",
       "name": "キノガッサ",
-      "query": "キノガッサ ロケット団の栄光 003 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "24310 003",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_id_plus_card_number"
     },
     {
       "collectorNumber": "003",
       "name": "キノガッサ",
-      "query": "キノガッサ 003 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "SV10 003",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_code_plus_card_number"
     },
     {
       "collectorNumber": "003",
       "name": "キノガッサ",
-      "query": "キノガッサ ロケット団の栄光 pokemon card",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "キノガッサ SV10",
+      "setId": "SV10",
+      "strategy": "name_plus_pokewallet_set_code"
     },
     {
       "collectorNumber": "004",
       "name": "カットロトム",
-      "query": "カットロトム ロケット団の栄光 004 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "24310 004",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_id_plus_card_number"
     },
     {
       "collectorNumber": "004",
       "name": "カットロトム",
-      "query": "カットロトム 004 japanese pokemon",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "SV10 004",
+      "setId": "SV10",
+      "strategy": "pokewallet_set_code_plus_card_number"
     },
     {
       "collectorNumber": "004",
       "name": "カットロトム",
-      "query": "カットロトム ロケット団の栄光 pokemon card",
-      "setId": "SV10"
+      "pokewalletSetId": "24310",
+      "query": "カットロトム SV10",
+      "setId": "SV10",
+      "strategy": "name_plus_pokewallet_set_code"
+    }
+  ],
+  "sampleSetMatches": [
+    {
+      "cardscanrSetId": "SV10",
+      "cardscanrSetName": "ロケット団の栄光",
+      "pokewalletSetCode": "SV10",
+      "pokewalletSetId": "24310",
+      "pokewalletSetName": "SV10: The Glory of Team Rocket",
+      "score": 0.55,
+      "signals": [
+        "set_code_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV11B",
+      "cardscanrSetName": "ブラックボルト",
+      "pokewalletSetCode": "SV11B",
+      "pokewalletSetId": "24349",
+      "pokewalletSetName": "SV11B: Black Bolt",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV11W",
+      "cardscanrSetName": "ホワイトフレア",
+      "pokewalletSetCode": "SV11W",
+      "pokewalletSetId": "24350",
+      "pokewalletSetName": "SV11W: White Flare",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV9",
+      "cardscanrSetName": "バトルパートナーズ",
+      "pokewalletSetCode": "SV9",
+      "pokewalletSetId": "24173",
+      "pokewalletSetName": "SV9: Battle Partners",
+      "score": 0.6,
+      "signals": [
+        "set_code_exact",
+        "card_count_close"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV9a",
+      "cardscanrSetName": "熱風のアリーナ",
+      "pokewalletSetCode": "SV9a",
+      "pokewalletSetId": "24260",
+      "pokewalletSetName": "SV9a: Heat Wave Arena",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV1S",
+      "cardscanrSetName": "スカーレットex",
+      "pokewalletSetCode": "SV1S",
+      "pokewalletSetId": "23605",
+      "pokewalletSetName": "SV1S: Scarlet ex",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV1V",
+      "cardscanrSetName": "バイオレットex",
+      "pokewalletSetCode": "SV1V",
+      "pokewalletSetId": "23606",
+      "pokewalletSetName": "SV1V: Violet ex",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV1a",
+      "cardscanrSetName": "トリプレットビート",
+      "pokewalletSetCode": "SV1a",
+      "pokewalletSetId": "23598",
+      "pokewalletSetName": "SV1a: Triplet Beat",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV2D",
+      "cardscanrSetName": "クレイバースト",
+      "pokewalletSetCode": "SV2D",
+      "pokewalletSetId": "23608",
+      "pokewalletSetName": "SV2D: Clay Burst",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
+    },
+    {
+      "cardscanrSetId": "SV2P",
+      "cardscanrSetName": "スノーハザード",
+      "pokewalletSetCode": "SV2P",
+      "pokewalletSetId": "23607",
+      "pokewalletSetName": "SV2P: Snow Hazard",
+      "score": 0.62,
+      "signals": [
+        "set_code_exact",
+        "card_count_exact"
+      ]
     }
   ],
   "sampleSkipped": [
     {
-      "detail": "HTTP Error 429: Too Many Requests",
-      "query": "ロケット団のワナイダー ロケット団の栄光 009 japanese pokemon",
-      "reason": "request_failed"
+      "providerId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
+      "query": "24310 001",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_id_plus_card_number"
+    },
+    {
+      "providerId": "pk_fb19de2f941e96bca0987476525fa14a764dd1396bcf41cdb8c04dd582cfa30ba22940073ca1a1bea6b8915e0888",
+      "query": "SV10 001",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
+      "query": "SV10 001",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
+      "query": "24310 002",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_id_plus_card_number"
+    },
+    {
+      "providerId": "pk_d3f16bb1d12d011324ee2953ec6fe19c1ea1d389500e61809663ef14a18e5963720c46bc091b12c26895e499852e",
+      "query": "SV10 002",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
+      "query": "SV10 002",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
+      "query": "24310 003",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_id_plus_card_number"
+    },
+    {
+      "providerId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
+      "query": "SV10 003",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_2a6ebe3d387614a374266ebd108e3f35b62f22e69c84c5a06439a88b83390e2a45290c02596820419570c6325ee5",
+      "query": "SV10 003",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
+      "query": "24310 004",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_id_plus_card_number"
+    },
+    {
+      "providerId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
+      "query": "SV10 004",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    },
+    {
+      "providerId": "pk_4a3e218a548dd4d4d5456bc71af228326a4dd5f2bb7740539699fcc65b39e1a9dc748e90e0360793ba8e050689c0",
+      "query": "SV10 004",
+      "reason": "collector_number_mismatch",
+      "strategy": "pokewallet_set_code_plus_card_number"
+    }
+  ],
+  "sampleUnmatchedCardScanRSets": [
+    {
+      "setId": "S12a"
+    },
+    {
+      "setId": "PMCG1"
+    },
+    {
+      "setId": "E1"
+    },
+    {
+      "setId": "E2"
+    },
+    {
+      "setId": "ADV5"
+    },
+    {
+      "setId": "E3"
+    },
+    {
+      "setId": "E4"
+    },
+    {
+      "setId": "E5"
+    },
+    {
+      "setId": "M1L"
+    },
+    {
+      "setId": "M1S"
+    }
+  ],
+  "sampleUnmatchedPokewalletSets": [
+    {
+      "language": "jap",
+      "name": "ADV-P Promotional Cards",
+      "pokewalletSetCode": "ADV-P",
+      "pokewalletSetId": "24140"
+    },
+    {
+      "language": "jap",
+      "name": "Aqua Deck Kit",
+      "pokewalletSetCode": "advG",
+      "pokewalletSetId": "24122"
+    },
+    {
+      "language": "eng",
+      "name": "Ash vs Team Rocket Deck Kit (JP Exclusive)",
+      "pokewalletSetCode": "AVTR",
+      "pokewalletSetId": "23095"
+    },
+    {
+      "language": "jap",
+      "name": "Battle Academy",
+      "pokewalletSetCode": "svI",
+      "pokewalletSetId": "23822"
+    },
+    {
+      "language": "jap",
+      "name": "Battle Academy",
+      "pokewalletSetCode": "svIba",
+      "pokewalletSetId": "-228"
+    },
+    {
+      "language": "jap",
+      "name": "Deoxys/Rayquaza Constructed Starter Deck",
+      "pokewalletSetCode": "advJ",
+      "pokewalletSetId": "-204"
+    },
+    {
+      "language": "eng",
+      "name": "Extended Art: SV11 Black Bolt",
+      "pokewalletSetCode": "xsv11B",
+      "pokewalletSetId": "-236"
+    },
+    {
+      "language": "eng",
+      "name": "Extended Art: SV11 White Flare",
+      "pokewalletSetCode": "xsv11W",
+      "pokewalletSetId": "-237"
+    },
+    {
+      "language": "eng",
+      "name": "Extended Art: SV2a",
+      "pokewalletSetCode": "xsv2a",
+      "pokewalletSetId": "-238"
+    },
+    {
+      "language": "eng",
+      "name": "Extended Art: Terastal Fest",
+      "pokewalletSetCode": "xsv8a",
+      "pokewalletSetId": "-239"
     }
   ],
   "schemaVersion": "1.0.0",
   "searchTargetsTested": [
-    "クヌギダマ ロケット団の栄光 001 japanese pokemon",
-    "クヌギダマ 001 japanese pokemon",
-    "クヌギダマ ロケット団の栄光 pokemon card",
-    "キノココ ロケット団の栄光 002 japanese pokemon",
-    "キノココ 002 japanese pokemon",
-    "キノココ ロケット団の栄光 pokemon card",
-    "キノガッサ ロケット団の栄光 003 japanese pokemon",
-    "キノガッサ 003 japanese pokemon",
-    "キノガッサ ロケット団の栄光 pokemon card",
-    "カットロトム ロケット団の栄光 004 japanese pokemon",
-    "カットロトム 004 japanese pokemon",
-    "カットロトム ロケット団の栄光 pokemon card",
-    "カリキリ ロケット団の栄光 005 japanese pokemon",
-    "カリキリ 005 japanese pokemon",
-    "カリキリ ロケット団の栄光 pokemon card",
-    "ラランテス ロケット団の栄光 006 japanese pokemon",
-    "ラランテス 006 japanese pokemon",
-    "ラランテス ロケット団の栄光 pokemon card",
-    "ロケット団のサッチムシ ロケット団の栄光 007 japanese pokemon",
-    "ロケット団のサッチムシ 007 japanese pokemon",
-    "ロケット団のサッチムシ ロケット団の栄光 pokemon card",
-    "ロケット団のタマンチュラ ロケット団の栄光 008 japanese pokemon",
-    "ロケット団のタマンチュラ 008 japanese pokemon",
-    "ロケット団のタマンチュラ ロケット団の栄光 pokemon card",
-    "ロケット団のワナイダー ロケット団の栄光 009 japanese pokemon"
+    "24310 001",
+    "SV10 001",
+    "クヌギダマ SV10",
+    "24310 002",
+    "SV10 002",
+    "キノココ SV10",
+    "24310 003",
+    "SV10 003",
+    "キノガッサ SV10",
+    "24310 004",
+    "SV10 004",
+    "カットロトム SV10",
+    "24310 005",
+    "SV10 005",
+    "カリキリ SV10",
+    "24310 006",
+    "SV10 006",
+    "ラランテス SV10",
+    "24310 007",
+    "SV10 007",
+    "ロケット団のサッチムシ SV10",
+    "24310 008",
+    "SV10 008",
+    "ロケット団のタマンチュラ SV10",
+    "24310 009",
+    "SV10 009",
+    "ロケット団のワナイダー SV10",
+    "24310 010",
+    "SV10 010",
+    "ミニーブ SV10",
+    "24310 011",
+    "SV10 011",
+    "オリーニョ SV10",
+    "24310 012",
+    "SV10 012",
+    "オリーヴァex SV10",
+    "24310 013",
+    "SV10 013",
+    "ガーディ SV10"
   ],
+  "setMatchCandidatesBuilt": 25,
   "skippedLowConfidence": 0,
-  "skippedNoCanonicalMatch": 0,
+  "skippedNoCanonicalMatch": 39,
   "skippedNoCurrency": 0,
   "skippedNoPrice": 0,
-  "unmappedResults": 0
+  "unmappedResults": 39
 }

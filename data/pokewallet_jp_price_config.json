@@ -4,7 +4,7 @@
   "provider": "pokewallet",
   "apiKeyEnv": "POKEWALLET_API_KEY",
   "mode": "controlled_test",
-  "maxRequestsPerRun": 25,
+  "maxRequestsPerRun": 40,
   "requestSleepSeconds": 0.35,
   "targetLanguages": [
     "jp"
@@ -12,6 +12,13 @@
   "targetGame": "pokemon",
   "confidenceThreshold": 0.82,
   "writeOnlyConfidentMatches": true,
+  "usePokewalletSetMap": true,
+  "setMapMaxSets": 25,
+  "searchStrategy": "pokewallet_set_id_plus_card_number",
+  "fallbackSearchStrategies": [
+    "pokewallet_set_code_plus_card_number",
+    "name_plus_pokewallet_set_code"
+  ],
   "useCatalogueSampleTargets": true,
   "catalogueSampleLimit": 25,
   "catalogueSampleStrategy": "known_popular_and_recent",
