@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,8 +24,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_DIR = ROOT / "public" / "v1"
 CONFIG_PATH = ROOT / "data" / "pokewallet_catalog_config.json"
 OUTPUT_DIR = PUBLIC_DIR / "provider-catalog" / "pokewallet"
+CARDS_DIR = OUTPUT_DIR / "cards"
 DIAG_PATH = PUBLIC_DIR / "diagnostics" / "pokewallet-catalog-foundation-latest.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
+DEFAULT_FULL_STATE_PATH = ROOT / "data" / "pokewallet_catalog_full_state.json"
 BASE_URL = "https://api.pokewallet.io"
 SCHEMA_VERSION = "1.0.0"
 MAX_SAMPLE_ITEMS = 20
@@ -100,26 +105,50 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def rel_path(path: Path) -> str:
+    return str(path.relative_to(ROOT))
+
+
+def configured_path(value: Any, default_path: Path) -> Path:
+    text = str(value or "").strip()
+    if not text:
+        return default_path
+    path = Path(text)
+    return path if path.is_absolute() else ROOT / path
+
+
+def provider_user_agent() -> str:
+    return "CardScanR-PokeWallet-Catalog-Foundation/1.0"
+
+
 def base_notes() -> list[str]:
     return [
         "Pokewallet provider catalogue foundation for CardScanR matching research.",
         "Only safe provider metadata is stored.",
         "Image references are stored as API endpoints only; image files are not stored in this repository.",
-        "Production catalogue integration comes later after provider coverage is reviewed.",
+        "Provider metadata is not official CardScanR canonical data yet.",
+        "Production catalogue and pricing integration are separate later steps.",
     ]
 
 
-def base_diag(ts: str, api_key_present: bool) -> dict[str, Any]:
+def base_diag(ts: str, api_key_present: bool, *, mode: str = "catalogue_foundation") -> dict[str, Any]:
     return {
         "schemaVersion": SCHEMA_VERSION,
         "generatedAtUtc": ts,
         "provider": "pokewallet",
-        "mode": "catalogue_foundation",
+        "mode": mode,
+        "status": "ok",
         "apiKeyPresent": api_key_present,
+        "fullCatalogueEnabled": False,
         "requestsAttempted": 0,
         "requestsSucceeded": 0,
         "requestsFailed": 0,
         "setsFetched": 0,
+        "setsProcessedThisRun": 0,
+        "setsRemainingAfterRun": 0,
+        "cardsWrittenThisRun": 0,
+        "cardsWrittenByLanguage": {},
+        "setFilesWritten": 0,
         "languagesSeen": {},
         "setsSelectedByLanguage": {},
         "cardsFetchedByLanguage": {},
@@ -127,8 +156,52 @@ def base_diag(ts: str, api_key_present: bool) -> dict[str, Any]:
         "imageSamplesAvailable": 0,
         "sampleCards": [],
         "sampleSkipped": [],
+        "blockerReason": "",
         "recommendation": "",
     }
+
+
+def default_full_state(run_id: str) -> dict[str, Any]:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "updatedAtUtc": now_utc(),
+        "mode": "full_catalogue",
+        "completedSetKeys": [],
+        "failedSetKeys": [],
+        "skippedSetKeys": [],
+        "lastProcessedSetKey": None,
+        "requestsAttemptedTotal": 0,
+        "requestsSucceededTotal": 0,
+        "requestsFailedTotal": 0,
+        "cardsWrittenTotal": 0,
+        "languagesCompleted": {},
+        "lastRunId": run_id,
+    }
+
+
+def load_full_state(path: Path, run_id: str) -> dict[str, Any]:
+    if not path.exists():
+        return default_full_state(run_id)
+    try:
+        data = load_json(path)
+    except Exception:
+        return default_full_state(run_id)
+    state = default_full_state(run_id)
+    state.update({key: data.get(key, value) for key, value in state.items()})
+    state["lastRunId"] = run_id
+    return state
+
+
+def write_full_state(path: Path, state: dict[str, Any]) -> None:
+    state["updatedAtUtc"] = now_utc()
+    write_json(path, state)
+
+
+def add_state_item(state: dict[str, Any], field: str, value: str) -> None:
+    items = state.setdefault(field, [])
+    if isinstance(items, list) and value not in items:
+        items.append(value)
+        items.sort()
 
 
 def fetch_json(url: str, *, api_key: str, timeout_seconds: int = 30) -> FetchResult:
@@ -137,7 +210,7 @@ def fetch_json(url: str, *, api_key: str, timeout_seconds: int = 30) -> FetchRes
         headers={
             "X-API-Key": api_key,
             "Accept": "application/json",
-            "User-Agent": "CardScanR-PokeWallet-Catalog-Foundation/1.0",
+            "User-Agent": provider_user_agent(),
         },
     )
     try:
@@ -160,7 +233,7 @@ def fetch_image_metadata(url: str, *, api_key: str, timeout_seconds: int = 20) -
         headers={
             "X-API-Key": api_key,
             "Accept": "image/*",
-            "User-Agent": "CardScanR-PokeWallet-Catalog-Foundation/1.0",
+            "User-Agent": provider_user_agent(),
         },
     )
     try:
@@ -181,12 +254,18 @@ def header_value(headers: dict[str, str], name: str) -> str | None:
     return None
 
 
-def record_request(diag: dict[str, Any], result: FetchResult) -> None:
+def record_request(diag: dict[str, Any], result: FetchResult, state: dict[str, Any] | None = None) -> None:
     diag["requestsAttempted"] += 1
+    if state is not None:
+        state["requestsAttemptedTotal"] = int(state.get("requestsAttemptedTotal") or 0) + 1
     if result.ok:
         diag["requestsSucceeded"] += 1
+        if state is not None:
+            state["requestsSucceededTotal"] = int(state.get("requestsSucceededTotal") or 0) + 1
     else:
         diag["requestsFailed"] += 1
+        if state is not None:
+            state["requestsFailedTotal"] = int(state.get("requestsFailedTotal") or 0) + 1
 
 
 def list_items(payload: dict[str, Any], *keys: str) -> list[dict[str, Any]]:
@@ -228,10 +307,33 @@ def parse_set(raw: dict[str, Any], language_map: dict[str, Any]) -> ProviderSet 
     )
 
 
-def fetch_sets(api_key: str, config: dict[str, Any], diag: dict[str, Any]) -> list[ProviderSet]:
+def request_limit(config: dict[str, Any], args: argparse.Namespace | None = None, *, full: bool = False) -> int:
+    if args is not None and args.max_requests is not None:
+        return max(1, int(args.max_requests))
+    if full:
+        full_cfg = config.get("fullCatalogue") if isinstance(config.get("fullCatalogue"), dict) else {}
+        return max(1, int(full_cfg.get("maxRequestsPerRun") or config.get("maxRequestsPerRun") or 500))
+    return max(1, int(config.get("maxRequestsPerRun") or 500))
+
+
+def sleep_seconds(config: dict[str, Any], *, full: bool = False) -> float:
+    if full:
+        full_cfg = config.get("fullCatalogue") if isinstance(config.get("fullCatalogue"), dict) else {}
+        return max(0.0, float(full_cfg.get("requestSleepSeconds") or config.get("requestSleepSeconds") or 0.0))
+    return max(0.0, float(config.get("requestSleepSeconds") or 0.0))
+
+
+def fetch_sets(
+    api_key: str,
+    config: dict[str, Any],
+    diag: dict[str, Any],
+    *,
+    max_requests: int,
+    state: dict[str, Any] | None = None,
+    full: bool = False,
+) -> list[ProviderSet]:
     language_map = config.get("languageMap") if isinstance(config.get("languageMap"), dict) else {}
-    max_requests = max(1, int(config.get("maxRequestsPerRun") or 500))
-    sleep_seconds = max(0.0, float(config.get("requestSleepSeconds") or 0.0))
+    delay = sleep_seconds(config, full=full)
     page = 1
     per_page = 100
     seen: set[str] = set()
@@ -239,9 +341,13 @@ def fetch_sets(api_key: str, config: dict[str, Any], diag: dict[str, Any]) -> li
 
     while diag["requestsAttempted"] < max_requests:
         result = fetch_json(f"{BASE_URL}/sets?page={page}&limit={per_page}", api_key=api_key)
-        record_request(diag, result)
+        record_request(diag, result, state)
         if not result.ok or result.payload is None:
-            append_sample(diag["sampleSkipped"], {"reason": "sets_fetch_failed", "page": page, "detail": result.error})
+            detail = result.error or "request_failed"
+            append_sample(diag["sampleSkipped"], {"reason": "sets_fetch_failed", "page": page, "detail": detail})
+            if result.status_code == 429:
+                diag["status"] = "rate_limited"
+                diag["blockerReason"] = "Pokewallet returned 429 while fetching sets."
             break
 
         items = list_items(result.payload, "data", "results", "sets")
@@ -261,9 +367,8 @@ def fetch_sets(api_key: str, config: dict[str, Any], diag: dict[str, Any]) -> li
         if added == 0 or len(items) < per_page:
             break
         page += 1
-        if sleep_seconds:
-            time.sleep(sleep_seconds)
-
+        if delay:
+            time.sleep(delay)
     return sets
 
 
@@ -279,7 +384,22 @@ def public_set_record(item: ProviderSet) -> dict[str, Any]:
     }
 
 
-def select_sets(sets: list[ProviderSet], config: dict[str, Any]) -> dict[str, list[ProviderSet]]:
+def set_key_for(item: ProviderSet, *, prefer_numeric: bool) -> str:
+    if prefer_numeric and item.set_id:
+        return item.set_id
+    return item.set_code or item.set_id or item.name
+
+
+def safe_filename(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
+    return cleaned or "unknown"
+
+
+def per_set_path(item: ProviderSet, *, prefer_numeric: bool) -> Path:
+    return CARDS_DIR / safe_filename(item.app_language) / f"{safe_filename(set_key_for(item, prefer_numeric=prefer_numeric))}.json"
+
+
+def select_sample_sets(sets: list[ProviderSet], config: dict[str, Any]) -> dict[str, list[ProviderSet]]:
     target_languages = {str(item).lower() for item in config.get("targetLanguages", []) if str(item).strip()}
     limits = config.get("sampleSetsPerLanguage") if isinstance(config.get("sampleSetsPerLanguage"), dict) else {}
     grouped: dict[str, list[ProviderSet]] = {}
@@ -293,16 +413,40 @@ def select_sets(sets: list[ProviderSet], config: dict[str, Any]) -> dict[str, li
         limit = max(0, int(limits.get(language, 0) or 0))
         if limit <= 0:
             continue
-        selected[language] = sorted(
-            items,
-            key=lambda item: (
-                0 if item.release_date else 1,
-                item.release_date or "",
-                item.set_code,
-                item.set_id,
-            ),
-            reverse=True,
-        )[:limit]
+        selected[language] = sorted(items, key=sort_set_key)[:limit]
+    return selected
+
+
+def sort_set_key(item: ProviderSet) -> tuple[int, str, str, str]:
+    return (0 if item.release_date else 1, item.release_date or "", item.set_code, item.set_id)
+
+
+def select_full_sets(
+    sets: list[ProviderSet],
+    config: dict[str, Any],
+    *,
+    language_filter: str | None,
+    all_languages: bool,
+) -> dict[str, list[ProviderSet]]:
+    full_cfg = config.get("fullCatalogue") if isinstance(config.get("fullCatalogue"), dict) else {}
+    include_provider_languages = {str(item).lower() for item in full_cfg.get("includeLanguages", []) if str(item).strip()}
+    grouped: dict[str, list[ProviderSet]] = {}
+    for item in sets:
+        if include_provider_languages and item.language not in include_provider_languages:
+            continue
+        if language_filter and item.app_language != language_filter:
+            continue
+        grouped.setdefault(item.app_language, []).append(item)
+
+    if all_languages or language_filter:
+        return {language: sorted(items, key=sort_set_key) for language, items in sorted(grouped.items())}
+
+    limits = config.get("sampleSetsPerLanguage") if isinstance(config.get("sampleSetsPerLanguage"), dict) else {}
+    selected: dict[str, list[ProviderSet]] = {}
+    for language, items in sorted(grouped.items()):
+        limit = max(0, int(limits.get(language, 0) or 0))
+        if limit > 0:
+            selected[language] = sorted(items, key=sort_set_key)[:limit]
     return selected
 
 
@@ -322,7 +466,7 @@ def variant_values(record: dict[str, Any]) -> list[str]:
     found: list[str] = []
     for key in ("variant", "variant_type", "variantType", "sub_type_name", "subTypeName", "finish", "condition"):
         value = record.get(key)
-        if isinstance(value, str) and value.strip() and value not in found:
+        if isinstance(value, str) and value.strip() and value.strip() not in found:
             found.append(value.strip())
     for source_key in ("tcgplayer", "cardmarket", "prices"):
         source = record.get(source_key)
@@ -342,7 +486,7 @@ def variant_values(record: dict[str, Any]) -> list[str]:
                 value = item.get(key)
                 if isinstance(value, str) and value.strip() and value.strip() not in found:
                     found.append(value.strip())
-    return found
+    return sorted(found)
 
 
 def has_price_fields(record: dict[str, Any]) -> bool:
@@ -363,6 +507,8 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
     clean_name = string_value(info.get("clean_name") or record.get("clean_name"))
     number = string_value(info.get("card_number") or record.get("card_number") or record.get("number"))
     rarity = string_value(info.get("rarity") or record.get("rarity"))
+    low_endpoint = f"/images/{provider_card_id}?size=low" if provider_card_id else None
+    high_endpoint = f"/images/{provider_card_id}?size=high" if provider_card_id else None
     return {
         "providerCardId": provider_card_id,
         "providerSetId": provider_set_id,
@@ -376,6 +522,8 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
         "rarity": rarity,
         "variants": variant_values(record),
         "imageEndpoint": f"/images/{provider_card_id}" if provider_card_id else None,
+        "imageEndpointLow": low_endpoint,
+        "imageEndpointHigh": high_endpoint,
         "imageLowAvailable": None,
         "imageHighAvailable": None,
         "hasPriceFields": has_price_fields(record),
@@ -391,23 +539,31 @@ def fetch_set_cards(
     set_item: ProviderSet,
     config: dict[str, Any],
     diag: dict[str, Any],
-) -> list[dict[str, Any]]:
-    max_requests = max(1, int(config.get("maxRequestsPerRun") or 500))
-    sleep_seconds = max(0.0, float(config.get("requestSleepSeconds") or 0.0))
+    max_requests: int,
+    state: dict[str, Any] | None = None,
+    full: bool = False,
+) -> tuple[list[dict[str, Any]], bool]:
+    delay = sleep_seconds(config, full=full)
     page = 1
     per_page = 200
     cards: list[dict[str, Any]] = []
     seen: set[str] = set()
+    rate_limited = False
 
     while diag["requestsAttempted"] < max_requests:
-        set_key = set_item.set_id or set_item.set_code
+        set_key = set_key_for(set_item, prefer_numeric=True)
         if not set_key:
             append_sample(diag["sampleSkipped"], {"reason": "missing_set_id", "setCode": set_item.set_code, "language": set_item.language})
             break
         result = fetch_json(f"{BASE_URL}/sets/{quote(set_key, safe='')}?page={page}&limit={per_page}", api_key=api_key)
-        record_request(diag, result)
+        record_request(diag, result, state)
         if not result.ok or result.payload is None:
-            append_sample(diag["sampleSkipped"], {"reason": "set_detail_failed", "setId": set_key, "page": page, "detail": result.error})
+            detail = result.error or "request_failed"
+            append_sample(diag["sampleSkipped"], {"reason": "set_detail_failed", "setId": set_key, "page": page, "detail": detail})
+            if result.status_code == 429:
+                rate_limited = True
+                diag["status"] = "rate_limited"
+                diag["blockerReason"] = "Pokewallet returned 429 while fetching set details."
             break
         set_obj, page_cards = set_detail_cards(result.payload)
         if not page_cards:
@@ -424,9 +580,9 @@ def fetch_set_cards(
         if added == 0 or len(page_cards) < per_page:
             break
         page += 1
-        if sleep_seconds:
-            time.sleep(sleep_seconds)
-    return cards
+        if delay:
+            time.sleep(delay)
+    return cards, rate_limited
 
 
 def check_images(
@@ -435,10 +591,13 @@ def check_images(
     cards: list[dict[str, Any]],
     config: dict[str, Any],
     diag: dict[str, Any],
+    max_requests: int,
+    full: bool = False,
 ) -> list[dict[str, Any]]:
-    max_requests = max(1, int(config.get("maxRequestsPerRun") or 500))
-    sample_limit = max(0, int(config.get("imageCheckSampleLimit") or 0))
-    sleep_seconds = max(0.0, float(config.get("requestSleepSeconds") or 0.0))
+    cfg = config.get("fullCatalogue") if full and isinstance(config.get("fullCatalogue"), dict) else config
+    sample_limit_key = "imageAvailabilitySampleLimit" if full else "imageCheckSampleLimit"
+    sample_limit = max(0, int(cfg.get(sample_limit_key) or 0))
+    delay = sleep_seconds(config, full=full)
     samples: list[dict[str, Any]] = []
     checked_cards = 0
 
@@ -479,14 +638,52 @@ def check_images(
             )
             if result.status_code == 429:
                 append_sample(diag["sampleSkipped"], {"reason": "image_check_rate_limited", "providerCardId": provider_card_id})
+                diag["status"] = "rate_limited"
+                diag["blockerReason"] = "Pokewallet returned 429 while checking image availability."
                 return samples
-            if sleep_seconds:
-                time.sleep(sleep_seconds)
+            if delay:
+                time.sleep(delay)
     return samples
 
 
-def empty_provider_files(ts: str) -> dict[str, dict[str, Any]]:
+def full_summary_defaults() -> dict[str, Any]:
+    return {
+        "fullCatalogueAvailable": bool(list(CARDS_DIR.glob("*/*.json"))) if CARDS_DIR.exists() else False,
+        "fullCatalogueMode": "metadata_only",
+        "perSetFilesWritten": len(list(CARDS_DIR.glob("*/*.json"))) if CARDS_DIR.exists() else 0,
+        "cardsWrittenByLanguage": {},
+        "setsWrittenByLanguage": {},
+        "latestFullCatalogueRunAtUtc": None,
+        "statePath": str(DEFAULT_FULL_STATE_PATH.relative_to(ROOT)).replace("\\", "/"),
+    }
+
+
+def summarize_existing_full_catalogue() -> dict[str, Any]:
+    summary = full_summary_defaults()
+    cards_by_language: dict[str, int] = {}
+    sets_by_language: dict[str, int] = {}
+    latest: str | None = None
+    for path in sorted(CARDS_DIR.glob("*/*.json")) if CARDS_DIR.exists() else []:
+        payload = load_json(path)
+        language = string_value(payload.get("cardScanRLanguage") or path.parent.name)
+        cards = payload.get("cards")
+        count = len(cards) if isinstance(cards, list) else 0
+        cards_by_language[language] = cards_by_language.get(language, 0) + count
+        sets_by_language[language] = sets_by_language.get(language, 0) + 1
+        ts = payload.get("generatedAtUtc")
+        if isinstance(ts, str) and (latest is None or ts > latest):
+            latest = ts
+    summary["fullCatalogueAvailable"] = bool(sets_by_language)
+    summary["perSetFilesWritten"] = sum(sets_by_language.values())
+    summary["cardsWrittenByLanguage"] = dict(sorted(cards_by_language.items()))
+    summary["setsWrittenByLanguage"] = dict(sorted(sets_by_language.items()))
+    summary["latestFullCatalogueRunAtUtc"] = latest
+    return summary
+
+
+def empty_provider_files(ts: str, full_summary: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
     notes = base_notes()
+    full = full_summary or summarize_existing_full_catalogue()
     return {
         "sets-summary.json": {
             "schemaVersion": SCHEMA_VERSION,
@@ -497,6 +694,7 @@ def empty_provider_files(ts: str) -> dict[str, dict[str, Any]]:
             "setsFetched": 0,
             "languagesSeen": {},
             "sets": [],
+            **full,
         },
         "languages-summary.json": {
             "schemaVersion": SCHEMA_VERSION,
@@ -505,6 +703,7 @@ def empty_provider_files(ts: str) -> dict[str, dict[str, Any]]:
             "game": "pokemon",
             "notes": notes,
             "languages": [],
+            **full,
         },
         "cards-sample.json": {
             "schemaVersion": SCHEMA_VERSION,
@@ -514,6 +713,7 @@ def empty_provider_files(ts: str) -> dict[str, dict[str, Any]]:
             "notes": notes,
             "cardCount": 0,
             "cards": [],
+            **full,
         },
         "image-availability-sample.json": {
             "schemaVersion": SCHEMA_VERSION,
@@ -524,8 +724,13 @@ def empty_provider_files(ts: str) -> dict[str, dict[str, Any]]:
             "imageSamplesChecked": 0,
             "imageSamplesAvailable": 0,
             "samples": [],
+            **full,
         },
     }
+
+
+def map_provider_language_for_summary(provider_language: str, language_map: dict[str, Any]) -> str:
+    return str(language_map.get(provider_language, provider_language)).lower()
 
 
 def write_provider_outputs(
@@ -536,8 +741,10 @@ def write_provider_outputs(
     cards: list[dict[str, Any]],
     image_samples: list[dict[str, Any]],
     diag: dict[str, Any],
+    language_map: dict[str, Any],
+    full_summary: dict[str, Any] | None = None,
 ) -> list[Path]:
-    payloads = empty_provider_files(ts)
+    payloads = empty_provider_files(ts, full_summary)
     language_counts: dict[str, int] = {}
     provider_language_counts: dict[str, int] = {}
     selected_counts: dict[str, int] = {}
@@ -565,15 +772,21 @@ def write_provider_outputs(
     )
     payloads["languages-summary.json"]["languages"] = [
         {
-            "providerLanguages": sorted(language for language, count in provider_language_counts.items() if language and map_provider_language_for_summary(language, diag) == app_language),
+            "providerLanguages": sorted(
+                language
+                for language in provider_language_counts
+                if language and map_provider_language_for_summary(language, language_map) == app_language
+            ),
             "cardScanRLanguage": app_language,
             "setCount": language_counts.get(app_language, 0),
             "selectedSetCount": selected_counts.get(app_language, 0),
             "cardsFetched": card_counts.get(app_language, 0),
+            "cardsWritten": (full_summary or {}).get("cardsWrittenByLanguage", {}).get(app_language, 0),
+            "setsWritten": (full_summary or {}).get("setsWrittenByLanguage", {}).get(app_language, 0),
         }
         for app_language in sorted(language_counts)
     ]
-    payloads["cards-sample.json"].update({"cardCount": len(cards), "cards": cards})
+    payloads["cards-sample.json"].update({"cardCount": len(cards), "cards": cards[:100]})
     payloads["image-availability-sample.json"].update(
         {
             "imageSamplesChecked": diag["imageSamplesChecked"],
@@ -590,15 +803,31 @@ def write_provider_outputs(
     return written
 
 
-def map_provider_language_for_summary(provider_language: str, diag: dict[str, Any]) -> str:
-    mapping = diag.get("_languageMap")
-    if isinstance(mapping, dict):
-        return str(mapping.get(provider_language, provider_language)).lower()
-    return provider_language
+def per_set_payload(ts: str, set_item: ProviderSet, cards: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "provider": "pokewallet",
+        "game": "pokemon",
+        "providerLanguage": set_item.language,
+        "cardScanRLanguage": set_item.app_language,
+        "providerSetId": set_item.set_id,
+        "providerSetCode": set_item.set_code,
+        "providerSetName": set_item.name,
+        "cardCount": len(cards),
+        "imageReferencesOnly": True,
+        "cards": cards,
+    }
+
+
+def write_per_set_file(ts: str, set_item: ProviderSet, cards: list[dict[str, Any]], *, prefer_numeric: bool) -> Path:
+    path = per_set_path(set_item, prefer_numeric=prefer_numeric)
+    write_json(path, per_set_payload(ts, set_item, cards))
+    return path
 
 
 def index_entry(dataset_id: str, path: Path, dataset_type: str, description: str, ts: str) -> dict[str, Any]:
-    return {
+    entry = {
         "id": dataset_id,
         "url": f"/v1/{path.relative_to(PUBLIC_DIR).as_posix()}",
         "sha256": sha256_file(path),
@@ -609,14 +838,14 @@ def index_entry(dataset_id: str, path: Path, dataset_type: str, description: str
         "schemaVersion": SCHEMA_VERSION,
         "game": "pokemon",
     }
+    language = path.parent.name if path.parent.parent == CARDS_DIR else None
+    if language:
+        entry["language"] = language
+    return entry
 
 
-def update_index(ts: str, written_paths: list[Path]) -> None:
-    index = load_json(INDEX_PATH)
-    datasets = index.get("datasets")
-    if not isinstance(datasets, list):
-        raise ValueError("index.json datasets must be a list")
-    entries = {
+def provider_dataset_entries(ts: str) -> dict[str, dict[str, Any]]:
+    entries: dict[str, dict[str, Any]] = {
         "provider_catalog_pokewallet_sets_summary": index_entry(
             "provider_catalog_pokewallet_sets_summary",
             OUTPUT_DIR / "sets-summary.json",
@@ -653,92 +882,319 @@ def update_index(ts: str, written_paths: list[Path]) -> None:
             ts,
         ),
     }
+    if CARDS_DIR.exists():
+        for path in sorted(CARDS_DIR.glob("*/*.json")):
+            language = path.parent.name
+            set_id = path.stem
+            dataset_id = f"provider_catalog_pokewallet_cards_{language}_{set_id}"
+            entries[dataset_id] = index_entry(
+                dataset_id,
+                path,
+                "provider_catalog_cards",
+                f"Pokewallet provider catalogue cards for {language} set {set_id}",
+                ts,
+            )
+    return entries
+
+
+def update_index(ts: str) -> None:
+    index = load_json(INDEX_PATH)
+    datasets = index.get("datasets")
+    if not isinstance(datasets, list):
+        raise ValueError("index.json datasets must be a list")
     by_id = {str(item.get("id")): item for item in datasets if isinstance(item, dict)}
-    for key, entry in entries.items():
-        if entry["url"] and (entry["id"] == "diagnostics_pokewallet_catalog_foundation" or Path(PUBLIC_DIR / entry["url"].removeprefix("/v1/")).exists()):
-            by_id[key] = entry
+    for dataset_id, entry in provider_dataset_entries(ts).items():
+        local_path = PUBLIC_DIR / str(entry["url"]).removeprefix("/v1/").lstrip("/")
+        if local_path.exists():
+            by_id[dataset_id] = entry
     index["datasets"] = [by_id[key] for key in sorted(by_id)]
     index["generatedAtUtc"] = ts
     write_json(INDEX_PATH, index)
 
 
-def main() -> int:
-    ts = now_utc()
-    config = load_json(CONFIG_PATH)
+def language_counts(sets: list[ProviderSet]) -> dict[str, int]:
+    return dict(sorted({language: sum(1 for item in sets if item.language == language) for language in {item.language for item in sets}}.items()))
+
+
+def finish_diag(diag: dict[str, Any]) -> None:
+    if diag["status"] == "ok" and diag.get("blockerReason"):
+        diag["status"] = "partial"
+    if diag["status"] == "ok" and diag.get("setsRemainingAfterRun", 0):
+        diag["status"] = "partial"
+
+
+def run_sample(args: argparse.Namespace, config: dict[str, Any], ts: str) -> dict[str, Any]:
     language_map = config.get("languageMap") if isinstance(config.get("languageMap"), dict) else {}
     api_key = os.getenv(str(config.get("apiKeyEnv") or "POKEWALLET_API_KEY"), "").strip()
-    diag = base_diag(ts, bool(api_key))
-    diag["_languageMap"] = language_map
-
-    if not bool(config.get("enabled", True)):
-        diag["recommendation"] = "Pokewallet catalogue foundation is disabled."
-        diag.pop("_languageMap", None)
-        written = write_provider_outputs(ts=ts, sets=[], selected={}, cards=[], image_samples=[], diag=diag)
-        write_json(DIAG_PATH, diag)
-        update_index(ts, written + [DIAG_PATH])
-        safe_log("Pokewallet catalogue foundation disabled; wrote empty provider catalogue shell files.")
-        return 0
+    diag = base_diag(ts, bool(api_key), mode="catalogue_foundation")
 
     if not api_key:
+        diag["status"] = "key_missing"
         diag["recommendation"] = "POKEWALLET_API_KEY is not set; provider catalogue foundation could not fetch Pokewallet data."
-        diag.pop("_languageMap", None)
-        written = write_provider_outputs(ts=ts, sets=[], selected={}, cards=[], image_samples=[], diag=diag)
         write_json(DIAG_PATH, diag)
-        update_index(ts, written + [DIAG_PATH])
-        safe_log("POKEWALLET_API_KEY missing; wrote diagnostics and empty provider catalogue shell files.")
-        return 0
+        return diag
 
-    max_requests = max(1, int(config.get("maxRequestsPerRun") or 500))
-    sleep_seconds = max(0.0, float(config.get("requestSleepSeconds") or 0.0))
-    sets = fetch_sets(api_key, config, diag)
+    max_requests = request_limit(config, args)
+    sets = fetch_sets(api_key, config, diag, max_requests=max_requests)
     diag["setsFetched"] = len(sets)
-    diag["languagesSeen"] = dict(sorted({language: sum(1 for item in sets if item.language == language) for language in {item.language for item in sets}}.items()))
+    diag["languagesSeen"] = language_counts(sets)
+    selected = select_sample_sets(sets, config)
+    diag["setsSelectedByLanguage"] = {language: [public_set_record(item) for item in items] for language, items in sorted(selected.items())}
 
-    selected = select_sets(sets, config)
-    diag["setsSelectedByLanguage"] = {
-        language: [public_set_record(item) for item in items]
-        for language, items in sorted(selected.items())
-    }
+    if args.dry_run:
+        diag["status"] = "dry_run"
+        diag["recommendation"] = "Dry run fetched Pokewallet set metadata only; no provider catalogue files were changed."
+        write_json(DIAG_PATH, diag)
+        return diag
 
     cards: list[dict[str, Any]] = []
     for language, items in sorted(selected.items()):
         for item in items:
             if diag["requestsAttempted"] >= max_requests:
+                diag["blockerReason"] = "Request limit reached during sample catalogue build."
                 append_sample(diag["sampleSkipped"], {"reason": "request_limit_reached", "language": language})
                 break
-            set_cards = fetch_set_cards(api_key=api_key, set_item=item, config=config, diag=diag)
+            set_cards, rate_limited = fetch_set_cards(api_key=api_key, set_item=item, config=config, diag=diag, max_requests=max_requests)
             cards.extend(set_cards)
             diag["cardsFetchedByLanguage"][language] = int(diag["cardsFetchedByLanguage"].get(language) or 0) + len(set_cards)
             for card in set_cards[:3]:
                 append_sample(diag["sampleCards"], card)
-            if sleep_seconds:
-                time.sleep(sleep_seconds)
+            if rate_limited:
+                break
+        if diag["status"] == "rate_limited":
+            break
 
-    image_samples = []
-    if not bool(config.get("writeImageFiles", False)) and bool(config.get("storeImageReferencesOnly", True)):
-        image_samples = check_images(api_key=api_key, cards=cards, config=config, diag=diag)
-    else:
+    image_samples: list[dict[str, Any]] = []
+    if diag["status"] != "rate_limited" and not bool(config.get("writeImageFiles", False)) and bool(config.get("storeImageReferencesOnly", True)):
+        image_samples = check_images(api_key=api_key, cards=cards, config=config, diag=diag, max_requests=max_requests)
+    elif bool(config.get("writeImageFiles", False)):
         append_sample(diag["sampleSkipped"], {"reason": "image_check_disabled_by_config"})
 
+    full_summary = summarize_existing_full_catalogue()
+    written = write_provider_outputs(
+        ts=ts,
+        sets=sets,
+        selected=selected,
+        cards=cards,
+        image_samples=image_samples,
+        diag=diag,
+        language_map=language_map,
+        full_summary=full_summary,
+    )
     diag["recommendation"] = (
         "Pokewallet catalogue foundation wrote provider metadata samples for review; production catalogue integration can be designed next."
         if cards
         else "Pokewallet sets were fetched, but no set-detail cards were collected for the configured sample."
     )
-    diag.pop("_languageMap", None)
-    written = write_provider_outputs(ts=ts, sets=sets, selected=selected, cards=cards, image_samples=image_samples, diag=diag)
     write_json(DIAG_PATH, diag)
-    update_index(ts, written + [DIAG_PATH])
-    safe_log(
-        "setsFetched={setsFetched} requests={requestsAttempted}/{requestsSucceeded} "
-        "cardsFetched={cardsFetched} imageSamples={imageSamplesChecked}/{imageSamplesAvailable}".format(
-            setsFetched=diag["setsFetched"],
-            requestsAttempted=diag["requestsAttempted"],
-            requestsSucceeded=diag["requestsSucceeded"],
-            cardsFetched=sum(int(value) for value in diag["cardsFetchedByLanguage"].values()),
-            imageSamplesChecked=diag["imageSamplesChecked"],
-            imageSamplesAvailable=diag["imageSamplesAvailable"],
+    update_index(ts)
+    return diag
+
+
+def run_reset_full_state(config: dict[str, Any]) -> dict[str, Any]:
+    ts = now_utc()
+    full_cfg = config.get("fullCatalogue") if isinstance(config.get("fullCatalogue"), dict) else {}
+    state_path = configured_path(full_cfg.get("statePath"), DEFAULT_FULL_STATE_PATH)
+    state = default_full_state(str(uuid.uuid4()))
+    write_full_state(state_path, state)
+    diag = base_diag(ts, bool(os.getenv(str(config.get("apiKeyEnv") or "POKEWALLET_API_KEY"), "").strip()), mode="full_catalogue")
+    diag["fullCatalogueEnabled"] = bool(full_cfg.get("enabled", False))
+    diag["status"] = "dry_run"
+    diag["recommendation"] = "Full catalogue state was reset; no provider requests were made."
+    write_json(DIAG_PATH, diag)
+    return diag
+
+
+def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str) -> dict[str, Any]:
+    full_cfg = config.get("fullCatalogue") if isinstance(config.get("fullCatalogue"), dict) else {}
+    language_map = config.get("languageMap") if isinstance(config.get("languageMap"), dict) else {}
+    api_key = os.getenv(str(config.get("apiKeyEnv") or "POKEWALLET_API_KEY"), "").strip()
+    diag = base_diag(ts, bool(api_key), mode="full_catalogue")
+    diag["fullCatalogueEnabled"] = bool(full_cfg.get("enabled", False)) or bool(args.full_catalogue)
+    state_path = configured_path(full_cfg.get("statePath"), DEFAULT_FULL_STATE_PATH)
+    run_id = str(uuid.uuid4())
+    state = load_full_state(state_path, run_id)
+    write_full_state(state_path, state)
+
+    if not api_key:
+        diag["status"] = "key_missing"
+        diag["blockerReason"] = "POKEWALLET_API_KEY is not set."
+        diag["recommendation"] = "Set POKEWALLET_API_KEY before running the full Pokewallet catalogue export."
+        write_json(DIAG_PATH, diag)
+        return diag
+
+    max_requests = request_limit(config, args, full=True)
+    prefer_numeric = bool(full_cfg.get("preferNumericSetId", True))
+    sets = fetch_sets(api_key, config, diag, max_requests=max_requests, state=state, full=True)
+    diag["setsFetched"] = len(sets)
+    diag["languagesSeen"] = language_counts(sets)
+    if diag["status"] == "rate_limited" and not sets:
+        diag["recommendation"] = "Pokewallet returned 429; resume the full catalogue export after the provider limit resets."
+        write_full_state(state_path, state)
+        write_json(DIAG_PATH, diag)
+        update_index(ts)
+        return diag
+    selected = select_full_sets(
+        sets,
+        config,
+        language_filter=str(args.language).lower() if args.language else None,
+        all_languages=bool(args.all_languages),
+    )
+    diag["setsSelectedByLanguage"] = {language: [public_set_record(item) for item in items[:25]] for language, items in sorted(selected.items())}
+
+    completed = set(state.get("completedSetKeys") if isinstance(state.get("completedSetKeys"), list) else [])
+    selected_items: list[tuple[str, ProviderSet]] = []
+    for language, items in sorted(selected.items()):
+        for item in items:
+            key = set_key_for(item, prefer_numeric=prefer_numeric)
+            if not key:
+                add_state_item(state, "skippedSetKeys", f"missing-key:{item.name}")
+                continue
+            if args.resume and key in completed:
+                continue
+            selected_items.append((language, item))
+
+    diag["setsRemainingAfterRun"] = len(selected_items)
+    if args.dry_run:
+        diag["status"] = "dry_run"
+        diag["recommendation"] = "Dry run selected full-catalogue provider sets only; no per-set files were changed."
+        write_json(DIAG_PATH, diag)
+        write_full_state(state_path, state)
+        return diag
+
+    written_paths: list[Path] = []
+    all_sample_cards: list[dict[str, Any]] = []
+    cards_written_by_language: dict[str, int] = {}
+    sets_written_by_language: dict[str, int] = {}
+
+    for language, item in selected_items:
+        if diag["requestsAttempted"] >= max_requests:
+            diag["blockerReason"] = "Request limit reached during full catalogue export."
+            diag["status"] = "partial"
+            append_sample(diag["sampleSkipped"], {"reason": "request_limit_reached", "language": language})
+            break
+
+        set_key = set_key_for(item, prefer_numeric=prefer_numeric)
+        state["lastProcessedSetKey"] = set_key
+        cards, rate_limited = fetch_set_cards(
+            api_key=api_key,
+            set_item=item,
+            config=config,
+            diag=diag,
+            max_requests=max_requests,
+            state=state,
+            full=True,
         )
+        if cards:
+            if bool(full_cfg.get("imageAvailabilityCheck", False)) and not bool(full_cfg.get("writeImageFiles", False)):
+                check_images(api_key=api_key, cards=cards, config=config, diag=diag, max_requests=max_requests, full=True)
+            if bool(full_cfg.get("writePerSetFiles", True)):
+                written_paths.append(write_per_set_file(ts, item, cards, prefer_numeric=prefer_numeric))
+            diag["setsProcessedThisRun"] += 1
+            diag["cardsWrittenThisRun"] += len(cards)
+            diag["setFilesWritten"] += 1
+            cards_written_by_language[language] = cards_written_by_language.get(language, 0) + len(cards)
+            sets_written_by_language[language] = sets_written_by_language.get(language, 0) + 1
+            state["cardsWrittenTotal"] = int(state.get("cardsWrittenTotal") or 0) + len(cards)
+            add_state_item(state, "completedSetKeys", set_key)
+            for card in cards[:3]:
+                append_sample(diag["sampleCards"], card)
+            all_sample_cards.extend(cards[:5])
+        else:
+            add_state_item(state, "failedSetKeys", set_key)
+            append_sample(diag["sampleSkipped"], {"reason": "set_detail_no_cards", "setId": set_key, "language": language})
+
+        write_full_state(state_path, state)
+        if rate_limited or diag["status"] == "rate_limited":
+            break
+        if sleep_seconds(config, full=True):
+            time.sleep(sleep_seconds(config, full=True))
+
+    diag["cardsWrittenByLanguage"] = dict(sorted(cards_written_by_language.items()))
+    diag["cardsFetchedByLanguage"] = dict(sorted(cards_written_by_language.items()))
+    diag["setsRemainingAfterRun"] = max(0, len(selected_items) - diag["setsProcessedThisRun"])
+
+    completed_sets = set(state.get("completedSetKeys") if isinstance(state.get("completedSetKeys"), list) else [])
+    languages_completed: dict[str, bool] = {}
+    for language, items in selected.items():
+        keys = [set_key_for(item, prefer_numeric=prefer_numeric) for item in items if set_key_for(item, prefer_numeric=prefer_numeric)]
+        languages_completed[language] = bool(keys) and all(key in completed_sets for key in keys)
+    state["languagesCompleted"] = languages_completed
+    write_full_state(state_path, state)
+
+    full_summary = summarize_existing_full_catalogue()
+    full_summary["latestFullCatalogueRunAtUtc"] = ts if written_paths else full_summary.get("latestFullCatalogueRunAtUtc")
+    full_summary["statePath"] = str(state_path.relative_to(ROOT)).replace("\\", "/") if state_path.is_relative_to(ROOT) else str(state_path)
+
+    if written_paths:
+        write_provider_outputs(
+            ts=ts,
+            sets=sets,
+            selected=selected,
+            cards=all_sample_cards,
+            image_samples=[],
+            diag=diag,
+            language_map=language_map,
+            full_summary=full_summary,
+        )
+    else:
+        write_provider_outputs(
+            ts=ts,
+            sets=sets,
+            selected=selected,
+            cards=[],
+            image_samples=[],
+            diag=diag,
+            language_map=language_map,
+            full_summary=full_summary,
+        )
+
+    if diag["status"] == "ok" and diag["setsRemainingAfterRun"] > 0:
+        diag["status"] = "partial"
+        if not diag["blockerReason"]:
+            diag["blockerReason"] = "Full catalogue export stopped before all selected sets were processed."
+    if diag["status"] == "rate_limited":
+        diag["recommendation"] = "Pokewallet returned 429; resume the full catalogue export after the provider limit resets."
+    elif diag["setsRemainingAfterRun"] > 0:
+        diag["recommendation"] = "Resume the full Pokewallet catalogue export until selected languages are complete."
+    else:
+        diag["recommendation"] = "Full Pokewallet catalogue export completed for the selected scope."
+    write_json(DIAG_PATH, diag)
+    update_index(ts)
+    return diag
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build Pokewallet provider catalogue foundation files.")
+    parser.add_argument("--dry-run", action="store_true", help="Fetch set metadata and write diagnostics only.")
+    parser.add_argument("--full-catalogue", action="store_true", help="Run the resumable full provider catalogue export.")
+    parser.add_argument("--language", type=str, default=None, help="CardScanR language filter such as en, jp, kr, zh, zh-cn, or zh-tw.")
+    parser.add_argument("--all-languages", action="store_true", help="Include all configured provider languages for full catalogue export.")
+    parser.add_argument("--max-requests", type=int, default=None, help="Maximum Pokewallet requests for this run.")
+    parser.add_argument("--resume", action="store_true", help="Skip sets already completed in the full catalogue state file.")
+    parser.add_argument("--reset-full-catalogue-state", action="store_true", help="Reset full catalogue state and exit.")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv or sys.argv[1:])
+    config = load_json(CONFIG_PATH)
+    ts = now_utc()
+
+    if args.reset_full_catalogue_state:
+        diag = run_reset_full_state(config)
+        safe_log("Reset data/pokewallet_catalog_full_state.json")
+        safe_log(f"status={diag['status']} requests={diag['requestsAttempted']}/{diag['requestsSucceeded']}")
+        return 0
+
+    if args.full_catalogue:
+        diag = run_full_catalogue(args, config, ts)
+    else:
+        diag = run_sample(args, config, ts)
+
+    safe_log(
+        "status={status} setsFetched={setsFetched} requests={requestsAttempted}/{requestsSucceeded} "
+        "setsProcessed={setsProcessedThisRun} cardsWritten={cardsWrittenThisRun} setFilesWritten={setFilesWritten}".format(**diag)
     )
     return 0
 

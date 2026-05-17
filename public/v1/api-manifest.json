@@ -150,6 +150,14 @@
     {
       "authRequired": false,
       "cacheable": true,
+      "description": "Pokewallet provider catalogue cards for one provider set with metadata and image references only",
+      "id": "provider_catalog_pokewallet_cards_by_set",
+      "method": "GET",
+      "path": "/provider-catalog/pokewallet/cards/{language}/{setId}.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
       "description": "Pokewallet image endpoint availability sample storing metadata only",
       "id": "provider_catalog_pokewallet_image_availability_sample",
       "method": "GET",
@@ -186,7 +194,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-17T06:20:00Z",
+  "generatedAtUtc": "2026-05-17T07:05:00Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -210,6 +218,10 @@
     "Pokewallet provider-catalog image fields store endpoint references and response metadata only.",
     "CardScanR does not own Pokewallet image assets and does not store image binaries in this cache.",
     "Apps should cache provider images locally only where allowed by provider terms and app policy.",
+    "Full Pokewallet provider-catalog per-set files use /provider-catalog/pokewallet/cards/{language}/{setId}.json.",
+    "Pokewallet provider metadata is not official CardScanR canonical catalogue data yet.",
+    "CardScanR may use provider metadata for scan and match assistance after review.",
+    "Pricing integration is separate from provider catalogue metadata.",
     "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,

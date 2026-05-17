@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T06:20:00Z",
+  "generatedAtUtc": "2026-05-17T07:05:00Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -45,6 +45,10 @@
     "CardScanR does not own Pokewallet image assets.",
     "Provider images are not bulk-downloaded into this repository.",
     "Apps should cache provider images locally only where allowed by provider terms and app policy.",
+    "Full Pokewallet provider-catalog per-set files use /provider-catalog/pokewallet/cards/{language}/{setId}.json.",
+    "Pokewallet provider metadata is not official CardScanR canonical catalogue data yet.",
+    "CardScanR may use provider metadata for scan and match assistance after review.",
+    "Pricing integration is separate from provider catalogue metadata.",
     "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,

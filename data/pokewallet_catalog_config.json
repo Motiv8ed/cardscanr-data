@@ -3,6 +3,28 @@
   "diagnosticsOnly": false,
   "enabled": true,
   "imageCheckSampleLimit": 50,
+  "fullCatalogue": {
+    "enabled": false,
+    "statePath": "data/pokewallet_catalog_full_state.json",
+    "maxRequestsPerRun": 500,
+    "requestSleepSeconds": 0.25,
+    "includeLanguages": [
+      "eng",
+      "jap",
+      "chn",
+      "kor",
+      "zho",
+      "chi",
+      "chs",
+      "cht"
+    ],
+    "preferNumericSetId": true,
+    "writePerSetFiles": true,
+    "writeImageFiles": false,
+    "storeImageReferencesOnly": true,
+    "imageAvailabilityCheck": false,
+    "imageAvailabilitySampleLimit": 100
+  },
   "languageMap": {
     "chi": "zh",
     "chn": "zh",

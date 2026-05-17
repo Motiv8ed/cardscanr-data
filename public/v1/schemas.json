@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T06:20:00Z",
+  "generatedAtUtc": "2026-05-17T07:05:00Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -270,18 +270,26 @@
       "notes": [
         "Diagnostics for the Pokewallet provider catalogue foundation builder.",
         "The builder stores safe metadata only and must not store full provider responses.",
-        "Image checks record endpoint availability metadata only."
+        "Image checks record endpoint availability metadata only.",
+        "Full catalogue mode is resumable and writes provider-catalog per-set files with image references only."
       ],
       "requiredFields": [
         "schemaVersion",
         "generatedAtUtc",
         "provider",
         "mode",
+        "status",
         "apiKeyPresent",
+        "fullCatalogueEnabled",
         "requestsAttempted",
         "requestsSucceeded",
         "requestsFailed",
         "setsFetched",
+        "setsProcessedThisRun",
+        "setsRemainingAfterRun",
+        "cardsWrittenThisRun",
+        "cardsWrittenByLanguage",
+        "setFilesWritten",
         "languagesSeen",
         "setsSelectedByLanguage",
         "cardsFetchedByLanguage",
@@ -289,7 +297,55 @@
         "imageSamplesAvailable",
         "sampleCards",
         "sampleSkipped",
+        "blockerReason",
         "recommendation"
+      ]
+    },
+    "pokewallet_provider_catalog_cards_by_set": {
+      "notes": [
+        "Resumable provider metadata export for one Pokewallet set.",
+        "Files live at /provider-catalog/pokewallet/cards/{language}/{setId}.json.",
+        "Records store provider IDs, set data, card numbers, selected names, variant labels, image endpoint references, and field-key lists only.",
+        "Image files are not stored.",
+        "Provider metadata is not official CardScanR canonical catalogue data yet.",
+        "CardScanR may use it for scan and match assistance after review.",
+        "Pricing integration is separate."
+      ],
+      "requiredCardFields": [
+        "providerCardId",
+        "providerSetId",
+        "providerSetCode",
+        "providerSetName",
+        "providerLanguage",
+        "cardScanRLanguage",
+        "name",
+        "cleanName",
+        "cardNumber",
+        "rarity",
+        "variants",
+        "imageEndpoint",
+        "imageEndpointLow",
+        "imageEndpointHigh",
+        "imageLowAvailable",
+        "imageHighAvailable",
+        "hasPriceFields",
+        "hasTcgplayerFields",
+        "hasCardmarketFields",
+        "rawKeys"
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "provider",
+        "game",
+        "providerLanguage",
+        "cardScanRLanguage",
+        "providerSetId",
+        "providerSetCode",
+        "providerSetName",
+        "cardCount",
+        "imageReferencesOnly",
+        "cards"
       ]
     },
     "pokewallet_provider_catalog_cards_sample": {
@@ -332,6 +388,7 @@
       "notes": [
         "Research-stage Pokewallet provider catalogue summaries.",
         "Image files are not stored in the repository; image availability samples store response metadata only.",
+        "Full catalogue summary fields report per-set file counts, cards written by language, and state path.",
         "Production catalogue integration comes later after provider metadata coverage is reviewed."
       ],
       "requiredFields": [
