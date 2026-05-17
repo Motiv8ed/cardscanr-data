@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T02:20:00Z",
+  "generatedAtUtc": "2026-05-17T06:20:00Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -264,6 +264,82 @@
         "sampleSkipped",
         "blockerReason",
         "recommendation"
+      ]
+    },
+    "pokewallet_catalog_foundation_diagnostics": {
+      "notes": [
+        "Diagnostics for the Pokewallet provider catalogue foundation builder.",
+        "The builder stores safe metadata only and must not store full provider responses.",
+        "Image checks record endpoint availability metadata only."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "provider",
+        "mode",
+        "apiKeyPresent",
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "setsFetched",
+        "languagesSeen",
+        "setsSelectedByLanguage",
+        "cardsFetchedByLanguage",
+        "imageSamplesChecked",
+        "imageSamplesAvailable",
+        "sampleCards",
+        "sampleSkipped",
+        "recommendation"
+      ]
+    },
+    "pokewallet_provider_catalog_cards_sample": {
+      "notes": [
+        "Research-stage provider catalogue card sample for future CardScanR matching.",
+        "Card records store provider IDs, set IDs, language, card number, selected names, variant labels, image endpoint references, and field-key lists only.",
+        "No image binaries or full provider responses are stored."
+      ],
+      "requiredCardFields": [
+        "providerCardId",
+        "providerSetId",
+        "providerSetCode",
+        "providerSetName",
+        "providerLanguage",
+        "cardScanRLanguage",
+        "name",
+        "cleanName",
+        "cardNumber",
+        "rarity",
+        "variants",
+        "imageEndpoint",
+        "imageLowAvailable",
+        "imageHighAvailable",
+        "hasPriceFields",
+        "hasTcgplayerFields",
+        "hasCardmarketFields",
+        "rawKeys"
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "provider",
+        "game",
+        "notes",
+        "cardCount",
+        "cards"
+      ]
+    },
+    "pokewallet_provider_catalog_summary": {
+      "notes": [
+        "Research-stage Pokewallet provider catalogue summaries.",
+        "Image files are not stored in the repository; image availability samples store response metadata only.",
+        "Production catalogue integration comes later after provider metadata coverage is reviewed."
+      ],
+      "requiredFields": [
+        "schemaVersion",
+        "generatedAtUtc",
+        "provider",
+        "game",
+        "notes"
       ]
     },
     "pokewallet_pro_price_probe_diagnostics": {

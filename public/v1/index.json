@@ -6,9 +6,9 @@
       "id": "api_manifest",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "bed152ea853acd8affc7608119b0fc7a122c4af11287fdf613673198a21f11f8",
+      "sha256": "d7935210567423b4a8365e9bbcc5c605d2d07ba2224fe2a4f9f6478881fe0991",
       "type": "api_manifest",
-      "updatedAtUtc": "2026-05-17T01:58:13Z",
+      "updatedAtUtc": "2026-05-17T06:20:00Z",
       "url": "/v1/api-manifest.json"
     },
     {
@@ -16,9 +16,9 @@
       "id": "api_notes",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "c766c382877c2d83a4eceae167431d259473d285d7f94293d1602601362d0761",
+      "sha256": "133f210ed8f86100fd48ca4be1a27da065abd2edd612948d11d58a395b29733e",
       "type": "api_notes",
-      "updatedAtUtc": "2026-05-17T02:20:00Z",
+      "updatedAtUtc": "2026-05-17T06:20:00Z",
       "url": "/v1/api-notes.json"
     },
     {
@@ -2909,6 +2909,17 @@
       "url": "/v1/diagnostics/latest-build.json"
     },
     {
+      "description": "Pokewallet catalogue foundation build diagnostics",
+      "game": "pokemon",
+      "id": "diagnostics_pokewallet_catalog_foundation",
+      "recommendedCacheTtlSeconds": 900,
+      "schemaVersion": "1.0.0",
+      "sha256": "0e8b45b966c55670187ca75671f348e4556234f3bb48d44bcb09b16723a1dea6",
+      "type": "diagnostics",
+      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "url": "/v1/diagnostics/pokewallet-catalog-foundation-latest.json"
+    },
+    {
       "description": "Controlled Pokewallet JP current price build diagnostics",
       "id": "diagnostics_pokewallet_jp_price_build",
       "recommendedCacheTtlSeconds": 900,
@@ -3086,13 +3097,57 @@
       "url": "/v1/prices/status.json"
     },
     {
+      "description": "Pokewallet provider catalogue card sample with safe metadata only",
+      "game": "pokemon",
+      "id": "provider_catalog_pokewallet_cards_sample",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "fc88263baf8c5cf0be0a08337be269bce4b6fee153f198936b92b9b05de9f83a",
+      "type": "provider_catalog",
+      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "url": "/v1/provider-catalog/pokewallet/cards-sample.json"
+    },
+    {
+      "description": "Pokewallet provider catalogue image endpoint availability sample",
+      "game": "pokemon",
+      "id": "provider_catalog_pokewallet_image_availability_sample",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "afe612e31a2aba0f1c1cc835792aa245b524165239458afeeea7c587582f9e59",
+      "type": "provider_catalog",
+      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "url": "/v1/provider-catalog/pokewallet/image-availability-sample.json"
+    },
+    {
+      "description": "Pokewallet provider catalogue language coverage summary",
+      "game": "pokemon",
+      "id": "provider_catalog_pokewallet_languages_summary",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "6303d56788ecc9f5c17ad372b62e2af84df55e4e78cf5598057384a6d9b083c9",
+      "type": "provider_catalog",
+      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "url": "/v1/provider-catalog/pokewallet/languages-summary.json"
+    },
+    {
+      "description": "Pokewallet provider catalogue set summary for CardScanR matching research",
+      "game": "pokemon",
+      "id": "provider_catalog_pokewallet_sets_summary",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "529dc197dc790fdfd70bddca17534052639276eefe68ed459c92534f84772065",
+      "type": "provider_catalog",
+      "updatedAtUtc": "2026-05-17T08:27:32Z",
+      "url": "/v1/provider-catalog/pokewallet/sets-summary.json"
+    },
+    {
       "description": "CardScanR cache schema documentation",
       "id": "schemas",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "111ba4eaa3aaf0f16297dd2e8d8098554ba69915af4dbcb12316d0e531509548",
+      "sha256": "2879b02d2d8d4d3a0193f3f07c1c4d08b8530a89799f3d00110121bcf5627b90",
       "type": "schemas",
-      "updatedAtUtc": "2026-05-17T02:20:00Z",
+      "updatedAtUtc": "2026-05-17T06:20:00Z",
       "url": "/v1/schemas.json"
     },
     {
@@ -3106,6 +3161,6 @@
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-17T02:20:00Z",
+  "generatedAtUtc": "2026-05-17T08:27:32Z",
   "schemaVersion": "1.0.0"
 }

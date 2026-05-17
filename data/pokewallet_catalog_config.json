@@ -1,0 +1,40 @@
+{
+  "apiKeyEnv": "POKEWALLET_API_KEY",
+  "diagnosticsOnly": false,
+  "enabled": true,
+  "imageCheckSampleLimit": 50,
+  "languageMap": {
+    "chi": "zh",
+    "chn": "zh",
+    "chs": "zh-cn",
+    "cht": "zh-tw",
+    "eng": "en",
+    "jap": "jp",
+    "kor": "kr",
+    "zho": "zh"
+  },
+  "maxRequestsPerRun": 500,
+  "mode": "catalogue_foundation",
+  "provider": "pokewallet",
+  "requestSleepSeconds": 0.25,
+  "sampleSetsPerLanguage": {
+    "en": 5,
+    "jp": 10,
+    "kr": 5,
+    "zh": 5
+  },
+  "schemaVersion": "1.0.0",
+  "storeImageReferencesOnly": true,
+  "targetGame": "pokemon",
+  "targetLanguages": [
+    "eng",
+    "jap",
+    "chn",
+    "kor",
+    "zho",
+    "chi",
+    "chs",
+    "cht"
+  ],
+  "writeImageFiles": false
+}

@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-17T02:20:00Z",
+  "generatedAtUtc": "2026-05-17T06:20:00Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -39,7 +39,13 @@
     "Pokewallet Pro trial discovery is diagnostics-only and must not write production price files.",
     "Pokewallet image endpoints require an API key; discovery checks small image samples by response metadata only.",
     "Pokewallet images are not stored in this repository by the Pro trial discovery probe.",
-    "Pokewallet production cache integration across languages comes later after diagnostics are reviewed."
+    "Pokewallet production cache integration across languages comes later after diagnostics are reviewed.",
+    "Pokewallet provider-catalog files are foundation data for future CardScanR catalogue matching.",
+    "Provider-catalog card records store image endpoint references only, not image files.",
+    "CardScanR does not own Pokewallet image assets.",
+    "Provider images are not bulk-downloaded into this repository.",
+    "Apps should cache provider images locally only where allowed by provider terms and app policy.",
+    "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",

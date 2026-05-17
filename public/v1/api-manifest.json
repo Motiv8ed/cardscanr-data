@@ -126,6 +126,38 @@
     {
       "authRequired": false,
       "cacheable": true,
+      "description": "Pokewallet provider catalogue set summary for CardScanR matching research",
+      "id": "provider_catalog_pokewallet_sets_summary",
+      "method": "GET",
+      "path": "/provider-catalog/pokewallet/sets-summary.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Pokewallet provider catalogue language coverage summary",
+      "id": "provider_catalog_pokewallet_languages_summary",
+      "method": "GET",
+      "path": "/provider-catalog/pokewallet/languages-summary.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Pokewallet provider catalogue card sample with safe metadata only",
+      "id": "provider_catalog_pokewallet_cards_sample",
+      "method": "GET",
+      "path": "/provider-catalog/pokewallet/cards-sample.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Pokewallet image endpoint availability sample storing metadata only",
+      "id": "provider_catalog_pokewallet_image_availability_sample",
+      "method": "GET",
+      "path": "/provider-catalog/pokewallet/image-availability-sample.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "method": "GET",
@@ -138,6 +170,14 @@
       "id": "diagnostics_pokewallet_jp_price_build",
       "method": "GET",
       "path": "/diagnostics/pokewallet-jp-price-build-latest.json"
+    },
+    {
+      "authRequired": false,
+      "cacheable": true,
+      "description": "Pokewallet catalogue foundation build diagnostics",
+      "id": "diagnostics_pokewallet_catalog_foundation",
+      "method": "GET",
+      "path": "/diagnostics/pokewallet-catalog-foundation-latest.json"
     }
   ],
   "futureInternalDynamicRoutes": [
@@ -146,7 +186,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-17T01:58:13Z",
+  "generatedAtUtc": "2026-05-17T06:20:00Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -165,7 +205,12 @@
     "Pokewallet JP records may come from CardMarket or TCGPlayer depending on the record.",
     "Provider currency is passed through as-is and is not converted.",
     "EUR and USD must remain separate source currencies when both are present.",
-    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP refresh scheduling exists."
+    "JP nextExpectedPriceUpdateAtUtc may be null until regular JP refresh scheduling exists.",
+    "Pokewallet provider-catalog files are research-stage app data and are not production catalogue files yet.",
+    "Pokewallet provider-catalog image fields store endpoint references and response metadata only.",
+    "CardScanR does not own Pokewallet image assets and does not store image binaries in this cache.",
+    "Apps should cache provider images locally only where allowed by provider terms and app policy.",
+    "Production catalogue integration comes later after provider metadata coverage is reviewed."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",

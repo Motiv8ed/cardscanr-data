@@ -321,6 +321,52 @@ REQUIRED_POKEWALLET_PRO_TRIAL_STATE_FIELDS = {
     "languagesCompleted",
     "lastRunId",
 }
+REQUIRED_POKEWALLET_CATALOG_FOUNDATION_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "mode",
+    "apiKeyPresent",
+    "requestsAttempted",
+    "requestsSucceeded",
+    "requestsFailed",
+    "setsFetched",
+    "languagesSeen",
+    "setsSelectedByLanguage",
+    "cardsFetchedByLanguage",
+    "imageSamplesChecked",
+    "imageSamplesAvailable",
+    "sampleCards",
+    "sampleSkipped",
+    "recommendation",
+}
+REQUIRED_PROVIDER_CATALOG_TOP_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "game",
+    "notes",
+}
+REQUIRED_POKEWALLET_PROVIDER_CARD_FIELDS = {
+    "providerCardId",
+    "providerSetId",
+    "providerSetCode",
+    "providerSetName",
+    "providerLanguage",
+    "cardScanRLanguage",
+    "name",
+    "cleanName",
+    "cardNumber",
+    "rarity",
+    "variants",
+    "imageEndpoint",
+    "imageLowAvailable",
+    "imageHighAvailable",
+    "hasPriceFields",
+    "hasTcgplayerFields",
+    "hasCardmarketFields",
+    "rawKeys",
+}
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
 REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
@@ -1243,6 +1289,130 @@ def check_pokewallet_pro_trial_discovery_state() -> None:
         err("data/pokewallet_pro_trial_discovery_state.json languagesCompleted must be an object")
 
 
+def check_pokewallet_catalog_foundation_diagnostics() -> None:
+    print("\n[6g] Pokewallet catalogue foundation diagnostics check")
+    path = V1_DIR / "diagnostics" / "pokewallet-catalog-foundation-latest.json"
+    if not path.exists():
+        warn(f"Pokewallet catalogue foundation diagnostics not found: {path.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(path)
+    if data is None or not isinstance(data, dict):
+        err("diagnostics/pokewallet-catalog-foundation-latest.json must be a JSON object")
+        return
+
+    if check_required(
+        data,
+        REQUIRED_POKEWALLET_CATALOG_FOUNDATION_FIELDS,
+        "diagnostics/pokewallet-catalog-foundation-latest.json",
+    ):
+        ok("diagnostics/pokewallet-catalog-foundation-latest.json has required fields")
+
+    if data.get("provider") != "pokewallet":
+        err("diagnostics/pokewallet-catalog-foundation-latest.json provider must be pokewallet")
+    if data.get("mode") != "catalogue_foundation":
+        err("diagnostics/pokewallet-catalog-foundation-latest.json mode must be catalogue_foundation")
+    if not isinstance(data.get("apiKeyPresent"), bool):
+        err("diagnostics/pokewallet-catalog-foundation-latest.json apiKeyPresent must be boolean")
+
+    for field in [
+        "requestsAttempted",
+        "requestsSucceeded",
+        "requestsFailed",
+        "setsFetched",
+        "imageSamplesChecked",
+        "imageSamplesAvailable",
+    ]:
+        value = data.get(field)
+        if not isinstance(value, int) or value < 0:
+            err(f"diagnostics/pokewallet-catalog-foundation-latest.json {field} must be a non-negative integer")
+
+    for field in ["languagesSeen", "setsSelectedByLanguage", "cardsFetchedByLanguage"]:
+        if not isinstance(data.get(field), dict):
+            err(f"diagnostics/pokewallet-catalog-foundation-latest.json {field} must be an object")
+    for field in ["sampleCards", "sampleSkipped"]:
+        if not isinstance(data.get(field), list):
+            err(f"diagnostics/pokewallet-catalog-foundation-latest.json {field} must be a list")
+    if not isinstance(data.get("recommendation"), str) or not data.get("recommendation"):
+        err("diagnostics/pokewallet-catalog-foundation-latest.json recommendation must be a non-empty string")
+
+
+def check_pokewallet_provider_catalog() -> None:
+    print("\n[6h] Pokewallet provider catalogue files check")
+    root = V1_DIR / "provider-catalog" / "pokewallet"
+    if not root.exists():
+        warn(f"Pokewallet provider catalogue directory not found: {root.relative_to(ROOT)}")
+        return
+
+    disallowed_suffixes = {".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.suffix.lower() in disallowed_suffixes:
+            err(f"Provider catalogue must not contain image binary files: {path.relative_to(ROOT)}")
+
+    required_files = {
+        "sets-summary.json",
+        "languages-summary.json",
+        "cards-sample.json",
+        "image-availability-sample.json",
+    }
+    existing_files = {path.name for path in root.glob("*.json")}
+    missing = required_files - existing_files
+    if missing:
+        err(f"Pokewallet provider catalogue is missing files: {sorted(missing)}")
+
+    for filename in sorted(required_files & existing_files):
+        path = root / filename
+        data = load_json_file(path)
+        if data is None or not isinstance(data, dict):
+            err(f"{path.relative_to(ROOT)} must be a JSON object")
+            continue
+        if check_required(data, REQUIRED_PROVIDER_CATALOG_TOP_FIELDS, str(path.relative_to(ROOT))):
+            ok(f"{path.relative_to(ROOT)} has required top-level fields")
+        if data.get("provider") != "pokewallet":
+            err(f"{path.relative_to(ROOT)} provider must be pokewallet")
+        if data.get("game") != "pokemon":
+            err(f"{path.relative_to(ROOT)} game must be pokemon")
+        if not isinstance(data.get("notes"), list):
+            err(f"{path.relative_to(ROOT)} notes must be a list")
+
+        if filename == "sets-summary.json":
+            if not isinstance(data.get("sets"), list):
+                err(f"{path.relative_to(ROOT)} sets must be a list")
+            if not isinstance(data.get("languagesSeen"), dict):
+                err(f"{path.relative_to(ROOT)} languagesSeen must be an object")
+        elif filename == "languages-summary.json":
+            if not isinstance(data.get("languages"), list):
+                err(f"{path.relative_to(ROOT)} languages must be a list")
+        elif filename == "cards-sample.json":
+            cards = data.get("cards")
+            if not isinstance(cards, list):
+                err(f"{path.relative_to(ROOT)} cards must be a list")
+                continue
+            if data.get("cardCount") != len(cards):
+                err(f"{path.relative_to(ROOT)} cardCount must equal cards length")
+            for i, card in enumerate(cards):
+                if not isinstance(card, dict):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] must be an object")
+                    continue
+                missing_fields = REQUIRED_POKEWALLET_PROVIDER_CARD_FIELDS - set(card.keys())
+                if missing_fields:
+                    err(f"{path.relative_to(ROOT)} cards[{i}] missing fields: {sorted(missing_fields)}")
+                if card.get("imageEndpoint") is not None and not str(card.get("imageEndpoint")).startswith("/images/"):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] imageEndpoint must be an /images/ endpoint or null")
+                if not isinstance(card.get("rawKeys"), list):
+                    err(f"{path.relative_to(ROOT)} cards[{i}] rawKeys must be a list")
+                for field in ["hasPriceFields", "hasTcgplayerFields", "hasCardmarketFields"]:
+                    if not isinstance(card.get(field), bool):
+                        err(f"{path.relative_to(ROOT)} cards[{i}] {field} must be boolean")
+        elif filename == "image-availability-sample.json":
+            if not isinstance(data.get("samples"), list):
+                err(f"{path.relative_to(ROOT)} samples must be a list")
+            for field in ["imageSamplesChecked", "imageSamplesAvailable"]:
+                value = data.get(field)
+                if not isinstance(value, int) or value < 0:
+                    err(f"{path.relative_to(ROOT)} {field} must be a non-negative integer")
+
+
 def check_api_manifest() -> None:
     print("\n[7] API manifest check")
     path = V1_DIR / "api-manifest.json"
@@ -1598,6 +1768,8 @@ def main() -> None:
     check_pokewallet_pro_price_probe_diagnostics()
     check_pokewallet_pro_trial_discovery_diagnostics()
     check_pokewallet_pro_trial_discovery_state()
+    check_pokewallet_catalog_foundation_diagnostics()
+    check_pokewallet_provider_catalog()
     check_api_manifest()
     check_api_notes()
     check_schemas()

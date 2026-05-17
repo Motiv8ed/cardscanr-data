@@ -1,0 +1,35 @@
+{
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-17T08:27:32Z",
+  "languages": [
+    {
+      "cardScanRLanguage": "en",
+      "cardsFetched": 864,
+      "providerLanguages": [],
+      "selectedSetCount": 5,
+      "setCount": 334
+    },
+    {
+      "cardScanRLanguage": "jp",
+      "cardsFetched": 357,
+      "providerLanguages": [],
+      "selectedSetCount": 10,
+      "setCount": 462
+    },
+    {
+      "cardScanRLanguage": "zh",
+      "cardsFetched": 133,
+      "providerLanguages": [],
+      "selectedSetCount": 5,
+      "setCount": 58
+    }
+  ],
+  "notes": [
+    "Pokewallet provider catalogue foundation for CardScanR matching research.",
+    "Only safe provider metadata is stored.",
+    "Image references are stored as API endpoints only; image files are not stored in this repository.",
+    "Production catalogue integration comes later after provider coverage is reviewed."
+  ],
+  "provider": "pokewallet",
+  "schemaVersion": "1.0.0"
+}
