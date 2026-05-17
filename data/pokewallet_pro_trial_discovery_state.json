@@ -1,18 +1,42 @@
 {
-  "completedEndpointKeys": [],
-  "completedSetKeys": [],
+  "completedEndpointKeys": [
+    "completionValue:24026",
+    "prices:24025:all",
+    "prices:24025:cm",
+    "prices:24025:tcg",
+    "prices:24026:all",
+    "prices:24026:cm",
+    "prices:24026:tcg",
+    "setDetails:24025",
+    "setDetails:24026",
+    "statistics:24025",
+    "statistics:24026",
+    "topCards:top-cards-growth-cm",
+    "topCards:top-cards-growth-tcg",
+    "topCards:top-cards-price-cm",
+    "topCards:top-cards-price-tcg",
+    "trending:sets-trending",
+    "trending:sets-trending-30d",
+    "trending:sets-trending-7d"
+  ],
+  "completedSetKeys": [
+    "24025",
+    "24026"
+  ],
   "failedSetKeys": [],
   "imageSamplesCheckedTotal": 0,
-  "languagesCompleted": {},
-  "lastProcessedSetKey": null,
-  "lastRunId": "81d0da6c-607c-4f42-8aba-ab00bac727ee",
+  "languagesCompleted": {
+    "jp": false
+  },
+  "lastProcessedSetKey": "24025",
+  "lastRunId": "3f39ea26-a68d-4426-8b7e-fc17ec80de2f",
   "mode": "trial_discovery",
   "priceHistorySamplesCheckedTotal": 0,
-  "priceRecordsFoundTotal": 0,
-  "requestsAttemptedTotal": 2,
+  "priceRecordsFoundTotal": 651,
+  "requestsAttemptedTotal": 24,
   "requestsFailedTotal": 0,
-  "requestsSucceededTotal": 2,
+  "requestsSucceededTotal": 24,
   "schemaVersion": "1.0.0",
   "skippedSetKeys": [],
-  "updatedAtUtc": "2026-05-17T05:48:32Z"
+  "updatedAtUtc": "2026-05-17T20:46:11Z"
 }

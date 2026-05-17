@@ -1,7 +1,9 @@
 {
   "apiKeyPresent": true,
-  "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T06:46:09Z",
+  "currenciesSeen": [
+    "USD"
+  ],
+  "generatedAtUtc": "2026-05-17T20:31:24Z",
   "languagesSeen": {
     "en": 334,
     "jp": 462,
@@ -9,98 +11,557 @@
   },
   "mode": "pro_price_probe",
   "priceRecordsFoundByLanguage": {
-    "en": 0,
+    "en": 284,
     "jp": 0,
     "zh-cn": 0
   },
   "priceResponsesByLanguage": {
     "en": {
       "attempted": 3,
-      "failed": 3,
-      "succeeded": 0
+      "failed": 0,
+      "succeeded": 3
     },
     "jp": {
-      "attempted": 5,
-      "failed": 5,
+      "attempted": 0,
+      "failed": 0,
       "succeeded": 0
     },
     "zh-cn": {
-      "attempted": 2,
-      "failed": 2,
+      "attempted": 0,
+      "failed": 0,
       "succeeded": 0
     }
   },
   "proEndpointUsed": "/prices/:setCode",
-  "proRequestsAttempted": 10,
-  "proRequestsFailed": 10,
-  "proRequestsSucceeded": 0,
+  "proRequestsAttempted": 3,
+  "proRequestsFailed": 0,
+  "proRequestsSucceeded": 3,
   "provider": "pokewallet",
-  "recommendation": "Pass --enable-pro after activating Pokewallet Pro to test /prices/:setCode.",
-  "requestsAttempted": 12,
-  "requestsFailed": 10,
-  "requestsSucceeded": 2,
-  "samplePriceRecords": [],
-  "sampleResponseShapes": [],
+  "recommendation": "Pokewallet Pro price endpoint returned parseable guide price records; review diagnostics before building cache support.",
+  "requestsAttempted": 5,
+  "requestsFailed": 0,
+  "requestsSucceeded": 5,
+  "samplePriceRecords": [
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low",
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low",
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low",
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.avg",
+        "cardmarket.low",
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    },
+    {
+      "currency": "USD",
+      "hasCardNumber": true,
+      "hasName": true,
+      "hasSetOrGroupId": false,
+      "identifierFields": [
+        "card_number",
+        "name"
+      ],
+      "language": "en",
+      "market": "US",
+      "priceFields": [
+        "cardmarket.trend"
+      ],
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "source": "tcgplayer",
+      "variantFields": []
+    }
+  ],
+  "sampleResponseShapes": [
+    {
+      "language": "en",
+      "recordContainer": "data",
+      "recordCount": 108,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "en",
+      "recordContainer": "data",
+      "recordCount": 109,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD23",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    },
+    {
+      "language": "en",
+      "recordContainer": "data",
+      "recordCount": 102,
+      "sampleRecordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD24",
+      "topLevelKeys": [
+        "data",
+        "group_id",
+        "set_code",
+        "source",
+        "success",
+        "total"
+      ]
+    }
+  ],
   "sampleSkipped": [
     {
-      "detail": "http_403",
       "language": "en",
-      "reason": "price_endpoint_failed",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
       "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
       "language": "en",
-      "reason": "price_endpoint_failed",
-      "setCode": "WCD23"
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
       "language": "en",
-      "reason": "price_endpoint_failed",
-      "setCode": "WCD24"
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "jp",
-      "reason": "price_endpoint_failed",
-      "setCode": "SV10"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "jp",
-      "reason": "price_endpoint_failed",
-      "setCode": "SV11B"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "jp",
-      "reason": "price_endpoint_failed",
-      "setCode": "SV11W"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "jp",
-      "reason": "price_endpoint_failed",
-      "setCode": "SV9"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "jp",
-      "reason": "price_endpoint_failed",
-      "setCode": "SV9a"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "zh-cn",
-      "reason": "price_endpoint_failed",
-      "setCode": "30th-P"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     },
     {
-      "detail": "http_403",
-      "language": "zh-cn",
-      "reason": "price_endpoint_failed",
-      "setCode": "CS5.1C"
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
+    },
+    {
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
+    },
+    {
+      "language": "en",
+      "reason": "no_numeric_prices",
+      "recordKeys": [
+        "card_number",
+        "cardmarket",
+        "name",
+        "tcgplayer",
+        "variant"
+      ],
+      "setCode": "WCD22"
     }
   ],
   "schemaVersion": "1.0.0",
@@ -193,6 +654,8 @@
       }
     ]
   },
-  "sourcesSeen": [],
-  "status": "pro_required"
+  "sourcesSeen": [
+    "tcgplayer"
+  ],
+  "status": "ok"
 }
