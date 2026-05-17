@@ -13,11 +13,11 @@
   "confidenceThreshold": 0.82,
   "writeOnlyConfidentMatches": true,
   "usePokewalletSetMap": true,
+  "usePokewalletSetDetails": true,
   "setMapMaxSets": 25,
-  "searchStrategy": "pokewallet_set_id_plus_card_number",
+  "searchStrategy": "pokewallet_set_detail_first",
   "fallbackSearchStrategies": [
-    "pokewallet_set_code_plus_card_number",
-    "name_plus_pokewallet_set_code"
+    "pokewallet_set_id_plus_card_number"
   ],
   "useCatalogueSampleTargets": true,
   "catalogueSampleLimit": 25,
@@ -34,42 +34,7 @@
     "E2"
   ],
   "catalogueSearchTemplates": [
-    "{name} {setName} {collectorNumber} japanese pokemon",
-    "{name} {collectorNumber} japanese pokemon",
-    "{name} {setName} pokemon card"
+    "{pokewalletSetId} {collectorNumber}"
   ],
-  "searchTargets": [
-    {
-      "query": "charizard japanese",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "pikachu japanese",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "mew japanese",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "mega symphonia",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "battle partners",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "sv10 japanese pokemon",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "sv11 japanese pokemon",
-      "expectedLanguage": "jp"
-    },
-    {
-      "query": "pmcg1 japanese pokemon",
-      "expectedLanguage": "jp"
-    }
-  ]
+  "searchTargets": []
 }

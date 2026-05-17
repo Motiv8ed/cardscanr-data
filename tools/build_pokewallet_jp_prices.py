@@ -35,6 +35,12 @@ SCHEMA_VERSION = "1.0.0"
 DEFAULT_PREFERRED_SET_IDS = ["SV10", "SV11B", "SV11W", "SV9", "SV9a", "S12a", "PMCG1", "E1", "E2"]
 DEFAULT_SEARCH_STRATEGY = "pokewallet_set_id_plus_card_number"
 DEFAULT_FALLBACK_STRATEGIES = ["pokewallet_set_code_plus_card_number", "name_plus_pokewallet_set_code"]
+DEFAULT_STALENESS = {
+    "status": "fresh",
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+}
 
 
 @dataclass(frozen=True)
@@ -144,13 +150,7 @@ def parse_set_record(raw: dict[str, Any]) -> PokewalletSetInfo | None:
 
 
 def is_japanese_like_set(set_info: PokewalletSetInfo) -> bool:
-    if set_info.language in {"jp", "ja", "japanese"}:
-        return True
-    if any(ord(ch) > 127 for ch in set_info.name):
-        return True
-    hay = normalize_text(f"{set_info.name} {set_info.set_code}")
-    jp_signals = ["japanese", "jp", "ja", "sv", "pmcg", "neo", "adv"]
-    return any(token in hay for token in jp_signals)
+    return set_info.language == "jap"
 
 
 def fetch_pokewallet_sets(
@@ -195,6 +195,17 @@ def fetch_pokewallet_sets(
                 continue
             seen_ids.add(key)
             sets.append(parsed)
+            append_sample(
+                diagnostics["samplePokewalletSets"],
+                {
+                    "setId": parsed.set_id,
+                    "setCode": parsed.set_code,
+                    "name": parsed.name,
+                    "language": parsed.language,
+                    "cardCount": parsed.card_count,
+                    "releaseDate": parsed.release_date,
+                },
+            )
 
         if len(items) < per_page:
             break
@@ -274,9 +285,9 @@ def set_match_score(cardscanr: CardScanRSetInfo, pokewallet: PokewalletSetInfo) 
                 score += 0.20
                 signals.append("set_name_fuzzy_medium")
 
-    if pokewallet.language in {"ja", "jp", "japanese"}:
+    if pokewallet.language == "jap":
         score += 0.06
-        signals.append("language_jp")
+        signals.append("language_jap")
 
     if pokewallet.card_count is not None and cardscanr.card_count > 0:
         diff = abs(pokewallet.card_count - cardscanr.card_count)
@@ -397,6 +408,242 @@ def build_set_map(
 
     return set_map
 
+
+def fetch_pokewallet_set_detail(
+    *,
+    api_key: str,
+    set_id: str,
+    diagnostics: dict[str, Any],
+    request_limit: int,
+) -> dict[str, Any] | None:
+    if diagnostics["requestsAttempted"] >= request_limit:
+        return None
+
+    diagnostics["requestsAttempted"] += 1
+    diagnostics["pokewalletSetDetailsAttempted"] += 1
+    url = f"https://api.pokewallet.io/sets/{quote(str(set_id), safe='')}?page=1&limit=200"
+    try:
+        payload = fetch_json(url, api_key=api_key)
+        diagnostics["requestsSucceeded"] += 1
+        diagnostics["pokewalletSetDetailsSucceeded"] += 1
+        return payload
+    except Exception as exc:  # noqa: BLE001
+        diagnostics["requestsFailed"] += 1
+        append_sample(
+            diagnostics["sampleSkipped"],
+            {"reason": "set_detail_failed", "setId": str(set_id), "detail": str(exc)},
+        )
+        return None
+
+
+def normalize_card_number(value: Any) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "", str(value or "")).upper()
+
+
+def collector_number_keys(value: Any) -> list[str]:
+    text = str(value or "").strip()
+    keys: list[str] = []
+    for part in (text, re.split(r"[/#]", text, maxsplit=1)[0]):
+        normalized = normalize_card_number(part)
+        if normalized and normalized not in keys:
+            keys.append(normalized)
+        stripped = normalized.lstrip("0") or ("0" if normalized else "")
+        if stripped and stripped not in keys:
+            keys.append(stripped)
+    return keys
+
+
+def build_cardscanr_card_index(cards: list[TargetCard]) -> dict[tuple[str, str], TargetCard]:
+    index: dict[tuple[str, str], TargetCard] = {}
+    for card in cards:
+        for collector_key in collector_number_keys(card.collector_number):
+            key = (normalize_set_code(card.set_id), collector_key)
+            index.setdefault(key, card)
+    return index
+
+
+def build_cardscanr_cards_by_set(cards: list[TargetCard]) -> dict[str, list[TargetCard]]:
+    cards_by_set: dict[str, list[TargetCard]] = {}
+    for card in cards:
+        cards_by_set.setdefault(normalize_set_code(card.set_id), []).append(card)
+    for set_cards in cards_by_set.values():
+        set_cards.sort(key=lambda item: (collector_number_keys(item.collector_number)[0], item.collector_number))
+    return cards_by_set
+
+
+def set_detail_cards(payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    set_obj = payload.get("set") if isinstance(payload.get("set"), dict) else {}
+    cards = payload.get("cards") if isinstance(payload.get("cards"), list) else payload.get("data")
+    cards = cards if isinstance(cards, list) else []
+    return set_obj, [card for card in cards if isinstance(card, dict)]
+
+
+def sample_set_detail_card(card: dict[str, Any], set_obj: dict[str, Any]) -> dict[str, Any]:
+    info = card_info(card)
+    return {
+        "providerId": str(card.get("id") or ""),
+        "setId": str(info.get("set_id") or set_obj.get("set_id") or ""),
+        "setCode": str(info.get("set_code") or ""),
+        "number": str(info.get("card_number") or ""),
+        "name": str(info.get("name") or info.get("clean_name") or ""),
+        "cleanName": str(info.get("clean_name") or ""),
+        "hasTcgplayer": isinstance(card.get("tcgplayer"), dict),
+        "hasCardmarket": isinstance(card.get("cardmarket"), dict),
+    }
+
+
+def iter_price_variants(record: dict[str, Any]) -> list[dict[str, Any]]:
+    variants: list[dict[str, Any]] = []
+
+    tcgplayer = record.get("tcgplayer")
+    if isinstance(tcgplayer, dict):
+        prices = tcgplayer.get("prices")
+        if isinstance(prices, dict):
+            prices = list(prices.values())
+        if isinstance(prices, list):
+            for item in prices:
+                if not isinstance(item, dict):
+                    continue
+                market = to_float(item.get("market_price") if item.get("market_price") is not None else item.get("mid_price"))
+                low = to_float(item.get("low_price"))
+                high = to_float(item.get("high_price"))
+                if market is None and low is None and high is None:
+                    continue
+                variants.append(
+                    {
+                        "currency": "USD",
+                        "marketPrice": market,
+                        "lowPrice": low,
+                        "highPrice": high,
+                        "variant": str(item.get("sub_type_name") or "normal"),
+                        "priceSource": "tcgplayer",
+                    }
+                )
+
+    cardmarket = record.get("cardmarket")
+    if isinstance(cardmarket, dict):
+        prices = cardmarket.get("prices")
+        if isinstance(prices, dict):
+            prices = list(prices.values())
+        if isinstance(prices, list):
+            for item in prices:
+                if not isinstance(item, dict):
+                    continue
+                market = to_float(item.get("avg") if item.get("avg") is not None else item.get("trend"))
+                low = to_float(item.get("low"))
+                if market is None and low is None:
+                    continue
+                variants.append(
+                    {
+                        "currency": "EUR",
+                        "marketPrice": market,
+                        "lowPrice": low,
+                        "highPrice": None,
+                        "variant": str(item.get("variant_type") or "normal"),
+                        "priceSource": "cardmarket",
+                    }
+                )
+
+    return variants
+
+
+def build_price_record(
+    *,
+    cardscanr_card: TargetCard,
+    provider_record: dict[str, Any],
+    provider_set_id: str,
+    price_variant: dict[str, Any],
+    confidence: float,
+    signals: list[str],
+    fetched_at_utc: str,
+) -> dict[str, Any]:
+    source = str(price_variant.get("priceSource") or "pokewallet")
+    variant = str(price_variant.get("variant") or "normal")
+    currency = str(price_variant.get("currency") or "")
+    canonical_id = "|".join(
+        [
+            "pokemon",
+            "jp",
+            cardscanr_card.set_id,
+            normalize_card_number(cardscanr_card.collector_number),
+            cardscanr_card.normalized_name,
+            source,
+            currency,
+            variant,
+            "near_mint",
+        ]
+    )
+    return {
+        "canonicalId": canonical_id,
+        "setId": cardscanr_card.set_id,
+        "collectorNumber": cardscanr_card.collector_number,
+        "normalizedName": cardscanr_card.normalized_name,
+        "variant": variant,
+        "condition": "near_mint",
+        "currency": currency,
+        "marketPrice": price_variant.get("marketPrice"),
+        "lowPrice": price_variant.get("lowPrice"),
+        "highPrice": price_variant.get("highPrice"),
+        "source": "pokewallet",
+        "fetchedAtUtc": fetched_at_utc,
+        "nextExpectedPriceUpdateAtUtc": None,
+        "staleness": dict(DEFAULT_STALENESS),
+        "providerIds": {
+            "pokewalletId": str(provider_record.get("id") or ""),
+            "pokewalletSetId": str(provider_set_id or ""),
+        },
+        "matchConfidence": round(confidence, 4),
+        "matchSignals": signals,
+    }
+
+
+def add_price_record(
+    *,
+    records_by_set: dict[str, list[dict[str, Any]]],
+    seen_canonical: dict[str, dict[str, Any]],
+    record: dict[str, Any],
+) -> bool:
+    canonical_id = str(record.get("canonicalId") or "")
+    if not canonical_id:
+        return False
+    existing = seen_canonical.get(canonical_id)
+    if existing and float(existing.get("matchConfidence") or 0.0) >= float(record.get("matchConfidence") or 0.0):
+        return False
+    if existing:
+        existing_set_id = str(existing.get("setId") or "")
+        if existing_set_id in records_by_set:
+            records_by_set[existing_set_id] = [
+                item for item in records_by_set[existing_set_id] if str(item.get("canonicalId") or "") != canonical_id
+            ]
+    seen_canonical[canonical_id] = record
+    records_by_set.setdefault(str(record.get("setId") or ""), []).append(record)
+    return True
+
+
+def count_useful_price_variants(record: dict[str, Any]) -> int:
+    return len(iter_price_variants(record))
+
+
+def expected_card_lookup_key(set_id: str, collector_number: str) -> tuple[str, str]:
+    return normalize_set_code(set_id), normalize_card_number(collector_number)
+
+
+def match_cardscanr_card(
+    *,
+    index: dict[tuple[str, str], TargetCard],
+    set_id: str,
+    collector_number: str,
+) -> TargetCard | None:
+    normalized_set_id = normalize_set_code(set_id)
+    for collector_key in collector_number_keys(collector_number):
+        match = index.get((normalized_set_id, collector_key))
+        if match is not None:
+            return match
+    return None
+
+
+def collector_numbers_match(left: Any, right: Any) -> bool:
+    return bool(set(collector_number_keys(left)) & set(collector_number_keys(right)))
 
 def choose_sample_cards(
     cards: list[TargetCard],
@@ -694,13 +941,22 @@ def build_diagnostics_base(ts: str, mode: str, api_key_present: bool) -> dict[st
         "priceFilesWritten": 0,
         "currenciesSeen": [],
         "catalogueCardsLoaded": 0,
+        "cardscanrJpSetsLoaded": 0,
         "catalogueSampleTargetsBuilt": 0,
         "catalogueSearchQueriesBuilt": 0,
         "cataloguePreferredSetIdsUsed": [],
         "pokewalletSetsFetched": 0,
         "pokewalletJapaneseLikeSets": 0,
         "pokewalletSetLanguagesSeen": [],
+        "samplePokewalletSets": [],
         "setMatchCandidatesBuilt": 0,
+        "pokewalletSetDetailsAttempted": 0,
+        "pokewalletSetDetailsSucceeded": 0,
+        "pokewalletCardsFetchedFromSetDetails": 0,
+        "sampleSetDetailCards": [],
+        "searchFallbackRequestsAttempted": 0,
+        "searchFallbackResultsFound": 0,
+        "sampleSearchQueries": [],
         "matchScoreDistribution": {
             "0.90-1.00": 0,
             "0.80-0.89": 0,
@@ -718,6 +974,7 @@ def build_diagnostics_base(ts: str, mode: str, api_key_present: bool) -> dict[st
         "sampleSearchTargets": [],
         "sampleMatches": [],
         "sampleSkipped": [],
+        "blockerReason": "",
         "recommendation": "",
     }
 
@@ -733,7 +990,10 @@ def write_api_docs_updates(ts: str) -> None:
         manifest_notes = []
     required_manifest_notes = [
         "JP current prices may be present as partial controlled-test coverage sourced from Pokewallet.",
+        "Pokewallet JP coverage is set-detail-first and may fall back to set_id search only when set-detail cards are unavailable.",
+        "Pokewallet JP records may come from CardMarket or TCGPlayer depending on the record.",
         "Provider currency is passed through as-is and is not converted.",
+        "EUR and USD must remain separate source currencies when both are present.",
         "JP nextExpectedPriceUpdateAtUtc may be null until regular JP refresh scheduling exists.",
     ]
     for note in required_manifest_notes:
@@ -763,9 +1023,12 @@ def write_api_docs_updates(ts: str) -> None:
         notes = []
     required_notes = [
         "JP current prices may be partial and sourced from a controlled Pokewallet test builder.",
+        "Pokewallet JP coverage is set-detail-first and may fall back to set_id search only when set-detail cards are unavailable.",
+        "Pokewallet JP records may come from CardMarket or TCGPlayer depending on the record.",
         "App should display JP price data only when a matching JP record exists.",
         "If JP record is missing, show Japanese price not available yet.",
         "Provider currency is not converted; app should display provider currency as-is.",
+        "EUR and USD must remain separate source currencies when both are present.",
         "JP nextExpectedPriceUpdateAtUtc may be null until regular JP scheduling exists.",
     ]
     for note in required_notes:
@@ -795,13 +1058,22 @@ def write_api_docs_updates(ts: str) -> None:
             "priceRecordsWritten",
             "priceFilesWritten",
             "catalogueCardsLoaded",
+            "cardscanrJpSetsLoaded",
             "catalogueSampleTargetsBuilt",
             "catalogueSearchQueriesBuilt",
             "cataloguePreferredSetIdsUsed",
             "pokewalletSetsFetched",
             "pokewalletJapaneseLikeSets",
             "pokewalletSetLanguagesSeen",
+            "samplePokewalletSets",
             "setMatchCandidatesBuilt",
+            "pokewalletSetDetailsAttempted",
+            "pokewalletSetDetailsSucceeded",
+            "pokewalletCardsFetchedFromSetDetails",
+            "sampleSetDetailCards",
+            "searchFallbackRequestsAttempted",
+            "searchFallbackResultsFound",
+            "sampleSearchQueries",
             "matchScoreDistribution",
             "skippedNoPrice",
             "skippedLowConfidence",
@@ -813,13 +1085,41 @@ def write_api_docs_updates(ts: str) -> None:
             "sampleSearchTargets",
             "sampleMatches",
             "sampleSkipped",
+            "blockerReason",
             "recommendation",
         ],
         "notes": [
             "Controlled Pokewallet JP price build diagnostics without secrets or raw payload dumps.",
-            "Includes set-map probing metrics and confidence-gated write outcomes.",
+            "Includes set-map probing metrics, set-detail metrics, fallback search metrics, and confidence-gated write outcomes.",
         ],
     }
+    current_price_set_schema = schema_map.get("current_price_set_file")
+    if isinstance(current_price_set_schema, dict):
+        notes = current_price_set_schema.get("notes")
+        if not isinstance(notes, list):
+            notes = []
+        required_set_notes = [
+            "JP Pokewallet set files may use top-level currency mixed when record currencies include both EUR and USD.",
+            "Record-level currency is authoritative for JP Pokewallet records.",
+            "JP nextExpectedPriceUpdateAtUtc may be null until a regular JP refresh cadence exists.",
+        ]
+        for note in required_set_notes:
+            if note not in notes:
+                notes.append(note)
+        current_price_set_schema["notes"] = notes
+    current_price_record_schema = schema_map.get("current_price_record")
+    if isinstance(current_price_record_schema, dict):
+        notes = current_price_record_schema.get("notes")
+        if not isinstance(notes, list):
+            notes = []
+        required_record_notes = [
+            "Pokewallet JP CardMarket prices are EUR and TCGPlayer prices are USD.",
+            "Do not combine or convert EUR and USD into a single price.",
+        ]
+        for note in required_record_notes:
+            if note not in notes:
+                notes.append(note)
+        current_price_record_schema["notes"] = notes
     schemas["schemas"] = schema_map
 
     cache.write_json(API_MANIFEST_PATH, api_manifest)
@@ -921,13 +1221,21 @@ def update_index(*, ts: str, jp_files: list[tuple[str, str, Path]]) -> None:
     cache.write_json(INDEX_PATH, index)
 
 
-def update_status_files(*, ts: str, jp_files: list[tuple[str, str, Path]], price_records_written: int, currencies_seen: list[str], had_new_records: bool) -> None:
+def update_status_files(
+    *,
+    ts: str,
+    jp_files: list[tuple[str, str, Path]],
+    price_records_written: int,
+    currencies_seen: list[str],
+    had_new_records: bool,
+    status_override: str | None = None,
+    notes_override: list[str] | None = None,
+) -> None:
     prices_status = load_json(PRICES_STATUS_PATH)
     if not isinstance(prices_status.get("languages"), dict):
         prices_status["languages"] = {}
 
     if had_new_records and jp_files:
-        status = "partial"
         source_currency = currencies_seen[0] if len(currencies_seen) == 1 else "mixed"
         staleness_status = "fresh"
         age_seconds = 0
@@ -948,6 +1256,20 @@ def update_status_files(*, ts: str, jp_files: list[tuple[str, str, Path]], price
             "Provider currency is passed through as-is and is not converted.",
         ]
         last_success = None
+
+    if status_override is not None:
+        status = status_override
+        if status == "catalogue_only":
+            source_currency = currencies_seen[0] if len(currencies_seen) == 1 else ("mixed" if len(currencies_seen) > 1 else None)
+            staleness_status = "unavailable"
+            age_seconds = None
+    elif had_new_records and jp_files:
+        status = "partial"
+    else:
+        status = "not_available"
+
+    if notes_override:
+        notes = notes_override
 
     prices_status["generatedAtUtc"] = ts
     prices_status["languages"]["jp"] = {
@@ -1021,7 +1343,15 @@ def main() -> int:
     if not bool(config.get("enabled", True)):
         diagnostics["recommendation"] = "Pokewallet JP controlled test is disabled in data/pokewallet_jp_price_config.json."
         cache.write_json(DIAG_PATH, diagnostics)
-        update_status_files(ts=ts, jp_files=[], price_records_written=0, currencies_seen=[], had_new_records=False)
+        update_status_files(
+            ts=ts,
+            jp_files=[],
+            price_records_written=0,
+            currencies_seen=[],
+            had_new_records=False,
+            status_override="not_available",
+            notes_override=["Pokewallet JP controlled test is disabled."] ,
+        )
         write_api_docs_updates(ts)
         update_index(ts=ts, jp_files=collect_jp_price_files())
         print("Controlled test disabled; wrote diagnostics and status metadata only.")
@@ -1030,7 +1360,15 @@ def main() -> int:
     if not api_key:
         diagnostics["recommendation"] = "POKEWALLET_API_KEY is not set. Real JP controlled test could not run; no JP price records were written."
         cache.write_json(DIAG_PATH, diagnostics)
-        update_status_files(ts=ts, jp_files=[], price_records_written=0, currencies_seen=[], had_new_records=False)
+        update_status_files(
+            ts=ts,
+            jp_files=[],
+            price_records_written=0,
+            currencies_seen=[],
+            had_new_records=False,
+            status_override="not_available",
+            notes_override=["POKEWALLET_API_KEY is not set; JP pricing test could not run."],
+        )
         write_api_docs_updates(ts)
         update_index(ts=ts, jp_files=collect_jp_price_files())
         print("POKEWALLET_API_KEY missing; wrote diagnostics and status metadata only.")
@@ -1038,202 +1376,287 @@ def main() -> int:
 
     all_cards, cardscanr_sets = load_target_cards()
     diagnostics["catalogueCardsLoaded"] = len(all_cards)
+    diagnostics["cardscanrJpSetsLoaded"] = len(cardscanr_sets)
+    card_index = build_cardscanr_card_index(all_cards)
+    cards_by_set = build_cardscanr_cards_by_set(all_cards)
 
     preferred_set_ids = [str(item) for item in (config.get("cataloguePreferredSetIds") or DEFAULT_PREFERRED_SET_IDS)]
     sample_limit = max(1, int(config.get("catalogueSampleLimit") or 25))
 
-    use_set_map = bool(config.get("usePokewalletSetMap", True))
     set_map_max_sets = max(1, int(config.get("setMapMaxSets") or 25))
-    search_strategy = str(config.get("searchStrategy") or DEFAULT_SEARCH_STRATEGY)
-    fallback_strategies = [str(item) for item in (config.get("fallbackSearchStrategies") or DEFAULT_FALLBACK_STRATEGIES)]
-
-    set_map: dict[str, dict[str, Any]] = {}
-    if use_set_map:
-        pokewallet_sets = fetch_pokewallet_sets(
-            api_key=api_key,
-            diagnostics=diagnostics,
-            request_limit=max_requests,
-            max_sets=set_map_max_sets,
-        )
-        set_map = build_set_map(
-            cardscanr_sets=cardscanr_sets,
-            pokewallet_sets=pokewallet_sets,
-            preferred_set_ids=preferred_set_ids,
-            max_sets=set_map_max_sets,
-            diagnostics=diagnostics,
-        )
-
+    set_list = fetch_pokewallet_sets(
+        api_key=api_key,
+        diagnostics=diagnostics,
+        request_limit=max_requests,
+        max_sets=set_map_max_sets * 8,
+    )
+    set_map = build_set_map(
+        cardscanr_sets=cardscanr_sets,
+        pokewallet_sets=set_list,
+        preferred_set_ids=preferred_set_ids,
+        max_sets=set_map_max_sets,
+        diagnostics=diagnostics,
+    )
     diagnostics["cataloguePreferredSetIdsUsed"] = [set_id for set_id in preferred_set_ids if set_id in set_map]
 
-    selected_cards = choose_sample_cards(
-        all_cards,
-        allowed_set_ids=set(set_map.keys()),
-        sample_limit=sample_limit,
+    ordered_candidates = sorted(
+        set_map.values(),
+        key=lambda item: (
+            preferred_set_ids.index(item["cardscanrSetId"]) if item["cardscanrSetId"] in preferred_set_ids else 999,
+            -float(item.get("score") or 0.0),
+            item["cardscanrSetId"],
+        ),
     )
-    diagnostics["catalogueSampleTargetsBuilt"] = len(selected_cards)
+    selected_candidates = ordered_candidates[:set_map_max_sets]
+    diagnostics["catalogueSampleTargetsBuilt"] = min(sample_limit, len(all_cards))
+    diagnostics["catalogueSearchQueriesBuilt"] = 0
 
-    query_budget = max(0, max_requests - diagnostics["requestsAttempted"])
-    query_targets = build_query_targets(
-        selected_cards,
-        set_map,
-        primary_strategy=search_strategy,
-        fallback_strategies=fallback_strategies,
-        max_queries=query_budget,
-    )
-    diagnostics["catalogueSearchQueriesBuilt"] = len(query_targets)
-
-    for item in query_targets[:12]:
-        append_sample(
-            diagnostics["sampleSearchTargets"],
-            {
-                "query": item.get("query"),
-                "strategy": item.get("strategy"),
-                "setId": item.get("target", {}).get("setId"),
-                "collectorNumber": item.get("target", {}).get("collectorNumber"),
-                "name": item.get("target", {}).get("name"),
-                "pokewalletSetId": item.get("target", {}).get("pokewalletSetId"),
-            },
-        )
-
+    search_fallback_queue: list[dict[str, Any]] = []
     seen_canonical: dict[str, dict[str, Any]] = {}
+    records_by_set: dict[str, list[dict[str, Any]]] = {}
     currencies_seen: set[str] = set()
-    currency_by_set: dict[str, str] = {}
+    sample_cards_seen = 0
 
-    for item in query_targets:
+    for candidate in selected_candidates:
         if diagnostics["requestsAttempted"] >= max_requests:
             break
 
-        query = cleaned_query(str(item.get("query") or ""))
-        if not query:
+        provider_set_id = str(candidate.get("pokewalletSetId") or "")
+        if not provider_set_id:
             continue
 
-        target = item.get("target") if isinstance(item.get("target"), dict) else {}
-        diagnostics["searchTargetsTested"].append(query)
+        set_payload = fetch_pokewallet_set_detail(
+            api_key=api_key,
+            set_id=provider_set_id,
+            diagnostics=diagnostics,
+            request_limit=max_requests,
+        )
+        if not set_payload:
+            fallback_cards = cards_by_set.get(normalize_set_code(str(candidate.get("cardscanrSetId") or "")), [])
+            for fallback_card in fallback_cards[:sample_limit]:
+                search_fallback_queue.append(
+                    {
+                        "setId": fallback_card.set_id,
+                        "providerSetId": provider_set_id,
+                        "collectorNumber": fallback_card.collector_number,
+                        "providerCardId": "",
+                        "providerName": "",
+                    }
+                )
+            continue
 
-        url = f"https://api.pokewallet.io{POKEWALLET_ENDPOINTS['search']['path']}?q={quote(query)}&page=1&limit=8"
+        set_obj, cards = set_detail_cards(set_payload)
+        diagnostics["pokewalletCardsFetchedFromSetDetails"] += len(cards)
+        if not cards:
+            fallback_cards = cards_by_set.get(normalize_set_code(str(candidate.get("cardscanrSetId") or "")), [])
+            for fallback_card in fallback_cards[:sample_limit]:
+                search_fallback_queue.append(
+                    {
+                        "setId": fallback_card.set_id,
+                        "providerSetId": provider_set_id,
+                        "collectorNumber": fallback_card.collector_number,
+                        "providerCardId": "",
+                        "providerName": "",
+                    }
+                )
+            append_sample(
+                diagnostics["sampleSkipped"],
+                {
+                    "reason": "set_detail_cards_unavailable",
+                    "setId": str(candidate.get("cardscanrSetId") or ""),
+                    "pokewalletSetId": provider_set_id,
+                },
+            )
+            continue
+
+        for card in cards:
+            info = card_info(card)
+            provider_card_number = str(info.get("card_number") or "").strip()
+            if not provider_card_number:
+                diagnostics["skippedNoCanonicalMatch"] += 1
+                append_sample(
+                    diagnostics["sampleSkipped"],
+                    {
+                        "reason": "missing_card_number",
+                        "setId": str(candidate.get("cardscanrSetId") or ""),
+                        "providerId": str(card.get("id") or ""),
+                    },
+                )
+                continue
+
+            append_sample(diagnostics["sampleSetDetailCards"], sample_set_detail_card(card, set_obj))
+
+            matched_card = match_cardscanr_card(
+                index=card_index,
+                set_id=str(candidate.get("cardscanrSetId") or ""),
+                collector_number=provider_card_number,
+            )
+            if matched_card is None:
+                diagnostics["skippedNoCanonicalMatch"] += 1
+                append_sample(
+                    diagnostics["sampleSkipped"],
+                    {
+                        "reason": "card_not_in_cardscanr_catalogue",
+                        "setId": str(candidate.get("cardscanrSetId") or ""),
+                        "collectorNumber": provider_card_number,
+                        "providerId": str(card.get("id") or ""),
+                    },
+                )
+                continue
+
+            diagnostics["possibleJapaneseResults"] += 1
+            sample_cards_seen += 1
+
+            provider_set_id_value = str(info.get("set_id") or set_obj.get("set_id") or provider_set_id)
+            variants = iter_price_variants(card)
+            if not variants:
+                diagnostics["skippedNoPrice"] += 1
+                append_sample(
+                    diagnostics["sampleSkipped"],
+                    {
+                        "reason": "set_detail_card_no_price",
+                        "setId": matched_card.set_id,
+                        "collectorNumber": provider_card_number,
+                        "providerCardId": str(card.get("id") or ""),
+                    },
+                )
+                continue
+
+            for price_variant in variants:
+                if not isinstance(price_variant.get("currency"), str):
+                    continue
+                record = build_price_record(
+                    cardscanr_card=matched_card,
+                    provider_record=card,
+                    provider_set_id=provider_set_id_value,
+                    price_variant=price_variant,
+                    confidence=0.99,
+                    signals=["set_id_exact", "collector_exact", f"price_source_{price_variant['priceSource']}"],
+                    fetched_at_utc=ts,
+                )
+                if add_price_record(records_by_set=records_by_set, seen_canonical=seen_canonical, record=record):
+                    diagnostics["confidentMatches"] += 1
+                    currencies_seen.add(str(price_variant.get("currency") or ""))
+                    diagnostics["possibleJapaneseResults"] += 1 if possible_japanese(card) else 0
+                    append_sample(
+                        diagnostics["sampleMatches"],
+                        {
+                            "providerId": str(card.get("id") or ""),
+                            "setId": matched_card.set_id,
+                            "collectorNumber": matched_card.collector_number,
+                            "currency": price_variant.get("currency"),
+                            "confidence": 0.99,
+                            "signals": ["set_id_exact", "collector_exact", f"price_source_{price_variant['priceSource']}"],
+                        },
+                    )
+
+    for candidate in search_fallback_queue[:sample_limit]:
+        if diagnostics["requestsAttempted"] >= max_requests:
+            break
+
+        query = cleaned_query(f"{candidate['providerSetId']} {candidate['collectorNumber']}")
+        diagnostics["searchFallbackRequestsAttempted"] += 1
         diagnostics["requestsAttempted"] += 1
+        diagnostics["catalogueSearchQueriesBuilt"] += 1
+        append_sample(
+            diagnostics["sampleSearchQueries"],
+            {
+                "query": query,
+                "setId": candidate["setId"],
+                "collectorNumber": candidate["collectorNumber"],
+            },
+        )
+        append_sample(
+            diagnostics["sampleSearchTargets"],
+            {
+                "query": query,
+                "setId": candidate["setId"],
+                "collectorNumber": candidate["collectorNumber"],
+                "reason": "search_fallback",
+            },
+        )
+
         try:
-            payload = fetch_json(url, api_key=api_key)
+            payload = fetch_json(
+                f"https://api.pokewallet.io{POKEWALLET_ENDPOINTS['search']['path']}?q={quote(query)}&page=1&limit=8",
+                api_key=api_key,
+            )
             diagnostics["requestsSucceeded"] += 1
         except Exception as exc:  # noqa: BLE001
             diagnostics["requestsFailed"] += 1
             append_sample(
                 diagnostics["sampleSkipped"],
-                {"query": query, "strategy": item.get("strategy"), "reason": "request_failed", "detail": str(exc)},
+                {"reason": "search_fallback_failed", "query": query, "detail": str(exc)},
             )
-            if sleep_seconds:
-                time.sleep(sleep_seconds)
             continue
 
         results = list_results(payload)
+        diagnostics["searchFallbackResultsFound"] += len(results)
         diagnostics["resultsFound"] += len(results)
 
         for record in results:
-            if possible_japanese(record):
-                diagnostics["possibleJapaneseResults"] += 1
-
-            score, signals, collector_match = score_result(record, target)
-            diagnostics["matchScoreDistribution"][score_bucket(score)] += 1
-
-            if not collector_match:
-                diagnostics["skippedNoCanonicalMatch"] += 1
-                diagnostics["unmappedResults"] += 1
-                append_sample(
-                    diagnostics["sampleSkipped"],
-                    {"query": query, "strategy": item.get("strategy"), "providerId": str(record.get("id") or ""), "reason": "collector_number_mismatch"},
-                )
+            provider_info = card_info(record)
+            provider_set_id = str(provider_info.get("set_id") or record.get("set_id") or "")
+            provider_number = str(provider_info.get("card_number") or "")
+            if normalize_set_code(provider_set_id) != normalize_set_code(candidate["providerSetId"]):
+                continue
+            if not collector_numbers_match(provider_number, candidate["collectorNumber"]):
                 continue
 
-            price_data = extract_price(record)
-            if price_data is None:
+            variants = iter_price_variants(record)
+            if not variants:
                 diagnostics["skippedNoPrice"] += 1
                 append_sample(
                     diagnostics["sampleSkipped"],
-                    {"query": query, "strategy": item.get("strategy"), "providerId": str(record.get("id") or ""), "reason": "no_useful_price"},
-                )
-                continue
-            currency, market, low, high = price_data
-
-            if score < confidence_threshold:
-                diagnostics["lowConfidenceMatches"] += 1
-                diagnostics["skippedLowConfidence"] += 1
-                append_sample(
-                    diagnostics["sampleSkipped"],
                     {
+                        "reason": "search_result_no_price",
                         "query": query,
-                        "strategy": item.get("strategy"),
                         "providerId": str(record.get("id") or ""),
-                        "reason": "low_confidence",
-                        "confidence": round(score, 4),
-                        "signals": signals,
                     },
                 )
                 continue
 
-            set_id = str(target.get("setId") or "")
-            if not set_id:
+            matched_card = match_cardscanr_card(
+                index=card_index,
+                set_id=candidate["setId"],
+                collector_number=candidate["collectorNumber"],
+            )
+            if matched_card is None:
                 diagnostics["skippedNoCanonicalMatch"] += 1
-                diagnostics["unmappedResults"] += 1
-                append_sample(
-                    diagnostics["sampleSkipped"],
-                    {"query": query, "strategy": item.get("strategy"), "providerId": str(record.get("id") or ""), "reason": "missing_target_set"},
+                continue
+
+            diagnostics["possibleJapaneseResults"] += 1
+
+            for price_variant in variants:
+                record_payload = build_price_record(
+                    cardscanr_card=matched_card,
+                    provider_record=record,
+                    provider_set_id=provider_set_id,
+                    price_variant=price_variant,
+                    confidence=0.99,
+                    signals=["search_fallback", "set_id_exact", "collector_exact", f"price_source_{price_variant['priceSource']}"],
+                    fetched_at_utc=ts,
                 )
-                continue
-
-            if set_id in currency_by_set and currency_by_set[set_id] != currency:
-                diagnostics["skippedNoCurrency"] += 1
-                append_sample(
-                    diagnostics["sampleSkipped"],
-                    {
-                        "query": query,
-                        "strategy": item.get("strategy"),
-                        "providerId": str(record.get("id") or ""),
-                        "reason": "set_currency_mismatch",
-                        "setId": set_id,
-                    },
-                )
-                continue
-
-            diagnostics["confidentMatches"] += 1
-            currencies_seen.add(currency)
-            currency_by_set[set_id] = currency
-
-            payload_record = build_record(
-                record=record,
-                target=target,
-                confidence=score,
-                signals=signals,
-                fetched_at_utc=ts,
-                currency=currency,
-                market=market,
-                low=low,
-                high=high,
-            )
-            canonical_id = payload_record["canonicalId"]
-            existing = seen_canonical.get(canonical_id)
-            if existing and float(existing.get("matchConfidence") or 0.0) >= payload_record["matchConfidence"]:
-                continue
-
-            seen_canonical[canonical_id] = payload_record
-            append_sample(
-                diagnostics["sampleMatches"],
-                {
-                    "providerId": str(record.get("id") or ""),
-                    "setId": set_id,
-                    "collectorNumber": payload_record["collectorNumber"],
-                    "currency": currency,
-                    "confidence": payload_record["matchConfidence"],
-                    "signals": signals,
-                },
-            )
+                if add_price_record(records_by_set=records_by_set, seen_canonical=seen_canonical, record=record_payload):
+                    diagnostics["confidentMatches"] += 1
+                    currencies_seen.add(str(price_variant.get("currency") or ""))
+                    diagnostics["possibleJapaneseResults"] += 1 if possible_japanese(record) else 0
+                    append_sample(
+                        diagnostics["sampleMatches"],
+                        {
+                            "providerId": str(record.get("id") or ""),
+                            "setId": matched_card.set_id,
+                            "collectorNumber": matched_card.collector_number,
+                            "currency": price_variant.get("currency"),
+                            "confidence": 0.99,
+                            "signals": ["search_fallback", "set_id_exact", "collector_exact", f"price_source_{price_variant['priceSource']}"],
+                        },
+                    )
 
         if sleep_seconds:
             time.sleep(sleep_seconds)
 
-    records_by_set: dict[str, list[dict[str, Any]]] = {}
-    for record in seen_canonical.values():
-        set_id = str(record.get("setId") or "")
-        records_by_set.setdefault(set_id, []).append(record)
+    diagnostics["catalogueSampleTargetsBuilt"] = sample_cards_seen
 
     written_files: list[tuple[str, str, Path]] = []
     price_records_written = 0
@@ -1244,8 +1667,14 @@ def main() -> int:
             continue
         records.sort(key=lambda item: str(item.get("canonicalId") or ""))
         set_name = cardscanr_sets.get(set_id).set_name if set_id in cardscanr_sets else set_id
-        currency = currency_by_set.get(set_id)
+        currency_counts: dict[str, int] = {}
+        for record in records:
+            record_currency = str(record.get("currency") or "").strip()
+            if record_currency:
+                currency_counts[record_currency] = currency_counts.get(record_currency, 0) + 1
+        currency = sorted(currency_counts)[0] if len(currency_counts) == 1 else ("mixed" if len(currency_counts) > 1 else None)
         if not currency:
+            diagnostics["skippedNoCurrency"] += 1
             continue
 
         payload = {
@@ -1263,12 +1692,7 @@ def main() -> int:
             "nextExpectedPriceUpdateAtUtc": None,
             "expectedUpdateIntervalMinutes": None,
             "isLivePricing": False,
-            "staleness": {
-                "status": "fresh",
-                "ageSeconds": 0,
-                "freshForSeconds": 86400,
-                "staleAfterSeconds": 172800,
-            },
+            "staleness": dict(DEFAULT_STALENESS),
             "prices": records,
         }
         path = JP_PRICES_DIR / f"{set_id}.json"
@@ -1281,17 +1705,38 @@ def main() -> int:
     diagnostics["currenciesSeen"] = sorted(currencies_seen)
 
     if written_files:
-        diagnostics["recommendation"] = "Pokewallet set-map probing produced confident priced JP matches; continue cautious partial runs."
-    elif not set_map:
-        diagnostics["recommendation"] = "No Pokewallet set matches were found for CardScanR JP sets in this controlled run."
-    elif diagnostics["resultsFound"] == 0:
-        diagnostics["recommendation"] = "Set matches existed, but Pokewallet search returned zero card results for generated set-id queries."
-    elif diagnostics["skippedNoPrice"] > 0:
-        diagnostics["recommendation"] = "Results were returned but lacked useful numeric prices for controlled JP write criteria."
-    elif diagnostics["skippedLowConfidence"] > 0:
-        diagnostics["recommendation"] = "Results were returned but confidence stayed below threshold for safe JP writes."
+        diagnostics["recommendation"] = "Pokewallet set-detail-first matching produced confident JP price records."
+        diagnostics["blockerReason"] = ""
+        final_status = "partial"
+        notes = [
+            "Controlled Pokewallet JP current price test with partial set coverage.",
+            "Provider currency is passed through as-is and is not converted.",
+            "JPY is not inferred; Pokewallet CardMarket records remain EUR and TCGPlayer records remain USD.",
+            "JP nextExpectedPriceUpdateAtUtc is null until regular JP scheduling exists.",
+        ]
+    elif diagnostics["pokewalletSetDetailsSucceeded"] > 0:
+        if diagnostics["skippedNoPrice"] > 0:
+            diagnostics["blockerReason"] = "Set-detail cards matched the JP catalogue, but no useful numeric TCGPlayer/CardMarket prices were present."
+        elif diagnostics["skippedNoCanonicalMatch"] > 0:
+            diagnostics["blockerReason"] = "Set-detail cards were fetched, but card numbers did not map confidently to CardScanR JP catalogue cards."
+        else:
+            diagnostics["blockerReason"] = "Set details were fetched, but no confident priced records met write criteria."
+        diagnostics["recommendation"] = f"{diagnostics['blockerReason']} Keep JP as catalogue-only."
+        final_status = "catalogue_only"
+        notes = [
+            "Pokewallet JP set details were available, but no usable numeric prices were written.",
+            "Japanese catalogue coverage exists without JP current price files yet.",
+            "Provider currency is passed through as-is and is not converted.",
+        ]
     else:
-        diagnostics["recommendation"] = "Pokewallet did not produce enough confident priced JP matches this run; keep as controlled test only."
+        diagnostics["blockerReason"] = "Pokewallet JP set-detail requests did not succeed for the matched JP set candidates."
+        diagnostics["recommendation"] = f"{diagnostics['blockerReason']} Keep JP current prices unavailable."
+        final_status = "not_available"
+        notes = [
+            "Controlled Pokewallet JP current price test produced no confident priced matches.",
+            "Japanese catalogue exists but JP current prices remain unavailable.",
+            "Provider currency is passed through as-is and is not converted.",
+        ]
 
     cache.write_json(DIAG_PATH, diagnostics)
     all_jp_files = collect_jp_price_files()
@@ -1301,6 +1746,8 @@ def main() -> int:
         price_records_written=price_records_written,
         currencies_seen=sorted(currencies_seen),
         had_new_records=bool(written_files),
+        status_override=final_status,
+        notes_override=notes,
     )
     write_api_docs_updates(ts)
     update_index(ts=ts, jp_files=all_jp_files)

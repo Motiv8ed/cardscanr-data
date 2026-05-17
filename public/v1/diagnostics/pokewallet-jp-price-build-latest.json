@@ -1,140 +1,404 @@
 {
   "apiKeyPresent": true,
+  "blockerReason": "Set-detail cards matched the JP catalogue, but no useful numeric TCGPlayer/CardMarket prices were present.",
+  "cardscanrJpSetsLoaded": 65,
   "catalogueCardsLoaded": 6246,
   "cataloguePreferredSetIdsUsed": [
     "SV10",
     "SV11B",
     "SV11W",
     "SV9",
-    "SV9a"
+    "SV9a",
+    "S12a"
   ],
-  "catalogueSampleTargetsBuilt": 25,
-  "catalogueSearchQueriesBuilt": 39,
+  "catalogueSampleTargetsBuilt": 2559,
+  "catalogueSearchQueriesBuilt": 14,
   "confidentMatches": 0,
   "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T01:29:23Z",
+  "generatedAtUtc": "2026-05-17T01:58:13Z",
   "lowConfidenceMatches": 0,
   "matchScoreDistribution": {
-    "0.00-0.59": 13,
+    "0.00-0.59": 0,
     "0.60-0.69": 0,
-    "0.70-0.79": 26,
+    "0.70-0.79": 0,
     "0.80-0.89": 0,
     "0.90-1.00": 0
   },
   "mode": "controlled_test",
-  "pokewalletJapaneseLikeSets": 127,
+  "pokewalletCardsFetchedFromSetDetails": 2593,
+  "pokewalletJapaneseLikeSets": 462,
+  "pokewalletSetDetailsAttempted": 25,
+  "pokewalletSetDetailsSucceeded": 21,
   "pokewalletSetLanguagesSeen": [
     "chn",
     "eng",
     "jap"
   ],
   "pokewalletSetsFetched": 854,
-  "possibleJapaneseResults": 39,
+  "possibleJapaneseResults": 2559,
   "priceFilesWritten": 0,
   "priceRecordsWritten": 0,
   "provider": "pokewallet",
-  "recommendation": "Pokewallet did not produce enough confident priced JP matches this run; keep as controlled test only.",
+  "recommendation": "Set-detail cards matched the JP catalogue, but no useful numeric TCGPlayer/CardMarket prices were present. Keep JP as catalogue-only.",
   "requestsAttempted": 40,
-  "requestsFailed": 0,
-  "requestsSucceeded": 40,
-  "resultsFound": 39,
+  "requestsFailed": 18,
+  "requestsSucceeded": 22,
+  "resultsFound": 0,
   "sampleMatches": [],
+  "samplePokewalletSets": [
+    {
+      "cardCount": 11,
+      "language": "jap",
+      "name": "10th Movie Commemoration Set",
+      "releaseDate": "3rd August, 2007",
+      "setCode": "10M",
+      "setId": "24146"
+    },
+    {
+      "cardCount": 9,
+      "language": "jap",
+      "name": "11th Movie Commemoration Set",
+      "releaseDate": "1st August, 2008",
+      "setCode": "11M",
+      "setId": "24145"
+    },
+    {
+      "cardCount": 108,
+      "language": "eng",
+      "name": "2022 World Championship Decks",
+      "releaseDate": null,
+      "setCode": "WCD22",
+      "setId": "-188"
+    },
+    {
+      "cardCount": 109,
+      "language": "eng",
+      "name": "2023 World Championship Decks",
+      "releaseDate": null,
+      "setCode": "WCD23",
+      "setId": "-189"
+    },
+    {
+      "cardCount": 102,
+      "language": "eng",
+      "name": "2024 World Championship Decks",
+      "releaseDate": null,
+      "setCode": "WCD24",
+      "setId": "-190"
+    },
+    {
+      "cardCount": 9,
+      "language": "chn",
+      "name": "30th Anniversary Celebration Simplified Chinese Singles",
+      "releaseDate": "20th March, 2026",
+      "setCode": "30th-P",
+      "setId": "-241"
+    },
+    {
+      "cardCount": 0,
+      "language": "jap",
+      "name": "64 Mario Stadium Best Photo Contest",
+      "releaseDate": null,
+      "setCode": "24197",
+      "setId": "24197"
+    },
+    {
+      "cardCount": 49,
+      "language": "jap",
+      "name": "ADV Expansion Pack",
+      "releaseDate": "31st January, 2003",
+      "setCode": "ADV1",
+      "setId": "24129"
+    },
+    {
+      "cardCount": 43,
+      "language": "jap",
+      "name": "ADV-P Promotional Cards",
+      "releaseDate": null,
+      "setCode": "ADV-P",
+      "setId": "24140"
+    },
+    {
+      "cardCount": 54,
+      "language": "eng",
+      "name": "Alternate Art Promos",
+      "releaseDate": "1st January, 2002",
+      "setCode": "PR",
+      "setId": "1938"
+    },
+    {
+      "cardCount": 23,
+      "language": "chn",
+      "name": "Ancient Roar",
+      "releaseDate": "27th October, 2023",
+      "setCode": "CS5.1C",
+      "setId": "-38"
+    },
+    {
+      "cardCount": 31,
+      "language": "jap",
+      "name": "Aqua Deck Kit",
+      "releaseDate": "24th October, 2003",
+      "setCode": "advG",
+      "setId": "24122"
+    }
+  ],
+  "sampleSearchQueries": [
+    {
+      "collectorNumber": "001",
+      "query": "23611 001",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "002",
+      "query": "23611 002",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "003",
+      "query": "23611 003",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "004",
+      "query": "23611 004",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "005",
+      "query": "23611 005",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "006",
+      "query": "23611 006",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "007",
+      "query": "23611 007",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "008",
+      "query": "23611 008",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "009",
+      "query": "23611 009",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "010",
+      "query": "23611 010",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "011",
+      "query": "23611 011",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "012",
+      "query": "23611 012",
+      "setId": "SV4M"
+    }
+  ],
   "sampleSearchTargets": [
     {
       "collectorNumber": "001",
-      "name": "クヌギダマ",
-      "pokewalletSetId": "24310",
-      "query": "24310 001",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_id_plus_card_number"
-    },
-    {
-      "collectorNumber": "001",
-      "name": "クヌギダマ",
-      "pokewalletSetId": "24310",
-      "query": "SV10 001",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_code_plus_card_number"
-    },
-    {
-      "collectorNumber": "001",
-      "name": "クヌギダマ",
-      "pokewalletSetId": "24310",
-      "query": "クヌギダマ SV10",
-      "setId": "SV10",
-      "strategy": "name_plus_pokewallet_set_code"
+      "query": "23611 001",
+      "reason": "search_fallback",
+      "setId": "SV4M"
     },
     {
       "collectorNumber": "002",
-      "name": "キノココ",
-      "pokewalletSetId": "24310",
-      "query": "24310 002",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_id_plus_card_number"
-    },
-    {
-      "collectorNumber": "002",
-      "name": "キノココ",
-      "pokewalletSetId": "24310",
-      "query": "SV10 002",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_code_plus_card_number"
-    },
-    {
-      "collectorNumber": "002",
-      "name": "キノココ",
-      "pokewalletSetId": "24310",
-      "query": "キノココ SV10",
-      "setId": "SV10",
-      "strategy": "name_plus_pokewallet_set_code"
+      "query": "23611 002",
+      "reason": "search_fallback",
+      "setId": "SV4M"
     },
     {
       "collectorNumber": "003",
-      "name": "キノガッサ",
-      "pokewalletSetId": "24310",
-      "query": "24310 003",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_id_plus_card_number"
-    },
-    {
-      "collectorNumber": "003",
-      "name": "キノガッサ",
-      "pokewalletSetId": "24310",
-      "query": "SV10 003",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_code_plus_card_number"
-    },
-    {
-      "collectorNumber": "003",
-      "name": "キノガッサ",
-      "pokewalletSetId": "24310",
-      "query": "キノガッサ SV10",
-      "setId": "SV10",
-      "strategy": "name_plus_pokewallet_set_code"
+      "query": "23611 003",
+      "reason": "search_fallback",
+      "setId": "SV4M"
     },
     {
       "collectorNumber": "004",
-      "name": "カットロトム",
-      "pokewalletSetId": "24310",
-      "query": "24310 004",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_id_plus_card_number"
+      "query": "23611 004",
+      "reason": "search_fallback",
+      "setId": "SV4M"
     },
     {
-      "collectorNumber": "004",
-      "name": "カットロトム",
-      "pokewalletSetId": "24310",
-      "query": "SV10 004",
-      "setId": "SV10",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "005",
+      "query": "23611 005",
+      "reason": "search_fallback",
+      "setId": "SV4M"
     },
     {
-      "collectorNumber": "004",
-      "name": "カットロトム",
-      "pokewalletSetId": "24310",
-      "query": "カットロトム SV10",
-      "setId": "SV10",
-      "strategy": "name_plus_pokewallet_set_code"
+      "collectorNumber": "006",
+      "query": "23611 006",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "007",
+      "query": "23611 007",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "008",
+      "query": "23611 008",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "009",
+      "query": "23611 009",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "010",
+      "query": "23611 010",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "011",
+      "query": "23611 011",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    },
+    {
+      "collectorNumber": "012",
+      "query": "23611 012",
+      "reason": "search_fallback",
+      "setId": "SV4M"
+    }
+  ],
+  "sampleSetDetailCards": [
+    {
+      "cleanName": "Pineco",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Pineco",
+      "number": "001/098",
+      "providerId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Shroomish",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Shroomish",
+      "number": "002/098",
+      "providerId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Breloom",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Breloom",
+      "number": "003/098",
+      "providerId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Mow Rotom",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Mow Rotom",
+      "number": "004/098",
+      "providerId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Fomantis",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Fomantis",
+      "number": "005/098",
+      "providerId": "pk_b7fd033b2b35b43aacfedc4fe679e5f2a9aef7233c988348a495f404ab650c3bdcfd1ce955bc636436246890107c",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Lurantis",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Lurantis",
+      "number": "006/098",
+      "providerId": "pk_286bad072bf83b4e177ee5c0b6e9d20f32dc2c0b0de157135a5503de7c53c882f0d60c7599a377abee56cc6b6900",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Team Rockets Blipbug",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Team Rocket's Blipbug",
+      "number": "007/098",
+      "providerId": "pk_d44f01405b265d93a8967cc1bcf487a53322c0d2a413c7e2749ebf6de99eeaf565007428002400977e22f969a54a",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Team Rockets Tarountula",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Team Rocket's Tarountula",
+      "number": "008/098",
+      "providerId": "pk_25cbb26374c5ba1a2b3dc0bb278037b2b97a82458969d157871769e0537c74a9072491192dc1b216dbdaeb31d1cd",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Team Rockets Spidops",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Team Rocket's Spidops",
+      "number": "009/098",
+      "providerId": "pk_bef8cfd74d9e517d5c55b0dd54120ee34d3f568942278449f5b9589b9d8638226c9ffce704c19bbaa564fba3e945",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Smoliv",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Smoliv",
+      "number": "010/098",
+      "providerId": "pk_82fee1238254b8aad19a672779d77967f828f6786d10bebeec953dc4278a922cd5d8633a35588e280709f9e7557af2",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Dolliv",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Dolliv",
+      "number": "011/098",
+      "providerId": "pk_616a771b28634c9476d55decd8dfcdd855e25f5af1e3f49b86fa5927ea630a539156e6e1e6f5634a8e435e0f3afb6b",
+      "setCode": "24310",
+      "setId": "24310"
+    },
+    {
+      "cleanName": "Arboliva ex",
+      "hasCardmarket": true,
+      "hasTcgplayer": true,
+      "name": "Arboliva ex",
+      "number": "012/098",
+      "providerId": "pk_5076245a744c91e275ac3ef81676ca04f8ee81f394f48efb7189eade563ac7835ee73f32a929630fb4da026c5132c9",
+      "setCode": "24310",
+      "setId": "24310"
     }
   ],
   "sampleSetMatches": [
@@ -144,9 +408,10 @@
       "pokewalletSetCode": "SV10",
       "pokewalletSetId": "24310",
       "pokewalletSetName": "SV10: The Glory of Team Rocket",
-      "score": 0.55,
+      "score": 0.61,
       "signals": [
-        "set_code_exact"
+        "set_code_exact",
+        "language_jap"
       ]
     },
     {
@@ -155,9 +420,10 @@
       "pokewalletSetCode": "SV11B",
       "pokewalletSetId": "24349",
       "pokewalletSetName": "SV11B: Black Bolt",
-      "score": 0.62,
+      "score": 0.68,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
@@ -167,9 +433,10 @@
       "pokewalletSetCode": "SV11W",
       "pokewalletSetId": "24350",
       "pokewalletSetName": "SV11W: White Flare",
-      "score": 0.62,
+      "score": 0.68,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
@@ -179,9 +446,10 @@
       "pokewalletSetCode": "SV9",
       "pokewalletSetId": "24173",
       "pokewalletSetName": "SV9: Battle Partners",
-      "score": 0.6,
+      "score": 0.66,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_close"
       ]
     },
@@ -191,151 +459,154 @@
       "pokewalletSetCode": "SV9a",
       "pokewalletSetId": "24260",
       "pokewalletSetName": "SV9a: Heat Wave Arena",
-      "score": 0.62,
+      "score": 0.68,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
     {
-      "cardscanrSetId": "SV1S",
-      "cardscanrSetName": "スカーレットex",
-      "pokewalletSetCode": "SV1S",
-      "pokewalletSetId": "23605",
-      "pokewalletSetName": "SV1S: Scarlet ex",
-      "score": 0.62,
+      "cardscanrSetId": "S12a",
+      "cardscanrSetName": "VSTARユニバース",
+      "pokewalletSetCode": "S12a",
+      "pokewalletSetId": "23645",
+      "pokewalletSetName": "S12a: VSTAR Universe",
+      "score": 0.64,
       "signals": [
         "set_code_exact",
+        "language_jap",
+        "card_count_near"
+      ]
+    },
+    {
+      "cardscanrSetId": "M1L",
+      "cardscanrSetName": "メガブレイブ",
+      "pokewalletSetCode": "m1L",
+      "pokewalletSetId": "24399",
+      "pokewalletSetName": "m1L: Mega Brave",
+      "score": 0.68,
+      "signals": [
+        "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
     {
-      "cardscanrSetId": "SV1V",
-      "cardscanrSetName": "バイオレットex",
-      "pokewalletSetCode": "SV1V",
-      "pokewalletSetId": "23606",
-      "pokewalletSetName": "SV1V: Violet ex",
-      "score": 0.62,
+      "cardscanrSetId": "M1S",
+      "cardscanrSetName": "メガシンフォニア",
+      "pokewalletSetCode": "m1S",
+      "pokewalletSetId": "24400",
+      "pokewalletSetName": "m1S: Mega Symphonia",
+      "score": 0.68,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
     {
-      "cardscanrSetId": "SV1a",
-      "cardscanrSetName": "トリプレットビート",
-      "pokewalletSetCode": "SV1a",
-      "pokewalletSetId": "23598",
-      "pokewalletSetName": "SV1a: Triplet Beat",
-      "score": 0.62,
+      "cardscanrSetId": "M2",
+      "cardscanrSetName": "インフェルノX",
+      "pokewalletSetCode": "M2",
+      "pokewalletSetId": "24459",
+      "pokewalletSetName": "M2: Inferno X",
+      "score": 0.68,
       "signals": [
         "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     },
     {
-      "cardscanrSetId": "SV2D",
-      "cardscanrSetName": "クレイバースト",
-      "pokewalletSetCode": "SV2D",
-      "pokewalletSetId": "23608",
-      "pokewalletSetName": "SV2D: Clay Burst",
-      "score": 0.62,
+      "cardscanrSetId": "S12",
+      "cardscanrSetName": "パラダイムトリガー",
+      "pokewalletSetCode": "S12",
+      "pokewalletSetId": "23632",
+      "pokewalletSetName": "S12: Paradigm Trigger",
+      "score": 0.68,
       "signals": [
         "set_code_exact",
-        "card_count_exact"
-      ]
-    },
-    {
-      "cardscanrSetId": "SV2P",
-      "cardscanrSetName": "スノーハザード",
-      "pokewalletSetCode": "SV2P",
-      "pokewalletSetId": "23607",
-      "pokewalletSetName": "SV2P: Snow Hazard",
-      "score": 0.62,
-      "signals": [
-        "set_code_exact",
+        "language_jap",
         "card_count_exact"
       ]
     }
   ],
   "sampleSkipped": [
     {
-      "providerId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
-      "query": "24310 001",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_id_plus_card_number"
+      "collectorNumber": "001/098",
+      "providerCardId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_fb19de2f941e96bca0987476525fa14a764dd1396bcf41cdb8c04dd582cfa30ba22940073ca1a1bea6b8915e0888",
-      "query": "SV10 001",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "002/098",
+      "providerCardId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_c5e2790b4dd3ac3caafa74a28984d5d001fbed3069165802df850ea4c7f7fdf0e6c198b141dc5ae257cc32deec23",
-      "query": "SV10 001",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "003/098",
+      "providerCardId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
-      "query": "24310 002",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_id_plus_card_number"
+      "collectorNumber": "004/098",
+      "providerCardId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_d3f16bb1d12d011324ee2953ec6fe19c1ea1d389500e61809663ef14a18e5963720c46bc091b12c26895e499852e",
-      "query": "SV10 002",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "005/098",
+      "providerCardId": "pk_b7fd033b2b35b43aacfedc4fe679e5f2a9aef7233c988348a495f404ab650c3bdcfd1ce955bc636436246890107c",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_82efa6e5cbdbe8505ee1aa01484938dbfca6a0a5d245314513eeb2dda17e4fc8476f04f49f81b83fbd0c3fb2f04d",
-      "query": "SV10 002",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "006/098",
+      "providerCardId": "pk_286bad072bf83b4e177ee5c0b6e9d20f32dc2c0b0de157135a5503de7c53c882f0d60c7599a377abee56cc6b6900",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
-      "query": "24310 003",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_id_plus_card_number"
+      "collectorNumber": "007/098",
+      "providerCardId": "pk_d44f01405b265d93a8967cc1bcf487a53322c0d2a413c7e2749ebf6de99eeaf565007428002400977e22f969a54a",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_3862585638304a31173fd607feaad04525b9c4d45d030b8a4dc61002ce7a2117b4b41d75b098759fa66aa8576c62",
-      "query": "SV10 003",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "008/098",
+      "providerCardId": "pk_25cbb26374c5ba1a2b3dc0bb278037b2b97a82458969d157871769e0537c74a9072491192dc1b216dbdaeb31d1cd",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_2a6ebe3d387614a374266ebd108e3f35b62f22e69c84c5a06439a88b83390e2a45290c02596820419570c6325ee5",
-      "query": "SV10 003",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "009/098",
+      "providerCardId": "pk_bef8cfd74d9e517d5c55b0dd54120ee34d3f568942278449f5b9589b9d8638226c9ffce704c19bbaa564fba3e945",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
-      "query": "24310 004",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_id_plus_card_number"
+      "collectorNumber": "010/098",
+      "providerCardId": "pk_82fee1238254b8aad19a672779d77967f828f6786d10bebeec953dc4278a922cd5d8633a35588e280709f9e7557af2",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_e71a1060ac07290369e49ad47cb7de90849562ed8d90aa185cf3d9b245b235465e25337303b1565fd238867d2965",
-      "query": "SV10 004",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "011/098",
+      "providerCardId": "pk_616a771b28634c9476d55decd8dfcdd855e25f5af1e3f49b86fa5927ea630a539156e6e1e6f5634a8e435e0f3afb6b",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     },
     {
-      "providerId": "pk_4a3e218a548dd4d4d5456bc71af228326a4dd5f2bb7740539699fcc65b39e1a9dc748e90e0360793ba8e050689c0",
-      "query": "SV10 004",
-      "reason": "collector_number_mismatch",
-      "strategy": "pokewallet_set_code_plus_card_number"
+      "collectorNumber": "012/098",
+      "providerCardId": "pk_5076245a744c91e275ac3ef81676ca04f8ee81f394f48efb7189eade563ac7835ee73f32a929630fb4da026c5132c9",
+      "reason": "set_detail_card_no_price",
+      "setId": "SV10"
     }
   ],
   "sampleUnmatchedCardScanRSets": [
-    {
-      "setId": "S12a"
-    },
     {
       "setId": "PMCG1"
     },
@@ -358,13 +629,34 @@
       "setId": "E5"
     },
     {
-      "setId": "M1L"
+      "setId": "PMCG2"
     },
     {
-      "setId": "M1S"
+      "setId": "PMCG3"
+    },
+    {
+      "setId": "PMCG4"
     }
   ],
   "sampleUnmatchedPokewalletSets": [
+    {
+      "language": "jap",
+      "name": "10th Movie Commemoration Set",
+      "pokewalletSetCode": "10M",
+      "pokewalletSetId": "24146"
+    },
+    {
+      "language": "jap",
+      "name": "11th Movie Commemoration Set",
+      "pokewalletSetCode": "11M",
+      "pokewalletSetId": "24145"
+    },
+    {
+      "language": "jap",
+      "name": "64 Mario Stadium Best Photo Contest",
+      "pokewalletSetCode": "24197",
+      "pokewalletSetId": "24197"
+    },
     {
       "language": "jap",
       "name": "ADV-P Promotional Cards",
@@ -378,100 +670,44 @@
       "pokewalletSetId": "24122"
     },
     {
-      "language": "eng",
-      "name": "Ash vs Team Rocket Deck Kit (JP Exclusive)",
-      "pokewalletSetCode": "AVTR",
-      "pokewalletSetId": "23095"
+      "language": "jap",
+      "name": "Arceus LV.X Deck: Grass & Fire",
+      "pokewalletSetCode": "Pt",
+      "pokewalletSetId": "24054"
     },
     {
       "language": "jap",
-      "name": "Battle Academy",
-      "pokewalletSetCode": "svI",
-      "pokewalletSetId": "23822"
+      "name": "Arceus LV.X Deck: Lightning & Psychic",
+      "pokewalletSetCode": "Pt",
+      "pokewalletSetId": "24055"
     },
     {
       "language": "jap",
-      "name": "Battle Academy",
-      "pokewalletSetCode": "svIba",
-      "pokewalletSetId": "-228"
+      "name": "Awakening Legends",
+      "pokewalletSetCode": "23720",
+      "pokewalletSetId": "23720"
     },
     {
       "language": "jap",
-      "name": "Deoxys/Rayquaza Constructed Starter Deck",
-      "pokewalletSetCode": "advJ",
-      "pokewalletSetId": "-204"
+      "name": "Base Expansion Pack",
+      "pokewalletSetCode": "23730",
+      "pokewalletSetId": "23730"
     },
     {
-      "language": "eng",
-      "name": "Extended Art: SV11 Black Bolt",
-      "pokewalletSetCode": "xsv11B",
-      "pokewalletSetId": "-236"
-    },
-    {
-      "language": "eng",
-      "name": "Extended Art: SV11 White Flare",
-      "pokewalletSetCode": "xsv11W",
-      "pokewalletSetId": "-237"
-    },
-    {
-      "language": "eng",
-      "name": "Extended Art: SV2a",
-      "pokewalletSetCode": "xsv2a",
-      "pokewalletSetId": "-238"
-    },
-    {
-      "language": "eng",
-      "name": "Extended Art: Terastal Fest",
-      "pokewalletSetCode": "xsv8a",
-      "pokewalletSetId": "-239"
+      "language": "jap",
+      "name": "Bastiodon the Defender Half Deck",
+      "pokewalletSetCode": "DP2",
+      "pokewalletSetId": "24047"
     }
   ],
   "schemaVersion": "1.0.0",
-  "searchTargetsTested": [
-    "24310 001",
-    "SV10 001",
-    "クヌギダマ SV10",
-    "24310 002",
-    "SV10 002",
-    "キノココ SV10",
-    "24310 003",
-    "SV10 003",
-    "キノガッサ SV10",
-    "24310 004",
-    "SV10 004",
-    "カットロトム SV10",
-    "24310 005",
-    "SV10 005",
-    "カリキリ SV10",
-    "24310 006",
-    "SV10 006",
-    "ラランテス SV10",
-    "24310 007",
-    "SV10 007",
-    "ロケット団のサッチムシ SV10",
-    "24310 008",
-    "SV10 008",
-    "ロケット団のタマンチュラ SV10",
-    "24310 009",
-    "SV10 009",
-    "ロケット団のワナイダー SV10",
-    "24310 010",
-    "SV10 010",
-    "ミニーブ SV10",
-    "24310 011",
-    "SV10 011",
-    "オリーニョ SV10",
-    "24310 012",
-    "SV10 012",
-    "オリーヴァex SV10",
-    "24310 013",
-    "SV10 013",
-    "ガーディ SV10"
-  ],
+  "searchFallbackRequestsAttempted": 14,
+  "searchFallbackResultsFound": 0,
+  "searchTargetsTested": [],
   "setMatchCandidatesBuilt": 25,
   "skippedLowConfidence": 0,
-  "skippedNoCanonicalMatch": 39,
+  "skippedNoCanonicalMatch": 34,
   "skippedNoCurrency": 0,
-  "skippedNoPrice": 0,
-  "unmappedResults": 39
+  "skippedNoPrice": 2559,
+  "unmappedResults": 0
 }

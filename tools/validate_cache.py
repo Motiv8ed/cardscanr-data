@@ -193,13 +193,22 @@ REQUIRED_POKEWALLET_JP_BUILD_FIELDS = {
     "priceFilesWritten",
     "currenciesSeen",
     "catalogueCardsLoaded",
+    "cardscanrJpSetsLoaded",
     "catalogueSampleTargetsBuilt",
     "catalogueSearchQueriesBuilt",
     "cataloguePreferredSetIdsUsed",
     "pokewalletSetsFetched",
     "pokewalletJapaneseLikeSets",
     "pokewalletSetLanguagesSeen",
+    "samplePokewalletSets",
     "setMatchCandidatesBuilt",
+    "pokewalletSetDetailsAttempted",
+    "pokewalletSetDetailsSucceeded",
+    "pokewalletCardsFetchedFromSetDetails",
+    "sampleSetDetailCards",
+    "searchFallbackRequestsAttempted",
+    "searchFallbackResultsFound",
+    "sampleSearchQueries",
     "matchScoreDistribution",
     "skippedNoPrice",
     "skippedLowConfidence",
@@ -211,6 +220,7 @@ REQUIRED_POKEWALLET_JP_BUILD_FIELDS = {
     "sampleSearchTargets",
     "sampleMatches",
     "sampleSkipped",
+    "blockerReason",
     "recommendation",
 }
 ALLOWED_POKEWALLET_PROBE_STATUSES = {
@@ -552,8 +562,8 @@ def check_price_files() -> None:
                 if not isinstance(data.get("source"), str) or not data.get("source"):
                     err(f"{rel}: source must be a non-empty string")
                 currency = data.get("currency")
-                if not isinstance(currency, str) or len(currency) != 3:
-                    err(f"{rel}: currency must be a 3-letter string")
+                if not isinstance(currency, str) or (currency != "mixed" and len(currency) != 3):
+                    err(f"{rel}: currency must be a 3-letter string or mixed")
 
             if data.get("status") not in ALLOWED_SET_PRICE_STATUS_VALUES:
                 err(f"{rel}: status must be one of {sorted(ALLOWED_SET_PRICE_STATUS_VALUES)}")
@@ -642,7 +652,12 @@ def check_price_files() -> None:
                 if not isinstance(record_currency, str) or len(record_currency) != 3 or record_currency.upper() != record_currency:
                     err(f"{rel}: prices[{i}] currency must be a 3-letter uppercase string")
                     entry_errors += 1
-                if isinstance(data.get("currency"), str) and isinstance(record_currency, str) and data.get("currency") != record_currency:
+                if (
+                    isinstance(data.get("currency"), str)
+                    and data.get("currency") != "mixed"
+                    and isinstance(record_currency, str)
+                    and data.get("currency") != record_currency
+                ):
                     err(f"{rel}: prices[{i}] currency must match top-level currency")
                     entry_errors += 1
                 entry_staleness = entry.get("staleness")
@@ -667,6 +682,9 @@ def check_price_files() -> None:
                         entry_errors += 1
                     elif not isinstance(provider_ids.get("pokewalletId"), str) or not provider_ids.get("pokewalletId"):
                         err(f"{rel}: prices[{i}] providerIds.pokewalletId must be a non-empty string")
+                        entry_errors += 1
+                    elif not isinstance(provider_ids.get("pokewalletSetId"), str) or not provider_ids.get("pokewalletSetId"):
+                        err(f"{rel}: prices[{i}] providerIds.pokewalletSetId must be a non-empty string")
                         entry_errors += 1
 
                     match_confidence = entry.get("matchConfidence")
@@ -887,10 +905,16 @@ def check_pokewallet_jp_build_diagnostics() -> None:
         "priceRecordsWritten",
         "priceFilesWritten",
         "catalogueCardsLoaded",
+        "cardscanrJpSetsLoaded",
         "catalogueSampleTargetsBuilt",
         "catalogueSearchQueriesBuilt",
         "pokewalletSetsFetched",
         "pokewalletJapaneseLikeSets",
+        "pokewalletSetDetailsAttempted",
+        "pokewalletSetDetailsSucceeded",
+        "pokewalletCardsFetchedFromSetDetails",
+        "searchFallbackRequestsAttempted",
+        "searchFallbackResultsFound",
         "setMatchCandidatesBuilt",
         "skippedNoPrice",
         "skippedLowConfidence",
@@ -906,6 +930,9 @@ def check_pokewallet_jp_build_diagnostics() -> None:
         "currenciesSeen",
         "cataloguePreferredSetIdsUsed",
         "pokewalletSetLanguagesSeen",
+        "samplePokewalletSets",
+        "sampleSetDetailCards",
+        "sampleSearchQueries",
         "sampleSetMatches",
         "sampleUnmatchedCardScanRSets",
         "sampleUnmatchedPokewalletSets",
@@ -915,6 +942,9 @@ def check_pokewallet_jp_build_diagnostics() -> None:
     ]:
         if not isinstance(data.get(field), list):
             err(f"diagnostics/pokewallet-jp-price-build-latest.json {field} must be a list")
+
+    if not isinstance(data.get("blockerReason"), str):
+        err("diagnostics/pokewallet-jp-price-build-latest.json blockerReason must be a string")
 
     distribution = data.get("matchScoreDistribution")
     if not isinstance(distribution, dict):

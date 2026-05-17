@@ -1,6 +1,6 @@
 {
   "cacheVersion": "2026.05.17.0117",
-  "generatedAtUtc": "2026-05-17T01:17:00Z",
+  "generatedAtUtc": "2026-05-17T01:58:13Z",
   "intendedConsumer": "cardscanr_app",
   "languages": {
     "en": {
@@ -54,19 +54,19 @@
       "lastSuccessfulPriceUpdateAtUtc": null,
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
-        "Japanese catalogue support is partial.",
-        "Japanese current price cache is not available yet.",
-        "Timestamps are UTC. Apps should convert to the user's local timezone."
+        "Pokewallet JP set details were available, but no usable numeric prices were written.",
+        "Japanese catalogue coverage exists without JP current price files yet.",
+        "Provider currency is passed through as-is and is not converted."
       ],
       "sourceSummary": {
         "currency": null,
         "isLivePricing": false,
-        "primarySource": "tcgdex"
+        "primarySource": "pokewallet"
       },
       "staleness": {
         "ageSeconds": null,
         "freshForSeconds": 86400,
-        "staleAfterSeconds": 259200,
+        "staleAfterSeconds": 172800,
         "status": "unavailable"
       },
       "status": "catalogue_only"
