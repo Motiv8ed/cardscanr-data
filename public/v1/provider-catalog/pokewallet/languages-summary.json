@@ -1,35 +1,59 @@
 {
+  "cardsWrittenByLanguage": {
+    "en": 2923
+  },
+  "fullCatalogueAvailable": true,
+  "fullCatalogueMode": "metadata_only",
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-17T08:27:32Z",
+  "generatedAtUtc": "2026-05-18T07:02:25Z",
   "languages": [
     {
       "cardScanRLanguage": "en",
-      "cardsFetched": 864,
-      "providerLanguages": [],
-      "selectedSetCount": 5,
-      "setCount": 334
+      "cardsFetched": 140,
+      "cardsWritten": 2923,
+      "providerLanguages": [
+        "eng"
+      ],
+      "selectedSetCount": 334,
+      "setCount": 334,
+      "setsWritten": 28
     },
     {
       "cardScanRLanguage": "jp",
-      "cardsFetched": 357,
-      "providerLanguages": [],
-      "selectedSetCount": 10,
-      "setCount": 462
+      "cardsFetched": 0,
+      "cardsWritten": 0,
+      "providerLanguages": [
+        "jap"
+      ],
+      "selectedSetCount": 462,
+      "setCount": 462,
+      "setsWritten": 0
     },
     {
       "cardScanRLanguage": "zh",
-      "cardsFetched": 133,
-      "providerLanguages": [],
-      "selectedSetCount": 5,
-      "setCount": 58
+      "cardsFetched": 0,
+      "cardsWritten": 0,
+      "providerLanguages": [
+        "chn"
+      ],
+      "selectedSetCount": 58,
+      "setCount": 58,
+      "setsWritten": 0
     }
   ],
+  "latestFullCatalogueRunAtUtc": "2026-05-18T07:02:25Z",
   "notes": [
     "Pokewallet provider catalogue foundation for CardScanR matching research.",
     "Only safe provider metadata is stored.",
     "Image references are stored as API endpoints only; image files are not stored in this repository.",
-    "Production catalogue integration comes later after provider coverage is reviewed."
+    "Provider metadata is not official CardScanR canonical data yet.",
+    "Production catalogue and pricing integration are separate later steps."
   ],
+  "perSetFilesWritten": 28,
   "provider": "pokewallet",
-  "schemaVersion": "1.0.0"
+  "schemaVersion": "1.0.0",
+  "setsWrittenByLanguage": {
+    "en": 28
+  },
+  "statePath": "data/pokewallet_catalog_full_state.json"
 }
