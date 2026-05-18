@@ -108,11 +108,11 @@ else {
     Join-Path $RepoRoot 'logs\pokewallet_catalog_worker.log'
 }
 
-$interval = if ($null -ne $workerConfig -and $null -ne $workerConfig.intervalMinutes) {
-    [int]$workerConfig.intervalMinutes
-}
-elseif ($null -ne $status -and $null -ne $status.intervalMinutes) {
+$interval = if ($null -ne $status -and $null -ne $status.intervalMinutes) {
     [int]$status.intervalMinutes
+}
+elseif ($null -ne $workerConfig -and $null -ne $workerConfig.intervalMinutes) {
+    [int]$workerConfig.intervalMinutes
 }
 else {
     75
@@ -127,25 +127,28 @@ if ($taskExists) {
     $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
 }
 
-$cycleLock = Get-LockStatus -Path $cycleLockPath
 $workerLock = Get-LockStatus -Path $workerLockPath
-$currentlyRunning = ($taskExists -and $task.State -eq 'Running') -or $cycleLock.Alive
+$cycleLock = Get-LockStatus -Path $cycleLockPath
 
 Write-Host 'CardScanR PokéWallet Catalogue Worker'
 Write-Host ''
-Write-Host ("Scheduled task exists: {0}" -f ($(if ($taskExists) { 'yes' } else { 'no' })))
-Write-Host ("Scheduled task enabled: {0}" -f ($(if ($taskEnabled) { 'yes' } else { 'no' })))
-Write-Host ("Scheduled task state: {0}" -f (Format-Value $(if ($taskExists) { $task.State } else { $null })))
-Write-Host ("Last run time: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.LastRunTime } else { $null })))
-Write-Host ("Next run time: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.NextRunTime } else { $null })))
-Write-Host ("Last task result: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.LastTaskResult } else { $null })))
+Write-Host ("Manual worker running: {0}" -f ($(if ($workerLock.Alive) { 'yes' } else { 'no' })))
+Write-Host ("Manual worker PID: {0}" -f ($(if ($workerLock.Pid -gt 0) { $workerLock.Pid } else { 'None' })))
+Write-Host ("Active cycle running: {0}" -f ($(if ($cycleLock.Alive) { 'yes' } else { 'no' })))
+Write-Host ("Active cycle PID: {0}" -f ($(if ($cycleLock.Pid -gt 0) { $cycleLock.Pid } else { 'None' })))
 Write-Host ''
-Write-Host ("Worker status: {0}" -f ($(if ($currentlyRunning) { 'Running' } else { 'Stopped' })))
-Write-Host ("Interval: {0} minutes" -f $interval)
+Write-Host ("Optional scheduled task installed: {0}" -f ($(if ($taskExists) { 'yes' } else { 'no' })))
+Write-Host ("Optional scheduled task enabled: {0}" -f ($(if ($taskEnabled) { 'yes' } else { 'no' })))
+Write-Host ("Optional scheduled task state: {0}" -f (Format-Value $(if ($taskExists) { $task.State } else { $null })))
+Write-Host ("Optional scheduled task last run: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.LastRunTime } else { $null })))
+Write-Host ("Optional scheduled task next run: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.NextRunTime } else { $null })))
+Write-Host ''
 Write-Host ("Last cycle started: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleStartedAtUtc } else { $null })))
 Write-Host ("Last cycle finished: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleFinishedAtUtc } else { $null })))
+Write-Host ("Next cycle: {0}" -f (Format-Value $(if ($workerLock.Alive -and $null -ne $status) { $status.nextCycleAtUtc } else { $null })))
+Write-Host ("Interval: {0} minutes" -f $interval)
 Write-Host ("Worker last result: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastStatus } else { $null })))
-Write-Host ("Worker last commit: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCommit } else { $null })))
+Write-Host ("Last commit: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCommit } else { $null })))
 Write-Host ("Worker last error: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastError } else { $null })))
 Write-Host ''
 Write-Host ("Cards written total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.cardsWrittenTotal } else { $null })))
@@ -156,11 +159,11 @@ Write-Host ("Languages completed: {0}" -f (Format-Languages $(if ($null -ne $sta
 Write-Host ("Latest diagnostic status: {0}" -f (Format-Value $(if ($null -ne $diag) { $diag.status } else { $null })))
 Write-Host ("Log path: {0}" -f $logPath)
 
+if ($workerLock.Stale) {
+    Write-Host ''
+    Write-Host ("Warning: stale manual worker lock exists for PID {0}." -f (Format-Value $workerLock.Pid))
+}
 if ($cycleLock.Stale) {
     Write-Host ''
     Write-Host ("Warning: stale cycle lock exists for PID {0}." -f (Format-Value $cycleLock.Pid))
-}
-if ($workerLock.Stale) {
-    Write-Host ''
-    Write-Host ("Warning: stale legacy worker lock exists for PID {0}." -f (Format-Value $workerLock.Pid))
 }

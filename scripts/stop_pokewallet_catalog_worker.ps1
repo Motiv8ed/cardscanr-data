@@ -1,5 +1,6 @@
 param(
     [string]$RepoRoot = "",
+    [switch]$RemoveScheduledTask,
     [string]$TaskName = "CardScanR PokéWallet Catalogue Worker"
 )
 
@@ -80,30 +81,38 @@ function Stop-LockProcess {
     elseif ($targetPid -gt 0) {
         Write-Host ("Removed stale {0} lock for dead PID {1}." -f $Label, $targetPid)
     }
+    else {
+        Write-Host ("Removed stale {0} lock." -f $Label)
+    }
 
     Remove-Item -Path $Path -Force -ErrorAction SilentlyContinue
 }
 
-if (Test-Path $uninstallScript) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $uninstallScript -TaskName $TaskName
-    if ($LASTEXITCODE -ne 0) {
-        throw "Scheduled task uninstall failed with exit code $LASTEXITCODE."
+if ($RemoveScheduledTask) {
+    if (Test-Path $uninstallScript) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $uninstallScript -TaskName $TaskName
+        if ($LASTEXITCODE -ne 0) {
+            throw "Scheduled task uninstall failed with exit code $LASTEXITCODE."
+        }
     }
-}
-else {
-    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-    if ($null -ne $task) {
-        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
-        Write-Host "Removed scheduled task: $TaskName"
+    else {
+        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        if ($null -ne $task) {
+            Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+            Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+            Write-Host "Removed scheduled task: $TaskName"
+        }
     }
 }
 
+if (Test-Path $workerLockPath) {
+    Stop-LockProcess -Path $workerLockPath -Label 'manual worker loop'
+}
+else {
+    Write-Host 'Manual worker loop lock not found.'
+}
 if (Test-Path $cycleLockPath) {
     Stop-LockProcess -Path $cycleLockPath -Label 'catalogue cycle'
-}
-if (Test-Path $workerLockPath) {
-    Stop-LockProcess -Path $workerLockPath -Label 'legacy catalogue worker'
 }
 
 $existing = Read-JsonFile -Path $statusPath
