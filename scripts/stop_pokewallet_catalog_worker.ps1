@@ -1,5 +1,6 @@
 param(
-    [string]$RepoRoot = ""
+    [string]$RepoRoot = "",
+    [string]$TaskName = "CardScanR PokéWallet Catalogue Worker"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,8 +10,10 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
 }
 $RepoRoot = (Resolve-Path $RepoRoot).Path
 
-$configPath = Join-Path $RepoRoot 'data\pokewallet_catalog_config.json'
 $statusPath = Join-Path $RepoRoot 'data\pokewallet_catalog_worker_status.json'
+$workerLockPath = Join-Path $RepoRoot '.pokewallet_catalog_worker.lock'
+$cycleLockPath = Join-Path $RepoRoot '.pokewallet_catalog_cycle.lock'
+$uninstallScript = Join-Path $RepoRoot 'scripts\uninstall_pokewallet_catalog_scheduled_task.ps1'
 
 function Get-UtcIso {
     return ([datetime]::UtcNow).ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -36,6 +39,10 @@ function Write-JsonFile {
         [object]$Payload
     )
 
+    $parent = Split-Path -Parent $Path
+    if (-not (Test-Path $parent)) {
+        New-Item -ItemType Directory -Path $parent | Out-Null
+    }
     $tmpPath = "$Path.tmp"
     $json = $Payload | ConvertTo-Json -Depth 10
     Set-Content -Path $tmpPath -Value $json -Encoding UTF8
@@ -54,50 +61,64 @@ function Test-ProcessAlive {
     }
 }
 
-$config = Read-JsonFile -Path $configPath
-if ($null -eq $config -or $null -eq $config.fullCatalogueWorker) {
-    throw 'fullCatalogueWorker config is missing.'
-}
+function Stop-LockProcess {
+    param(
+        [string]$Path,
+        [string]$Label
+    )
 
-$lockPath = Join-Path $RepoRoot ([string]$config.fullCatalogueWorker.lockPath)
-$status = Read-JsonFile -Path $statusPath
-
-$targetPid = 0
-if (Test-Path $lockPath) {
-    $lockData = Read-JsonFile -Path $lockPath
+    $lockData = Read-JsonFile -Path $Path
+    $targetPid = 0
     if ($null -ne $lockData -and $null -ne $lockData.pid) {
         $targetPid = [int]$lockData.pid
     }
-}
-elseif ($null -ne $status -and $null -ne $status.pid) {
-    $targetPid = [int]$status.pid
+
+    if ($targetPid -gt 0 -and (Test-ProcessAlive -ProcessId $targetPid)) {
+        Stop-Process -Id $targetPid -Force -ErrorAction Stop
+        Write-Host ("Stopped {0} process PID {1}." -f $Label, $targetPid)
+    }
+    elseif ($targetPid -gt 0) {
+        Write-Host ("Removed stale {0} lock for dead PID {1}." -f $Label, $targetPid)
+    }
+
+    Remove-Item -Path $Path -Force -ErrorAction SilentlyContinue
 }
 
-if ($targetPid -gt 0 -and (Test-ProcessAlive -ProcessId $targetPid)) {
-    Stop-Process -Id $targetPid -Force -ErrorAction Stop
-    Write-Host "Stopped catalogue worker process PID $targetPid."
-}
-elseif ($targetPid -gt 0) {
-    Write-Host "Catalogue worker process PID $targetPid was not running."
+if (Test-Path $uninstallScript) {
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $uninstallScript -TaskName $TaskName
+    if ($LASTEXITCODE -ne 0) {
+        throw "Scheduled task uninstall failed with exit code $LASTEXITCODE."
+    }
 }
 else {
-    Write-Host 'Catalogue worker is not running.'
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($null -ne $task) {
+        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        Write-Host "Removed scheduled task: $TaskName"
+    }
 }
 
-Remove-Item -Path $lockPath -Force -ErrorAction SilentlyContinue
+if (Test-Path $cycleLockPath) {
+    Stop-LockProcess -Path $cycleLockPath -Label 'catalogue cycle'
+}
+if (Test-Path $workerLockPath) {
+    Stop-LockProcess -Path $workerLockPath -Label 'legacy catalogue worker'
+}
 
-$updatedStatus = [ordered]@{
+$existing = Read-JsonFile -Path $statusPath
+$payload = [ordered]@{
     schemaVersion = '1.0.0'
     running = $false
-    pid = $targetPid
-    startedAtUtc = if ($null -ne $status) { $status.startedAtUtc } else { $null }
-    lastCycleStartedAtUtc = if ($null -ne $status) { $status.lastCycleStartedAtUtc } else { $null }
-    lastCycleFinishedAtUtc = if ($null -ne $status) { $status.lastCycleFinishedAtUtc } else { $null }
+    pid = $null
+    startedAtUtc = if ($null -ne $existing) { $existing.startedAtUtc } else { $null }
+    lastCycleStartedAtUtc = if ($null -ne $existing) { $existing.lastCycleStartedAtUtc } else { $null }
+    lastCycleFinishedAtUtc = if ($null -ne $existing) { $existing.lastCycleFinishedAtUtc } else { Get-UtcIso }
     nextCycleAtUtc = $null
-    intervalMinutes = if ($null -ne $status -and $null -ne $status.intervalMinutes) { [int]$status.intervalMinutes } else { [int]$config.fullCatalogueWorker.intervalMinutes }
+    intervalMinutes = if ($null -ne $existing -and $null -ne $existing.intervalMinutes) { [int]$existing.intervalMinutes } else { 75 }
     lastStatus = 'stopped'
-    lastCommit = if ($null -ne $status) { $status.lastCommit } else { $null }
+    lastCommit = if ($null -ne $existing) { $existing.lastCommit } else { $null }
     lastError = $null
 }
-Write-JsonFile -Path $statusPath -Payload $updatedStatus
+Write-JsonFile -Path $statusPath -Payload $payload
 Write-Host 'Catalogue worker status updated to stopped.'

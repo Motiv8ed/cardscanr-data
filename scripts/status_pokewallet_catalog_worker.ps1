@@ -1,5 +1,6 @@
 param(
-    [string]$RepoRoot = ""
+    [string]$RepoRoot = "",
+    [string]$TaskName = "CardScanR PokéWallet Catalogue Worker"
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,6 +14,8 @@ $configPath = Join-Path $RepoRoot 'data\pokewallet_catalog_config.json'
 $statusPath = Join-Path $RepoRoot 'data\pokewallet_catalog_worker_status.json'
 $statePath = Join-Path $RepoRoot 'data\pokewallet_catalog_full_state.json'
 $diagPath = Join-Path $RepoRoot 'public\v1\diagnostics\pokewallet-catalog-foundation-latest.json'
+$workerLockPath = Join-Path $RepoRoot '.pokewallet_catalog_worker.lock'
+$cycleLockPath = Join-Path $RepoRoot '.pokewallet_catalog_cycle.lock'
 
 function Read-JsonFile {
     param([string]$Path)
@@ -66,47 +69,85 @@ function Format-Languages {
     return ($parts -join ', ')
 }
 
+function Get-LockStatus {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return [pscustomobject]@{
+            Exists = $false
+            Pid = 0
+            Alive = $false
+            Stale = $false
+        }
+    }
+
+    $data = Read-JsonFile -Path $Path
+    $pidValue = 0
+    if ($null -ne $data -and $null -ne $data.pid) {
+        $pidValue = [int]$data.pid
+    }
+    $alive = $pidValue -gt 0 -and (Test-ProcessAlive -ProcessId $pidValue)
+    return [pscustomobject]@{
+        Exists = $true
+        Pid = $pidValue
+        Alive = $alive
+        Stale = -not $alive
+    }
+}
+
 $config = Read-JsonFile -Path $configPath
 $status = Read-JsonFile -Path $statusPath
 $state = Read-JsonFile -Path $statePath
 $diag = Read-JsonFile -Path $diagPath
 
-$workerConfig = $null
-if ($null -ne $config) {
-    $workerConfig = $config.fullCatalogueWorker
+$workerConfig = if ($null -ne $config) { $config.fullCatalogueWorker } else { $null }
+$logPath = if ($null -ne $workerConfig -and -not [string]::IsNullOrWhiteSpace([string]$workerConfig.logPath)) {
+    Join-Path $RepoRoot ([string]$workerConfig.logPath)
+}
+else {
+    Join-Path $RepoRoot 'logs\pokewallet_catalog_worker.log'
 }
 
-$lockPath = if ($null -ne $workerConfig) { Join-Path $RepoRoot ([string]$workerConfig.lockPath) } else { Join-Path $RepoRoot '.pokewallet_catalog_worker.lock' }
-$logPath = if ($null -ne $workerConfig) { Join-Path $RepoRoot ([string]$workerConfig.logPath) } else { Join-Path $RepoRoot 'logs\pokewallet_catalog_worker.log' }
-
-$pidValue = if ($null -ne $status -and $null -ne $status.pid) { [int]$status.pid } else { 0 }
-$running = $false
-if ($pidValue -gt 0) {
-    $running = Test-ProcessAlive -ProcessId $pidValue
-}
-if (-not (Test-Path $lockPath)) {
-    $running = $false
-}
-
-$interval = if ($null -ne $status -and $null -ne $status.intervalMinutes) {
-    [int]$status.intervalMinutes
-}
-elseif ($null -ne $workerConfig -and $null -ne $workerConfig.intervalMinutes) {
+$interval = if ($null -ne $workerConfig -and $null -ne $workerConfig.intervalMinutes) {
     [int]$workerConfig.intervalMinutes
+}
+elseif ($null -ne $status -and $null -ne $status.intervalMinutes) {
+    [int]$status.intervalMinutes
 }
 else {
     75
 }
 
-Write-Host 'CardScanR Pokewallet Catalogue Worker'
+$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+$taskExists = $null -ne $task
+$taskEnabled = $false
+$taskInfo = $null
+if ($taskExists) {
+    $taskEnabled = $task.State -ne 'Disabled'
+    $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
+}
+
+$cycleLock = Get-LockStatus -Path $cycleLockPath
+$workerLock = Get-LockStatus -Path $workerLockPath
+$currentlyRunning = ($taskExists -and $task.State -eq 'Running') -or $cycleLock.Alive
+
+Write-Host 'CardScanR PokéWallet Catalogue Worker'
 Write-Host ''
-Write-Host ("Status: {0}" -f ($(if ($running) { 'Running' } else { 'Stopped' })))
-Write-Host ("PID: {0}" -f ($(if ($pidValue -gt 0) { $pidValue } else { 'None' })))
+Write-Host ("Scheduled task exists: {0}" -f ($(if ($taskExists) { 'yes' } else { 'no' })))
+Write-Host ("Scheduled task enabled: {0}" -f ($(if ($taskEnabled) { 'yes' } else { 'no' })))
+Write-Host ("Scheduled task state: {0}" -f (Format-Value $(if ($taskExists) { $task.State } else { $null })))
+Write-Host ("Last run time: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.LastRunTime } else { $null })))
+Write-Host ("Next run time: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.NextRunTime } else { $null })))
+Write-Host ("Last task result: {0}" -f (Format-Value $(if ($null -ne $taskInfo) { $taskInfo.LastTaskResult } else { $null })))
+Write-Host ''
+Write-Host ("Worker status: {0}" -f ($(if ($currentlyRunning) { 'Running' } else { 'Stopped' })))
 Write-Host ("Interval: {0} minutes" -f $interval)
-Write-Host ("Last cycle: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleFinishedAtUtc } else { $null })))
-Write-Host ("Next cycle: {0}" -f (Format-Value $(if ($running -and $null -ne $status) { $status.nextCycleAtUtc } else { $null })))
-Write-Host ("Last result: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastStatus } else { $null })))
-Write-Host ("Last commit: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCommit } else { $null })))
+Write-Host ("Last cycle started: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleStartedAtUtc } else { $null })))
+Write-Host ("Last cycle finished: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleFinishedAtUtc } else { $null })))
+Write-Host ("Worker last result: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastStatus } else { $null })))
+Write-Host ("Worker last commit: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCommit } else { $null })))
+Write-Host ("Worker last error: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastError } else { $null })))
+Write-Host ''
 Write-Host ("Cards written total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.cardsWrittenTotal } else { $null })))
 Write-Host ("Requests attempted total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.requestsAttemptedTotal } else { $null })))
 Write-Host ("Requests succeeded total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.requestsSucceededTotal } else { $null })))
@@ -114,3 +155,12 @@ Write-Host ("Requests failed total: {0}" -f (Format-Value $(if ($null -ne $state
 Write-Host ("Languages completed: {0}" -f (Format-Languages $(if ($null -ne $state) { $state.languagesCompleted } else { $null })))
 Write-Host ("Latest diagnostic status: {0}" -f (Format-Value $(if ($null -ne $diag) { $diag.status } else { $null })))
 Write-Host ("Log path: {0}" -f $logPath)
+
+if ($cycleLock.Stale) {
+    Write-Host ''
+    Write-Host ("Warning: stale cycle lock exists for PID {0}." -f (Format-Value $cycleLock.Pid))
+}
+if ($workerLock.Stale) {
+    Write-Host ''
+    Write-Host ("Warning: stale legacy worker lock exists for PID {0}." -f (Format-Value $workerLock.Pid))
+}
