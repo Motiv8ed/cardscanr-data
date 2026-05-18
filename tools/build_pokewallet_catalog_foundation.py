@@ -831,7 +831,8 @@ def write_provider_outputs(
         }
         for app_language in sorted(language_counts)
     ]
-    payloads["cards-sample.json"].update({"cardCount": len(cards), "cards": cards[:100]})
+    sample_cards = cards[:100]
+    payloads["cards-sample.json"].update({"cardCount": len(sample_cards), "cards": sample_cards})
     payloads["image-availability-sample.json"].update(
         {
             "imageSamplesChecked": diag["imageSamplesChecked"],

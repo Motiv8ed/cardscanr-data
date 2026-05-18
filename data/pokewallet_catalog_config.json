@@ -25,6 +25,21 @@
     "imageAvailabilityCheck": false,
     "imageAvailabilitySampleLimit": 100
   },
+  "fullCatalogueWorker": {
+    "enabled": false,
+    "intervalMinutes": 75,
+    "maxRequestsPerCycle": 80,
+    "hourlyReserveRequests": 10,
+    "dailyReserveRequests": 50,
+    "stopWhenDailyRemainingBelow": 50,
+    "stopOnRateLimit": true,
+    "validateAfterCycle": true,
+    "commitAfterCycle": true,
+    "pushAfterCycle": true,
+    "commitMessage": "Expand PokéWallet provider catalogue export",
+    "logPath": "logs/pokewallet_catalog_worker.log",
+    "lockPath": ".pokewallet_catalog_worker.lock"
+  },
   "languageMap": {
     "chi": "zh",
     "chn": "zh",
