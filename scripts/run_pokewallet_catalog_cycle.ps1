@@ -23,6 +23,18 @@ if (-not (Test-Path $pythonPath)) {
 $script:cycleLockAcquired = $false
 $script:logPath = Join-Path $RepoRoot 'logs\pokewallet_catalog_worker.log'
 
+function Convert-ToProcessArgument {
+    param([string]$Value)
+
+    if ($null -eq $Value) {
+        return '""'
+    }
+    if ($Value -match '[\s"]') {
+        return '"' + ($Value -replace '"', '\"') + '"'
+    }
+    return $Value
+}
+
 function Get-UtcIso {
     param([datetime]$Value = ([datetime]::UtcNow))
     return $Value.ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -190,13 +202,29 @@ function Invoke-RepoCommand {
     )
 
     Write-CycleLog ("RUN {0} {1}" -f $FilePath, ($Arguments -join ' '))
-    $output = @(& $FilePath @Arguments 2>&1)
-    foreach ($line in $output) {
-        Write-OutputLog $line
+    $stdoutPath = Join-Path $env:TEMP ("cardscanr-cycle-command-{0}.out" -f ([guid]::NewGuid().ToString('N')))
+    $stderrPath = Join-Path $env:TEMP ("cardscanr-cycle-command-{0}.err" -f ([guid]::NewGuid().ToString('N')))
+    $argumentList = (($Arguments | ForEach-Object { Convert-ToProcessArgument -Value ([string]$_) }) -join ' ')
+    try {
+        $process = Start-Process -FilePath $FilePath -ArgumentList $argumentList -WorkingDirectory $RepoRoot -NoNewWindow -PassThru -Wait -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        $output = @()
+        if (Test-Path $stdoutPath) {
+            $output += @(Get-Content -Path $stdoutPath -Encoding UTF8)
+        }
+        if (Test-Path $stderrPath) {
+            $output += @(Get-Content -Path $stderrPath -Encoding UTF8)
+        }
+        foreach ($line in $output) {
+            Write-OutputLog $line
+        }
+        $exitCode = [int]$process.ExitCode
+    }
+    finally {
+        Remove-Item -Path $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
     }
 
     return [pscustomobject]@{
-        ExitCode = [int]$LASTEXITCODE
+        ExitCode = $exitCode
         Output = $output
     }
 }
