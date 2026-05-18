@@ -380,6 +380,38 @@ REQUIRED_PROVIDER_CATALOG_TOP_FIELDS = {
     "game",
     "notes",
 }
+REQUIRED_PROVIDER_CATALOG_STATUS_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "game",
+    "status",
+    "binaryImagesStored",
+    "imageStorageMode",
+    "catalogueType",
+    "languages",
+    "notes",
+}
+REQUIRED_PROVIDER_CATALOG_CARDS_MANIFEST_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "provider",
+    "game",
+    "status",
+    "totalSetFiles",
+    "totalCards",
+    "languages",
+}
+REQUIRED_PROVIDER_CATALOG_MANIFEST_SET_FILE_FIELDS = {
+    "providerSetId",
+    "providerSetCode",
+    "providerSetName",
+    "cardScanRLanguage",
+    "cardCount",
+    "url",
+    "sha256",
+    "updatedAtUtc",
+}
 REQUIRED_POKEWALLET_PROVIDER_CARD_FIELDS = {
     "providerCardId",
     "providerSetId",
@@ -1505,28 +1537,119 @@ def check_pokewallet_provider_catalog() -> None:
         "languages-summary.json",
         "cards-sample.json",
         "image-availability-sample.json",
+        "status.json",
+        "cards-manifest.json",
     }
     existing_files = {path.name for path in root.glob("*.json")}
     missing = required_files - existing_files
     if missing:
         err(f"Pokewallet provider catalogue is missing files: {sorted(missing)}")
 
+    status_data = None
+    manifest_data = None
     for filename in sorted(required_files & existing_files):
         path = root / filename
         data = load_json_file(path)
         if data is None or not isinstance(data, dict):
             err(f"{path.relative_to(ROOT)} must be a JSON object")
             continue
-        if check_required(data, REQUIRED_PROVIDER_CATALOG_TOP_FIELDS, str(path.relative_to(ROOT))):
+        if filename == "status.json":
+            required = REQUIRED_PROVIDER_CATALOG_STATUS_FIELDS
+        elif filename == "cards-manifest.json":
+            required = REQUIRED_PROVIDER_CATALOG_CARDS_MANIFEST_FIELDS
+        else:
+            required = REQUIRED_PROVIDER_CATALOG_TOP_FIELDS
+        if check_required(data, required, str(path.relative_to(ROOT))):
             ok(f"{path.relative_to(ROOT)} has required top-level fields")
         if data.get("provider") != "pokewallet":
             err(f"{path.relative_to(ROOT)} provider must be pokewallet")
         if data.get("game") != "pokemon":
             err(f"{path.relative_to(ROOT)} game must be pokemon")
-        if not isinstance(data.get("notes"), list):
+        if "notes" in required and not isinstance(data.get("notes"), list):
             err(f"{path.relative_to(ROOT)} notes must be a list")
 
-        if filename == "sets-summary.json":
+        if filename == "status.json":
+            status_data = data
+            if data.get("status") not in {"partial", "complete", "not_available"}:
+                err(f"{path.relative_to(ROOT)} status must be partial, complete, or not_available")
+            if data.get("binaryImagesStored") is not False:
+                err(f"{path.relative_to(ROOT)} binaryImagesStored must be false")
+            if data.get("imageStorageMode") != "provider_reference_only":
+                err(f"{path.relative_to(ROOT)} imageStorageMode must be provider_reference_only")
+            if data.get("catalogueType") != "provider_metadata":
+                err(f"{path.relative_to(ROOT)} catalogueType must be provider_metadata")
+            languages = data.get("languages")
+            if not isinstance(languages, dict):
+                err(f"{path.relative_to(ROOT)} languages must be an object")
+            else:
+                for language, payload in sorted(languages.items()):
+                    if not isinstance(payload, dict):
+                        err(f"{path.relative_to(ROOT)} languages.{language} must be an object")
+                        continue
+                    for field in ["available", "complete"]:
+                        if not isinstance(payload.get(field), bool):
+                            err(f"{path.relative_to(ROOT)} languages.{language}.{field} must be boolean")
+                    for field in ["setFileCount", "cardCount"]:
+                        value = payload.get(field)
+                        if not isinstance(value, int) or value < 0:
+                            err(f"{path.relative_to(ROOT)} languages.{language}.{field} must be a non-negative integer")
+        elif filename == "cards-manifest.json":
+            manifest_data = data
+            if data.get("status") not in {"partial", "complete", "not_available"}:
+                err(f"{path.relative_to(ROOT)} status must be partial, complete, or not_available")
+            for field in ["totalSetFiles", "totalCards"]:
+                value = data.get(field)
+                if not isinstance(value, int) or value < 0:
+                    err(f"{path.relative_to(ROOT)} {field} must be a non-negative integer")
+            languages = data.get("languages")
+            if not isinstance(languages, dict):
+                err(f"{path.relative_to(ROOT)} languages must be an object")
+            else:
+                total_manifest_files = 0
+                total_manifest_cards = 0
+                for language, payload in sorted(languages.items()):
+                    if not isinstance(payload, dict):
+                        err(f"{path.relative_to(ROOT)} languages.{language} must be an object")
+                        continue
+                    set_files = payload.get("setFiles")
+                    if not isinstance(set_files, list):
+                        err(f"{path.relative_to(ROOT)} languages.{language}.setFiles must be a list")
+                        continue
+                    total_manifest_files += len(set_files)
+                    for i, item in enumerate(set_files):
+                        item_label = f"{path.relative_to(ROOT)} languages.{language}.setFiles[{i}]"
+                        if not isinstance(item, dict):
+                            err(f"{item_label} must be an object")
+                            continue
+                        missing_fields = REQUIRED_PROVIDER_CATALOG_MANIFEST_SET_FILE_FIELDS - set(item.keys())
+                        if missing_fields:
+                            err(f"{item_label} missing fields: {sorted(missing_fields)}")
+                        if item.get("cardScanRLanguage") != language:
+                            err(f"{item_label} cardScanRLanguage must match language key")
+                        card_count = item.get("cardCount")
+                        if not isinstance(card_count, int) or card_count < 0:
+                            err(f"{item_label} cardCount must be a non-negative integer")
+                            card_count = 0
+                        total_manifest_cards += card_count
+                        url = item.get("url")
+                        if not isinstance(url, str) or not url.startswith("/provider-catalog/pokewallet/cards/"):
+                            err(f"{item_label} url must be a provider catalogue cards URL")
+                            continue
+                        target = V1_DIR / url.lstrip("/")
+                        if not target.exists():
+                            err(f"{item_label} url target does not exist: {target.relative_to(ROOT)}")
+                            continue
+                        actual_sha = sha256_file(target)
+                        if item.get("sha256") != actual_sha:
+                            err(f"{item_label} sha256 mismatch for {target.relative_to(ROOT)}")
+                        target_data = load_json_file(target)
+                        if isinstance(target_data, dict) and target_data.get("cardCount") != card_count:
+                            err(f"{item_label} cardCount must match target file")
+                if data.get("totalSetFiles") != total_manifest_files:
+                    err(f"{path.relative_to(ROOT)} totalSetFiles must equal manifest set file count")
+                if data.get("totalCards") != total_manifest_cards:
+                    err(f"{path.relative_to(ROOT)} totalCards must equal manifest card count")
+        elif filename == "sets-summary.json":
             if not isinstance(data.get("sets"), list):
                 err(f"{path.relative_to(ROOT)} sets must be a list")
             if not isinstance(data.get("languagesSeen"), dict):
@@ -1574,6 +1697,25 @@ def check_pokewallet_provider_catalog() -> None:
                 value = data.get(field)
                 if not isinstance(value, int) or value < 0:
                     err(f"{path.relative_to(ROOT)} {field} must be a non-negative integer")
+
+    if isinstance(status_data, dict) and isinstance(manifest_data, dict):
+        status_languages = status_data.get("languages")
+        manifest_languages = manifest_data.get("languages")
+        if isinstance(status_languages, dict) and isinstance(manifest_languages, dict):
+            if set(status_languages) != set(manifest_languages):
+                err("provider-catalog/pokewallet/status.json languages must match cards-manifest.json languages")
+            for language, status_payload in sorted(status_languages.items()):
+                manifest_payload = manifest_languages.get(language)
+                if not isinstance(status_payload, dict) or not isinstance(manifest_payload, dict):
+                    continue
+                set_files = manifest_payload.get("setFiles")
+                if not isinstance(set_files, list):
+                    continue
+                manifest_card_count = sum(item.get("cardCount", 0) for item in set_files if isinstance(item, dict) and isinstance(item.get("cardCount"), int))
+                if status_payload.get("setFileCount") != len(set_files):
+                    err(f"provider-catalog/pokewallet/status.json languages.{language}.setFileCount must match manifest")
+                if status_payload.get("cardCount") != manifest_card_count:
+                    err(f"provider-catalog/pokewallet/status.json languages.{language}.cardCount must match manifest")
 
     cards_root = root / "cards"
     if not cards_root.exists():

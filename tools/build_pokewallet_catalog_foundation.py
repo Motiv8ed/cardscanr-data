@@ -25,6 +25,8 @@ PUBLIC_DIR = ROOT / "public" / "v1"
 CONFIG_PATH = ROOT / "data" / "pokewallet_catalog_config.json"
 OUTPUT_DIR = PUBLIC_DIR / "provider-catalog" / "pokewallet"
 CARDS_DIR = OUTPUT_DIR / "cards"
+STATUS_PATH = OUTPUT_DIR / "status.json"
+CARDS_MANIFEST_PATH = OUTPUT_DIR / "cards-manifest.json"
 DIAG_PATH = PUBLIC_DIR / "diagnostics" / "pokewallet-catalog-foundation-latest.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
 DEFAULT_FULL_STATE_PATH = ROOT / "data" / "pokewallet_catalog_full_state.json"
@@ -726,6 +728,97 @@ def summarize_existing_full_catalogue() -> dict[str, Any]:
     return summary
 
 
+def provider_catalog_url(path: Path) -> str:
+    return "/" + path.relative_to(PUBLIC_DIR).as_posix()
+
+
+def provider_catalog_file_records() -> dict[str, list[dict[str, Any]]]:
+    records_by_language: dict[str, list[dict[str, Any]]] = {}
+    for path in sorted(CARDS_DIR.glob("*/*.json")) if CARDS_DIR.exists() else []:
+        payload = load_json(path)
+        language = string_value(payload.get("cardScanRLanguage") or path.parent.name)
+        cards = payload.get("cards")
+        card_count = len(cards) if isinstance(cards, list) else 0
+        record = {
+            "providerSetId": string_value(payload.get("providerSetId") or path.stem),
+            "providerSetCode": string_value(payload.get("providerSetCode")),
+            "providerSetName": string_value(payload.get("providerSetName")),
+            "cardScanRLanguage": language,
+            "cardCount": card_count,
+            "url": provider_catalog_url(path),
+            "sha256": sha256_file(path),
+            "updatedAtUtc": string_value(payload.get("generatedAtUtc")),
+        }
+        records_by_language.setdefault(language, []).append(record)
+    for language, records in records_by_language.items():
+        records_by_language[language] = sorted(records, key=lambda item: (item["providerSetId"], item["providerSetCode"]))
+    return dict(sorted(records_by_language.items()))
+
+
+def write_provider_catalog_app_files(ts: str, *, state_path: Path | None = None) -> list[Path]:
+    state_path = state_path or DEFAULT_FULL_STATE_PATH
+    state = load_json(state_path) if state_path.exists() else {}
+    languages_completed = state.get("languagesCompleted") if isinstance(state.get("languagesCompleted"), dict) else {}
+    file_records = provider_catalog_file_records()
+    all_languages = sorted(set(file_records) | {str(language) for language in languages_completed})
+    languages_status: dict[str, dict[str, Any]] = {}
+    manifest_languages: dict[str, dict[str, Any]] = {}
+    total_set_files = 0
+    total_cards = 0
+
+    for language in all_languages:
+        records = file_records.get(language, [])
+        card_count = sum(int(record.get("cardCount") or 0) for record in records)
+        latest = None
+        for record in records:
+            updated = record.get("updatedAtUtc")
+            if isinstance(updated, str) and updated and (latest is None or updated > latest):
+                latest = updated
+        complete = bool(languages_completed.get(language, False))
+        languages_status[language] = {
+            "available": bool(records),
+            "setFileCount": len(records),
+            "cardCount": card_count,
+            "complete": complete,
+            "lastUpdatedAtUtc": latest,
+        }
+        manifest_languages[language] = {"setFiles": records}
+        total_set_files += len(records)
+        total_cards += card_count
+
+    overall_status = "complete" if total_set_files and all(item["complete"] for item in languages_status.values()) else ("partial" if total_set_files else "not_available")
+    notes = [
+        "Provider catalogue files are identity metadata only.",
+        "Images are references only; binary images are not stored here.",
+        "Pricing availability is separate from catalogue availability.",
+    ]
+    status_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "provider": "pokewallet",
+        "game": "pokemon",
+        "status": overall_status,
+        "binaryImagesStored": False,
+        "imageStorageMode": "provider_reference_only",
+        "catalogueType": "provider_metadata",
+        "languages": languages_status,
+        "notes": notes,
+    }
+    manifest_payload = {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "provider": "pokewallet",
+        "game": "pokemon",
+        "status": overall_status,
+        "totalSetFiles": total_set_files,
+        "totalCards": total_cards,
+        "languages": manifest_languages,
+    }
+    write_json(STATUS_PATH, status_payload)
+    write_json(CARDS_MANIFEST_PATH, manifest_payload)
+    return [STATUS_PATH, CARDS_MANIFEST_PATH]
+
+
 def empty_provider_files(ts: str, full_summary: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
     notes = base_notes()
     full = full_summary or summarize_existing_full_catalogue()
@@ -920,6 +1013,20 @@ def provider_dataset_entries(ts: str) -> dict[str, dict[str, Any]]:
             "Pokewallet provider catalogue image endpoint availability sample",
             ts,
         ),
+        "provider_catalog_pokewallet_status": index_entry(
+            "provider_catalog_pokewallet_status",
+            STATUS_PATH,
+            "provider_catalog_status",
+            "App-facing Pokewallet provider catalogue availability status",
+            ts,
+        ),
+        "provider_catalog_pokewallet_cards_manifest": index_entry(
+            "provider_catalog_pokewallet_cards_manifest",
+            CARDS_MANIFEST_PATH,
+            "provider_catalog_manifest",
+            "App-facing Pokewallet provider catalogue cards manifest",
+            ts,
+        ),
         "diagnostics_pokewallet_catalog_foundation": index_entry(
             "diagnostics_pokewallet_catalog_foundation",
             DIAG_PATH,
@@ -1033,6 +1140,7 @@ def run_sample(args: argparse.Namespace, config: dict[str, Any], ts: str) -> dic
         else "Pokewallet sets were fetched, but no set-detail cards were collected for the configured sample."
     )
     write_json(DIAG_PATH, diag)
+    write_provider_catalog_app_files(ts)
     update_index(ts)
     return diag
 
@@ -1206,6 +1314,7 @@ def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str
     else:
         diag["recommendation"] = "Full Pokewallet catalogue export completed for the selected scope."
     write_json(DIAG_PATH, diag)
+    write_provider_catalog_app_files(ts, state_path=state_path)
     update_index(ts)
     return diag
 
