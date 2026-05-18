@@ -126,22 +126,6 @@
     {
       "authRequired": false,
       "cacheable": true,
-      "description": "App-facing Pokewallet provider catalogue availability status",
-      "id": "provider_catalog_pokewallet_status",
-      "method": "GET",
-      "path": "/provider-catalog/pokewallet/status.json"
-    },
-    {
-      "authRequired": false,
-      "cacheable": true,
-      "description": "App-facing Pokewallet provider catalogue cards manifest by language and set",
-      "id": "provider_catalog_pokewallet_cards_manifest",
-      "method": "GET",
-      "path": "/provider-catalog/pokewallet/cards-manifest.json"
-    },
-    {
-      "authRequired": false,
-      "cacheable": true,
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "method": "GET",
@@ -154,7 +138,7 @@
     "/api/v1/history",
     "/api/v1/search"
   ],
-  "generatedAtUtc": "2026-05-18T10:27:30Z",
+  "generatedAtUtc": "2026-05-18T13:35:58Z",
   "intendedConsumer": "cardscanr_app",
   "name": "CardScanR Internal Data API",
   "notes": [
@@ -167,8 +151,7 @@
     "Price freshness/status files provide UTC metadata for app-side update visibility.",
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",
-    "Images are referenced by URL and are not mirrored into this cache yet.",
-    "Pokewallet provider catalogue status and manifest files let the app discover available provider metadata without guessing paths."
+    "Images are referenced by URL and are not mirrored into this cache yet."
   ],
   "publicDeveloperApi": false,
   "schemaVersion": "1.0.0",

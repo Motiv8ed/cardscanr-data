@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-18T10:27:30Z",
+  "generatedAtUtc": "2026-05-18T13:35:58Z",
   "intendedConsumer": "cardscanr_app",
   "notes": [
     "This is a static internal data layer for the CardScanR app.",
@@ -17,10 +17,6 @@
     "Tracked history means history since CardScanR started tracking the card.",
     "Lifetime/all-time market history is not currently provided.",
     "Images are referenced by URL and are not mirrored into this cache yet.",
-    "Pokewallet provider catalogue status and manifest files are app-facing discovery metadata for provider catalogue availability.",
-    "Pokewallet provider catalogue files are provider metadata only and are not official CardScanR canonical catalogue data yet.",
-    "Provider catalogue image fields are references only; binary image files are not stored in this cache.",
-    "Pricing availability is separate from provider catalogue availability.",
     "Japanese Pokemon catalogue files are built from official TCGdex REST endpoints using the ja API language path.",
     "CardScanR cache language remains jp even when the upstream TCGdex API language path is ja.",
     "Japanese current price files are optional and are only written when official/free source pricing is available.",
