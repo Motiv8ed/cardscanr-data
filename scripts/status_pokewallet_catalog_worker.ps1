@@ -71,6 +71,18 @@ function Format-Languages {
     return ($parts -join ', ')
 }
 
+function Format-Ratio {
+    param(
+        $Used,
+        $Target
+    )
+
+    if ($null -eq $Used -or $null -eq $Target -or [string]::IsNullOrWhiteSpace([string]$Used) -or [string]::IsNullOrWhiteSpace([string]$Target)) {
+        return 'None'
+    }
+    return ("{0}/{1}" -f $Used, $Target)
+}
+
 function Get-LockStatus {
     param([string]$Path)
 
@@ -183,6 +195,12 @@ Write-Host ("Total cards: {0}" -f (Format-Value $(if ($null -ne $providerManifes
 Write-Host ("Latest diagnostic status: {0}" -f (Format-Value $(if ($null -ne $diag) { $diag.status } else { $null })))
 Write-Host ("Binary images stored: {0}" -f (Format-Value $(if ($null -ne $providerStatus) { $providerStatus.binaryImagesStored } else { $false })))
 Write-Host ("Image storage mode: {0}" -f (Format-Value $(if ($null -ne $providerStatus) { $providerStatus.imageStorageMode } else { 'provider_reference_only' })))
+Write-Host ("Budget source: {0}" -f (Format-Value $(if ($null -ne $status) { $status.budgetSource } else { $null })))
+Write-Host ("Hourly usage estimate: {0}" -f (Format-Ratio $(if ($null -ne $status) { $status.hourlyUsedEstimate } else { $null }) $(if ($null -ne $status) { $status.hourlyTarget } else { $null })))
+Write-Host ("Daily usage estimate: {0}" -f (Format-Ratio $(if ($null -ne $status) { $status.dailyUsedEstimate } else { $null }) $(if ($null -ne $status) { $status.dailyTarget } else { $null })))
+Write-Host ("Remaining hourly budget: {0}" -f (Format-Value $(if ($null -ne $status) { $status.hourlyRemaining } else { $null })))
+Write-Host ("Remaining daily budget: {0}" -f (Format-Value $(if ($null -ne $status) { $status.dailyRemaining } else { $null })))
+Write-Host ("Next wait reason: {0}" -f (Format-Value $(if ($null -ne $status) { $status.nextWaitReason } else { $null })))
 Write-Host ("Log path: {0}" -f $logPath)
 
 if ($workerLock.Stale) {
