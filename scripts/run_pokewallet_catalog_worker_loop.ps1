@@ -1,7 +1,8 @@
 param(
     [string]$RepoRoot = "",
     [int]$IntervalMinutes = 75,
-    [int]$MaxRequests = 0
+    [int]$MaxRequests = 0,
+    [switch]$UntilComplete
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,11 +15,15 @@ Set-Location $RepoRoot
 
 $configPath = Join-Path $RepoRoot 'data\pokewallet_catalog_config.json'
 $statusPath = Join-Path $RepoRoot 'data\pokewallet_catalog_worker_status.json'
+$providerStatusPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\status.json'
+$providerManifestPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\cards-manifest.json'
+$statePath = Join-Path $RepoRoot 'data\pokewallet_catalog_full_state.json'
 $workerLockPath = Join-Path $RepoRoot '.pokewallet_catalog_worker.lock'
 $cycleScript = Join-Path $RepoRoot 'scripts\run_pokewallet_catalog_cycle.ps1'
 $script:logPath = Join-Path $RepoRoot 'logs\pokewallet_catalog_worker.log'
 $script:lockAcquired = $false
 $script:startedAtUtc = $null
+$script:mode = if ($UntilComplete) { 'untilComplete' } else { 'loop' }
 
 function Convert-ToProcessArgument {
     param([string]$Value)
@@ -107,11 +112,33 @@ function Write-Status {
         [string]$LastCycleFinishedAtUtc,
         [string]$NextCycleAtUtc,
         [string]$LastCommit,
-        [string]$LastError
+        [string]$LastError,
+        [string]$CurrentPriorityLanguage,
+        [string]$NextLanguageToProcess,
+        [string[]]$LanguagePriority,
+        [object]$Progress
     )
 
+    $cardsByLanguage = @{}
+    $setFilesByLanguage = @{}
+    $languagesCompleted = @{}
+    $totalCards = 0
+    $totalSetFiles = 0
+    $binaryImagesStored = $false
+    $imageStorageMode = 'provider_reference_only'
+
+    if ($null -ne $Progress) {
+        $cardsByLanguage = $Progress.CardsByLanguage
+        $setFilesByLanguage = $Progress.SetFilesByLanguage
+        $languagesCompleted = $Progress.LanguagesCompleted
+        $totalCards = $Progress.TotalCards
+        $totalSetFiles = $Progress.TotalSetFiles
+        $binaryImagesStored = $Progress.BinaryImagesStored
+        $imageStorageMode = $Progress.ImageStorageMode
+    }
+
     $payload = [ordered]@{
-        schemaVersion = '1.0.0'
+        schemaVersion = '1.1.0'
         running = $Running
         pid = $PID
         startedAtUtc = $script:startedAtUtc
@@ -119,11 +146,134 @@ function Write-Status {
         lastCycleFinishedAtUtc = $LastCycleFinishedAtUtc
         nextCycleAtUtc = $NextCycleAtUtc
         intervalMinutes = $IntervalMinutes
+        mode = $script:mode
+        currentPriorityLanguage = $CurrentPriorityLanguage
+        nextLanguageToProcess = $NextLanguageToProcess
+        languagePriority = $LanguagePriority
         lastStatus = $LastStatus
         lastCommit = $LastCommit
         lastError = $LastError
+        cardsByLanguage = $cardsByLanguage
+        setFilesByLanguage = $setFilesByLanguage
+        languagesCompleted = $languagesCompleted
+        totalCards = $totalCards
+        totalSetFiles = $totalSetFiles
+        binaryImagesStored = $binaryImagesStored
+        imageStorageMode = $imageStorageMode
     }
     Write-JsonFile -Path $statusPath -Payload $payload
+}
+
+function Get-LanguagePriority {
+    param($Config)
+
+    $default = @('zh', 'jp', 'en')
+    if ($null -eq $Config -or $null -eq $Config.languagePriority) {
+        return $default
+    }
+
+    $values = @()
+    foreach ($item in $Config.languagePriority) {
+        $text = [string]$item
+        if (-not [string]::IsNullOrWhiteSpace($text)) {
+            $values += $text.Trim().ToLowerInvariant()
+        }
+    }
+
+    $ordered = @()
+    foreach ($item in $values) {
+        if ($ordered -notcontains $item) {
+            $ordered += $item
+        }
+    }
+    foreach ($item in $default) {
+        if ($ordered -notcontains $item) {
+            $ordered += $item
+        }
+    }
+    return $ordered
+}
+
+function Get-CatalogProgress {
+    $statusJson = Read-JsonFile -Path $providerStatusPath
+    $manifestJson = Read-JsonFile -Path $providerManifestPath
+    $stateJson = Read-JsonFile -Path $statePath
+
+    $cardsByLanguage = @{}
+    $setFilesByLanguage = @{}
+    $languagesCompleted = @{}
+    $incomplete = @()
+
+    if ($null -ne $statusJson -and $null -ne $statusJson.languages) {
+        foreach ($prop in $statusJson.languages.PSObject.Properties) {
+            $language = [string]$prop.Name
+            $value = $prop.Value
+            $setCount = [int]($value.setFileCount)
+            $cardCount = [int]($value.cardCount)
+            $complete = [bool]($value.complete)
+            $available = [bool]($value.available)
+            $cardsByLanguage[$language] = $cardCount
+            $setFilesByLanguage[$language] = $setCount
+            if ($available -and -not $complete) {
+                $incomplete += $language
+            }
+        }
+    }
+
+    if ($null -ne $stateJson -and $null -ne $stateJson.languagesCompleted) {
+        foreach ($prop in $stateJson.languagesCompleted.PSObject.Properties) {
+            $languagesCompleted[[string]$prop.Name] = [bool]$prop.Value
+        }
+    }
+
+    $totalCards = 0
+    $totalSetFiles = 0
+    if ($null -ne $manifestJson) {
+        $totalCards = [int]($manifestJson.totalCards)
+        $totalSetFiles = [int]($manifestJson.totalSetFiles)
+    }
+
+    $binaryImagesStored = $false
+    $imageStorageMode = 'provider_reference_only'
+    if ($null -ne $statusJson) {
+        if ($null -ne $statusJson.binaryImagesStored) {
+            $binaryImagesStored = [bool]$statusJson.binaryImagesStored
+        }
+        if (-not [string]::IsNullOrWhiteSpace([string]$statusJson.imageStorageMode)) {
+            $imageStorageMode = [string]$statusJson.imageStorageMode
+        }
+    }
+
+    return [pscustomobject]@{
+        IncompleteLanguages = $incomplete
+        CardsByLanguage = $cardsByLanguage
+        SetFilesByLanguage = $setFilesByLanguage
+        LanguagesCompleted = $languagesCompleted
+        TotalCards = $totalCards
+        TotalSetFiles = $totalSetFiles
+        BinaryImagesStored = $binaryImagesStored
+        ImageStorageMode = $imageStorageMode
+        IsComplete = ($incomplete.Count -eq 0 -and $totalSetFiles -gt 0)
+    }
+}
+
+function Get-NextLanguage {
+    param(
+        [object]$Progress,
+        [string[]]$Priority
+    )
+
+    if ($null -eq $Progress -or $Progress.IncompleteLanguages.Count -eq 0) {
+        return $null
+    }
+
+    foreach ($language in $Priority) {
+        if ($Progress.IncompleteLanguages -contains $language) {
+            return $language
+        }
+    }
+
+    return ($Progress.IncompleteLanguages | Sort-Object | Select-Object -First 1)
 }
 
 function Acquire-WorkerLock {
@@ -153,6 +303,8 @@ function Acquire-WorkerLock {
 }
 
 function Invoke-Cycle {
+    param([string]$Language)
+
     $args = @(
         '-NoProfile',
         '-ExecutionPolicy',
@@ -165,8 +317,15 @@ function Invoke-Cycle {
     if ($MaxRequests -gt 0) {
         $args += @('-MaxRequests', [string]$MaxRequests)
     }
+    if (-not [string]::IsNullOrWhiteSpace($Language)) {
+        $args += @('-Language', $Language)
+    }
+    else {
+        $args += '-AllLanguages'
+    }
 
-    Write-WorkerLog 'Starting catalogue cycle.'
+    $target = if ([string]::IsNullOrWhiteSpace($Language)) { 'all' } else { $Language }
+    Write-WorkerLog "Starting catalogue cycle (targetLanguage=$target)."
     $stdoutPath = Join-Path $env:TEMP ("cardscanr-worker-cycle-{0}.out" -f ([guid]::NewGuid().ToString('N')))
     $stderrPath = Join-Path $env:TEMP ("cardscanr-worker-cycle-{0}.err" -f ([guid]::NewGuid().ToString('N')))
     $argumentList = (($args | ForEach-Object { Convert-ToProcessArgument -Value ([string]$_) }) -join ' ')
@@ -250,37 +409,70 @@ try {
         $MaxRequests = 80
     }
 
+    $languagePriority = Get-LanguagePriority -Config $config
+
     Acquire-WorkerLock
-    Write-WorkerLog "Manual worker loop started. PID=$PID intervalMinutes=$IntervalMinutes maxRequests=$MaxRequests"
-    Write-Status -Running $true -LastStatus 'starting' -LastCycleStartedAtUtc $null -LastCycleFinishedAtUtc $null -NextCycleAtUtc (Get-UtcIso) -LastCommit $null -LastError $null
+    Write-WorkerLog "Manual worker loop started. PID=$PID mode=$($script:mode) intervalMinutes=$IntervalMinutes maxRequests=$MaxRequests languagePriority=$($languagePriority -join ',')"
+    $initialProgress = Get-CatalogProgress
+    $initialLanguage = if ($UntilComplete) { Get-NextLanguage -Progress $initialProgress -Priority $languagePriority } else { $null }
+    Write-Status -Running $true -LastStatus 'starting' -LastCycleStartedAtUtc $null -LastCycleFinishedAtUtc $null -NextCycleAtUtc (Get-UtcIso) -LastCommit $null -LastError $null -CurrentPriorityLanguage $(if ($null -ne $initialLanguage) { $initialLanguage } else { 'all' }) -NextLanguageToProcess $(if ($null -ne $initialLanguage) { $initialLanguage } else { 'all' }) -LanguagePriority $languagePriority -Progress $initialProgress
 
     while ($true) {
-        $cycleStartedAt = Get-UtcIso
-        Write-Status -Running $true -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $null -NextCycleAtUtc $null -LastCommit $null -LastError $null
+        $progressBefore = Get-CatalogProgress
+        $nextLanguage = $null
 
-        $cycle = Invoke-Cycle
+        if ($UntilComplete) {
+            if ($progressBefore.IsComplete) {
+                Write-WorkerLog 'All available provider catalogue languages are complete. Stopping until-complete loop.'
+                $now = Get-UtcIso
+                Write-Status -Running $false -LastStatus 'complete' -LastCycleStartedAtUtc $now -LastCycleFinishedAtUtc $now -NextCycleAtUtc $null -LastCommit $null -LastError $null -CurrentPriorityLanguage 'none' -NextLanguageToProcess 'none' -LanguagePriority $languagePriority -Progress $progressBefore
+                break
+            }
+            $nextLanguage = Get-NextLanguage -Progress $progressBefore -Priority $languagePriority
+            if ([string]::IsNullOrWhiteSpace($nextLanguage)) {
+                Write-WorkerLog 'No incomplete language was selected. Stopping loop safely.'
+                $now = Get-UtcIso
+                Write-Status -Running $false -LastStatus 'stopped' -LastCycleStartedAtUtc $now -LastCycleFinishedAtUtc $now -NextCycleAtUtc $null -LastCommit $null -LastError 'No incomplete language selected.' -CurrentPriorityLanguage 'none' -NextLanguageToProcess 'none' -LanguagePriority $languagePriority -Progress $progressBefore
+                break
+            }
+        }
+
+        $cycleStartedAt = Get-UtcIso
+        $currentTarget = if ($UntilComplete) { $nextLanguage } else { 'all' }
+        Write-Status -Running $true -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $null -NextCycleAtUtc $null -LastCommit $null -LastError $null -CurrentPriorityLanguage $currentTarget -NextLanguageToProcess $currentTarget -LanguagePriority $languagePriority -Progress $progressBefore
+
+        $cycle = Invoke-Cycle -Language $nextLanguage
         $cycleFinishedAt = Get-UtcIso
         $lastError = $null
-        if ($cycle.Status -notin @('ok', 'no_changes')) {
+        if ($cycle.Status -notin @('ok', 'no_changes', 'partial', 'complete')) {
             $lastError = $cycle.Message
         }
 
+        $progressAfter = Get-CatalogProgress
+
         if ($cycle.Status -eq 'rate_limited') {
             Write-WorkerLog 'Stopping manual worker because the provider returned rate limit status.'
-            Write-Status -Running $false -LastStatus 'rate_limited' -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $null -LastCommit $cycle.Commit -LastError $cycle.Message
+            Write-Status -Running $false -LastStatus 'rate_limited' -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $null -LastCommit $cycle.Commit -LastError $cycle.Message -CurrentPriorityLanguage $(if ($null -ne $currentTarget) { $currentTarget } else { 'all' }) -NextLanguageToProcess 'none' -LanguagePriority $languagePriority -Progress $progressAfter
             break
         }
 
-        if ($cycle.ExitCode -ne 0 -or $cycle.Status -in @('dirty_worktree', 'validation_failed', 'export_failed', 'git_commit_failed', 'git_push_failed', 'error')) {
+        if ($cycle.ExitCode -ne 0 -or $cycle.Status -in @('dirty_worktree', 'validation_failed', 'export_failed', 'git_commit_failed', 'git_push_failed', 'git_stage_failed', 'error')) {
             Write-WorkerLog "Stopping manual worker after cycle status=$($cycle.Status)."
-            Write-Status -Running $false -LastStatus $cycle.Status -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $null -LastCommit $cycle.Commit -LastError $lastError
+            Write-Status -Running $false -LastStatus $cycle.Status -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $null -LastCommit $cycle.Commit -LastError $lastError -CurrentPriorityLanguage $(if ($null -ne $currentTarget) { $currentTarget } else { 'all' }) -NextLanguageToProcess 'none' -LanguagePriority $languagePriority -Progress $progressAfter
+            break
+        }
+
+        if ($UntilComplete -and $progressAfter.IsComplete) {
+            Write-WorkerLog 'All available provider catalogue languages are complete. Stopping until-complete loop.'
+            Write-Status -Running $false -LastStatus 'complete' -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $null -LastCommit $cycle.Commit -LastError $null -CurrentPriorityLanguage 'none' -NextLanguageToProcess 'none' -LanguagePriority $languagePriority -Progress $progressAfter
             break
         }
 
         $nextCycle = [datetime]::UtcNow.AddMinutes($IntervalMinutes)
         $nextCycleAtUtc = Get-UtcIso -Value $nextCycle
+        $upcomingLanguage = if ($UntilComplete) { Get-NextLanguage -Progress $progressAfter -Priority $languagePriority } else { $null }
         Write-WorkerLog "Cycle finished with status=$($cycle.Status) nextCycleAtUtc=$nextCycleAtUtc"
-        Write-Status -Running $true -LastStatus $cycle.Status -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $nextCycleAtUtc -LastCommit $cycle.Commit -LastError $lastError
+        Write-Status -Running $true -LastStatus $cycle.Status -LastCycleStartedAtUtc $cycleStartedAt -LastCycleFinishedAtUtc $cycleFinishedAt -NextCycleAtUtc $nextCycleAtUtc -LastCommit $cycle.Commit -LastError $lastError -CurrentPriorityLanguage $(if ($null -ne $currentTarget) { $currentTarget } else { 'all' }) -NextLanguageToProcess $(if ($null -ne $upcomingLanguage) { $upcomingLanguage } else { if ($UntilComplete) { 'none' } else { 'all' } }) -LanguagePriority $languagePriority -Progress $progressAfter
         Wait-UntilNextCycle -NextCycle $nextCycle
     }
 }
@@ -288,7 +480,9 @@ finally {
     if ($script:lockAcquired) {
         Remove-Item -Path $workerLockPath -Force -ErrorAction SilentlyContinue
         $existing = Read-JsonFile -Path $statusPath
-        Write-Status -Running $false -LastStatus $(if ($null -ne $existing) { [string]$existing.lastStatus } else { 'stopped' }) -LastCycleStartedAtUtc $(if ($null -ne $existing) { [string]$existing.lastCycleStartedAtUtc } else { $null }) -LastCycleFinishedAtUtc $(if ($null -ne $existing) { [string]$existing.lastCycleFinishedAtUtc } else { $null }) -NextCycleAtUtc $null -LastCommit $(if ($null -ne $existing) { [string]$existing.lastCommit } else { $null }) -LastError $(if ($null -ne $existing) { [string]$existing.lastError } else { $null })
+        $progressFinal = Get-CatalogProgress
+        $priorityFinal = Get-LanguagePriority -Config (Get-WorkerConfig)
+        Write-Status -Running $false -LastStatus $(if ($null -ne $existing) { [string]$existing.lastStatus } else { 'stopped' }) -LastCycleStartedAtUtc $(if ($null -ne $existing) { [string]$existing.lastCycleStartedAtUtc } else { $null }) -LastCycleFinishedAtUtc $(if ($null -ne $existing) { [string]$existing.lastCycleFinishedAtUtc } else { $null }) -NextCycleAtUtc $null -LastCommit $(if ($null -ne $existing) { [string]$existing.lastCommit } else { $null }) -LastError $(if ($null -ne $existing) { [string]$existing.lastError } else { $null }) -CurrentPriorityLanguage $(if ($null -ne $existing -and -not [string]::IsNullOrWhiteSpace([string]$existing.currentPriorityLanguage)) { [string]$existing.currentPriorityLanguage } else { 'none' }) -NextLanguageToProcess $(if ($null -ne $existing -and -not [string]::IsNullOrWhiteSpace([string]$existing.nextLanguageToProcess)) { [string]$existing.nextLanguageToProcess } else { if ($UntilComplete) { 'none' } else { 'all' } }) -LanguagePriority $priorityFinal -Progress $progressFinal
         Write-WorkerLog 'Manual worker loop stopped.'
     }
 }

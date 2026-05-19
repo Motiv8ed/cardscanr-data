@@ -1,6 +1,8 @@
 param(
     [string]$RepoRoot = "",
-    [int]$MaxRequests = 0
+    [int]$MaxRequests = 0,
+    [string]$Language = "",
+    [switch]$AllLanguages
 )
 
 $ErrorActionPreference = 'Stop'
@@ -150,7 +152,9 @@ function Update-WorkerStatus {
         [string]$LastCycleFinishedAtUtc,
         [string]$LastCommit,
         [string]$LastError,
-        [int]$IntervalMinutes
+        [int]$IntervalMinutes,
+        [string]$Mode = 'once',
+        [string]$CurrentPriorityLanguage = 'all'
     )
 
     $existing = Read-JsonFile -Path $statusPath
@@ -169,6 +173,9 @@ function Update-WorkerStatus {
         lastCycleFinishedAtUtc = $LastCycleFinishedAtUtc
         nextCycleAtUtc = $null
         intervalMinutes = $IntervalMinutes
+        mode = $Mode
+        currentPriorityLanguage = $CurrentPriorityLanguage
+        nextLanguageToProcess = $null
         lastStatus = $LastStatus
         lastCommit = $LastCommit
         lastError = $LastError
@@ -282,9 +289,30 @@ try {
         $intervalMinutes = 75
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($Language)) {
+        $Language = $Language.Trim().ToLowerInvariant()
+        if ($Language -eq 'all') {
+            $AllLanguages = $true
+            $Language = ''
+        }
+    }
+
+    if (-not $AllLanguages -and [string]::IsNullOrWhiteSpace($Language)) {
+        $AllLanguages = $true
+    }
+
+    if (-not $AllLanguages) {
+        $allowedLanguages = @('en', 'jp', 'zh', 'kr', 'zh-cn', 'zh-tw')
+        if ($allowedLanguages -notcontains $Language) {
+            Stop-WithStatus -Status 'error' -Message "Unsupported language '$Language'. Allowed values: en, jp, zh, kr, zh-cn, zh-tw, or all." -StartedAtUtc (Get-UtcIso) -IntervalMinutes $intervalMinutes
+        }
+    }
+
+    $targetLanguage = if ($AllLanguages) { 'all' } else { $Language }
+
     Acquire-CycleLock
     $cycleStarted = Get-UtcIso
-    Update-WorkerStatus -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStarted -LastCycleFinishedAtUtc $null -LastCommit $null -LastError $null -IntervalMinutes $intervalMinutes
+    Update-WorkerStatus -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStarted -LastCycleFinishedAtUtc $null -LastCommit $null -LastError $null -IntervalMinutes $intervalMinutes -Mode 'once' -CurrentPriorityLanguage $targetLanguage
 
     $statusLines = Get-GitStatusLines
     $unrelated = @()
@@ -305,11 +333,16 @@ try {
     $exportArgs = @(
         'tools\build_pokewallet_catalog_foundation.py',
         '--full-catalogue',
-        '--all-languages',
         '--max-requests',
         [string]$MaxRequests,
         '--resume'
     )
+    if ($AllLanguages) {
+        $exportArgs += '--all-languages'
+    }
+    else {
+        $exportArgs += @('--language', $Language)
+    }
     $exportResult = Invoke-RepoCommand -FilePath $pythonPath -Arguments $exportArgs
     if ($exportResult.ExitCode -ne 0) {
         Stop-WithStatus -Status 'export_failed' -Message "Catalogue exporter failed with exit code $($exportResult.ExitCode)." -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
@@ -322,6 +355,10 @@ try {
 
     if ([string]$diag.status -eq 'rate_limited') {
         Stop-WithStatus -Status 'rate_limited' -Message 'Provider returned rate limit status.' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+    }
+
+    if ([string]$diag.status -eq 'complete') {
+        Write-CycleLog 'Exporter reported complete status for selected scope.'
     }
 
     if ([bool]$workerConfig.validateAfterCycle) {
@@ -383,7 +420,12 @@ try {
         Write-CycleLog 'commitAfterCycle is false; changes are staged but not committed.'
     }
 
-    Stop-WithStatus -Status 'ok' -Message 'cycle completed' -ExitCode 0 -Commit $commitHash -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+    $finalStatus = switch ([string]$diag.status) {
+        'complete' { 'complete' }
+        'partial' { 'partial' }
+        default { 'ok' }
+    }
+    Stop-WithStatus -Status $finalStatus -Message 'cycle completed' -ExitCode 0 -Commit $commitHash -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
 }
 finally {
     if ($script:cycleLockAcquired) {

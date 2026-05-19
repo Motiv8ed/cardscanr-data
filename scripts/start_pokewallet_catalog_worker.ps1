@@ -1,6 +1,7 @@
 param(
     [string]$RepoRoot = "",
     [int]$IntervalMinutes = 75,
+    [switch]$UntilComplete,
     [switch]$Foreground,
     [switch]$Background
 )
@@ -28,6 +29,8 @@ if ($IntervalMinutes -le 0) {
     $IntervalMinutes = 75
 }
 
+$modeLabel = if ($UntilComplete) { 'untilComplete' } else { 'loop' }
+
 $args = @(
     '-NoProfile',
     '-ExecutionPolicy',
@@ -40,16 +43,21 @@ $args = @(
     [string]$IntervalMinutes
 )
 
+if ($UntilComplete) {
+    $args += '-UntilComplete'
+}
+
 if ($Background) {
     $process = Start-Process -FilePath 'powershell.exe' -ArgumentList $args -WindowStyle Normal -PassThru
-    Write-Host "Started manual PokéWallet catalogue worker loop in a new window. PID: $($process.Id)"
+    Write-Host "Started manual PokéWallet catalogue worker ($modeLabel mode) in a new window. PID: $($process.Id)"
 }
 else {
-    Write-Host 'Starting manual PokéWallet catalogue worker loop in this window.'
+    Write-Host "Starting manual PokéWallet catalogue worker ($modeLabel mode) in this window."
     Write-Host 'Press Ctrl+C in this window, or run the stop script from another terminal.'
 }
 
 Write-Host ("Interval: {0} minutes" -f $IntervalMinutes)
+Write-Host ("Mode: {0}" -f $modeLabel)
 Write-Host ("Log path: {0}" -f $logPath)
 Write-Host ("Status file: {0}" -f $statusPath)
 Write-Host 'Status command: .\scripts\status_pokewallet_catalog_worker.ps1'

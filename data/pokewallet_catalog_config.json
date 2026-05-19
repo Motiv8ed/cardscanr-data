@@ -27,8 +27,14 @@
   },
   "fullCatalogueWorker": {
     "enabled": false,
+    "mode": "loop",
     "intervalMinutes": 75,
     "maxRequestsPerCycle": 80,
+    "languagePriority": [
+      "zh",
+      "jp",
+      "en"
+    ],
     "hourlyReserveRequests": 10,
     "dailyReserveRequests": 50,
     "stopWhenDailyRemainingBelow": 50,

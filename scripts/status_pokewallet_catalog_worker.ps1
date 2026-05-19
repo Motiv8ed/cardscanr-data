@@ -14,6 +14,8 @@ $configPath = Join-Path $RepoRoot 'data\pokewallet_catalog_config.json'
 $statusPath = Join-Path $RepoRoot 'data\pokewallet_catalog_worker_status.json'
 $statePath = Join-Path $RepoRoot 'data\pokewallet_catalog_full_state.json'
 $diagPath = Join-Path $RepoRoot 'public\v1\diagnostics\pokewallet-catalog-foundation-latest.json'
+$providerStatusPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\status.json'
+$providerManifestPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\cards-manifest.json'
 $workerLockPath = Join-Path $RepoRoot '.pokewallet_catalog_worker.lock'
 $cycleLockPath = Join-Path $RepoRoot '.pokewallet_catalog_cycle.lock'
 
@@ -99,6 +101,8 @@ $config = Read-JsonFile -Path $configPath
 $status = Read-JsonFile -Path $statusPath
 $state = Read-JsonFile -Path $statePath
 $diag = Read-JsonFile -Path $diagPath
+$providerStatus = Read-JsonFile -Path $providerStatusPath
+$providerManifest = Read-JsonFile -Path $providerManifestPath
 
 $workerConfig = if ($null -ne $config) { $config.fullCatalogueWorker } else { $null }
 $logPath = if ($null -ne $workerConfig -and -not [string]::IsNullOrWhiteSpace([string]$workerConfig.logPath)) {
@@ -147,6 +151,10 @@ Write-Host ("Last cycle started: {0}" -f (Format-Value $(if ($null -ne $status) 
 Write-Host ("Last cycle finished: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCycleFinishedAtUtc } else { $null })))
 Write-Host ("Next cycle: {0}" -f (Format-Value $(if ($workerLock.Alive -and $null -ne $status) { $status.nextCycleAtUtc } else { $null })))
 Write-Host ("Interval: {0} minutes" -f $interval)
+Write-Host ("Mode: {0}" -f (Format-Value $(if ($null -ne $status -and -not [string]::IsNullOrWhiteSpace([string]$status.mode)) { $status.mode } else { 'loop' })))
+Write-Host ("Current priority language: {0}" -f (Format-Value $(if ($null -ne $status -and -not [string]::IsNullOrWhiteSpace([string]$status.currentPriorityLanguage)) { $status.currentPriorityLanguage } else { 'all' })))
+Write-Host ("Next language to process: {0}" -f (Format-Value $(if ($null -ne $status -and -not [string]::IsNullOrWhiteSpace([string]$status.nextLanguageToProcess)) { $status.nextLanguageToProcess } else { 'all' })))
+Write-Host ("Language priority: {0}" -f (Format-Value $(if ($null -ne $status -and $null -ne $status.languagePriority) { ($status.languagePriority -join ', ') } elseif ($null -ne $workerConfig -and $null -ne $workerConfig.languagePriority) { ($workerConfig.languagePriority -join ', ') } else { 'zh, jp, en' })))
 Write-Host ("Worker last result: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastStatus } else { $null })))
 Write-Host ("Last commit: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastCommit } else { $null })))
 Write-Host ("Worker last error: {0}" -f (Format-Value $(if ($null -ne $status) { $status.lastError } else { $null })))
@@ -156,7 +164,25 @@ Write-Host ("Requests attempted total: {0}" -f (Format-Value $(if ($null -ne $st
 Write-Host ("Requests succeeded total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.requestsSucceededTotal } else { $null })))
 Write-Host ("Requests failed total: {0}" -f (Format-Value $(if ($null -ne $state) { $state.requestsFailedTotal } else { $null })))
 Write-Host ("Languages completed: {0}" -f (Format-Languages $(if ($null -ne $state) { $state.languagesCompleted } else { $null })))
+if ($null -ne $providerStatus -and $null -ne $providerStatus.languages) {
+    $setFileParts = @()
+    $cardParts = @()
+    foreach ($prop in $providerStatus.languages.PSObject.Properties | Sort-Object Name) {
+        $setFileParts += ("{0}={1}" -f $prop.Name, $prop.Value.setFileCount)
+        $cardParts += ("{0}={1}" -f $prop.Name, $prop.Value.cardCount)
+    }
+    Write-Host ("Set files by language: {0}" -f ($setFileParts -join ', '))
+    Write-Host ("Cards by language: {0}" -f ($cardParts -join ', '))
+}
+else {
+    Write-Host 'Set files by language: None'
+    Write-Host 'Cards by language: None'
+}
+Write-Host ("Total set files: {0}" -f (Format-Value $(if ($null -ne $providerManifest) { $providerManifest.totalSetFiles } else { $null })))
+Write-Host ("Total cards: {0}" -f (Format-Value $(if ($null -ne $providerManifest) { $providerManifest.totalCards } else { $null })))
 Write-Host ("Latest diagnostic status: {0}" -f (Format-Value $(if ($null -ne $diag) { $diag.status } else { $null })))
+Write-Host ("Binary images stored: {0}" -f (Format-Value $(if ($null -ne $providerStatus) { $providerStatus.binaryImagesStored } else { $false })))
+Write-Host ("Image storage mode: {0}" -f (Format-Value $(if ($null -ne $providerStatus) { $providerStatus.imageStorageMode } else { 'provider_reference_only' })))
 Write-Host ("Log path: {0}" -f $logPath)
 
 if ($workerLock.Stale) {
