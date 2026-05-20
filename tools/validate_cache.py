@@ -69,6 +69,10 @@ REQUIRED_PRICE_ENTRY_FIELDS = {
     "fetchedAtUtc",
 }
 REQUIRED_CURRENT_PRICE_ENTRY_FIELDS = REQUIRED_PRICE_ENTRY_FIELDS | {
+    "nextExpectedPriceUpdateAtUtc",
+    "staleness",
+}
+STAGE1_EN_CURRENT_PRICE_ADDITIVE_FIELDS = {
     "canonicalCardId",
     "priceIdentityId",
     "market",
@@ -79,8 +83,6 @@ REQUIRED_CURRENT_PRICE_ENTRY_FIELDS = REQUIRED_PRICE_ENTRY_FIELDS | {
     "status",
     "confidence",
     "diagnostics",
-    "nextExpectedPriceUpdateAtUtc",
-    "staleness",
 }
 REQUIRED_DIAGNOSTICS_FIELDS = {
     "buildStatus",
@@ -824,6 +826,10 @@ def check_price_files() -> None:
         warn("No price files found under public/v1/prices/")
         return
 
+    strict_price_contract = parse_bool_env("CARDSCANR_VALIDATE_STRICT_PRICE_CONTRACT")
+    en_current_legacy_record_count = 0
+    en_current_stage1_record_count = 0
+
     for path in price_files:
         rel = path.relative_to(ROOT)
         data = load_json_file(path)
@@ -894,6 +900,8 @@ def check_price_files() -> None:
         seen_ids: set[str] = set()
         dupes: list[str] = []
         entry_errors = 0
+        file_en_current_legacy_record_count = 0
+        file_en_current_stage1_record_count = 0
         for i, entry in enumerate(prices):
             if not isinstance(entry, dict):
                 err(f"{rel}: prices[{i}] is not an object")
@@ -988,6 +996,24 @@ def check_price_files() -> None:
                         err(f"{rel}: prices[{i}] matchSignals must be a list for JP entries")
                         entry_errors += 1
                 elif current_language == "en":
+                    present_stage1_fields = STAGE1_EN_CURRENT_PRICE_ADDITIVE_FIELDS & set(entry.keys())
+                    if not present_stage1_fields:
+                        file_en_current_legacy_record_count += 1
+                        en_current_legacy_record_count += 1
+                        continue
+
+                    if present_stage1_fields != STAGE1_EN_CURRENT_PRICE_ADDITIVE_FIELDS:
+                        missing_stage1_fields = STAGE1_EN_CURRENT_PRICE_ADDITIVE_FIELDS - present_stage1_fields
+                        err(
+                            f"{rel}: prices[{i}] must define either none or all Stage 1 EN price fields; "
+                            f"missing {sorted(missing_stage1_fields)}"
+                        )
+                        entry_errors += 1
+                        continue
+
+                    file_en_current_stage1_record_count += 1
+                    en_current_stage1_record_count += 1
+
                     market = entry.get("market")
                     if not isinstance(market, str) or not market or market != market.lower():
                         err(f"{rel}: prices[{i}] market must be a non-empty lowercase string")
@@ -1046,10 +1072,28 @@ def check_price_files() -> None:
                         err(f"{rel}: prices[{i}] priceIdentityId does not match expected identity format")
                         entry_errors += 1
 
+        if current_language == "en" and strict_price_contract and file_en_current_legacy_record_count > 0:
+            err(
+                f"{rel}: contains {file_en_current_legacy_record_count} legacy EN current price record(s) "
+                "without Stage 1 additive fields; strict mode requires full Stage 1 fields"
+            )
+            entry_errors += 1
+
         if dupes:
             err(f"{rel}: duplicate canonicalId values: {dupes}")
         elif entry_errors == 0:
-            ok(f"{rel}: {len(prices)} entries, no duplicates, all fields present")
+            if current_language == "en":
+                ok(
+                    f"{rel}: {len(prices)} entries, no duplicates, "
+                    f"legacy={file_en_current_legacy_record_count}, stage1={file_en_current_stage1_record_count}"
+                )
+            else:
+                ok(f"{rel}: {len(prices)} entries, no duplicates, all fields present")
+
+    ok(
+        "EN current price migration mix: "
+        f"legacy={en_current_legacy_record_count}, stage1={en_current_stage1_record_count}"
+    )
 
 
 def check_price_status_files() -> None:
