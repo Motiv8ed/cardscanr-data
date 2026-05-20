@@ -8,6 +8,9 @@ This project now supports a local-first EN current-price refresh flow.
 - Validates artifacts after each run.
 - Optionally commits and pushes if changes exist.
 - Persists a cursor in `data/scheduled_price_refresh_state.json` so each run advances to the next batch.
+- Tracks provider request usage in state and enforces hourly/daily safety budgets.
+- Stops cleanly on provider rate-limit responses and resumes from persisted progress.
+- Derives an internal per-cycle request cap for the EN current-price builder so a single batch cannot overshoot the remaining request headroom.
 
 ## Run Manually
 
@@ -27,6 +30,18 @@ Commit and push (if changed):
 
 ```powershell
 .\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --commit --push
+```
+
+Run until one full EN rotation completes (safe budget-aware mode):
+
+```powershell
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --until-complete
+```
+
+Optional loop caps:
+
+```powershell
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --until-complete --max-cycles 30 --cycle-delay-seconds 20
 ```
 
 PowerShell helper:
@@ -51,6 +66,19 @@ Use a user account that has access to your git credential helper.
 
 The updater uses the same environment variables as `tools/build_price_cache.py`.
 Set them in your user/system environment (or task-level environment) before scheduling.
+
+Budget env vars (authoritative names):
+
+- `CARDSCANR_MAX_REQUESTS_PER_HOUR` (default `90`)
+- `CARDSCANR_MAX_REQUESTS_PER_DAY` (default `950`)
+- `CARDSCANR_REQUEST_SAFETY_BUFFER` (default `10`)
+- `CARDSCANR_CURRENT_PRICE_REQUEST_CAP` (internal per-cycle cap passed from the updater; normally set automatically)
+
+Compatibility aliases are also accepted:
+
+- `POKEWALLET_MAX_REQUESTS_PER_HOUR`
+- `POKEWALLET_MAX_REQUESTS_PER_DAY`
+- `POKEWALLET_REQUEST_SAFETY_BUFFER`
 
 Pokewallet diagnostics use `POKEWALLET_API_KEY` from the environment only.
 
@@ -109,6 +137,8 @@ Image notes:
 - The Pokewallet image endpoint requires an API key.
 - Discovery checks only small image samples and records response metadata.
 - Images are not stored in the repository.
+- EN/JP app-facing catalogue files currently keep `imageSmall` and `imageLarge` URLs only.
+- Local image binary caching is still planned and is not performed by this updater.
 
 ## One-click background updater
 
@@ -174,6 +204,15 @@ Recommended interval:
 - Use batch size 20 for the default local rotation.
 - With roughly 159 EN current-price files, batch size 20 every 60 minutes is about 8 hours for a full rotation.
 - A faster optional setting is batch size 30 every 60 minutes, which is roughly 5-6 hours for a full rotation.
+
+Recommended local updater settings:
+
+- `CARDSCANR_MAX_REQUESTS_PER_HOUR=90`
+- `CARDSCANR_MAX_REQUESTS_PER_DAY=950`
+- `CARDSCANR_REQUEST_SAFETY_BUFFER=10`
+- `--batch-size 5`
+
+The updater derives `CARDSCANR_CURRENT_PRICE_REQUEST_CAP` automatically from the remaining hourly and daily headroom before each cycle.
 
 Notes:
 

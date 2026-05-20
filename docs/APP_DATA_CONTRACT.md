@@ -131,6 +131,16 @@ Contract notes:
 - `/v1/images/cache-policy.json` is policy metadata only.
 - `provider-catalog` image references are not production image files.
 
+Planned local image cache path contract (future worker):
+
+- `/v1/images/cards/{game}/{language}/{setId}/{collectorNumberOrCardId}/small.jpg`
+- `/v1/images/cards/{game}/{language}/{setId}/{collectorNumberOrCardId}/large.jpg`
+
+Forward-compatible app guidance:
+
+- Continue consuming `imageSmall` and `imageLarge` upstream URLs today.
+- Future additive fields may include local image URLs (`localImageSmall`, `localImageLarge`) and cache metadata while preserving existing upstream URL fields.
+
 ## 9) Current coverage (known snapshot)
 
 From current output/diagnostics snapshot:

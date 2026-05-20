@@ -100,6 +100,7 @@ CURRENT_PRICE_VARIANTS = [
     ("1stEditionNormal", "first_edition_normal"),
 ]
 TMP_BUILD_ROOT = ROOT / ".cache_build_tmp"
+CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_CURRENT_PRICE_REQUEST_CAP"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -111,6 +112,38 @@ LANGUAGE_TO_TCGDEX = {
     "jp": "ja",
     "ja": "ja",
 }
+
+
+class ProviderRateLimitError(RuntimeError):
+    """Raised when a provider reports request quota/rate-limit exhaustion."""
+
+    def __init__(self, provider: str, status_code: int | None = None, detail: str = "") -> None:
+        self.provider = provider
+        self.status_code = status_code
+        self.detail = detail
+        message = f"{provider} rate limit encountered"
+        if status_code is not None:
+            message += f" (status={status_code})"
+        if detail:
+            message += f": {detail}"
+        super().__init__(message)
+
+
+REQUEST_TRACKER: dict[str, int] = {
+    "attempted": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "rateLimited": 0,
+}
+CURRENT_PRICE_REQUEST_CAP = 0
+
+
+class RequestCapReachedError(RuntimeError):
+    """Raised when the current-price request cap has been reached."""
+
+
+def resolve_current_price_request_cap() -> int:
+    return parse_positive_int_env(CURRENT_PRICE_REQUEST_CAP_ENV)
 
 
 def now_utc() -> str:
@@ -139,6 +172,65 @@ def parse_positive_int_env(name: str) -> int:
     if value < 0:
         raise ValueError(f"{name} must be >= 0")
     return value
+
+
+def reset_request_tracker() -> None:
+    REQUEST_TRACKER["attempted"] = 0
+    REQUEST_TRACKER["succeeded"] = 0
+    REQUEST_TRACKER["failed"] = 0
+    REQUEST_TRACKER["rateLimited"] = 0
+
+
+def remaining_current_price_requests() -> int | None:
+    if CURRENT_PRICE_REQUEST_CAP <= 0:
+        return None
+    return max(0, CURRENT_PRICE_REQUEST_CAP - int(REQUEST_TRACKER.get("attempted", 0)))
+
+
+def mark_request_attempt(success: bool, rate_limited: bool = False) -> None:
+    REQUEST_TRACKER["attempted"] += 1
+    if success:
+        REQUEST_TRACKER["succeeded"] += 1
+    else:
+        REQUEST_TRACKER["failed"] += 1
+    if rate_limited:
+        REQUEST_TRACKER["rateLimited"] += 1
+
+
+def is_rate_limit_detail_text(text: str) -> bool:
+    value = (text or "").strip().lower()
+    if not value:
+        return False
+    signals = [
+        "rate limit",
+        "too many requests",
+        "over limit",
+        "over-limit",
+        "quota exceeded",
+        "daily limit",
+        "request limit",
+        "limit exceeded",
+    ]
+    return any(signal in value for signal in signals)
+
+
+def extract_error_detail(payload: object) -> str:
+    if isinstance(payload, dict):
+        candidate_keys = ["error", "errors", "message", "detail", "status", "title"]
+        for key in candidate_keys:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, str) and item.strip():
+                        return item.strip()
+                    if isinstance(item, dict):
+                        for nested in ["message", "detail", "title", "error"]:
+                            nested_value = item.get(nested)
+                            if isinstance(nested_value, str) and nested_value.strip():
+                                return nested_value.strip()
+    return ""
 
 
 def reset_tmp_build_root(tmp_root: Path) -> None:
@@ -1508,14 +1600,45 @@ def pokemon_tcg_headers() -> dict:
 
 
 def pokemon_tcg_get(endpoint: str, params: dict | None = None) -> dict:
+    if CURRENT_PRICE_REQUEST_CAP > 0 and int(REQUEST_TRACKER.get("attempted", 0)) >= CURRENT_PRICE_REQUEST_CAP:
+        raise RequestCapReachedError(
+            f"current price request cap reached before requesting {endpoint}"
+        )
     response = requests.get(
         f"{POKEMON_TCG_API_BASE}/{endpoint.lstrip('/')}",
         params=params or {},
         headers=pokemon_tcg_headers(),
         timeout=30,
     )
-    response.raise_for_status()
-    payload = response.json()
+    payload: object = {}
+    detail_text = ""
+    try:
+        payload = response.json()
+        detail_text = extract_error_detail(payload)
+    except ValueError:
+        detail_text = (response.text or "").strip()
+
+    is_rate_limited = response.status_code == 429
+    if not is_rate_limited and response.status_code in {401, 403}:
+        is_rate_limited = is_rate_limit_detail_text(detail_text)
+    if not is_rate_limited and response.status_code == 400:
+        is_rate_limited = is_rate_limit_detail_text(detail_text)
+    if not is_rate_limited and isinstance(payload, dict):
+        is_rate_limited = is_rate_limit_detail_text(detail_text)
+
+    if is_rate_limited:
+        mark_request_attempt(success=False, rate_limited=True)
+        raise ProviderRateLimitError(
+            provider=SOURCE_ID_POKEMON_TCG_API,
+            status_code=response.status_code,
+            detail=detail_text or "provider reported a request limit",
+        )
+
+    if response.status_code >= 400:
+        mark_request_attempt(success=False)
+        response.raise_for_status()
+
+    mark_request_attempt(success=True)
     if not isinstance(payload, dict):
         raise ValueError(f"PokemonTCG API returned non-object payload for {endpoint}")
     return payload
@@ -1590,14 +1713,25 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
         "normalizedName": normalized_name,
         "rarity": card.get("rarity"),
         "supertype": card.get("supertype"),
+        "supertypes": [card.get("supertype")] if isinstance(card.get("supertype"), str) and card.get("supertype") else [],
         "subtypes": card.get("subtypes") if isinstance(card.get("subtypes"), list) else [],
         "types": card.get("types") if isinstance(card.get("types"), list) else [],
         "hp": card.get("hp"),
         "artist": card.get("artist"),
+        "illustrator": card.get("artist"),
         "imageSmall": images.get("small"),
         "imageLarge": images.get("large"),
         "imageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
+        "providerIds": {
+            "pokemonTcgApi": card.get("id"),
+            "tcgdex": None,
+            "pokewallet": None,
+        },
+        "pricingReferences": {
+            "tcgplayerAvailable": isinstance(card.get("tcgplayer"), dict),
+            "cardmarketAvailable": False,
+        },
         "externalIds": {
             "pokemonTcgApiId": card.get("id"),
             "tcgdexCardId": None,
@@ -1654,10 +1788,24 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
         "rarity": card.get("rarity"),
         "category": card.get("category"),
         "illustrator": card.get("illustrator"),
+        "supertype": card.get("category"),
+        "supertypes": [card.get("category")] if isinstance(card.get("category"), str) and card.get("category") else [],
+        "subtypes": card.get("types") if isinstance(card.get("types"), list) else [],
+        "types": card.get("types") if isinstance(card.get("types"), list) else [],
+        "hp": card.get("hp"),
         "imageSmall": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low"),
         "imageLarge": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high"),
         "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
+        "providerIds": {
+            "pokemonTcgApi": None,
+            "tcgdex": card.get("id"),
+            "pokewallet": None,
+        },
+        "pricingReferences": {
+            "tcgplayerAvailable": False,
+            "cardmarketAvailable": False,
+        },
         "externalIds": {
             "pokemonTcgApiId": None,
             "tcgdexCardId": card.get("id"),
@@ -1698,10 +1846,24 @@ def build_japanese_global_card_record(card: dict, set_id: str, set_name: str, lo
         "rarity": card.get("rarity"),
         "category": card.get("category"),
         "illustrator": card.get("illustrator"),
+        "supertype": card.get("category"),
+        "supertypes": [card.get("category")] if isinstance(card.get("category"), str) and card.get("category") else [],
+        "subtypes": card.get("types") if isinstance(card.get("types"), list) else [],
+        "types": card.get("types") if isinstance(card.get("types"), list) else [],
+        "hp": card.get("hp"),
         "imageSmall": image,
         "imageLarge": image,
         "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
+        "providerIds": {
+            "pokemonTcgApi": None,
+            "tcgdex": card.get("id"),
+            "pokewallet": None,
+        },
+        "pricingReferences": {
+            "tcgplayerAvailable": False,
+            "cardmarketAvailable": False,
+        },
         "externalIds": {
             "pokemonTcgApiId": None,
             "tcgdexCardId": card.get("id"),
@@ -1739,6 +1901,9 @@ def merge_japanese_set_cards(set_detail_records: list[dict], global_records: lis
 
 def fetch_global_jp_cards(max_probe: int) -> list[dict]:
     response = requests.get("https://api.tcgdex.net/v2/ja/cards", timeout=90)
+    mark_request_attempt(success=response.status_code < 400, rate_limited=(response.status_code == 429))
+    if response.status_code == 429:
+        raise ProviderRateLimitError(provider=SOURCE_ID_TCGDEX, status_code=429, detail="TCGdex global cards endpoint")
     response.raise_for_status()
     payload = response.json()
     if not isinstance(payload, list):
@@ -2073,6 +2238,10 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
             card_files.append((set_id, set_name, card_path))
             metrics["catalogueEnSetsBuilt"] += 1
             metrics["catalogueEnCardsFetched"] += len(card_records)
+        except ProviderRateLimitError as exc:
+            print(f"  [WARN] Stopping EN catalogue build due to provider rate limit: {exc}")
+            metrics["catalogueEnStoppedReason"] = "rate_limited"
+            break
         except (requests.RequestException, ValueError) as exc:
             print(f"  [WARN] Failed to build catalogue cards for set {set_id}: {exc}")
             failed_set_ids.append(set_id)
@@ -2268,11 +2437,15 @@ def build_english_current_prices_by_set(
         "currentPriceEnSkippedNoPriceSets": 0,
         "currentPriceEnSource": CURRENT_PRICE_SOURCE,
         "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+        "currentPriceEnRateLimited": False,
+        "currentPriceEnRequestCap": CURRENT_PRICE_REQUEST_CAP,
+        "currentPriceEnRequestsUsed": 0,
+        "currentPriceEnStopReason": None,
     }
 
     if not config.get("buildCurrentPricesFromPokemonTcgApi", True):
         metrics["currentPriceEnStatus"] = "disabled_by_config"
-        return [], metrics
+        return [], metrics, refresh_state
 
     if not isinstance(catalog_sets, dict) or catalog_sets.get("catalogueStatus") not in {"built", "partial_built"}:
         metrics["currentPriceEnStatus"] = "skipped_no_built_catalogue"
@@ -2290,11 +2463,14 @@ def build_english_current_prices_by_set(
         or "rotating_set_batch"
     ).strip().lower()
     batch_enabled = bool(config.get("scheduledCurrentPriceBatchEnabled", True))
+    request_cap = int(metrics["currentPriceEnRequestCap"] or 0)
 
     selected_sets = list(sets_all)
     cursor_before = int(refresh_state.get("enCurrentPriceCursor", 0) or 0)
     cursor_after = cursor_before
     selected_set_ids: list[str] = [str(item.get("id") or "") for item in selected_sets]
+    processed_set_ids: list[str] = []
+    rate_limited = False
 
     if batch_enabled and strategy == "rotating_set_batch" and mode in {"scheduled", "current_prices"}:
         batch_size = resolve_batch_size(config)
@@ -2345,10 +2521,15 @@ def build_english_current_prices_by_set(
     sleep_seconds = float(config.get("catalogueRequestSleepSeconds", 0.15))
     written_files: list[tuple[str, str, Path]] = []
     failed_set_ids: list[str] = []
+    request_cap_reached = False
 
     for set_data in selected_sets:
         set_id = str(set_data.get("id"))
         set_name = str(set_data.get("name") or set_id)
+        if request_cap > 0 and remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
+            metrics["currentPriceEnStopReason"] = "request_cap_reached"
+            request_cap_reached = True
+            break
         metrics["currentPriceEnSetsAttempted"] += 1
         print(f"  Fetching current prices for set {set_id} ({set_name})")
 
@@ -2360,6 +2541,18 @@ def build_english_current_prices_by_set(
                 max_pages=max_pages_per_set,
                 sleep_seconds=sleep_seconds,
             )
+        except RequestCapReachedError:
+            print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+            metrics["currentPriceEnStopReason"] = "request_cap_reached"
+            request_cap_reached = True
+            break
+        except ProviderRateLimitError as exc:
+            print(f"  [WARN] Provider rate limit while building EN prices for set {set_id}: {exc}")
+            metrics["currentPriceEnStatus"] = "rate_limited"
+            metrics["currentPriceEnRateLimited"] = True
+            metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
+            rate_limited = True
+            break
         except (requests.RequestException, ValueError) as exc:
             print(f"  [WARN] Failed to build current prices for set {set_id}: {exc}")
             failed_set_ids.append(set_id)
@@ -2374,6 +2567,7 @@ def build_english_current_prices_by_set(
         prices.sort(key=price_sort_key)
         if not prices:
             metrics["currentPriceEnSkippedNoPriceSets"] += 1
+            processed_set_ids.append(set_id)
         else:
             price_path = output_dir / f"{set_id}.json"
             set_next_expected_utc = expected_next_refresh_utc(ts, full_rotation_hours)
@@ -2401,6 +2595,7 @@ def build_english_current_prices_by_set(
             written_files.append((set_id, set_name, price_path))
             metrics["currentPriceEnSetsWritten"] += 1
             metrics["currentPriceEnPriceRecordsWritten"] += len(prices)
+            processed_set_ids.append(set_id)
             if fail_after_set_count > 0 and metrics["currentPriceEnSetsWritten"] >= fail_after_set_count:
                 raise RuntimeError(
                     "Intentional failure for local safety testing via "
@@ -2412,20 +2607,37 @@ def build_english_current_prices_by_set(
 
     if failed_set_ids:
         metrics["currentPriceEnStatus"] = "partial_built"
+        metrics["currentPriceEnStopReason"] = "set_error"
         failed_preview = ", ".join(failed_set_ids[:10])
         raise RuntimeError(
             "Failed to build EN current prices for one or more sets; "
             f"leaving existing public current-price cache untouched. sets={failed_preview}"
         )
 
-    metrics["currentPriceEnStatus"] = "built"
+    metrics["currentPriceEnRequestsUsed"] = int(REQUEST_TRACKER.get("attempted", 0))
+    if request_cap_reached:
+        metrics["currentPriceEnStatus"] = "partial_built"
+        metrics["currentPriceEnStopReason"] = "request_cap_reached"
+    elif not rate_limited:
+        metrics["currentPriceEnStatus"] = "built"
+        metrics["currentPriceEnStopReason"] = "completed"
     metrics["currentPriceEnBatchSetIds"] = selected_set_ids
+    metrics["currentPriceEnProcessedSetIds"] = processed_set_ids
 
     next_state = dict(refresh_state)
     next_state["schemaVersion"] = SCHEMA_VERSION
-    next_state["enCurrentPriceCursor"] = cursor_after
+    if batch_enabled and strategy == "rotating_set_batch" and mode in {"scheduled", "current_prices"}:
+        total_sets = len(sets_all)
+        processed_count = len(processed_set_ids)
+        next_cursor = (cursor_before % total_sets + processed_count) % total_sets
+        next_state["enCurrentPriceCursor"] = next_cursor
+    else:
+        next_state["enCurrentPriceCursor"] = cursor_after
     next_state["lastUpdatedAtUtc"] = ts
     next_state["lastBatchSetIds"] = selected_set_ids
+    next_state["lastProcessedSetIds"] = processed_set_ids
+    next_state["lastStopReason"] = str(metrics.get("currentPriceEnStopReason") or "completed")
+    next_state["lastRateLimited"] = bool(metrics.get("currentPriceEnRateLimited"))
 
     return written_files, metrics, next_state
 
@@ -2730,6 +2942,7 @@ def should_build_japanese_catalogue(mode: str, config: dict) -> bool:
 # Main build
 # ---------------------------------------------------------------------------
 def build() -> None:
+    global CURRENT_PRICE_REQUEST_CAP
     ts = now_utc()
     day = ts[:10]
     catalog_config = load_catalog_config()
@@ -2739,6 +2952,11 @@ def build() -> None:
     next_refresh_state: dict | None = None
     fail_after_en_count = parse_positive_int_env("CARDSCANR_FAIL_AFTER_EN_PRICE_SET_COUNT")
     reset_tmp_build_root(TMP_BUILD_ROOT)
+    reset_request_tracker()
+    if mode == "current_prices":
+        CURRENT_PRICE_REQUEST_CAP = resolve_current_price_request_cap()
+    else:
+        CURRENT_PRICE_REQUEST_CAP = 0
     print(f"[build_price_cache] Starting {mode} build at {ts}")
 
     cards: list[dict] = load_json(CARDS_PATH).get("cards", [])
@@ -2815,6 +3033,12 @@ def build() -> None:
         "currentPriceJpSetsWritten": 0,
         "currentPriceJpPriceRecordsWritten": 0,
         "currentPriceJpSkippedNoPriceSets": 0,
+            "providerRequestsAttempted": 0,
+            "providerRequestsSucceeded": 0,
+            "providerRequestsFailed": 0,
+            "providerRateLimitedCount": 0,
+            "stopReason": None,
+            "rateLimitStatus": "not_limited",
     }
 
     cards_by_id: dict[str, dict] = {}
@@ -2940,8 +3164,17 @@ def build() -> None:
                 "currentPriceEnSkippedNoPriceSets": 0,
                 "currentPriceEnSource": CURRENT_PRICE_SOURCE,
                 "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
+                "currentPriceEnRequestCap": CURRENT_PRICE_REQUEST_CAP,
+                "currentPriceEnRequestsUsed": int(REQUEST_TRACKER.get("attempted", 0)),
             }
         diagnostics.update(current_price_metrics)
+        diagnostics["requestCap"] = current_price_metrics.get("currentPriceEnRequestCap")
+        diagnostics["requestsUsed"] = current_price_metrics.get("currentPriceEnRequestsUsed", int(REQUEST_TRACKER.get("attempted", 0)))
+        diagnostics["stopReason"] = current_price_metrics.get("currentPriceEnStopReason") or diagnostics.get("stopReason")
+        if str(current_price_metrics.get("currentPriceEnStatus") or "") == "rate_limited":
+            diagnostics["buildStatus"] = "rate_limited"
+            diagnostics["stopReason"] = str(current_price_metrics.get("currentPriceEnStopReason") or "rate_limited")
+            diagnostics["rateLimitStatus"] = "rate_limited"
 
         if should_build_japanese_catalogue(mode, catalog_config):
             (
@@ -2991,6 +3224,15 @@ def build() -> None:
             }
         diagnostics.update(catalog_jp_metrics)
         diagnostics.update(jp_current_price_metrics)
+
+        diagnostics["providerRequestsAttempted"] = int(REQUEST_TRACKER.get("attempted", 0))
+        diagnostics["providerRequestsSucceeded"] = int(REQUEST_TRACKER.get("succeeded", 0))
+        diagnostics["providerRequestsFailed"] = int(REQUEST_TRACKER.get("failed", 0))
+        diagnostics["providerRateLimitedCount"] = int(REQUEST_TRACKER.get("rateLimited", 0))
+        if diagnostics["providerRateLimitedCount"] > 0 and diagnostics.get("rateLimitStatus") == "not_limited":
+            diagnostics["rateLimitStatus"] = "rate_limited"
+            if diagnostics.get("stopReason") in (None, ""):
+                diagnostics["stopReason"] = "provider_rate_limited"
 
         state_for_status = next_refresh_state if next_refresh_state is not None else refresh_state
         prices_status, en_prices_status, jp_prices_status = build_public_price_status_payloads(

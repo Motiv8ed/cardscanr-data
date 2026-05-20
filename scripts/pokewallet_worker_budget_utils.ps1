@@ -19,6 +19,40 @@ function Get-EnvIntOrDefault {
     return $DefaultValue
 }
 
+function Get-EnvIntFromNamesOrDefault {
+    param(
+        [string[]]$Names,
+        [int]$DefaultValue
+    )
+
+    foreach ($name in $Names) {
+        $resolved = Get-EnvIntOrDefault -Name $name -DefaultValue -1
+        if ($resolved -gt 0) {
+            return $resolved
+        }
+    }
+
+    return $DefaultValue
+}
+
+function Get-EnvBoolFromNamesOrDefault {
+    param(
+        [string[]]$Names,
+        [bool]$DefaultValue
+    )
+
+    foreach ($name in $Names) {
+        $raw = [Environment]::GetEnvironmentVariable($name)
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            continue
+        }
+        $text = $raw.Trim().ToLowerInvariant()
+        return $text -in @('1', 'true', 'yes', 'y', 'on')
+    }
+
+    return $DefaultValue
+}
+
 function Get-EnvBoolOrDefault {
     param(
         [string]$Name,
@@ -137,11 +171,11 @@ function Resolve-PokewalletBudgetSettings {
         }
     }
 
-    $providerHourly = Get-EnvIntOrDefault -Name 'POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_HOUR' -DefaultValue $providerHourly
-    $providerDaily = Get-EnvIntOrDefault -Name 'POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_DAY' -DefaultValue $providerDaily
-    $workerHourly = Get-EnvIntOrDefault -Name 'POKEWALLET_MAX_REQUESTS_PER_HOUR' -DefaultValue $workerHourly
-    $workerDaily = Get-EnvIntOrDefault -Name 'POKEWALLET_MAX_REQUESTS_PER_DAY' -DefaultValue $workerDaily
-    $safetyBuffer = Get-EnvIntOrDefault -Name 'POKEWALLET_REQUEST_SAFETY_BUFFER' -DefaultValue $safetyBuffer
+    $providerHourly = Get-EnvIntFromNamesOrDefault -Names @('CARDSCANR_PROVIDER_PLAN_REQUESTS_PER_HOUR', 'POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_HOUR') -DefaultValue $providerHourly
+    $providerDaily = Get-EnvIntFromNamesOrDefault -Names @('CARDSCANR_PROVIDER_PLAN_REQUESTS_PER_DAY', 'POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_DAY') -DefaultValue $providerDaily
+    $workerHourly = Get-EnvIntFromNamesOrDefault -Names @('CARDSCANR_MAX_REQUESTS_PER_HOUR', 'POKEWALLET_MAX_REQUESTS_PER_HOUR') -DefaultValue $workerHourly
+    $workerDaily = Get-EnvIntFromNamesOrDefault -Names @('CARDSCANR_MAX_REQUESTS_PER_DAY', 'POKEWALLET_MAX_REQUESTS_PER_DAY') -DefaultValue $workerDaily
+    $safetyBuffer = Get-EnvIntFromNamesOrDefault -Names @('CARDSCANR_REQUEST_SAFETY_BUFFER', 'POKEWALLET_REQUEST_SAFETY_BUFFER') -DefaultValue $safetyBuffer
 
     $providerHourlySafe = [Math]::Max(1, $providerHourly - $safetyBuffer)
     $providerDailySafe = [Math]::Max(1, $providerDaily - $safetyBuffer)
@@ -153,7 +187,10 @@ function Resolve-PokewalletBudgetSettings {
     if ($null -ne $WorkerConfig -and -not [string]::IsNullOrWhiteSpace([string]$WorkerConfig.usageEndpointUrl)) {
         $usageEndpointUrl = [string]$WorkerConfig.usageEndpointUrl
     }
-    $usageEndpointUrlEnv = [Environment]::GetEnvironmentVariable('POKEWALLET_USAGE_ENDPOINT_URL')
+    $usageEndpointUrlEnv = [Environment]::GetEnvironmentVariable('CARDSCANR_USAGE_ENDPOINT_URL')
+    if ([string]::IsNullOrWhiteSpace($usageEndpointUrlEnv)) {
+        $usageEndpointUrlEnv = [Environment]::GetEnvironmentVariable('POKEWALLET_USAGE_ENDPOINT_URL')
+    }
     if (-not [string]::IsNullOrWhiteSpace($usageEndpointUrlEnv)) {
         $usageEndpointUrl = $usageEndpointUrlEnv.Trim()
     }
@@ -162,7 +199,7 @@ function Resolve-PokewalletBudgetSettings {
     if ($null -ne $WorkerConfig -and $null -ne $WorkerConfig.usageEndpointEnabled) {
         $usageEndpointEnabled = [bool]$WorkerConfig.usageEndpointEnabled
     }
-    $usageEndpointEnabled = Get-EnvBoolOrDefault -Name 'POKEWALLET_USAGE_ENDPOINT_ENABLED' -DefaultValue $usageEndpointEnabled
+    $usageEndpointEnabled = Get-EnvBoolFromNamesOrDefault -Names @('CARDSCANR_USAGE_ENDPOINT_ENABLED', 'POKEWALLET_USAGE_ENDPOINT_ENABLED') -DefaultValue $usageEndpointEnabled
 
     if ([string]::IsNullOrWhiteSpace($usageEndpointUrl)) {
         $usageEndpointEnabled = $false

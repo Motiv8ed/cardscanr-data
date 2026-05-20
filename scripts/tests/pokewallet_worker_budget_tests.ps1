@@ -3,6 +3,13 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . (Join-Path $repoRoot 'scripts\pokewallet_worker_budget_utils.ps1')
 
+$env:CARDSCANR_MAX_REQUESTS_PER_HOUR = $null
+$env:CARDSCANR_MAX_REQUESTS_PER_DAY = $null
+$env:CARDSCANR_REQUEST_SAFETY_BUFFER = $null
+$env:POKEWALLET_MAX_REQUESTS_PER_HOUR = $null
+$env:POKEWALLET_MAX_REQUESTS_PER_DAY = $null
+$env:POKEWALLET_REQUEST_SAFETY_BUFFER = $null
+
 function Assert-Equal {
     param(
         $Expected,
@@ -36,6 +43,17 @@ $settings = [pscustomobject]@{
     UsageEndpointUrl = ''
     UsageEndpointTimeoutSeconds = 8
 }
+
+$env:CARDSCANR_MAX_REQUESTS_PER_HOUR = '90'
+$env:CARDSCANR_MAX_REQUESTS_PER_DAY = '950'
+$env:CARDSCANR_REQUEST_SAFETY_BUFFER = '10'
+$aliasSettings = Resolve-PokewalletBudgetSettings -WorkerConfig $settings
+Assert-Equal 90 $aliasSettings.HourlyTarget 'CARDSCANR hourly alias target applies'
+Assert-Equal 950 $aliasSettings.DailyTarget 'CARDSCANR daily alias target applies'
+
+$env:CARDSCANR_MAX_REQUESTS_PER_HOUR = $null
+$env:CARDSCANR_MAX_REQUESTS_PER_DAY = $null
+$env:CARDSCANR_REQUEST_SAFETY_BUFFER = $null
 
 $now = [datetimeoffset]::Parse('2026-05-20T10:00:00Z').UtcDateTime
 $ledger = [pscustomobject]@{

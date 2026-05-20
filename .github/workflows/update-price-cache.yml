@@ -34,6 +34,9 @@ jobs:
           POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY || '' }}
           POKEWALLET_API_KEY: ${{ secrets.POKEWALLET_API_KEY || '' }}
           CARDSCANR_CURRENT_PRICE_BATCH_SIZE: "10"
+          CARDSCANR_MAX_REQUESTS_PER_HOUR: "90"
+          CARDSCANR_MAX_REQUESTS_PER_DAY: "950"
+          CARDSCANR_REQUEST_SAFETY_BUFFER: "10"
         run: python tools/build_price_cache.py current_prices
 
       - name: Validate cache

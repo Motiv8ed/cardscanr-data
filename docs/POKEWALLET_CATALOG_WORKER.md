@@ -14,6 +14,12 @@ You can also force until-complete mode via environment variable:
 $env:POKEWALLET_WORKER_UNTIL_COMPLETE = "true"
 ```
 
+CARDSCANR alias is also supported:
+
+```powershell
+$env:CARDSCANR_WORKER_UNTIL_COMPLETE = "true"
+```
+
 ## Commands
 
 Start manual worker:
@@ -154,6 +160,13 @@ Supported environment variables:
 - `POKEWALLET_MAX_REQUESTS_PER_DAY=900`
 - `POKEWALLET_REQUEST_SAFETY_BUFFER=10`
 - `POKEWALLET_WORKER_UNTIL_COMPLETE=true`
+
+CARDSCANR aliases (preferred for app-wide consistency) are also supported:
+
+- `CARDSCANR_MAX_REQUESTS_PER_HOUR=90`
+- `CARDSCANR_MAX_REQUESTS_PER_DAY=950`
+- `CARDSCANR_REQUEST_SAFETY_BUFFER=10`
+- `CARDSCANR_WORKER_UNTIL_COMPLETE=true`
 
 Optional live usage support:
 

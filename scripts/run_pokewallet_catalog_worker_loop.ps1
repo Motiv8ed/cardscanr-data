@@ -475,7 +475,7 @@ try {
         $MaxRequests = 80
     }
 
-    $untilCompleteFromEnv = Get-EnvBoolOrDefault -Name 'POKEWALLET_WORKER_UNTIL_COMPLETE' -DefaultValue $false
+    $untilCompleteFromEnv = Get-EnvBoolFromNamesOrDefault -Names @('CARDSCANR_WORKER_UNTIL_COMPLETE', 'POKEWALLET_WORKER_UNTIL_COMPLETE') -DefaultValue $false
     if ($untilCompleteFromEnv) {
         $UntilComplete = $true
         $script:mode = 'untilComplete'

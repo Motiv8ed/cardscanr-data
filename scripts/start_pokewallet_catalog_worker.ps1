@@ -29,7 +29,10 @@ if ($IntervalMinutes -le 0) {
     $IntervalMinutes = 75
 }
 
-$untilCompleteEnv = [Environment]::GetEnvironmentVariable('POKEWALLET_WORKER_UNTIL_COMPLETE')
+$untilCompleteEnv = [Environment]::GetEnvironmentVariable('CARDSCANR_WORKER_UNTIL_COMPLETE')
+if ([string]::IsNullOrWhiteSpace($untilCompleteEnv)) {
+    $untilCompleteEnv = [Environment]::GetEnvironmentVariable('POKEWALLET_WORKER_UNTIL_COMPLETE')
+}
 if (-not $UntilComplete -and -not [string]::IsNullOrWhiteSpace($untilCompleteEnv)) {
     if ($untilCompleteEnv.Trim().ToLowerInvariant() -in @('1', 'true', 'yes', 'y', 'on')) {
         $UntilComplete = $true
