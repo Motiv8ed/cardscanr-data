@@ -2057,14 +2057,35 @@ def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str)
     collector_number = str(card.get("number") or "")
     normalized_name = normalize_catalog_name(card.get("name", ""))
 
+    canonical_card_id = f"pokemon|en|{set_id}|{collector_number}|{normalized_name}"
+    currency_value = CURRENT_PRICE_CURRENCY
+    market_value = "us"
+    condition_value = "near_mint"
+    price_identity_id = (
+        f"{canonical_card_id}|{variant}|{condition_value}|{market_value}|{currency_value.lower()}"
+    )
+
     return {
-        "canonicalId": f"pokemon|en|{set_id}|{collector_number}|{normalized_name}|{variant}|near_mint",
+        "canonicalId": f"{canonical_card_id}|{variant}|{condition_value}",
+        "canonicalCardId": canonical_card_id,
+        "priceIdentityId": price_identity_id,
         "setId": set_id,
         "collectorNumber": collector_number,
         "normalizedName": normalized_name,
         "variant": variant,
-        "condition": "near_mint",
-        "currency": CURRENT_PRICE_CURRENCY,
+        "condition": condition_value,
+        "currency": currency_value,
+        "market": market_value,
+        "country": "US",
+        "sourceCurrency": currency_value,
+        "targetCurrency": currency_value,
+        "conversionPolicy": "none",
+        "status": "priced",
+        "confidence": "medium",
+        "diagnostics": {
+            "sourceRecordStatus": "priced",
+            "notes": [],
+        },
         "marketPrice": compacted["marketPrice"],
         "lowPrice": compacted["lowPrice"],
         "highPrice": compacted["highPrice"],

@@ -67,6 +67,16 @@ REQUIRED_PRICE_ENTRY_FIELDS = {
     "fetchedAtUtc",
 }
 REQUIRED_CURRENT_PRICE_ENTRY_FIELDS = REQUIRED_PRICE_ENTRY_FIELDS | {
+    "canonicalCardId",
+    "priceIdentityId",
+    "market",
+    "country",
+    "sourceCurrency",
+    "targetCurrency",
+    "conversionPolicy",
+    "status",
+    "confidence",
+    "diagnostics",
     "nextExpectedPriceUpdateAtUtc",
     "staleness",
 }
@@ -531,6 +541,19 @@ ALLOWED_PRICE_STATUS_VALUES = {
 }
 ALLOWED_STALENESS_VALUES = {"fresh", "stale", "very_stale", "unavailable"}
 ALLOWED_SET_PRICE_STATUS_VALUES = {"ok", "partial", "stale", "very_stale", "unavailable"}
+ALLOWED_RECORD_PRICE_STATUS_VALUES = {
+    "priced",
+    "no_result",
+    "not_configured",
+    "rate_limited",
+    "network_error",
+    "provider_error",
+    "stale",
+    "unavailable",
+    "disabled",
+}
+ALLOWED_CONVERSION_POLICY_VALUES = {"none", "converted", "unavailable"}
+ALLOWED_CONFIDENCE_VALUES = {"high", "medium", "low", "unknown"}
 REQUIRED_PLACEHOLDER_CATALOG_FIELDS = {
     "schemaVersion",
     "generatedAtUtc",
@@ -938,6 +961,64 @@ def check_price_files() -> None:
                     match_signals = entry.get("matchSignals")
                     if not isinstance(match_signals, list):
                         err(f"{rel}: prices[{i}] matchSignals must be a list for JP entries")
+                        entry_errors += 1
+                elif current_language == "en":
+                    market = entry.get("market")
+                    if not isinstance(market, str) or not market or market != market.lower():
+                        err(f"{rel}: prices[{i}] market must be a non-empty lowercase string")
+                        entry_errors += 1
+
+                    country = entry.get("country")
+                    if not isinstance(country, str) or len(country) != 2 or country != country.upper():
+                        err(f"{rel}: prices[{i}] country must be a 2-letter uppercase string")
+                        entry_errors += 1
+
+                    for field in ["sourceCurrency", "targetCurrency"]:
+                        code = entry.get(field)
+                        if not isinstance(code, str) or len(code) != 3 or code != code.upper():
+                            err(f"{rel}: prices[{i}] {field} must be a 3-letter uppercase string")
+                            entry_errors += 1
+
+                    if entry.get("conversionPolicy") not in ALLOWED_CONVERSION_POLICY_VALUES:
+                        err(
+                            f"{rel}: prices[{i}] conversionPolicy must be one of "
+                            f"{sorted(ALLOWED_CONVERSION_POLICY_VALUES)}"
+                        )
+                        entry_errors += 1
+
+                    if entry.get("status") not in ALLOWED_RECORD_PRICE_STATUS_VALUES:
+                        err(
+                            f"{rel}: prices[{i}] status must be one of "
+                            f"{sorted(ALLOWED_RECORD_PRICE_STATUS_VALUES)}"
+                        )
+                        entry_errors += 1
+
+                    if entry.get("confidence") not in ALLOWED_CONFIDENCE_VALUES:
+                        err(
+                            f"{rel}: prices[{i}] confidence must be one of "
+                            f"{sorted(ALLOWED_CONFIDENCE_VALUES)}"
+                        )
+                        entry_errors += 1
+
+                    diagnostics = entry.get("diagnostics")
+                    if not isinstance(diagnostics, dict):
+                        err(f"{rel}: prices[{i}] diagnostics must be an object")
+                        entry_errors += 1
+
+                    expected_canonical_card_id = (
+                        f"pokemon|en|{entry.get('setId')}|{entry.get('collectorNumber')}|{entry.get('normalizedName')}"
+                    )
+                    if entry.get("canonicalCardId") != expected_canonical_card_id:
+                        err(f"{rel}: prices[{i}] canonicalCardId does not match expected identity format")
+                        entry_errors += 1
+
+                    currency_lower = str(entry.get("currency") or "").lower()
+                    expected_price_identity_id = (
+                        f"{expected_canonical_card_id}|{entry.get('variant')}|{entry.get('condition')}|"
+                        f"{entry.get('market')}|{currency_lower}"
+                    )
+                    if entry.get("priceIdentityId") != expected_price_identity_id:
+                        err(f"{rel}: prices[{i}] priceIdentityId does not match expected identity format")
                         entry_errors += 1
 
         if dupes:
