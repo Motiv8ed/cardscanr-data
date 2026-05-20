@@ -2,36 +2,55 @@
   "sources": [
     {
       "id": "manual_seed",
+      "aliases": [],
       "description": "Manually seeded reference prices",
       "enabled": true
     },
     {
       "id": "tcgdex",
+      "aliases": [],
       "description": "TCGdex open card database",
       "enabled": true
     },
     {
+      "id": "tcgdex_tcgplayer",
+      "aliases": [],
+      "description": "TCGdex price data via TCGplayer market feed",
+      "enabled": true
+    },
+    {
+      "id": "tcgdex_cardmarket",
+      "aliases": [],
+      "description": "TCGdex price data via Cardmarket market feed",
+      "enabled": true
+    },
+    {
       "id": "pokewallet",
+      "aliases": [],
       "description": "PokeWallet price data",
       "enabled": true
     },
     {
-      "id": "pokemonTcgApi",
+      "id": "pokemon_tcg_api",
+      "aliases": ["pokemonTcgApi"],
       "description": "Pokémon TCG API market prices",
       "enabled": true
     },
     {
-      "id": "ebaySoldListingsManual",
+      "id": "ebay_sold_manual",
+      "aliases": ["ebaySoldListingsManual"],
       "description": "eBay sold listings (manually curated)",
       "enabled": true
     },
     {
       "id": "manual",
+      "aliases": [],
       "description": "Manually entered prices",
       "enabled": true
     },
     {
       "id": "unavailable",
+      "aliases": [],
       "description": "Price data not available for this card",
       "enabled": false
     }

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Human-curated base configuration for supported-languages.json. The builder reads this file to derive language entries, then overwrites generatedAtUtc and derives pricingStatus and catalogueStatus from live build outputs. Do not edit visibility or enabled here without corresponding product decisions.",
+  "languages": [
+    {
+      "catalogueStatus": "available",
+      "defaultCurrency": "USD",
+      "defaultMarket": "us",
+      "displayName": "English",
+      "enabled": true,
+      "game": "pokemon",
+      "language": "en",
+      "nativeName": "English",
+      "notes": [],
+      "pricingStatus": "available",
+      "visibility": "public"
+    },
+    {
+      "allowPricingAutoPromotion": false,
+      "catalogueStatus": "partial",
+      "defaultCurrency": "JPY",
+      "defaultMarket": "jp",
+      "displayName": "Japanese",
+      "enabled": true,
+      "game": "pokemon",
+      "language": "jp",
+      "nativeName": "日本語",
+      "notes": [
+        "Japanese catalogue is partial — 162 sets available, 97 sets have incomplete card data, 5 sets failed.",
+        "Japanese pricing is not available. Card browsing only."
+      ],
+      "pricingStatus": "unavailable",
+      "visibility": "beta"
+    }
+  ]
+}

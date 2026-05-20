@@ -54,6 +54,10 @@ APP_CONFIG_PATH = PUBLIC_DIR / "app-config.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
 DIAG_PATH = DIAGNOSTICS_DIR / "latest-build.json"
 CARDS_PATH = DATA_DIR / "cards_to_track.json"
+SUPPORTED_LANGUAGES_PATH = PUBLIC_DIR / "supported-languages.json"
+SUPPORTED_MARKETS_PATH = PUBLIC_DIR / "supported-markets.json"
+SUPPORTED_LANGUAGES_CONFIG_PATH = DATA_DIR / "supported_languages_config.json"
+SUPPORTED_MARKETS_CONFIG_PATH = DATA_DIR / "supported_markets_config.json"
 BASE_URL = "https://cardscanr-cache.pages.dev/v1"
 DEFAULT_CACHE_TTL_SECONDS = 86400
 PRICE_CACHE_TTL_SECONDS = 43200
@@ -61,7 +65,32 @@ DIAGNOSTICS_CACHE_TTL_SECONDS = 900
 HISTORY_CACHE_TTL_SECONDS = 86400
 CATALOG_CACHE_TTL_SECONDS = 86400
 POKEMON_TCG_API_BASE = "https://api.pokemontcg.io/v2"
-CURRENT_PRICE_SOURCE = "pokemon_tcg_api"
+SOURCE_ID_POKEMON_TCG_API = "pokemon_tcg_api"
+SOURCE_ID_TCGDEX = "tcgdex"
+SOURCE_ID_TCGDEX_TCGPLAYER = "tcgdex_tcgplayer"
+SOURCE_ID_TCGDEX_CARDMARKET = "tcgdex_cardmarket"
+SOURCE_ID_POKEWALLET = "pokewallet"
+SOURCE_ID_EBAY_SOLD_MANUAL = "ebay_sold_manual"
+SOURCE_ID_MANUAL = "manual"
+SOURCE_ID_MANUAL_SEED = "manual_seed"
+SOURCE_ID_UNAVAILABLE = "unavailable"
+# Mirrors app-facing alias compatibility in /v1/supported-sources.json.
+SOURCE_ID_ALIASES = {
+    SOURCE_ID_POKEMON_TCG_API: ["pokemonTcgApi"],
+    SOURCE_ID_EBAY_SOLD_MANUAL: ["ebaySoldListingsManual"],
+}
+APP_SUPPORTED_SOURCE_IDS = [
+    SOURCE_ID_POKEMON_TCG_API,
+    SOURCE_ID_TCGDEX,
+    SOURCE_ID_TCGDEX_TCGPLAYER,
+    SOURCE_ID_TCGDEX_CARDMARKET,
+    SOURCE_ID_POKEWALLET,
+    SOURCE_ID_EBAY_SOLD_MANUAL,
+    SOURCE_ID_MANUAL,
+    SOURCE_ID_MANUAL_SEED,
+    SOURCE_ID_UNAVAILABLE,
+]
+CURRENT_PRICE_SOURCE = SOURCE_ID_POKEMON_TCG_API
 CURRENT_PRICE_CURRENCY = "USD"
 CURRENT_PRICE_VARIANTS = [
     ("normal", "normal"),
@@ -778,7 +807,7 @@ def build_public_price_status_payloads(
                 "nextExpectedPriceUpdateAtUtc": None,
                 "staleness": jp_payload["staleness"],
                 "sourceSummary": {
-                    "primarySource": "tcgdex",
+                    "primarySource": SOURCE_ID_TCGDEX,
                     "currency": None,
                     "isLivePricing": False,
                 },
@@ -905,7 +934,7 @@ def manual_seed_price_info(card: dict) -> dict:
         "lowPrice": low,
         "highPrice": high,
         "currency": "AUD",
-        "source": "manual_seed",
+        "source": SOURCE_ID_MANUAL_SEED,
     }
 
 
@@ -923,6 +952,115 @@ def build_price_entry(card: dict, ts: str, price_info: dict) -> dict:
         "highPrice": price_info["highPrice"],
         "source": price_info["source"],
         "fetchedAtUtc": ts,
+    }
+
+
+def _derive_catalogue_status_from_sets_file(game: str, language: str) -> str | None:
+    """Read sets.json and map catalogueStatus to the supported-languages enum."""
+    sets_path = CATALOG_DIR / game / language / "sets.json"
+    if not sets_path.exists():
+        return None
+    try:
+        data = load_json(sets_path)
+    except OSError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    raw = str(data.get("catalogueStatus", ""))
+    if raw in {"built"}:
+        return "available"
+    if raw in {"partial_built"}:
+        return "partial"
+    if raw in {"not_built_yet"}:
+        return "unavailable"
+    return None
+
+
+def _derive_pricing_status_from_price_status(game: str, language: str) -> str | None:
+    """Read prices/current/{game}/{language}/status.json and return pricingStatus."""
+    status_path = CATALOG_DIR.parent / "prices" / "current" / game / language / "status.json"
+    if not status_path.exists():
+        return None
+    try:
+        data = load_json(status_path)
+    except OSError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    if data.get("currentPriceFilesAvailable") is True:
+        return "available"
+    return "unavailable"
+
+
+def build_supported_language_manifest(ts: str) -> dict:
+    """Build supported-languages.json from curated config + live status derivation."""
+    config_data: dict = {}
+    if SUPPORTED_LANGUAGES_CONFIG_PATH.exists():
+        try:
+            config_data = load_json(SUPPORTED_LANGUAGES_CONFIG_PATH)
+        except OSError:
+            pass
+    if not isinstance(config_data, dict):
+        config_data = {}
+
+    base_languages: list[dict] = [
+        entry for entry in config_data.get("languages", []) if isinstance(entry, dict)
+    ]
+
+    languages: list[dict] = []
+    for entry in base_languages:
+        lang_entry = dict(entry)
+        game = str(lang_entry.get("game", ""))
+        language = str(lang_entry.get("language", ""))
+
+        # Derive catalogueStatus from live sets.json (never demotes human-set "planned" status)
+        if lang_entry.get("catalogueStatus") not in {"planned", "unavailable"}:
+            derived_cat = _derive_catalogue_status_from_sets_file(game, language)
+            if derived_cat is not None:
+                lang_entry["catalogueStatus"] = derived_cat
+
+        # Derive pricingStatus from live price status file (never auto-promotes to "available"
+        # if visibility is "planned" — that is a human editorial decision, or if
+        # allowPricingAutoPromotion is explicitly false in the config)
+        allow_auto = lang_entry.pop("allowPricingAutoPromotion", True)
+        if lang_entry.get("visibility") not in {"planned", "hidden", "internal"} and allow_auto:
+            derived_price = _derive_pricing_status_from_price_status(game, language)
+            if derived_price is not None:
+                # Allow downgrade to "unavailable" when status file says so, but
+                # never silently flip "planned" or "hidden" languages to "available".
+                if derived_price == "available":
+                    lang_entry["pricingStatus"] = "available"
+                elif derived_price == "unavailable" and lang_entry.get("pricingStatus") not in {"planned"}:
+                    lang_entry["pricingStatus"] = "unavailable"
+
+        languages.append(lang_entry)
+
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "languages": languages,
+    }
+
+
+def build_supported_market_manifest(ts: str) -> dict:
+    """Build supported-markets.json from curated config (timestamp-only refresh)."""
+    config_data: dict = {}
+    if SUPPORTED_MARKETS_CONFIG_PATH.exists():
+        try:
+            config_data = load_json(SUPPORTED_MARKETS_CONFIG_PATH)
+        except OSError:
+            pass
+    if not isinstance(config_data, dict):
+        config_data = {}
+
+    markets: list[dict] = [
+        dict(entry) for entry in config_data.get("markets", []) if isinstance(entry, dict)
+    ]
+
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "markets": markets,
     }
 
 
@@ -1431,7 +1569,7 @@ def build_catalog_set_record(set_data: dict) -> dict:
         "ptcgoCode": set_data.get("ptcgoCode"),
         "symbolUrl": images.get("symbol"),
         "logoUrl": images.get("logo"),
-        "imageSource": "pokemon_tcg_api",
+        "imageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
     }
 
@@ -1458,7 +1596,7 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
         "artist": card.get("artist"),
         "imageSmall": images.get("small"),
         "imageLarge": images.get("large"),
-        "imageSource": "pokemon_tcg_api",
+        "imageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": card.get("id"),
@@ -1490,7 +1628,7 @@ def build_japanese_catalog_set_record(set_data: dict) -> dict:
         "ptcgoCode": None,
         "symbolUrl": set_data.get("symbol"),
         "logoUrl": set_data.get("logo"),
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
     }
 
@@ -1518,7 +1656,7 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
         "illustrator": card.get("illustrator"),
         "imageSmall": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low"),
         "imageLarge": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high"),
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": None,
@@ -1562,7 +1700,7 @@ def build_japanese_global_card_record(card: dict, set_id: str, set_name: str, lo
         "illustrator": card.get("illustrator"),
         "imageSmall": image,
         "imageLarge": image,
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": None,
@@ -1776,7 +1914,7 @@ def build_japanese_pokemon_catalogue(
                 "language": "jp",
                 "setId": set_id,
                 "setName": set_name,
-                "source": "tcgdex",
+                "source": SOURCE_ID_TCGDEX,
                 "catalogueStatus": "built",
                 "cardCount": len(card_records),
                 "cards": card_records,
@@ -1839,7 +1977,7 @@ def build_japanese_pokemon_catalogue(
         "language": "jp",
         "catalogueStatus": metrics["catalogueJpStatus"],
         "cardsAvailable": len(card_files) > 0,
-        "source": "tcgdex",
+        "source": SOURCE_ID_TCGDEX,
         "setCount": len(unique_sets),
         "cardCount": metrics["catalogueJpCardsFetched"],
         "partialSetCount": metrics["catalogueJpSetsSkippedEmptyCards"],
@@ -1925,7 +2063,7 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
                 "language": "en",
                 "setId": set_id,
                 "setName": set_name,
-                "source": "pokemon_tcg_api",
+                "source": SOURCE_ID_POKEMON_TCG_API,
                 "catalogueStatus": "built",
                 "cardCount": len(card_records),
                 "cards": card_records,
@@ -1963,7 +2101,7 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
         "language": "en",
         "catalogueStatus": status,
         "cardsAvailable": len(card_files) > 0,
-        "source": "pokemon_tcg_api",
+        "source": SOURCE_ID_POKEMON_TCG_API,
         "setCount": len(sets),
         "cardCount": metrics["catalogueEnCardsFetched"],
         "partialSetCount": len(failed_set_ids),
@@ -2057,14 +2195,35 @@ def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str)
     collector_number = str(card.get("number") or "")
     normalized_name = normalize_catalog_name(card.get("name", ""))
 
+    canonical_card_id = f"pokemon|en|{set_id}|{collector_number}|{normalized_name}"
+    currency_value = CURRENT_PRICE_CURRENCY
+    market_value = "us"
+    condition_value = "near_mint"
+    price_identity_id = (
+        f"{canonical_card_id}|{variant}|{condition_value}|{market_value}|{currency_value.lower()}"
+    )
+
     return {
-        "canonicalId": f"pokemon|en|{set_id}|{collector_number}|{normalized_name}|{variant}|near_mint",
+        "canonicalId": f"{canonical_card_id}|{variant}|{condition_value}",
+        "canonicalCardId": canonical_card_id,
+        "priceIdentityId": price_identity_id,
         "setId": set_id,
         "collectorNumber": collector_number,
         "normalizedName": normalized_name,
         "variant": variant,
-        "condition": "near_mint",
-        "currency": CURRENT_PRICE_CURRENCY,
+        "condition": condition_value,
+        "currency": currency_value,
+        "market": market_value,
+        "country": "US",
+        "sourceCurrency": currency_value,
+        "targetCurrency": currency_value,
+        "conversionPolicy": "none",
+        "status": "priced",
+        "confidence": "medium",
+        "diagnostics": {
+            "sourceRecordStatus": "priced",
+            "notes": [],
+        },
         "marketPrice": compacted["marketPrice"],
         "lowPrice": compacted["lowPrice"],
         "highPrice": compacted["highPrice"],
@@ -2449,7 +2608,7 @@ def fetch_prices_from_tcgdex(card: dict, diagnostics: dict) -> dict | None:
     if isinstance(tcgplayer_prices, dict):
         variant_prices = extract_variant_prices(tcgplayer_prices, card.get("variant", "normal"))
         if variant_prices:
-            compacted = compact_price_info(variant_prices, "tcgdex_tcgplayer", "USD")
+            compacted = compact_price_info(variant_prices, SOURCE_ID_TCGDEX_TCGPLAYER, "USD")
             if compacted:
                 return compacted
 
@@ -2457,7 +2616,7 @@ def fetch_prices_from_tcgdex(card: dict, diagnostics: dict) -> dict | None:
     if isinstance(cardmarket_prices, dict):
         variant_prices = extract_variant_prices(cardmarket_prices, card.get("variant", "normal"))
         if variant_prices:
-            compacted = compact_price_info(variant_prices, "tcgdex_cardmarket", "EUR")
+            compacted = compact_price_info(variant_prices, SOURCE_ID_TCGDEX_CARDMARKET, "EUR")
             if compacted:
                 return compacted
 
@@ -2505,7 +2664,7 @@ def fetch_prices_from_pokemon_tcg_api(card: dict) -> dict | None:
         if not variant_prices:
             return None
 
-        return compact_price_info(variant_prices, "pokemon_tcg_api", "USD")
+        return compact_price_info(variant_prices, SOURCE_ID_POKEMON_TCG_API, "USD")
     except requests.RequestException as exc:
         print(f"[ERROR] PokemonTCG API request failed: {exc}")
         return None
@@ -2684,7 +2843,7 @@ def build() -> None:
                     price_info = fetch_live_price_info(card, diagnostics)
                     diagnostics["sourcesUsed"].add(price_info["source"])
 
-                    if price_info["source"] != "manual_seed":
+                    if price_info["source"] != SOURCE_ID_MANUAL_SEED:
                         diagnostics["livePriceCount"] += 1
 
                     diagnostics["cardsPriced"] += 1
@@ -2853,6 +3012,12 @@ def build() -> None:
         write_json(PRICES_STATUS_PATH, prices_status)
         write_json(EN_CURRENT_STATUS_PATH, en_prices_status)
         write_json(JP_CURRENT_STATUS_PATH, jp_prices_status)
+
+        supported_languages = build_supported_language_manifest(ts)
+        supported_markets = build_supported_market_manifest(ts)
+        write_json(SUPPORTED_LANGUAGES_PATH, supported_languages)
+        write_json(SUPPORTED_MARKETS_PATH, supported_markets)
+
         if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
             write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
 
@@ -2894,6 +3059,26 @@ def build() -> None:
             file_path=SCHEMAS_PATH,
             dataset_type="schemas",
             description="Machine-readable CardScanR cache schema docs",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="supported_languages",
+            file_path=SUPPORTED_LANGUAGES_PATH,
+            dataset_type="supported_languages",
+            description="CardScanR supported language and catalogue availability manifest",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="supported_markets",
+            file_path=SUPPORTED_MARKETS_PATH,
+            dataset_type="supported_markets",
+            description="CardScanR supported market and pricing availability manifest",
             ts=ts,
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )

@@ -17,15 +17,19 @@ public/                        ← Cloudflare Pages build output
     app-config.json            ← Feature flags consumed by the Flutter app
     supported-games.json       ← Enabled card games
     supported-sources.json     ← Enabled price sources
+    supported-languages.json   ← Language/catalogue/pricing availability manifest
+    supported-markets.json     ← Market/currency/pricing availability manifest
     prices/
       pokemon/
-        en/sample.json         ← English Pokémon prices (AUD)
-        jp/sample.json         ← Japanese Pokémon prices (AUD)
+        en/sample.json         ← English Pokémon sample prices (USD, provider-native)
+        jp/sample.json         ← Japanese Pokémon sample prices (pricing unavailable)
     diagnostics/
       latest-build.json        ← Build metadata written by the CI job
 
 data/
   cards_to_track.json          ← Cards the build script generates prices for
+  supported_languages_config.json  ← Curated source of truth for supported-languages.json
+  supported_markets_config.json    ← Curated source of truth for supported-markets.json
 
 tools/
   build_price_cache.py         ← Builds price files + updates index.json
@@ -79,3 +83,15 @@ Optional environment variables:
 2. Leave the build command empty (this is a static repo — CI commits the files
    directly).  
 3. The `public/_headers` file applies CORS + cache headers automatically.
+
+---
+
+
+## App-facing data contract
+
+For production app integration rules and stability scope of `public/v1`, see:
+
+- [`docs/APP_DATA_CONTRACT.md`](docs/APP_DATA_CONTRACT.md)
+
+Source IDs in `/v1/supported-sources.json` are canonical lowercase `snake_case`.
+Legacy IDs are exposed through per-source `aliases` for backward-compatible app matching during transition windows.
