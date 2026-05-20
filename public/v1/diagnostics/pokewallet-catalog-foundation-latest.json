@@ -1,11 +1,11 @@
 {
   "apiKeyPresent": true,
-  "blockerReason": "",
+  "blockerReason": "Full catalogue export stopped before all selected sets were processed.",
   "cardsFetchedByLanguage": {},
   "cardsWrittenByLanguage": {},
   "cardsWrittenThisRun": 0,
   "fullCatalogueEnabled": true,
-  "generatedAtUtc": "2026-05-20T00:29:30Z",
+  "generatedAtUtc": "2026-05-20T07:37:11Z",
   "imageSamplesAvailable": 0,
   "imageSamplesChecked": 0,
   "languagesSeen": {
@@ -15,18 +15,583 @@
   },
   "mode": "full_catalogue",
   "provider": "pokewallet",
-  "recommendation": "Full Pokewallet catalogue export completed for the selected scope.",
-  "requestsAttempted": 2,
-  "requestsFailed": 0,
+  "recommendation": "Resume the full Pokewallet catalogue export until selected languages are complete.",
+  "requestsAttempted": 17,
+  "requestsFailed": 15,
   "requestsSucceeded": 2,
   "sampleCards": [],
-  "sampleSkipped": [],
+  "sampleSkipped": [
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24521"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "24521"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "609"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "609"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "610"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "610"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24493"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "24493"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24529"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "24529"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "23692"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "23692"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24002"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "24002"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24003"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "24003"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24196"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "24196"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24197"
+    },
+    {
+      "language": "jp",
+      "reason": "set_detail_no_cards",
+      "setId": "24197"
+    }
+  ],
   "schemaVersion": "1.0.0",
   "setFilesWritten": 0,
   "setsFetched": 854,
   "setsProcessedThisRun": 0,
-  "setsRemainingAfterRun": 0,
+  "setsRemainingAfterRun": 15,
   "setsSelectedByLanguage": {
+    "en": [
+      {
+        "cardCount": 62,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "FO",
+        "providerSetId": "630",
+        "providerSetName": "Fossil",
+        "releaseDate": "10th October, 1999"
+      },
+      {
+        "cardCount": 14,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MED",
+        "providerSetId": "-121",
+        "providerSetName": "Mega Evolution Deck",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 8,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEE",
+        "providerSetId": "24461",
+        "providerSetName": "MEE: Mega Evolution Energies",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 188,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEG",
+        "providerSetId": "24380",
+        "providerSetName": "ME01: Mega Evolution",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 52,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEP",
+        "providerSetId": "24451",
+        "providerSetName": "ME: Mega Evolution Promo",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 51,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "mAA",
+        "providerSetId": "-205",
+        "providerSetName": "Mega Evolution All-Stars",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 24,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "xMEG",
+        "providerSetId": "-233",
+        "providerSetName": "Extended Art: Mega Evolution",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 230,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "OBF",
+        "providerSetId": "23228",
+        "providerSetName": "SV03: Obsidian Flames",
+        "releaseDate": "11th August, 2023"
+      },
+      {
+        "cardCount": 130,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PL",
+        "providerSetId": "1406",
+        "providerSetName": "Platinum",
+        "releaseDate": "11th February, 2009"
+      },
+      {
+        "cardCount": 211,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PPS1",
+        "providerSetId": "-153",
+        "providerSetName": "Play! Pokemon Prize Pack Series One",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 215,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH12",
+        "providerSetId": "3170",
+        "providerSetName": "SWSH12: Silver Tempest",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 30,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH12: TG",
+        "providerSetId": "17674",
+        "providerSetName": "SWSH12: Silver Tempest Trainer Gallery",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 100,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "AOR",
+        "providerSetId": "1576",
+        "providerSetName": "XY - Ancient Origins",
+        "releaseDate": "12th August, 2015"
+      },
+      {
+        "cardCount": 30,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PR",
+        "providerSetId": "1532",
+        "providerSetName": "XY Trainer Kit: Sylveon & Noivern",
+        "releaseDate": "12th March, 2014"
+      },
+      {
+        "cardCount": 61,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "TK6",
+        "providerSetId": "-179",
+        "providerSetName": "XY Trainer Kit: Sylveon & Noivern",
+        "releaseDate": "12th March, 2014"
+      },
+      {
+        "cardCount": 178,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SK",
+        "providerSetId": "1372",
+        "providerSetName": "Skyridge",
+        "releaseDate": "12th May, 2003"
+      },
+      {
+        "cardCount": 96,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "UL",
+        "providerSetId": "1399",
+        "providerSetName": "Unleashed",
+        "releaseDate": "12th May, 2010"
+      },
+      {
+        "cardCount": 284,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH08",
+        "providerSetId": "2906",
+        "providerSetName": "SWSH08: Fusion Strike",
+        "releaseDate": "12th November, 2021"
+      },
+      {
+        "cardCount": 113,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "FFI",
+        "providerSetId": "1481",
+        "providerSetName": "XY - Furious Fists",
+        "releaseDate": "13th August, 2014"
+      },
+      {
+        "cardCount": 93,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "LM",
+        "providerSetId": "1378",
+        "providerSetName": "Legend Maker",
+        "releaseDate": "13th February, 2006"
+      },
+      {
+        "cardCount": 106,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "GE",
+        "providerSetId": "1405",
+        "providerSetName": "Great Encounters",
+        "releaseDate": "13th February, 2008"
+      },
+      {
+        "cardCount": 9,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "RAID",
+        "providerSetId": "-160",
+        "providerSetName": "Raid Battle Cards",
+        "releaseDate": "13th July, 2020"
+      },
+      {
+        "cardCount": 203,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH04",
+        "providerSetId": "2701",
+        "providerSetName": "SWSH04: Vivid Voltage",
+        "releaseDate": "13th November, 2020"
+      },
+      {
+        "cardCount": 12,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MCD13",
+        "providerSetId": "-117",
+        "providerSetName": "McDonald's Collection 2013",
+        "releaseDate": "13th October, 2013"
+      },
+      {
+        "cardCount": 175,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SCR",
+        "providerSetId": "23537",
+        "providerSetName": "SV07: Stellar Crown",
+        "releaseDate": "13th September, 2024"
+      }
+    ],
+    "jp": [
+      {
+        "cardCount": 94,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "S3a",
+        "providerSetId": "23635",
+        "providerSetName": "S3a: Legendary Heartbeat",
+        "releaseDate": "10th July, 2020"
+      },
+      {
+        "cardCount": 115,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "sD",
+        "providerSetId": "23853",
+        "providerSetName": "sD: V Starter Decks",
+        "releaseDate": "10th July, 2020"
+      },
+      {
+        "cardCount": 51,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "PCG8",
+        "providerSetId": "24099",
+        "providerSetName": "Miracle Crystal",
+        "releaseDate": "10th March, 2006"
+      },
+      {
+        "cardCount": 103,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "SV1a",
+        "providerSetId": "23598",
+        "providerSetName": "SV1a: Triplet Beat",
+        "releaseDate": "10th March, 2023"
+      },
+      {
+        "cardCount": 95,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "Pt1",
+        "providerSetId": "23998",
+        "providerSetName": "Pt1: Galactic's Conquest",
+        "releaseDate": "10th October, 2008"
+      },
+      {
+        "cardCount": 82,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY9",
+        "providerSetId": "23927",
+        "providerSetName": "XY9: Rage of the Broken Heavens",
+        "releaseDate": "11th December, 2015"
+      },
+      {
+        "cardCount": 16,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "L2",
+        "providerSetId": "24080",
+        "providerSetName": "L2: Steelix Constructed Standard Deck",
+        "releaseDate": "11th February, 2010"
+      },
+      {
+        "cardCount": 10,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "L2",
+        "providerSetId": "24081",
+        "providerSetName": "L2: Tyranitar Constructed Standard Deck",
+        "releaseDate": "11th February, 2010"
+      },
+      {
+        "cardCount": 66,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "SM9a",
+        "providerSetId": "23701",
+        "providerSetName": "SM9a: Night Unison",
+        "releaseDate": "11th January, 2019"
+      },
+      {
+        "cardCount": 24,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "T-P",
+        "providerSetId": "-172",
+        "providerSetName": "Black Star Promos",
+        "releaseDate": "12th September, 2025"
+      },
+      {
+        "cardCount": 62,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY-Bx",
+        "providerSetId": "23914",
+        "providerSetName": "XY-Bx: Collection X",
+        "releaseDate": "13th December, 2013"
+      },
+      {
+        "cardCount": 62,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY-By",
+        "providerSetId": "23915",
+        "providerSetName": "XY-By: Collection Y",
+        "releaseDate": "13th December, 2013"
+      },
+      {
+        "cardCount": 75,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY5-Bg",
+        "providerSetId": "23921",
+        "providerSetName": "XY5-Bg: Gaia Volcano",
+        "releaseDate": "13th December, 2014"
+      },
+      {
+        "cardCount": 69,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY5-Bt",
+        "providerSetId": "23922",
+        "providerSetName": "XY5-Bt: Tidal Storm",
+        "releaseDate": "13th December, 2014"
+      },
+      {
+        "cardCount": 64,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "BW6",
+        "providerSetId": "23901",
+        "providerSetName": "BW6: Freeze Bolt",
+        "releaseDate": "13th July, 2012"
+      },
+      {
+        "cardCount": 60,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "BW6",
+        "providerSetId": "23902",
+        "providerSetName": "BW6: Cold Flare",
+        "releaseDate": "13th July, 2012"
+      },
+      {
+        "cardCount": 96,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "EBB",
+        "providerSetId": "23912",
+        "providerSetName": "EX Battle Boost",
+        "releaseDate": "13th July, 2013"
+      },
+      {
+        "cardCount": 11,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "MG",
+        "providerSetId": "23937",
+        "providerSetName": "Mewtwo vs Genesect Deck Kit (Mewtwo)",
+        "releaseDate": "13th July, 2013"
+      },
+      {
+        "cardCount": 10,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "MG",
+        "providerSetId": "23955",
+        "providerSetName": "Mewtwo vs Genesect Deck Kit (Genesect)",
+        "releaseDate": "13th July, 2013"
+      },
+      {
+        "cardCount": 111,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "smH",
+        "providerSetId": "23888",
+        "providerSetName": "smH: GX Starter Decks",
+        "releaseDate": "13th July, 2018"
+      },
+      {
+        "cardCount": 120,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "m4",
+        "providerSetId": "24653",
+        "providerSetName": "M4: Ninja Spinner",
+        "releaseDate": "13th March, 2026"
+      },
+      {
+        "cardCount": 99,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "S10a",
+        "providerSetId": "23640",
+        "providerSetName": "S10a: Dark Phantasma",
+        "releaseDate": "13th May, 2022"
+      },
+      {
+        "cardCount": 93,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XY4",
+        "providerSetId": "23920",
+        "providerSetName": "XY4: Phantom Gate",
+        "releaseDate": "13th September, 2014"
+      },
+      {
+        "cardCount": 12,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "XYB",
+        "providerSetId": "23959",
+        "providerSetName": "XYB: Dialga-EX + Aegislash-EX Hyper Metal Chain Deck",
+        "releaseDate": "13th September, 2014"
+      },
+      {
+        "cardCount": 94,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "SV7a",
+        "providerSetId": "23604",
+        "providerSetName": "SV7a: Paradise Dragona",
+        "releaseDate": "13th September, 2024"
+      }
+    ],
     "zh": [
       {
         "cardCount": 23,
@@ -255,5 +820,5 @@
       }
     ]
   },
-  "status": "ok"
+  "status": "partial"
 }
