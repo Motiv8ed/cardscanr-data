@@ -61,7 +61,31 @@ DIAGNOSTICS_CACHE_TTL_SECONDS = 900
 HISTORY_CACHE_TTL_SECONDS = 86400
 CATALOG_CACHE_TTL_SECONDS = 86400
 POKEMON_TCG_API_BASE = "https://api.pokemontcg.io/v2"
-CURRENT_PRICE_SOURCE = "pokemon_tcg_api"
+SOURCE_ID_POKEMON_TCG_API = "pokemon_tcg_api"
+SOURCE_ID_TCGDEX = "tcgdex"
+SOURCE_ID_TCGDEX_TCGPLAYER = "tcgdex_tcgplayer"
+SOURCE_ID_TCGDEX_CARDMARKET = "tcgdex_cardmarket"
+SOURCE_ID_POKEWALLET = "pokewallet"
+SOURCE_ID_EBAY_SOLD_MANUAL = "ebay_sold_manual"
+SOURCE_ID_MANUAL = "manual"
+SOURCE_ID_MANUAL_SEED = "manual_seed"
+SOURCE_ID_UNAVAILABLE = "unavailable"
+SOURCE_ID_ALIASES = {
+    SOURCE_ID_POKEMON_TCG_API: ["pokemonTcgApi"],
+    SOURCE_ID_EBAY_SOLD_MANUAL: ["ebaySoldListingsManual"],
+}
+APP_SUPPORTED_SOURCE_IDS = [
+    SOURCE_ID_POKEMON_TCG_API,
+    SOURCE_ID_TCGDEX,
+    SOURCE_ID_TCGDEX_TCGPLAYER,
+    SOURCE_ID_TCGDEX_CARDMARKET,
+    SOURCE_ID_POKEWALLET,
+    SOURCE_ID_EBAY_SOLD_MANUAL,
+    SOURCE_ID_MANUAL,
+    SOURCE_ID_MANUAL_SEED,
+    SOURCE_ID_UNAVAILABLE,
+]
+CURRENT_PRICE_SOURCE = SOURCE_ID_POKEMON_TCG_API
 CURRENT_PRICE_CURRENCY = "USD"
 CURRENT_PRICE_VARIANTS = [
     ("normal", "normal"),
@@ -778,7 +802,7 @@ def build_public_price_status_payloads(
                 "nextExpectedPriceUpdateAtUtc": None,
                 "staleness": jp_payload["staleness"],
                 "sourceSummary": {
-                    "primarySource": "tcgdex",
+                    "primarySource": SOURCE_ID_TCGDEX,
                     "currency": None,
                     "isLivePricing": False,
                 },
@@ -905,7 +929,7 @@ def manual_seed_price_info(card: dict) -> dict:
         "lowPrice": low,
         "highPrice": high,
         "currency": "AUD",
-        "source": "manual_seed",
+        "source": SOURCE_ID_MANUAL_SEED,
     }
 
 
@@ -1431,7 +1455,7 @@ def build_catalog_set_record(set_data: dict) -> dict:
         "ptcgoCode": set_data.get("ptcgoCode"),
         "symbolUrl": images.get("symbol"),
         "logoUrl": images.get("logo"),
-        "imageSource": "pokemon_tcg_api",
+        "imageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
     }
 
@@ -1458,7 +1482,7 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
         "artist": card.get("artist"),
         "imageSmall": images.get("small"),
         "imageLarge": images.get("large"),
-        "imageSource": "pokemon_tcg_api",
+        "imageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": card.get("id"),
@@ -1490,7 +1514,7 @@ def build_japanese_catalog_set_record(set_data: dict) -> dict:
         "ptcgoCode": None,
         "symbolUrl": set_data.get("symbol"),
         "logoUrl": set_data.get("logo"),
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
     }
 
@@ -1518,7 +1542,7 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
         "illustrator": card.get("illustrator"),
         "imageSmall": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low"),
         "imageLarge": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high"),
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": None,
@@ -1562,7 +1586,7 @@ def build_japanese_global_card_record(card: dict, set_id: str, set_name: str, lo
         "illustrator": card.get("illustrator"),
         "imageSmall": image,
         "imageLarge": image,
-        "imageSource": "tcgdex",
+        "imageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "externalIds": {
             "pokemonTcgApiId": None,
@@ -1776,7 +1800,7 @@ def build_japanese_pokemon_catalogue(
                 "language": "jp",
                 "setId": set_id,
                 "setName": set_name,
-                "source": "tcgdex",
+                "source": SOURCE_ID_TCGDEX,
                 "catalogueStatus": "built",
                 "cardCount": len(card_records),
                 "cards": card_records,
@@ -1839,7 +1863,7 @@ def build_japanese_pokemon_catalogue(
         "language": "jp",
         "catalogueStatus": metrics["catalogueJpStatus"],
         "cardsAvailable": len(card_files) > 0,
-        "source": "tcgdex",
+        "source": SOURCE_ID_TCGDEX,
         "setCount": len(unique_sets),
         "cardCount": metrics["catalogueJpCardsFetched"],
         "partialSetCount": metrics["catalogueJpSetsSkippedEmptyCards"],
@@ -1925,7 +1949,7 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
                 "language": "en",
                 "setId": set_id,
                 "setName": set_name,
-                "source": "pokemon_tcg_api",
+                "source": SOURCE_ID_POKEMON_TCG_API,
                 "catalogueStatus": "built",
                 "cardCount": len(card_records),
                 "cards": card_records,
@@ -1963,7 +1987,7 @@ def build_english_pokemon_catalogue(ts: str, config: dict) -> tuple[dict, list[t
         "language": "en",
         "catalogueStatus": status,
         "cardsAvailable": len(card_files) > 0,
-        "source": "pokemon_tcg_api",
+        "source": SOURCE_ID_POKEMON_TCG_API,
         "setCount": len(sets),
         "cardCount": metrics["catalogueEnCardsFetched"],
         "partialSetCount": len(failed_set_ids),
@@ -2470,7 +2494,7 @@ def fetch_prices_from_tcgdex(card: dict, diagnostics: dict) -> dict | None:
     if isinstance(tcgplayer_prices, dict):
         variant_prices = extract_variant_prices(tcgplayer_prices, card.get("variant", "normal"))
         if variant_prices:
-            compacted = compact_price_info(variant_prices, "tcgdex_tcgplayer", "USD")
+            compacted = compact_price_info(variant_prices, SOURCE_ID_TCGDEX_TCGPLAYER, "USD")
             if compacted:
                 return compacted
 
@@ -2478,7 +2502,7 @@ def fetch_prices_from_tcgdex(card: dict, diagnostics: dict) -> dict | None:
     if isinstance(cardmarket_prices, dict):
         variant_prices = extract_variant_prices(cardmarket_prices, card.get("variant", "normal"))
         if variant_prices:
-            compacted = compact_price_info(variant_prices, "tcgdex_cardmarket", "EUR")
+            compacted = compact_price_info(variant_prices, SOURCE_ID_TCGDEX_CARDMARKET, "EUR")
             if compacted:
                 return compacted
 
@@ -2526,7 +2550,7 @@ def fetch_prices_from_pokemon_tcg_api(card: dict) -> dict | None:
         if not variant_prices:
             return None
 
-        return compact_price_info(variant_prices, "pokemon_tcg_api", "USD")
+        return compact_price_info(variant_prices, SOURCE_ID_POKEMON_TCG_API, "USD")
     except requests.RequestException as exc:
         print(f"[ERROR] PokemonTCG API request failed: {exc}")
         return None
@@ -2705,7 +2729,7 @@ def build() -> None:
                     price_info = fetch_live_price_info(card, diagnostics)
                     diagnostics["sourcesUsed"].add(price_info["source"])
 
-                    if price_info["source"] != "manual_seed":
+                    if price_info["source"] != SOURCE_ID_MANUAL_SEED:
                         diagnostics["livePriceCount"] += 1
 
                     diagnostics["cardsPriced"] += 1

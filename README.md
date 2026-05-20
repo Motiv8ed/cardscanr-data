@@ -89,3 +89,5 @@ For production app integration rules and stability scope of `public/v1`, see:
 
 - [`docs/APP_DATA_CONTRACT.md`](docs/APP_DATA_CONTRACT.md)
 
+Source IDs in `/v1/supported-sources.json` are canonical lowercase `snake_case`.
+Legacy IDs are exposed through per-source `aliases` for backward-compatible app matching during transition windows.

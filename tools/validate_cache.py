@@ -35,6 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_DIR = ROOT / "public"
 V1_DIR = PUBLIC_DIR / "v1"
 INDEX_PATH = V1_DIR / "index.json"
+SUPPORTED_SOURCES_PATH = V1_DIR / "supported-sources.json"
 
 # ---------------------------------------------------------------------------
 # Required fields per file type
@@ -530,6 +531,24 @@ REQUIRED_LANGUAGE_STATUS_FIELDS = {
     "status",
     "staleness",
 }
+REQUIRED_SUPPORTED_SOURCES_FIELDS = {"sources"}
+REQUIRED_SUPPORTED_SOURCE_ENTRY_FIELDS = {"id", "aliases", "description", "enabled"}
+CANONICAL_SUPPORTED_SOURCE_IDS = {
+    "pokemon_tcg_api",
+    "tcgdex",
+    "tcgdex_tcgplayer",
+    "tcgdex_cardmarket",
+    "pokewallet",
+    "ebay_sold_manual",
+    "manual",
+    "manual_seed",
+    "unavailable",
+}
+REQUIRED_SUPPORTED_SOURCE_ALIASES = {
+    "pokemon_tcg_api": {"pokemonTcgApi"},
+    "ebay_sold_manual": {"ebaySoldListingsManual"},
+}
+LEGACY_PRIMARY_SOURCE_IDS = {"pokemonTcgApi", "ebaySoldListingsManual"}
 ALLOWED_PRICE_STATUS_VALUES = {
     "ok",
     "partial",
@@ -645,6 +664,14 @@ QUIET = False
 def parse_bool_env(name: str) -> bool:
     value = os.getenv(name, "").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def is_lower_snake_case(value: str) -> bool:
+    if not value or value != value.lower():
+        return False
+    if value.startswith("_") or value.endswith("_") or "__" in value:
+        return False
+    return all(char.islower() or char.isdigit() or char == "_" for char in value)
 
 
 def err(msg: str) -> None:
@@ -1952,8 +1979,101 @@ def check_schemas() -> None:
         err("schemas.json schemas must be a non-empty object")
 
 
+def check_supported_sources() -> None:
+    print("\n[10] Supported sources check")
+    if not SUPPORTED_SOURCES_PATH.exists():
+        err(f"Supported sources file not found: {SUPPORTED_SOURCES_PATH.relative_to(ROOT)}")
+        return
+
+    data = load_json_file(SUPPORTED_SOURCES_PATH)
+    if data is None or not isinstance(data, dict):
+        err("supported-sources.json must be a JSON object")
+        return
+
+    if check_required(data, REQUIRED_SUPPORTED_SOURCES_FIELDS, "supported-sources.json"):
+        ok("supported-sources.json has required top-level fields")
+
+    sources = data.get("sources")
+    if not isinstance(sources, list) or not sources:
+        err("supported-sources.json sources must be a non-empty list")
+        return
+
+    seen_ids: set[str] = set()
+    aliases_by_id: dict[str, set[str]] = {}
+    alias_to_id: dict[str, str] = {}
+
+    for i, entry in enumerate(sources):
+        label = f"supported-sources.json sources[{i}]"
+        if not isinstance(entry, dict):
+            err(f"{label} must be an object")
+            continue
+
+        missing = REQUIRED_SUPPORTED_SOURCE_ENTRY_FIELDS - set(entry.keys())
+        if missing:
+            err(f"{label} missing fields: {sorted(missing)}")
+
+        source_id = entry.get("id")
+        if not isinstance(source_id, str) or not source_id:
+            err(f"{label} id must be a non-empty string")
+            source_id = None
+        else:
+            if source_id in seen_ids:
+                err(f"supported-sources.json duplicate id: {source_id}")
+            else:
+                seen_ids.add(source_id)
+            if source_id in LEGACY_PRIMARY_SOURCE_IDS:
+                err(f"{label} id must be canonical snake_case, got legacy id: {source_id}")
+            if not is_lower_snake_case(source_id):
+                err(f"{label} id must be lowercase snake_case")
+            if source_id not in CANONICAL_SUPPORTED_SOURCE_IDS:
+                err(f"{label} id must be one of {sorted(CANONICAL_SUPPORTED_SOURCE_IDS)}")
+
+        description = entry.get("description")
+        if not isinstance(description, str) or not description.strip():
+            err(f"{label} description must be a non-empty string")
+
+        if not isinstance(entry.get("enabled"), bool):
+            err(f"{label} enabled must be boolean")
+
+        aliases_raw = entry.get("aliases")
+        entry_aliases: set[str] = set()
+        if not isinstance(aliases_raw, list):
+            err(f"{label} aliases must be an array")
+        else:
+            for j, alias in enumerate(aliases_raw):
+                alias_label = f"{label} aliases[{j}]"
+                if not isinstance(alias, str) or not alias:
+                    err(f"{alias_label} must be a non-empty string")
+                    continue
+                if source_id is not None and alias == source_id:
+                    err(f"{alias_label} must not duplicate id")
+                if alias in entry_aliases:
+                    err(f"{label} aliases must not contain duplicates: {alias}")
+                    continue
+                entry_aliases.add(alias)
+                previous_id = alias_to_id.get(alias)
+                if previous_id is not None and source_id is not None and previous_id != source_id:
+                    err(f"alias '{alias}' is assigned to multiple ids: {previous_id}, {source_id}")
+                elif source_id is not None:
+                    alias_to_id[alias] = source_id
+
+        if source_id is not None:
+            aliases_by_id[source_id] = entry_aliases
+
+    missing_canonical_ids = CANONICAL_SUPPORTED_SOURCE_IDS - seen_ids
+    if missing_canonical_ids:
+        err(f"supported-sources.json is missing canonical ids: {sorted(missing_canonical_ids)}")
+
+    for canonical_id, required_aliases in REQUIRED_SUPPORTED_SOURCE_ALIASES.items():
+        if canonical_id in aliases_by_id and not required_aliases.issubset(aliases_by_id[canonical_id]):
+            err(
+                f"supported-sources.json id '{canonical_id}' is missing required aliases: "
+                f"{sorted(required_aliases - aliases_by_id[canonical_id])}"
+            )
+
+
 def check_catalogues() -> None:
-    print("\n[10] Catalogue check")
+    print("\n[11] Catalogue check")
     catalog_files = sorted((V1_DIR / "catalog").rglob("sets.json")) if (V1_DIR / "catalog").exists() else []
     if not catalog_files:
         warn("No catalogue files found under public/v1/catalog/")
@@ -2129,7 +2249,7 @@ def check_catalog_card_files() -> None:
 # Check: tracked cards history and daily history files
 # ---------------------------------------------------------------------------
 def check_history() -> None:
-    print("\n[11] Tracked history check")
+    print("\n[12] Tracked history check")
     history_root = V1_DIR / "history"
     tracked_cards_path = history_root / "tracked-cards.json"
 
@@ -2253,6 +2373,7 @@ def main() -> None:
     check_api_manifest()
     check_api_notes()
     check_schemas()
+    check_supported_sources()
     check_catalogues()
     check_history()
 
