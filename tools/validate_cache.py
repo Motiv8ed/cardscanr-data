@@ -568,6 +568,7 @@ REQUIRED_SUPPORTED_LANGUAGE_ENTRY_FIELDS = {
     "visibility",
     "catalogueStatus",
     "pricingStatus",
+    "notes",
 }
 ALLOWED_LANGUAGE_VISIBILITY_VALUES = {"public", "beta", "internal", "hidden"}
 ALLOWED_CATALOGUE_STATUS_VALUES = {"available", "partial", "unavailable", "planned"}
@@ -580,6 +581,7 @@ REQUIRED_SUPPORTED_MARKET_ENTRY_FIELDS = {
     "visibility",
     "pricingStatus",
     "supportedSources",
+    "notes",
 }
 ALLOWED_MARKET_VISIBILITY_VALUES = {"public", "beta", "planned", "hidden"}
 ALLOWED_PRICE_STATUS_VALUES = {
