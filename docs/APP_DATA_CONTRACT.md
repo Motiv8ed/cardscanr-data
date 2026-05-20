@@ -62,7 +62,23 @@ Canonical source IDs are lowercase `snake_case`:
 - `manual_seed`
 - `unavailable`
 
-Current outputs may still contain transitional or legacy source names; those should be normalized in a future task.
+`/v1/supported-sources.json` source entries use this shape:
+
+```json
+{
+  "id": "pokemon_tcg_api",
+  "aliases": ["pokemonTcgApi"],
+  "description": "Pokémon TCG API market prices",
+  "enabled": true
+}
+```
+
+Rules:
+
+- `id` is canonical and must be lowercase `snake_case`.
+- `aliases` is an array of accepted legacy identifiers for app/client fallback matching.
+- App matching order is: exact canonical `id`, then any `aliases`.
+- During migration, legacy aliases must be retained for at least one app release cycle before removal.
 
 ## 6) Price status policy
 
@@ -144,7 +160,6 @@ Recommended app behavior:
 
 - No supported-languages manifest.
 - No supported-markets manifest.
-- Source IDs are inconsistent in current output.
 - Status enums are not fully normalized.
 - No explicit market/country fields in current app-facing price records.
 - No per-card explicit `no_result`/error records in current app-facing price files.
