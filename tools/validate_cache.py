@@ -2323,7 +2323,7 @@ def check_supported_languages_and_markets() -> None:
                     ):
                         err(f"{label} country must be a 2-letter uppercase ISO 3166-1 alpha-2 code or null")
 
-                    country_name = entry.get("countryName")
+                    country_name = entry.get("countryName", "")
                     if not isinstance(country_name, str) or not country_name.strip():
                         err(f"{label} countryName must be a non-empty string")
 
