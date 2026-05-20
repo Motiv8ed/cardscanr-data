@@ -25,6 +25,7 @@ Exit code
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -549,6 +550,7 @@ REQUIRED_SUPPORTED_SOURCE_ALIASES = {
     "ebay_sold_manual": {"ebaySoldListingsManual"},
 }
 LEGACY_PRIMARY_SOURCE_IDS = {"pokemonTcgApi", "ebaySoldListingsManual"}
+SNAKE_CASE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
 ALLOWED_PRICE_STATUS_VALUES = {
     "ok",
     "partial",
@@ -667,11 +669,7 @@ def parse_bool_env(name: str) -> bool:
 
 
 def is_lower_snake_case(value: str) -> bool:
-    if not value or value != value.lower():
-        return False
-    if value.startswith("_") or value.endswith("_") or "__" in value:
-        return False
-    return all(char.islower() or char.isdigit() or char == "_" for char in value)
+    return bool(SNAKE_CASE_PATTERN.fullmatch(value))
 
 
 def err(msg: str) -> None:

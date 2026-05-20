@@ -70,6 +70,7 @@ SOURCE_ID_EBAY_SOLD_MANUAL = "ebay_sold_manual"
 SOURCE_ID_MANUAL = "manual"
 SOURCE_ID_MANUAL_SEED = "manual_seed"
 SOURCE_ID_UNAVAILABLE = "unavailable"
+# Mirrors app-facing alias compatibility in /v1/supported-sources.json.
 SOURCE_ID_ALIASES = {
     SOURCE_ID_POKEMON_TCG_API: ["pokemonTcgApi"],
     SOURCE_ID_EBAY_SOLD_MANUAL: ["ebaySoldListingsManual"],
