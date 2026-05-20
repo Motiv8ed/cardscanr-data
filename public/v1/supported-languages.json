@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-20T04:48:38Z",
+  "languages": [
+    {
+      "catalogueStatus": "available",
+      "defaultCurrency": "USD",
+      "defaultMarket": "us",
+      "displayName": "English",
+      "enabled": true,
+      "game": "pokemon",
+      "language": "en",
+      "nativeName": "English",
+      "notes": [],
+      "pricingStatus": "available",
+      "visibility": "public"
+    },
+    {
+      "catalogueStatus": "partial",
+      "defaultCurrency": "JPY",
+      "defaultMarket": "jp",
+      "displayName": "Japanese",
+      "enabled": true,
+      "game": "pokemon",
+      "language": "jp",
+      "nativeName": "日本語",
+      "notes": [
+        "Japanese catalogue is partial — 162 sets available, 97 sets have incomplete card data, 5 sets failed.",
+        "Japanese pricing is not available. Card browsing only."
+      ],
+      "pricingStatus": "unavailable",
+      "visibility": "beta"
+    }
+  ]
+}

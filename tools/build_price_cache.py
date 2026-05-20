@@ -54,6 +54,10 @@ APP_CONFIG_PATH = PUBLIC_DIR / "app-config.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
 DIAG_PATH = DIAGNOSTICS_DIR / "latest-build.json"
 CARDS_PATH = DATA_DIR / "cards_to_track.json"
+SUPPORTED_LANGUAGES_PATH = PUBLIC_DIR / "supported-languages.json"
+SUPPORTED_MARKETS_PATH = PUBLIC_DIR / "supported-markets.json"
+SUPPORTED_LANGUAGES_CONFIG_PATH = DATA_DIR / "supported_languages_config.json"
+SUPPORTED_MARKETS_CONFIG_PATH = DATA_DIR / "supported_markets_config.json"
 BASE_URL = "https://cardscanr-cache.pages.dev/v1"
 DEFAULT_CACHE_TTL_SECONDS = 86400
 PRICE_CACHE_TTL_SECONDS = 43200
@@ -948,6 +952,113 @@ def build_price_entry(card: dict, ts: str, price_info: dict) -> dict:
         "highPrice": price_info["highPrice"],
         "source": price_info["source"],
         "fetchedAtUtc": ts,
+    }
+
+
+def _derive_catalogue_status_from_sets_file(game: str, language: str) -> str | None:
+    """Read sets.json and map catalogueStatus to the supported-languages enum."""
+    sets_path = CATALOG_DIR / game / language / "sets.json"
+    if not sets_path.exists():
+        return None
+    try:
+        data = load_json(sets_path)
+    except OSError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    raw = str(data.get("catalogueStatus", ""))
+    if raw in {"built"}:
+        return "available"
+    if raw in {"partial_built"}:
+        return "partial"
+    if raw in {"not_built_yet"}:
+        return "unavailable"
+    return None
+
+
+def _derive_pricing_status_from_price_status(game: str, language: str) -> str | None:
+    """Read prices/current/{game}/{language}/status.json and return pricingStatus."""
+    status_path = CATALOG_DIR.parent / "prices" / "current" / game / language / "status.json"
+    if not status_path.exists():
+        return None
+    try:
+        data = load_json(status_path)
+    except OSError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    if data.get("currentPriceFilesAvailable") is True:
+        return "available"
+    return "unavailable"
+
+
+def build_supported_language_manifest(ts: str) -> dict:
+    """Build supported-languages.json from curated config + live status derivation."""
+    config_data: dict = {}
+    if SUPPORTED_LANGUAGES_CONFIG_PATH.exists():
+        try:
+            config_data = load_json(SUPPORTED_LANGUAGES_CONFIG_PATH)
+        except OSError:
+            pass
+    if not isinstance(config_data, dict):
+        config_data = {}
+
+    base_languages: list[dict] = [
+        entry for entry in config_data.get("languages", []) if isinstance(entry, dict)
+    ]
+
+    languages: list[dict] = []
+    for entry in base_languages:
+        lang_entry = dict(entry)
+        game = str(lang_entry.get("game", ""))
+        language = str(lang_entry.get("language", ""))
+
+        # Derive catalogueStatus from live sets.json (never demotes human-set "planned" status)
+        if lang_entry.get("catalogueStatus") not in {"planned", "unavailable"}:
+            derived_cat = _derive_catalogue_status_from_sets_file(game, language)
+            if derived_cat is not None:
+                lang_entry["catalogueStatus"] = derived_cat
+
+        # Derive pricingStatus from live price status file (never auto-promotes to "available"
+        # if visibility is "planned" — that is a human editorial decision)
+        if lang_entry.get("visibility") not in {"planned", "hidden", "internal"}:
+            derived_price = _derive_pricing_status_from_price_status(game, language)
+            if derived_price is not None:
+                # Allow downgrade to "unavailable" when status file says so, but
+                # never silently flip "planned" or "hidden" languages to "available".
+                if derived_price == "available":
+                    lang_entry["pricingStatus"] = "available"
+                elif derived_price == "unavailable" and lang_entry.get("pricingStatus") not in {"planned"}:
+                    lang_entry["pricingStatus"] = "unavailable"
+
+        languages.append(lang_entry)
+
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "languages": languages,
+    }
+
+
+def build_supported_market_manifest(ts: str) -> dict:
+    """Build supported-markets.json from curated config (timestamp-only refresh)."""
+    config_data: dict = {}
+    if SUPPORTED_MARKETS_CONFIG_PATH.exists():
+        try:
+            config_data = load_json(SUPPORTED_MARKETS_CONFIG_PATH)
+        except OSError:
+            pass
+    if not isinstance(config_data, dict):
+        config_data = {}
+
+    markets: list[dict] = [
+        dict(entry) for entry in config_data.get("markets", []) if isinstance(entry, dict)
+    ]
+
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": ts,
+        "markets": markets,
     }
 
 
@@ -2899,6 +3010,12 @@ def build() -> None:
         write_json(PRICES_STATUS_PATH, prices_status)
         write_json(EN_CURRENT_STATUS_PATH, en_prices_status)
         write_json(JP_CURRENT_STATUS_PATH, jp_prices_status)
+
+        supported_languages = build_supported_language_manifest(ts)
+        supported_markets = build_supported_market_manifest(ts)
+        write_json(SUPPORTED_LANGUAGES_PATH, supported_languages)
+        write_json(SUPPORTED_MARKETS_PATH, supported_markets)
+
         if not (CATALOG_DIR / "pokemon" / "jp" / "sets.json").exists():
             write_json(CATALOG_DIR / "pokemon" / "jp" / "sets.json", catalog_jp)
 
@@ -2940,6 +3057,26 @@ def build() -> None:
             file_path=SCHEMAS_PATH,
             dataset_type="schemas",
             description="Machine-readable CardScanR cache schema docs",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="supported_languages",
+            file_path=SUPPORTED_LANGUAGES_PATH,
+            dataset_type="supported_languages",
+            description="CardScanR supported language and catalogue availability manifest",
+            ts=ts,
+            ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
+        )
+    )
+        index_entries.append(
+        build_index_dataset_entry(
+            dataset_id="supported_markets",
+            file_path=SUPPORTED_MARKETS_PATH,
+            dataset_type="supported_markets",
+            description="CardScanR supported market and pricing availability manifest",
             ts=ts,
             ttl_seconds=DEFAULT_CACHE_TTL_SECONDS,
         )

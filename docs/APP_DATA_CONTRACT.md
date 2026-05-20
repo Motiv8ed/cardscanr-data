@@ -16,6 +16,8 @@ The following files are production/stable (or intended-stable) app-facing contra
 - `/v1/app-config.json`
 - `/v1/supported-games.json`
 - `/v1/supported-sources.json`
+- `/v1/supported-languages.json`
+- `/v1/supported-markets.json`
 - `/v1/catalog/pokemon/en/sets.json`
 - `/v1/catalog/pokemon/en/cards/{setId}.json`
 - `/v1/catalog/pokemon/jp/sets.json`
@@ -146,20 +148,21 @@ Recommended app behavior:
 
 1. Fetch `/v1/index.json` first.
 2. Fetch `/v1/supported-games.json`.
-3. Discover language support from current catalogue/pricing status until a dedicated supported-languages manifest exists.
-4. Fetch sets per game/language.
-5. Fetch cards by `setId`; filter locally by `collectorNumber` + `normalizedName`.
-6. Fetch EN prices by `setId`; filter locally by `collectorNumber` + `normalizedName` + `variant` + `condition`.
-7. Treat missing price file as dataset unavailable.
-8. Treat missing card in a present price file as “no price for that card.”
-9. Do not overwrite an existing valid local price with missing/error/unavailable values.
-10. Use JP price status as unavailable.
-11. Use `imageSmall` / `imageLarge` directly.
+3. Fetch `/v1/supported-languages.json` and `/v1/supported-markets.json` to determine which languages and markets are available, beta, or planned.
+4. Filter onboarding and settings UI to `visibility: "public"` entries; show `visibility: "beta"` with a disclaimer badge.
+5. Fetch sets per game/language.
+6. Fetch cards by `setId`; filter locally by `collectorNumber` + `normalizedName`.
+7. Fetch EN prices by `setId`; filter locally by `collectorNumber` + `normalizedName` + `variant` + `condition`.
+8. Treat missing price file as dataset unavailable.
+9. Treat missing card in a present price file as “no price for that card.”
+10. Do not overwrite an existing valid local price with missing/error/unavailable values.
+11. For markets where `pricingStatus` is `"planned"` or `"unavailable"`, show "Pricing not available in your region yet" — never show a broken/error state.
+12. If `supported-languages.json` or `supported-markets.json` cannot be fetched, fall back to hardcoded defaults: EN/USD available, all others planned.
+13. Use JP price status as unavailable.
+14. Use `imageSmall` / `imageLarge` directly.
 
 ## 11) Near-term contract gaps
 
-- No supported-languages manifest.
-- No supported-markets manifest.
 - Status enums are not fully normalized.
 - No explicit market/country fields in current app-facing price records.
 - No per-card explicit `no_result`/error records in current app-facing price files.
@@ -217,3 +220,63 @@ Compact example record:
   }
 }
 ```
+
+## 13) supported-languages.json and supported-markets.json
+
+### `/v1/supported-languages.json`
+
+Describes which game/language combinations are available, beta, or planned.
+
+**Top-level fields:** `schemaVersion`, `generatedAtUtc`, `languages` (array)
+
+**Per-entry fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `game` | string | Matches `id` in `supported-games.json` |
+| `language` | string | Lowercase code (`en`, `jp`); matches path segments in `catalog/` and `prices/` |
+| `displayName` | string | English display name for app UI |
+| `nativeName` | string | Display name in the native language |
+| `enabled` | boolean | Whether the app should surface this language at all |
+| `visibility` | string | `"public"` \| `"beta"` \| `"internal"` \| `"hidden"` |
+| `catalogueStatus` | string | `"available"` \| `"partial"` \| `"unavailable"` \| `"planned"` |
+| `pricingStatus` | string | `"available"` \| `"partial"` \| `"unavailable"` \| `"planned"` |
+| `defaultMarket` | string | The `market` key from `supported-markets.json` to use by default |
+| `defaultCurrency` | string | ISO 4217 currency code |
+| `notes` | array | Human-readable caveats for app and developer consumption |
+
+**App visibility rules:**
+- `visibility: "public"` → show without qualification
+- `visibility: "beta"` → show with "Preview" or "Beta" badge; display `notes`
+- `visibility: "internal"` / `"hidden"` → do not render
+
+### `/v1/supported-markets.json`
+
+Describes which pricing markets are available, planned, or hidden.
+
+**Top-level fields:** `schemaVersion`, `generatedAtUtc`, `markets` (array)
+
+**Per-entry fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `market` | string | Lowercase stable key, used as a path segment and in `priceIdentityId` |
+| `country` | string \| null | ISO 3166-1 alpha-2 code, or `null` for multi-country regions |
+| `countryName` | string | Human-readable name |
+| `currency` | string | ISO 4217 code |
+| `enabled` | boolean | Whether the app should allow users to select this market |
+| `visibility` | string | `"public"` \| `"beta"` \| `"planned"` \| `"hidden"` |
+| `pricingStatus` | string | `"available"` \| `"partial"` \| `"unavailable"` \| `"planned"` |
+| `supportedSources` | array | Canonical `id` values from `supported-sources.json` |
+| `ebayDomain` | string \| null | eBay region domain when applicable, else `null` |
+| `notes` | array | Developer and app-facing caveats |
+
+**Coherence rule:** `enabled: true` must never be combined with `pricingStatus: "planned"` — that would be a lie to the app.
+
+### Builder refresh policy
+
+`generatedAtUtc` is refreshed on every build. All other fields are human-curated via:
+- `data/supported_languages_config.json`
+- `data/supported_markets_config.json`
+
+The builder derives `pricingStatus` from live `prices/current/{game}/{language}/status.json` and `catalogueStatus` from `catalog/{game}/{language}/sets.json`, but never auto-promotes `visibility` or `enabled`.

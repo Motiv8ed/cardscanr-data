@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-20T04:48:38Z",
+  "markets": [
+    {
+      "country": "US",
+      "countryName": "United States",
+      "currency": "USD",
+      "ebayDomain": null,
+      "enabled": true,
+      "market": "us",
+      "notes": [
+        "Primary market. EN Pokémon pricing available via pokemon_tcg_api in USD."
+      ],
+      "pricingStatus": "available",
+      "supportedSources": [
+        "pokemon_tcg_api"
+      ],
+      "visibility": "public"
+    },
+    {
+      "country": "AU",
+      "countryName": "Australia",
+      "currency": "AUD",
+      "ebayDomain": "ebay.com.au",
+      "enabled": false,
+      "market": "au",
+      "notes": [
+        "AU/AUD eBay sold pricing pipeline is not yet implemented.",
+        "Market is planned but must not be shown to users until pricing is live."
+      ],
+      "pricingStatus": "planned",
+      "supportedSources": [
+        "ebay_sold_manual"
+      ],
+      "visibility": "planned"
+    },
+    {
+      "country": "JP",
+      "countryName": "Japan",
+      "currency": "JPY",
+      "ebayDomain": null,
+      "enabled": false,
+      "market": "jp",
+      "notes": [
+        "JP market pricing is not available. No live source is configured for JPY pricing."
+      ],
+      "pricingStatus": "planned",
+      "supportedSources": [],
+      "visibility": "planned"
+    },
+    {
+      "country": null,
+      "countryName": "Europe (Cardmarket)",
+      "currency": "EUR",
+      "ebayDomain": null,
+      "enabled": false,
+      "market": "eu",
+      "notes": [
+        "EUR pricing via Cardmarket (tcgdex_cardmarket) is not yet built into the price cache pipeline.",
+        "Market is planned but not yet available."
+      ],
+      "pricingStatus": "planned",
+      "supportedSources": [
+        "tcgdex_cardmarket"
+      ],
+      "visibility": "planned"
+    }
+  ]
+}
