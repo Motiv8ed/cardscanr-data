@@ -17,6 +17,8 @@ public/                        ← Cloudflare Pages build output
     app-config.json            ← Feature flags consumed by the Flutter app
     supported-games.json       ← Enabled card games
     supported-sources.json     ← Enabled price sources
+    supported-languages.json   ← Language/catalogue/pricing availability manifest
+    supported-markets.json     ← Market/currency/pricing availability manifest
     prices/
       pokemon/
         en/sample.json         ← English Pokémon prices (AUD)
@@ -26,6 +28,8 @@ public/                        ← Cloudflare Pages build output
 
 data/
   cards_to_track.json          ← Cards the build script generates prices for
+  supported_languages_config.json  ← Curated source of truth for supported-languages.json
+  supported_markets_config.json    ← Curated source of truth for supported-markets.json
 
 tools/
   build_price_cache.py         ← Builds price files + updates index.json

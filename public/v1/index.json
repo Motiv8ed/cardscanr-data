@@ -4898,6 +4898,26 @@
       "url": "/v1/schemas.json"
     },
     {
+      "description": "CardScanR supported language and catalogue availability manifest",
+      "id": "supported_languages",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "f9eb6b39d31492a5a9c9cc52380dbebe27391362f253ee9333047c802ccba65b",
+      "type": "supported_languages",
+      "updatedAtUtc": "2026-05-20T04:48:38Z",
+      "url": "/v1/supported-languages.json"
+    },
+    {
+      "description": "CardScanR supported market and pricing availability manifest",
+      "id": "supported_markets",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "789b313a60d102990eacdb35deef5e5ba572afc3e3b5e67d43615e6b4a8098c1",
+      "type": "supported_markets",
+      "updatedAtUtc": "2026-05-20T04:48:38Z",
+      "url": "/v1/supported-markets.json"
+    },
+    {
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "recommendedCacheTtlSeconds": 86400,

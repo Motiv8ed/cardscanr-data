@@ -37,6 +37,8 @@ PUBLIC_DIR = ROOT / "public"
 V1_DIR = PUBLIC_DIR / "v1"
 INDEX_PATH = V1_DIR / "index.json"
 SUPPORTED_SOURCES_PATH = V1_DIR / "supported-sources.json"
+SUPPORTED_LANGUAGES_PATH = V1_DIR / "supported-languages.json"
+SUPPORTED_MARKETS_PATH = V1_DIR / "supported-markets.json"
 
 # ---------------------------------------------------------------------------
 # Required fields per file type
@@ -553,6 +555,35 @@ REQUIRED_SUPPORTED_SOURCE_ALIASES = {
 }
 LEGACY_PRIMARY_SOURCE_IDS = {"pokemonTcgApi", "ebaySoldListingsManual"}
 SNAKE_CASE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
+MARKET_KEY_PATTERN = re.compile(r"^[a-z0-9_]+$")
+ISO_4217_PATTERN = re.compile(r"^[A-Z]{3}$")
+ISO_3166_ALPHA2_PATTERN = re.compile(r"^[A-Z]{2}$")
+REQUIRED_SUPPORTED_LANGUAGES_FIELDS = {"schemaVersion", "generatedAtUtc", "languages"}
+REQUIRED_SUPPORTED_LANGUAGE_ENTRY_FIELDS = {
+    "game",
+    "language",
+    "displayName",
+    "nativeName",
+    "enabled",
+    "visibility",
+    "catalogueStatus",
+    "pricingStatus",
+    "notes",
+}
+ALLOWED_LANGUAGE_VISIBILITY_VALUES = {"public", "beta", "internal", "hidden"}
+ALLOWED_CATALOGUE_STATUS_VALUES = {"available", "partial", "unavailable", "planned"}
+ALLOWED_PRICING_STATUS_VALUES = {"available", "partial", "unavailable", "planned"}
+REQUIRED_SUPPORTED_MARKETS_FIELDS = {"schemaVersion", "generatedAtUtc", "markets"}
+REQUIRED_SUPPORTED_MARKET_ENTRY_FIELDS = {
+    "market",
+    "currency",
+    "enabled",
+    "visibility",
+    "pricingStatus",
+    "supportedSources",
+    "notes",
+}
+ALLOWED_MARKET_VISIBILITY_VALUES = {"public", "beta", "planned", "hidden"}
 ALLOWED_PRICE_STATUS_VALUES = {
     "ok",
     "partial",
@@ -782,6 +813,8 @@ def check_index() -> list[dict]:
         "prices_current_pokemon_jp_status",
         "catalog_pokemon_en_sets",
         "catalog_pokemon_jp_sets",
+        "supported_languages",
+        "supported_markets",
     }
     missing_ids = required_dataset_ids - seen_dataset_ids
     if missing_ids:
@@ -2119,6 +2152,230 @@ def check_supported_sources() -> None:
             )
 
 
+def check_supported_languages_and_markets() -> None:
+    print("\n[10b] Supported languages and markets check")
+
+    # ---- supported-languages.json ----
+    if not SUPPORTED_LANGUAGES_PATH.exists():
+        err(f"supported-languages.json not found at {SUPPORTED_LANGUAGES_PATH.relative_to(ROOT)}")
+    else:
+        data = load_json_file(SUPPORTED_LANGUAGES_PATH)
+        if data is None or not isinstance(data, dict):
+            err("supported-languages.json must be a JSON object")
+        else:
+            if check_required(data, REQUIRED_SUPPORTED_LANGUAGES_FIELDS, "supported-languages.json"):
+                ok("supported-languages.json has required top-level fields")
+
+            languages = data.get("languages")
+            if not isinstance(languages, list) or not languages:
+                err("supported-languages.json languages must be a non-empty list")
+            else:
+                # Load supported games for cross-reference
+                supported_games_path = V1_DIR / "supported-games.json"
+                known_game_ids: set[str] = set()
+                if supported_games_path.exists():
+                    games_data = load_json_file(supported_games_path)
+                    if isinstance(games_data, dict):
+                        for g in games_data.get("games", []):
+                            if isinstance(g, dict) and g.get("id"):
+                                known_game_ids.add(str(g["id"]))
+
+                seen_lang_pairs: set[tuple[str, str]] = set()
+                for i, entry in enumerate(languages):
+                    label = f"supported-languages.json languages[{i}]"
+                    if not isinstance(entry, dict):
+                        err(f"{label} must be an object")
+                        continue
+
+                    missing = REQUIRED_SUPPORTED_LANGUAGE_ENTRY_FIELDS - set(entry.keys())
+                    if missing:
+                        err(f"{label} missing fields: {sorted(missing)}")
+
+                    game = entry.get("game")
+                    language = entry.get("language")
+
+                    if known_game_ids and isinstance(game, str) and game not in known_game_ids:
+                        err(f"{label} game '{game}' does not exist in supported-games.json")
+
+                    if isinstance(game, str) and isinstance(language, str):
+                        pair = (game, language)
+                        if pair in seen_lang_pairs:
+                            err(f"supported-languages.json duplicate (game, language) pair: {pair}")
+                        else:
+                            seen_lang_pairs.add(pair)
+
+                    if not isinstance(entry.get("enabled"), bool):
+                        err(f"{label} enabled must be boolean")
+
+                    if entry.get("visibility") not in ALLOWED_LANGUAGE_VISIBILITY_VALUES:
+                        err(f"{label} visibility must be one of {sorted(ALLOWED_LANGUAGE_VISIBILITY_VALUES)}")
+
+                    if entry.get("catalogueStatus") not in ALLOWED_CATALOGUE_STATUS_VALUES:
+                        err(f"{label} catalogueStatus must be one of {sorted(ALLOWED_CATALOGUE_STATUS_VALUES)}")
+
+                    if entry.get("pricingStatus") not in ALLOWED_PRICING_STATUS_VALUES:
+                        err(f"{label} pricingStatus must be one of {sorted(ALLOWED_PRICING_STATUS_VALUES)}")
+
+                    default_currency = entry.get("defaultCurrency")
+                    if default_currency is not None and (
+                        not isinstance(default_currency, str) or not ISO_4217_PATTERN.fullmatch(default_currency)
+                    ):
+                        err(f"{label} defaultCurrency must be a 3-letter uppercase ISO 4217 code")
+
+                    if not isinstance(entry.get("notes"), list):
+                        err(f"{label} notes must be a list")
+
+                    # Consistency: catalogueStatus "available" must have a built catalogue
+                    if entry.get("catalogueStatus") == "available" and isinstance(game, str) and isinstance(language, str):
+                        catalog_path = V1_DIR / "catalog" / game / language / "sets.json"
+                        if not catalog_path.exists():
+                            err(
+                                f"{label} catalogueStatus is 'available' but "
+                                f"{catalog_path.relative_to(ROOT)} does not exist"
+                            )
+                        else:
+                            cat_data = load_json_file(catalog_path)
+                            if isinstance(cat_data, dict) and cat_data.get("catalogueStatus") not in {
+                                "built",
+                                "partial_built",
+                            }:
+                                err(
+                                    f"{label} catalogueStatus is 'available' but "
+                                    f"{catalog_path.relative_to(ROOT)} catalogueStatus is "
+                                    f"'{cat_data.get('catalogueStatus')}' (expected built or partial_built)"
+                                )
+
+                    # Consistency: pricingStatus "available" must have currentPriceFilesAvailable: true
+                    if entry.get("pricingStatus") == "available" and isinstance(game, str) and isinstance(language, str):
+                        price_status_path = (
+                            V1_DIR / "prices" / "current" / game / language / "status.json"
+                        )
+                        if not price_status_path.exists():
+                            err(
+                                f"{label} pricingStatus is 'available' but "
+                                f"{price_status_path.relative_to(ROOT)} does not exist"
+                            )
+                        else:
+                            ps_data = load_json_file(price_status_path)
+                            if isinstance(ps_data, dict) and ps_data.get("currentPriceFilesAvailable") is not True:
+                                err(
+                                    f"{label} pricingStatus is 'available' but "
+                                    f"{price_status_path.relative_to(ROOT)} currentPriceFilesAvailable is not true"
+                                )
+
+                ok(f"supported-languages.json: {len(languages)} language entries validated")
+
+    # ---- supported-markets.json ----
+    if not SUPPORTED_MARKETS_PATH.exists():
+        err(f"supported-markets.json not found at {SUPPORTED_MARKETS_PATH.relative_to(ROOT)}")
+    else:
+        data = load_json_file(SUPPORTED_MARKETS_PATH)
+        if data is None or not isinstance(data, dict):
+            err("supported-markets.json must be a JSON object")
+        else:
+            if check_required(data, REQUIRED_SUPPORTED_MARKETS_FIELDS, "supported-markets.json"):
+                ok("supported-markets.json has required top-level fields")
+
+            markets = data.get("markets")
+            if not isinstance(markets, list) or not markets:
+                err("supported-markets.json markets must be a non-empty list")
+            else:
+                # Load canonical source IDs for cross-reference
+                known_source_ids: set[str] = set(CANONICAL_SUPPORTED_SOURCE_IDS)
+                if SUPPORTED_SOURCES_PATH.exists():
+                    sources_data = load_json_file(SUPPORTED_SOURCES_PATH)
+                    if isinstance(sources_data, dict):
+                        for s in sources_data.get("sources", []):
+                            if isinstance(s, dict) and s.get("id"):
+                                known_source_ids.add(str(s["id"]))
+
+                seen_market_keys: set[str] = set()
+                for i, entry in enumerate(markets):
+                    label = f"supported-markets.json markets[{i}]"
+                    if not isinstance(entry, dict):
+                        err(f"{label} must be an object")
+                        continue
+
+                    missing = REQUIRED_SUPPORTED_MARKET_ENTRY_FIELDS - set(entry.keys())
+                    if missing:
+                        err(f"{label} missing fields: {sorted(missing)}")
+
+                    market_key = entry.get("market")
+                    if not isinstance(market_key, str) or not market_key:
+                        err(f"{label} market must be a non-empty string")
+                    elif not MARKET_KEY_PATTERN.fullmatch(market_key):
+                        err(f"{label} market must match [a-z0-9_]+ pattern")
+                    else:
+                        if market_key in seen_market_keys:
+                            err(f"supported-markets.json duplicate market key: {market_key}")
+                        else:
+                            seen_market_keys.add(market_key)
+
+                    currency = entry.get("currency")
+                    if not isinstance(currency, str) or not ISO_4217_PATTERN.fullmatch(str(currency)):
+                        err(f"{label} currency must be a 3-letter uppercase ISO 4217 code")
+
+                    country = entry.get("country")
+                    if country is not None and (
+                        not isinstance(country, str) or not ISO_3166_ALPHA2_PATTERN.fullmatch(str(country))
+                    ):
+                        err(f"{label} country must be a 2-letter uppercase ISO 3166-1 alpha-2 code or null")
+
+                    if not isinstance(entry.get("enabled"), bool):
+                        err(f"{label} enabled must be boolean")
+
+                    if entry.get("visibility") not in ALLOWED_MARKET_VISIBILITY_VALUES:
+                        err(f"{label} visibility must be one of {sorted(ALLOWED_MARKET_VISIBILITY_VALUES)}")
+
+                    if entry.get("pricingStatus") not in ALLOWED_PRICING_STATUS_VALUES:
+                        err(f"{label} pricingStatus must be one of {sorted(ALLOWED_PRICING_STATUS_VALUES)}")
+
+                    # Coherence: enabled:true must not be combined with pricingStatus:"planned"
+                    if entry.get("enabled") is True and entry.get("pricingStatus") == "planned":
+                        err(
+                            f"{label} enabled:true combined with pricingStatus:'planned' is incoherent — "
+                            "do not advertise an enabled market with no pricing"
+                        )
+
+                    supported_sources = entry.get("supportedSources")
+                    if not isinstance(supported_sources, list):
+                        err(f"{label} supportedSources must be a list")
+                    else:
+                        for j, source_id in enumerate(supported_sources):
+                            if not isinstance(source_id, str) or not source_id:
+                                err(f"{label} supportedSources[{j}] must be a non-empty string")
+                            elif source_id not in known_source_ids:
+                                err(
+                                    f"{label} supportedSources[{j}] '{source_id}' is not a known canonical "
+                                    "source id in supported-sources.json"
+                                )
+
+                    if not isinstance(entry.get("notes"), list):
+                        err(f"{label} notes must be a list")
+
+                ok(f"supported-markets.json: {len(markets)} market entries validated")
+
+    # ---- Cross-reference: defaultMarket in languages must exist in markets ----
+    if SUPPORTED_LANGUAGES_PATH.exists() and SUPPORTED_MARKETS_PATH.exists():
+        langs_data = load_json_file(SUPPORTED_LANGUAGES_PATH)
+        mkts_data = load_json_file(SUPPORTED_MARKETS_PATH)
+        if isinstance(langs_data, dict) and isinstance(mkts_data, dict):
+            known_markets = {
+                m.get("market")
+                for m in mkts_data.get("markets", [])
+                if isinstance(m, dict)
+            }
+            for i, entry in enumerate(langs_data.get("languages", [])):
+                if not isinstance(entry, dict):
+                    continue
+                default_market = entry.get("defaultMarket")
+                if default_market is not None and default_market not in known_markets:
+                    err(
+                        f"supported-languages.json languages[{i}] defaultMarket '{default_market}' "
+                        "does not exist in supported-markets.json"
+                    )
+
+
 def check_catalogues() -> None:
     print("\n[11] Catalogue check")
     catalog_files = sorted((V1_DIR / "catalog").rglob("sets.json")) if (V1_DIR / "catalog").exists() else []
@@ -2421,6 +2678,7 @@ def main() -> None:
     check_api_notes()
     check_schemas()
     check_supported_sources()
+    check_supported_languages_and_markets()
     check_catalogues()
     check_history()
 
