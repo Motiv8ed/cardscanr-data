@@ -2065,10 +2065,15 @@ def check_supported_sources() -> None:
         err(f"supported-sources.json is missing canonical ids: {sorted(missing_canonical_ids)}")
 
     for canonical_id, required_aliases in REQUIRED_SUPPORTED_SOURCE_ALIASES.items():
-        if canonical_id in aliases_by_id and not required_aliases.issubset(aliases_by_id[canonical_id]):
+        source_aliases = aliases_by_id.get(canonical_id)
+        if source_aliases is None:
+            if canonical_id in seen_ids:
+                err(f"supported-sources.json id '{canonical_id}' must define an aliases array")
+            continue
+        if not required_aliases.issubset(source_aliases):
             err(
                 f"supported-sources.json id '{canonical_id}' is missing required aliases: "
-                f"{sorted(required_aliases - aliases_by_id[canonical_id])}"
+                f"{sorted(required_aliases - source_aliases)}"
             )
 
 
