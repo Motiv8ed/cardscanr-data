@@ -577,6 +577,8 @@ REQUIRED_SUPPORTED_MARKETS_FIELDS = {"schemaVersion", "generatedAtUtc", "markets
 REQUIRED_SUPPORTED_MARKET_ENTRY_FIELDS = {
     "market",
     "currency",
+    "country",
+    "countryName",
     "enabled",
     "visibility",
     "pricingStatus",
@@ -2320,6 +2322,10 @@ def check_supported_languages_and_markets() -> None:
                         not isinstance(country, str) or not ISO_3166_ALPHA2_PATTERN.fullmatch(str(country))
                     ):
                         err(f"{label} country must be a 2-letter uppercase ISO 3166-1 alpha-2 code or null")
+
+                    country_name = entry.get("countryName")
+                    if not isinstance(country_name, str) or not country_name.strip():
+                        err(f"{label} countryName must be a non-empty string")
 
                     if not isinstance(entry.get("enabled"), bool):
                         err(f"{label} enabled must be boolean")

@@ -21,8 +21,8 @@ public/                        ← Cloudflare Pages build output
     supported-markets.json     ← Market/currency/pricing availability manifest
     prices/
       pokemon/
-        en/sample.json         ← English Pokémon prices (AUD)
-        jp/sample.json         ← Japanese Pokémon prices (AUD)
+        en/sample.json         ← English Pokémon sample prices (USD, provider-native)
+        jp/sample.json         ← Japanese Pokémon sample prices (pricing unavailable)
     diagnostics/
       latest-build.json        ← Build metadata written by the CI job
 
