@@ -152,3 +152,53 @@ Recommended app behavior:
 - JP normalization is inconsistent.
 - No local image binaries.
 - `provider-catalog` remains experimental.
+
+## 12) Stage 1 EN price contract rollout
+
+EN current price records now include both legacy and new identity fields for backward compatibility:
+
+- Legacy: `canonicalId` (kept for existing app readers)
+- New: `canonicalCardId`, `priceIdentityId`
+
+Current EN records also include additive market/currency/status metadata fields:
+`market`, `country`, `sourceCurrency`, `targetCurrency`, `conversionPolicy`,
+`status`, `confidence`, and compact `diagnostics`.
+
+Compact example record:
+
+```json
+{
+  "canonicalId": "pokemon|en|base1|4|charizard|holo|near_mint",
+  "canonicalCardId": "pokemon|en|base1|4|charizard",
+  "priceIdentityId": "pokemon|en|base1|4|charizard|holo|near_mint|us|usd",
+  "setId": "base1",
+  "collectorNumber": "4",
+  "normalizedName": "charizard",
+  "variant": "holo",
+  "condition": "near_mint",
+  "market": "us",
+  "country": "US",
+  "currency": "USD",
+  "sourceCurrency": "USD",
+  "targetCurrency": "USD",
+  "conversionPolicy": "none",
+  "status": "priced",
+  "confidence": "medium",
+  "source": "pokemon_tcg_api",
+  "marketPrice": 123.45,
+  "lowPrice": 100.0,
+  "highPrice": 150.0,
+  "fetchedAtUtc": "2026-05-19T23:41:51Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-20T08:41:51Z",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "diagnostics": {
+    "sourceRecordStatus": "priced",
+    "notes": []
+  }
+}
+```
