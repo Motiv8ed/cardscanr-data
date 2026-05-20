@@ -64,6 +64,9 @@ python tools/build_price_cache.py current_prices
 # Validate the cache
 python tools/validate_cache.py
 
+# Report EN current-price Stage 1 migration progress
+python tools/report_en_current_price_migration.py
+
 # Local-first batch updater (build + validate)
 python tools/run_local_price_update.py --batch-size 10
 ```
