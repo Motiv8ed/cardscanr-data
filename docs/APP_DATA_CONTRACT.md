@@ -280,3 +280,19 @@ Describes which pricing markets are available, planned, or hidden.
 - `data/supported_markets_config.json`
 
 The builder derives `pricingStatus` from live `prices/current/{game}/{language}/status.json` and `catalogueStatus` from `catalog/{game}/{language}/sets.json`, but never auto-promotes `visibility` or `enabled`.
+
+#### `allowPricingAutoPromotion` (config-only flag, not emitted to public JSON)
+
+A language entry in `data/supported_languages_config.json` may include:
+
+```json
+"allowPricingAutoPromotion": false
+```
+
+When `false`, the builder will not derive `pricingStatus` from the live price status file for that language — the curated `pricingStatus` value is preserved as-is. This prevents a language from being silently promoted to `pricingStatus: "available"` if an accidental or premature price file appears. The flag is stripped before the public manifest is written.
+
+Omitting the flag (or setting it to `true`) preserves existing behavior: `pricingStatus` is derived from the live status file for non-`planned`/non-`hidden`/non-`internal` visibility entries.
+
+#### JP catalogue notes — refresh reminder
+
+The JP language entry in `data/supported_languages_config.json` contains human-curated notes that include live set counts (e.g., number of available, partial, and failed sets). These counts are **not** updated automatically by the builder. When the JP catalogue coverage changes significantly, update the notes in `data/supported_languages_config.json` manually to keep them accurate.

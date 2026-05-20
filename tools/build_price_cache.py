@@ -1020,8 +1020,10 @@ def build_supported_language_manifest(ts: str) -> dict:
                 lang_entry["catalogueStatus"] = derived_cat
 
         # Derive pricingStatus from live price status file (never auto-promotes to "available"
-        # if visibility is "planned" — that is a human editorial decision)
-        if lang_entry.get("visibility") not in {"planned", "hidden", "internal"}:
+        # if visibility is "planned" — that is a human editorial decision, or if
+        # allowPricingAutoPromotion is explicitly false in the config)
+        allow_auto = lang_entry.pop("allowPricingAutoPromotion", True)
+        if lang_entry.get("visibility") not in {"planned", "hidden", "internal"} and allow_auto:
             derived_price = _derive_pricing_status_from_price_status(game, language)
             if derived_price is not None:
                 # Allow downgrade to "unavailable" when status file says so, but
