@@ -79,3 +79,13 @@ Optional environment variables:
 2. Leave the build command empty (this is a static repo — CI commits the files
    directly).  
 3. The `public/_headers` file applies CORS + cache headers automatically.
+
+---
+
+
+## App-facing data contract
+
+For production app integration rules and stability scope of `public/v1`, see:
+
+- [`docs/APP_DATA_CONTRACT.md`](docs/APP_DATA_CONTRACT.md)
+
