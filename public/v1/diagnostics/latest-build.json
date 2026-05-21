@@ -1,7 +1,7 @@
 {
   "buildStatus": "success",
-  "builtAtUtc": "2026-05-21T09:35:03Z",
-  "cacheVersion": "2026.05.21.0935",
+  "builtAtUtc": "2026-05-21T11:19:53Z",
+  "cacheVersion": "2026.05.21.1119",
   "cardsPriced": 0,
   "cardsRequested": 4,
   "catalogueEnCardsFetched": 20237,
@@ -43,97 +43,40 @@
   "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
   "catalogueJpStatus": "partial_built",
   "catalogueJpStoppedReason": "not_rebuilt",
-  "currentPriceEnBatchCursorAfter": 19,
-  "currentPriceEnBatchCursorBefore": 9,
+  "currentPriceEnBatchCursorAfter": 0,
+  "currentPriceEnBatchCursorBefore": 0,
   "currentPriceEnBatchEnabled": true,
   "currentPriceEnBatchSetIds": [
-    "bw10",
-    "bw11",
-    "bw2",
-    "bw3",
-    "bw4",
-    "bw5",
-    "bw6",
-    "bw7",
-    "bw8",
-    "bw9"
+    "bwp"
   ],
   "currentPriceEnBatchSize": 10,
   "currentPriceEnBatchStrategy": "rotating_set_batch",
   "currentPriceEnCurrency": "USD",
   "currentPriceEnExpectedUpdateIntervalMinutes": 60,
-  "currentPriceEnFallbackReasons": [
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw10"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw11"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw2"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw3"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw4"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw5"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw6"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw7"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw8"
-    },
-    {
-      "reason": "pokewallet_set_code_unresolved",
-      "setId": "bw9"
-    }
-  ],
-  "currentPriceEnFullRotationEstimatedHours": 18,
-  "currentPriceEnPriceRecordsWritten": 2215,
+  "currentPriceEnFallbackReasons": [],
+  "currentPriceEnFullRotationEstimatedHours": 1,
+  "currentPriceEnPriceRecordsWritten": 118,
   "currentPriceEnProcessedSetIds": [
-    "bw10",
-    "bw11",
-    "bw2",
-    "bw3",
-    "bw4",
-    "bw5",
-    "bw6",
-    "bw7",
-    "bw8",
-    "bw9"
+    "bwp"
   ],
   "currentPriceEnProviderPriority": [
     "pokewallet",
     "pokemon_tcg_api"
   ],
   "currentPriceEnProviderUsed": [
-    "pokemon_tcg_api"
+    "pokewallet"
   ],
   "currentPriceEnRateLimited": false,
-  "currentPriceEnRequestCap": 15,
-  "currentPriceEnRequestsUsed": 10,
-  "currentPriceEnSetsAttempted": 10,
-  "currentPriceEnSetsWritten": 10,
+  "currentPriceEnRequestCap": 0,
+  "currentPriceEnRequestsUsed": 2,
+  "currentPriceEnRequirePokewallet": true,
+  "currentPriceEnSetsAttempted": 1,
+  "currentPriceEnSetsWritten": 1,
   "currentPriceEnSkippedNoPriceSets": 0,
-  "currentPriceEnSource": "pokemon_tcg_api",
+  "currentPriceEnSource": "pokewallet",
   "currentPriceEnStatus": "built",
   "currentPriceEnStopReason": "completed",
+  "currentPriceEnTargetSetId": "bwp",
   "currentPriceJpPriceRecordsWritten": 0,
   "currentPriceJpSetsWritten": 0,
   "currentPriceJpSkippedNoPriceSets": 0,
@@ -558,13 +501,28 @@
   "livePriceCount": 0,
   "manualFallbackCount": 0,
   "noResultCount": 0,
+  "pokemonTcgApiFallbackSets": 0,
+  "pokewalletApiKeyPresent": true,
+  "pokewalletEnabled": true,
+  "pokewalletSetsAttempted": 1,
+  "pokewalletSetsFailed": 0,
+  "pokewalletSetsSkippedNoMatch": 0,
+  "pokewalletSetsSucceeded": 1,
+  "providerFallbackReasons": [],
+  "providerPriority": [
+    "pokewallet",
+    "pokemon_tcg_api"
+  ],
   "providerRateLimitedCount": 0,
-  "providerRequestsAttempted": 10,
+  "providerRequestsAttempted": 2,
   "providerRequestsFailed": 0,
-  "providerRequestsSucceeded": 10,
+  "providerRequestsSucceeded": 2,
+  "providerSourceCounts": {
+    "pokewallet": 1
+  },
   "rateLimitStatus": "not_limited",
-  "requestCap": 15,
-  "requestsUsed": 10,
+  "requestCap": 0,
+  "requestsUsed": 2,
   "sourcesUsed": [],
   "stopReason": "completed",
   "tcgdexAttempted": 0,

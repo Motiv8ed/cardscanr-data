@@ -11,6 +11,7 @@ This project now supports a local-first EN current-price refresh flow.
 - Tracks provider request usage in state and enforces hourly/daily safety budgets.
 - Stops cleanly on provider rate-limit responses and resumes from persisted progress.
 - Derives an internal per-cycle request cap for the EN current-price builder so a single batch cannot overshoot the remaining request headroom.
+- Supports all-day mode: sleeps when hourly budget is exhausted and resumes automatically when safe.
 
 ## Run Manually
 
@@ -38,6 +39,18 @@ Run until one full EN rotation completes (safe budget-aware mode):
 .\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --until-complete
 ```
 
+Run all day (sleep/resume mode):
+
+```powershell
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --all-day
+```
+
+Run all day with explicit target budgets:
+
+```powershell
+.\.venv\Scripts\python.exe tools\run_local_price_update.py --batch-size 20 --all-day --target-hourly-requests 90 --target-daily-requests 990
+```
+
 Optional loop caps:
 
 ```powershell
@@ -47,7 +60,7 @@ Optional loop caps:
 PowerShell helper:
 
 ```powershell
-.\scripts\run_local_price_update.ps1 -BatchSize 20 -Commit -Push
+.\scripts\run_local_price_update.ps1 -BatchSize 20 -AllDay -CommitChanges $true -PushChanges $false
 ```
 
 ## Windows Task Scheduler
@@ -56,7 +69,7 @@ Create a task that runs every 30-60 minutes with action:
 
 ```text
 Program/script: powershell.exe
-Add arguments: -ExecutionPolicy Bypass -File "D:\cardscanr-data\scripts\run_local_price_update.ps1" -BatchSize 10 -Commit -Push
+Add arguments: -ExecutionPolicy Bypass -File "D:\cardscanr-data\scripts\run_local_price_update.ps1" -BatchSize 10 -AllDay -CommitChanges $true -PushChanges $false
 Start in: D:\cardscanr-data
 ```
 
@@ -70,7 +83,7 @@ Set them in your user/system environment (or task-level environment) before sche
 Budget env vars (authoritative names):
 
 - `CARDSCANR_MAX_REQUESTS_PER_HOUR` (default `90`)
-- `CARDSCANR_MAX_REQUESTS_PER_DAY` (default `950`)
+- `CARDSCANR_MAX_REQUESTS_PER_DAY` (rolling 24h default `990`)
 - `CARDSCANR_REQUEST_SAFETY_BUFFER` (default `10`)
 - `CARDSCANR_CURRENT_PRICE_REQUEST_CAP` (internal per-cycle cap passed from the updater; normally set automatically)
 
@@ -79,6 +92,11 @@ Compatibility aliases are also accepted:
 - `POKEWALLET_MAX_REQUESTS_PER_HOUR`
 - `POKEWALLET_MAX_REQUESTS_PER_DAY`
 - `POKEWALLET_REQUEST_SAFETY_BUFFER`
+
+CLI overrides (highest priority for updater process):
+
+- `--target-hourly-requests`
+- `--target-daily-requests`
 
 Pokewallet diagnostics use `POKEWALLET_API_KEY` from the environment only.
 
@@ -208,7 +226,7 @@ Recommended interval:
 Recommended local updater settings:
 
 - `CARDSCANR_MAX_REQUESTS_PER_HOUR=90`
-- `CARDSCANR_MAX_REQUESTS_PER_DAY=950`
+- `CARDSCANR_MAX_REQUESTS_PER_DAY=990`
 - `CARDSCANR_REQUEST_SAFETY_BUFFER=10`
 - `--batch-size 5`
 
@@ -218,6 +236,9 @@ Notes:
 
 - The updater runs `git pull --ff-only` before each cycle and skips the cycle on pull failure.
 - The updater skips the cycle if unrelated uncommitted changes already exist.
+- In all-day mode, hourly exhaustion sleeps until the next safe wake time and then resumes.
+- In all-day mode, rolling 24h exhaustion stops the run cleanly.
+- If `--push` is enabled and push fails, the local commit is retained and the run exits with a failure status.
 - API keys must come from environment variables; never hardcode them.
 - Cloudflare Pages deploys automatically after each successful GitHub push.
 - The loop sleeps most of the time, so CPU and memory usage should stay minimal.

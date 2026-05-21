@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime, timedelta, timezone
+import io
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import os
@@ -117,8 +119,177 @@ def test_daily_budget_stop() -> None:
     assert daily_rem == 0
 
 
+def test_all_day_hourly_exhaustion_returns_sleep_window() -> None:
+    now = datetime.now(timezone.utc)
+    oldest = now - timedelta(minutes=59, seconds=40)
+    state = {
+        "requestLedger": [
+            {"timestampUtc": oldest.isoformat().replace("+00:00", "Z"), "requests": 90},
+        ]
+    }
+    budget = {"hourlyTarget": 90, "dailyTarget": 990}
+    snapshot = updater.build_budget_snapshot(state, budget, now)
+    sleep_seconds, reason = updater.next_safe_wake_seconds(snapshot)
+    assert reason == "hourly_budget_exhausted"
+    assert sleep_seconds > 0
+    assert sleep_seconds <= 3600
+
+
+def test_all_day_daily_exhaustion_stops_without_sleep() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {"timestampUtc": (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z"), "requests": 990},
+        ]
+    }
+    budget = {"hourlyTarget": 90, "dailyTarget": 990}
+    snapshot = updater.build_budget_snapshot(state, budget, now)
+    sleep_seconds, reason = updater.next_safe_wake_seconds(snapshot)
+    assert reason == "daily_budget_exhausted"
+    assert sleep_seconds > 0
+
+
+def test_should_commit_changes_requires_validation_and_diffs() -> None:
+    assert updater.should_commit_changes(True, ["public/v1/index.json"], True) is True
+    assert updater.should_commit_changes(True, ["public/v1/index.json"], False) is False
+    assert updater.should_commit_changes(True, [], True) is False
+    assert updater.should_commit_changes(False, ["public/v1/index.json"], True) is False
+
+
+def test_should_push_changes_requires_commit() -> None:
+    assert updater.should_push_changes(True, True) is True
+    assert updater.should_push_changes(True, False) is False
+    assert updater.should_push_changes(False, True) is False
+
+
+def test_pokewallet_bwp_maps_via_override_when_present() -> None:
+    set_data = {
+        "id": "bwp",
+        "name": "BW Black Star Promos",
+        "ptcgoCode": "PR-BLW",
+        "printedTotal": 101,
+        "releaseDate": "2011/03/01",
+        "language": "en",
+    }
+    set_map = {
+        "blackandwhitepromos": [
+            {
+                "providerSetCode": "PR",
+                "providerSetId": "1407",
+                "providerSetName": "Black and White Promos",
+                "language": "en",
+                "cardCount": 98,
+                "releaseDate": "25th April, 2011",
+                "lookupName": "blackandwhitepromos",
+            }
+        ]
+    }
+    match = builder.resolve_pokewallet_set_match(set_data, set_map)
+    assert match["matchedCode"] == "PR"
+    assert match["reason"] in {"override_name_match", "scored_match"}
+
+
+def test_pokewallet_mapping_rejects_ambiguous_candidates() -> None:
+    set_data = {
+        "id": "bwp",
+        "name": "BW Black Star Promos",
+        "ptcgoCode": "PR-BLW",
+        "printedTotal": 100,
+        "releaseDate": "2011/03/01",
+        "language": "en",
+    }
+    set_map = {
+        "blackandwhitepromos": [
+            {
+                "providerSetCode": "PRA",
+                "providerSetId": "1",
+                "providerSetName": "Black and White Promos",
+                "language": "en",
+                "cardCount": 100,
+                "releaseDate": "1st March, 2011",
+                "lookupName": "blackandwhitepromos",
+            },
+            {
+                "providerSetCode": "PRB",
+                "providerSetId": "2",
+                "providerSetName": "Black and White Promos",
+                "language": "en",
+                "cardCount": 100,
+                "releaseDate": "1st March, 2011",
+                "lookupName": "blackandwhitepromos",
+            },
+        ]
+    }
+    match = builder.resolve_pokewallet_set_match(set_data, set_map)
+    assert match["matchedCode"] is None
+    assert "ambiguous" in str(match["reason"])
+
+
+def test_pokewallet_exact_code_match_wins() -> None:
+    set_data = {
+        "id": "base1",
+        "name": "Base",
+        "ptcgoCode": "BS",
+        "printedTotal": 102,
+        "releaseDate": "1999/01/09",
+        "language": "en",
+    }
+    set_map = {
+        "baseset": [
+            {
+                "providerSetCode": "BS",
+                "providerSetId": "604",
+                "providerSetName": "Base Set",
+                "language": "en",
+                "cardCount": 101,
+                "releaseDate": "9th January, 1999",
+                "lookupName": "baseset",
+            },
+            {
+                "providerSetCode": "BSS",
+                "providerSetId": "1663",
+                "providerSetName": "Base Set (Shadowless)",
+                "language": "en",
+                "cardCount": 101,
+                "releaseDate": "9th January, 1999",
+                "lookupName": "basesetshadowless",
+            },
+        ]
+    }
+    match = builder.resolve_pokewallet_set_match(set_data, set_map)
+    assert match["matchedCode"] == "BS"
+    assert match["reason"] == "exact_code_match"
+
+
+def test_pokewallet_normalized_name_match_works() -> None:
+    set_data = {
+        "id": "gymheroes_local",
+        "name": "Gym Heroes",
+        "ptcgoCode": "GHERO",
+        "printedTotal": 132,
+        "releaseDate": "2000/08/14",
+        "language": "en",
+    }
+    set_map = {
+        "gymheroes": [
+            {
+                "providerSetCode": "GYM1",
+                "providerSetId": "777",
+                "providerSetName": "Gym Heroes",
+                "language": "en",
+                "cardCount": 132,
+                "releaseDate": "14th August, 2000",
+                "lookupName": "gymheroes",
+            }
+        ]
+    }
+    match = builder.resolve_pokewallet_set_match(set_data, set_map)
+    assert match["matchedCode"] == "GYM1"
+    assert match["reason"] in {"normalized_name_match", "scored_match"}
+
+
 def test_builder_uses_pokewallet_current_price_source_when_available() -> None:
-    original_get = builder.pokewallet_get
+    original_get_detailed = builder.pokewallet_get_detailed
     original_map_loader = builder.load_pokewallet_set_code_map
     original_cap = builder.CURRENT_PRICE_REQUEST_CAP
     original_tracker = dict(builder.REQUEST_TRACKER)
@@ -130,10 +301,10 @@ def test_builder_uses_pokewallet_current_price_source_when_available() -> None:
         builder.reset_request_tracker()
         builder.CURRENT_PRICE_REQUEST_CAP = 10
 
-        def fake_pokewallet_get(endpoint: str, api_key: str, params=None):
+        def fake_pokewallet_get_detailed(endpoint: str, api_key: str, params=None):
             assert api_key == "test-key"
             assert endpoint == "prices/BS"
-            return {
+            return ({
                 "data": [
                     {
                         "card_number": "1",
@@ -145,9 +316,9 @@ def test_builder_uses_pokewallet_current_price_source_when_available() -> None:
                         },
                     }
                 ]
-            }
+            }, 200)
 
-        builder.pokewallet_get = fake_pokewallet_get
+        builder.pokewallet_get_detailed = fake_pokewallet_get_detailed
         builder.load_pokewallet_set_code_map = lambda: {
             "baseset": [
                 {
@@ -193,7 +364,7 @@ def test_builder_uses_pokewallet_current_price_source_when_available() -> None:
             assert payload["source"] == "pokewallet"
             assert payload["prices"][0]["source"] == "pokewallet"
     finally:
-        builder.pokewallet_get = original_get
+        builder.pokewallet_get_detailed = original_get_detailed
         builder.load_pokewallet_set_code_map = original_map_loader
         builder.CURRENT_PRICE_REQUEST_CAP = original_cap
         builder.REQUEST_TRACKER.update(original_tracker)
@@ -205,6 +376,650 @@ def test_builder_uses_pokewallet_current_price_source_when_available() -> None:
             os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
         else:
             os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+
+
+def test_pokewallet_parser_extracts_records_from_flat_price_shape() -> None:
+    record = {
+        "name": "Zorua - BW12",
+        "card_number": "12/99",
+        "variant": "Holofoil",
+        "tcgplayer": {
+            "market_price": 2.34,
+            "low_price": 1.9,
+            "high_price": 3.1,
+        },
+        "cardmarket": {},
+    }
+    set_data = {"id": "bwp", "name": "BW Black Star Promos"}
+    catalog_index = {
+        "BW12": [
+            {"collectorNumber": "BW12", "normalizedName": "zorua"}
+        ]
+    }
+    records, reasons = builder.extract_pokewallet_current_price_records(
+        record,
+        set_data,
+        "2026-05-21T00:00:00Z",
+        catalog_index=catalog_index,
+    )
+    assert reasons == []
+    assert len(records) == 1
+    assert records[0]["source"] == "pokewallet"
+    assert records[0]["collectorNumber"] == "BW12"
+
+
+def test_pokewallet_parser_rejects_missing_tcgplayer_price() -> None:
+    record = {
+        "name": "Zorua - BW12",
+        "card_number": "12/99",
+        "variant": "Holofoil",
+        "tcgplayer": {},
+        "cardmarket": {"market_price": 1.5},
+    }
+    set_data = {"id": "bwp", "name": "BW Black Star Promos"}
+    catalog_index = {
+        "BW12": [
+            {"collectorNumber": "BW12", "normalizedName": "zorua"}
+        ]
+    }
+    records, reasons = builder.extract_pokewallet_current_price_records(
+        record,
+        set_data,
+        "2026-05-21T00:00:00Z",
+        catalog_index=catalog_index,
+    )
+    assert records == []
+    assert "unsupported_currency" in reasons or "missing_tcgplayer_price" in reasons
+
+
+def test_require_mode_fails_when_raw_items_have_no_usable_prices() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_catalog_index_loader = builder.load_catalogue_card_index_for_set
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "true"
+
+        builder.load_pokewallet_set_code_map = lambda: {
+            "blackandwhitepromos": [
+                {
+                    "providerSetCode": "PR",
+                    "providerSetId": "1407",
+                    "providerSetName": "Black and White Promos",
+                    "language": "en",
+                    "cardCount": 98,
+                    "releaseDate": "25th April, 2011",
+                    "lookupName": "blackandwhitepromos",
+                }
+            ]
+        }
+        builder.load_catalogue_card_index_for_set = lambda set_id, language="en": {
+            "BW12": [{"collectorNumber": "BW12", "normalizedName": "zorua"}]
+        }
+        builder.pokewallet_get_detailed = lambda endpoint, api_key, params=None: (
+            {
+                "data": [
+                    {
+                        "name": "Zorua - BW12",
+                        "card_number": "12/99",
+                        "tcgplayer": {},
+                        "cardmarket": {"market_price": 1.5},
+                    }
+                ]
+            },
+            200,
+        )
+        builder.fetch_pokemon_tcg_paginated = lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pokemon_tcg_api fallback should not run in require mode when unusable records")
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "bwp", "name": "BW Black Star Promos", "printedTotal": 101}]},
+                    output_dir,
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected RuntimeError for no usable pokewallet records in require mode"
+            except RuntimeError as exc:
+                assert "no usable price records" in str(exc)
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_catalogue_card_index_for_set = original_catalog_index_loader
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_fallback_mode_falls_back_when_raw_items_unusable_and_reports_rejections() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_catalog_index_loader = builder.load_catalogue_card_index_for_set
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+
+        builder.load_pokewallet_set_code_map = lambda: {
+            "blackandwhitepromos": [
+                {
+                    "providerSetCode": "PR",
+                    "providerSetId": "1407",
+                    "providerSetName": "Black and White Promos",
+                    "language": "en",
+                    "cardCount": 98,
+                    "releaseDate": "25th April, 2011",
+                    "lookupName": "blackandwhitepromos",
+                }
+            ]
+        }
+        builder.load_catalogue_card_index_for_set = lambda set_id, language="en": {
+            "BW12": [{"collectorNumber": "BW12", "normalizedName": "zorua"}]
+        }
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        builder.pokewallet_get_detailed = lambda endpoint, api_key, params=None: (
+            {
+                "data": [
+                    {
+                        "name": "Zorua - BW12",
+                        "card_number": "12/99",
+                        "tcgplayer": {},
+                        "cardmarket": {"market_price": 1.5},
+                    }
+                ]
+            },
+            200,
+        )
+
+        def fake_fetch(endpoint: str, *, base_params=None, page_size=250, max_pages=50, sleep_seconds=0.15):
+            set_id = str((base_params or {}).get("q", "set.id:test")).split(":", 1)[1]
+            card = {
+                "id": f"{set_id}-1",
+                "set": {"id": set_id},
+                "number": "1",
+                "name": "Fallback Card",
+                "tcgplayer": {"prices": {"normal": {"market": 2.0, "low": 1.5, "high": 2.5}}},
+            }
+            return [card], 1, 1
+
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            _written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                "2026-05-21T00:00:00Z",
+                {
+                    "buildCurrentPricesFromPokemonTcgApi": True,
+                    "scheduledCurrentPriceBatchEnabled": False,
+                    "continueOnSetError": True,
+                    "usePokewalletPrices": True,
+                },
+                {"catalogueStatus": "built", "sets": [{"id": "bwp", "name": "BW Black Star Promos", "printedTotal": 101}]},
+                output_dir,
+                "current_prices",
+                {"enCurrentPriceCursor": 0},
+                fail_after_set_count=0,
+            )
+
+            assert metrics["pokemonTcgApiFallbackSets"] == 1
+            fallback_entries = [
+                item for item in metrics.get("providerFallbackReasons", [])
+                if isinstance(item, dict) and item.get("reason") == "pokewallet_no_price_records"
+            ]
+            assert fallback_entries
+            assert isinstance(fallback_entries[0].get("rejectionReasonCounts"), dict)
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_catalogue_card_index_for_set = original_catalog_index_loader
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_pokewallet_logging_and_diagnostics_when_enabled() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+
+        def fake_pokewallet_get_detailed(endpoint: str, api_key: str, params=None):
+            assert endpoint == "prices/BS"
+            assert api_key == "test-key"
+            return ({
+                "data": [
+                    {
+                        "card_number": "1",
+                        "name": "Test Card",
+                        "tcgplayer": {
+                            "prices": {
+                                "normal": {"market": 1.23, "low": 1.0, "high": 1.5}
+                            }
+                        },
+                    }
+                ]
+            }, 200)
+
+        builder.pokewallet_get_detailed = fake_pokewallet_get_detailed
+        builder.load_pokewallet_set_code_map = lambda: {
+            "baseset": [{"providerSetCode": "BS", "providerSetName": "Base Set", "cardCount": 102}]
+        }
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            stdout_buffer = io.StringIO()
+            with contextlib.redirect_stdout(stdout_buffer):
+                _written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "base1", "name": "Base Set", "printedTotal": 102}]},
+                    output_dir,
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+
+            logs = stdout_buffer.getvalue()
+            assert "usePokeWalletPrices=True" in logs
+            assert "providerPriority=['pokewallet', 'pokemon_tcg_api']" in logs
+            assert "pokewalletApiKeyPresent=True" in logs
+            assert "Trying PokeWallet for set base1 using providerSetCode BS" in logs
+            assert metrics["pokewalletEnabled"] is True
+            assert metrics["pokewalletApiKeyPresent"] is True
+            assert metrics["pokewalletSetsAttempted"] == 1
+            assert metrics["pokewalletSetsSucceeded"] == 1
+            assert metrics["providerSourceCounts"]["pokewallet"] == 1
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_require_mode_fails_when_pokewallet_set_code_missing() -> None:
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "true"
+        builder.load_pokewallet_set_code_map = lambda: {}
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        fallback_called = {"value": False}
+
+        def fail_if_called(*args, **kwargs):
+            fallback_called["value"] = True
+            raise AssertionError("pokemon_tcg_api fallback should not run in require mode")
+
+        builder.fetch_pokemon_tcg_paginated = fail_if_called
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "base1", "name": "Base Set", "printedTotal": 102}]},
+                    output_dir,
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected RuntimeError for missing PokeWallet set-code match"
+            except RuntimeError as exc:
+                assert "no provider set-code match" in str(exc)
+        assert fallback_called["value"] is False
+    finally:
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_require_mode_fails_when_pokewallet_request_fails() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "true"
+        builder.load_pokewallet_set_code_map = lambda: {
+            "baseset": [{"providerSetCode": "BS", "providerSetName": "Base Set", "cardCount": 102}]
+        }
+        builder.load_existing_current_price_files = lambda language="en": []
+        builder.pokewallet_get_detailed = lambda endpoint, api_key, params=None: (_ for _ in ()).throw(
+            builder.requests.RequestException("boom")
+        )
+        builder.fetch_pokemon_tcg_paginated = lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pokemon_tcg_api fallback should not run in require mode")
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "base1", "name": "Base Set", "printedTotal": 102}]},
+                    output_dir,
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected RuntimeError for failed PokeWallet request"
+            except RuntimeError as exc:
+                assert "request failed" in str(exc)
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_fallback_mode_uses_pokemon_tcg_api_when_pokewallet_unmatched() -> None:
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+        builder.load_pokewallet_set_code_map = lambda: {}
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        def fake_fetch(endpoint: str, *, base_params=None, page_size=250, max_pages=50, sleep_seconds=0.15):
+            set_id = str((base_params or {}).get("q", "set.id:test")).split(":", 1)[1]
+            card = {
+                "id": f"{set_id}-1",
+                "set": {"id": set_id},
+                "number": "1",
+                "name": "Fallback Card",
+                "tcgplayer": {"prices": {"normal": {"market": 2.0, "low": 1.5, "high": 2.5}}},
+            }
+            return [card], 1, 1
+
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                "2026-05-21T00:00:00Z",
+                {
+                    "buildCurrentPricesFromPokemonTcgApi": True,
+                    "scheduledCurrentPriceBatchEnabled": False,
+                    "continueOnSetError": True,
+                    "usePokewalletPrices": True,
+                },
+                {"catalogueStatus": "built", "sets": [{"id": "setx", "name": "Set X"}]},
+                output_dir,
+                "current_prices",
+                {"enCurrentPriceCursor": 0},
+                fail_after_set_count=0,
+            )
+
+            assert [item[0] for item in written_files] == ["setx"]
+            payload = builder.load_json(output_dir / "setx.json")
+            assert payload["source"] == "pokemon_tcg_api"
+            assert metrics["pokemonTcgApiFallbackSets"] == 1
+            assert metrics["providerSourceCounts"]["pokemon_tcg_api"] == 1
+    finally:
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_provider_source_counts_track_pokewallet_and_pokemon_fallback() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+        builder.load_existing_current_price_files = lambda language="en": []
+        builder.load_pokewallet_set_code_map = lambda: {
+            "baseset": [{"providerSetCode": "BS", "providerSetName": "Base Set", "cardCount": 102}]
+        }
+
+        def fake_pokewallet_get_detailed(endpoint: str, api_key: str, params=None):
+            if endpoint == "prices/BS":
+                return ({
+                    "data": [
+                        {
+                            "card_number": "1",
+                            "name": "PW Card",
+                            "tcgplayer": {"prices": {"normal": {"market": 1.0, "low": 0.8, "high": 1.2}}},
+                        }
+                    ]
+                }, 200)
+            return ({"data": []}, 200)
+
+        def fake_fetch(endpoint: str, *, base_params=None, page_size=250, max_pages=50, sleep_seconds=0.15):
+            set_id = str((base_params or {}).get("q", "set.id:test")).split(":", 1)[1]
+            card = {
+                "id": f"{set_id}-1",
+                "set": {"id": set_id},
+                "number": "1",
+                "name": "Fallback Card",
+                "tcgplayer": {"prices": {"normal": {"market": 2.0, "low": 1.6, "high": 2.4}}},
+            }
+            return [card], 1, 1
+
+        builder.pokewallet_get_detailed = fake_pokewallet_get_detailed
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            _written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                "2026-05-21T00:00:00Z",
+                {
+                    "buildCurrentPricesFromPokemonTcgApi": True,
+                    "scheduledCurrentPriceBatchEnabled": False,
+                    "continueOnSetError": True,
+                    "usePokewalletPrices": True,
+                },
+                {
+                    "catalogueStatus": "built",
+                    "sets": [
+                        {"id": "base1", "name": "Base Set", "printedTotal": 102},
+                        {"id": "setx", "name": "Set X"},
+                    ],
+                },
+                output_dir,
+                "current_prices",
+                {"enCurrentPriceCursor": 0},
+                fail_after_set_count=0,
+            )
+
+            assert metrics["providerSourceCounts"]["pokewallet"] == 1
+            assert metrics["providerSourceCounts"]["pokemon_tcg_api"] == 1
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
 
 
 def test_detect_rate_limited() -> None:
@@ -353,7 +1168,24 @@ if __name__ == "__main__":
     test_pokewallet_api_key_resolution_prefers_cardscanr_alias()
     test_price_provider_priority_prefers_pokewallet_when_configured()
     test_daily_budget_stop()
+    test_all_day_hourly_exhaustion_returns_sleep_window()
+    test_all_day_daily_exhaustion_stops_without_sleep()
+    test_should_commit_changes_requires_validation_and_diffs()
+    test_should_push_changes_requires_commit()
+    test_pokewallet_bwp_maps_via_override_when_present()
+    test_pokewallet_mapping_rejects_ambiguous_candidates()
+    test_pokewallet_exact_code_match_wins()
+    test_pokewallet_normalized_name_match_works()
     test_builder_uses_pokewallet_current_price_source_when_available()
+    test_pokewallet_parser_extracts_records_from_flat_price_shape()
+    test_pokewallet_parser_rejects_missing_tcgplayer_price()
+    test_require_mode_fails_when_raw_items_have_no_usable_prices()
+    test_fallback_mode_falls_back_when_raw_items_unusable_and_reports_rejections()
+    test_pokewallet_logging_and_diagnostics_when_enabled()
+    test_require_mode_fails_when_pokewallet_set_code_missing()
+    test_require_mode_fails_when_pokewallet_request_fails()
+    test_fallback_mode_uses_pokemon_tcg_api_when_pokewallet_unmatched()
+    test_provider_source_counts_track_pokewallet_and_pokemon_fallback()
     test_detect_rate_limited()
     test_append_request_ledger_keeps_recent_entries()
     test_builder_request_cap_blocks_provider_request_before_exceeding()

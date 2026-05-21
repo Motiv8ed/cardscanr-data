@@ -72,6 +72,12 @@ python tools/run_local_price_update.py --batch-size 10
 
 # Safe long-run EN rotation until completion (budget-aware)
 python tools/run_local_price_update.py --batch-size 10 --until-complete
+
+# All-day mode (sleep when hourly budget is exhausted)
+python tools/run_local_price_update.py --batch-size 10 --all-day
+
+# All-day mode with explicit target budgets
+python tools/run_local_price_update.py --batch-size 10 --all-day --target-hourly-requests 90 --target-daily-requests 990
 ```
 
 No third-party packages are required.  
@@ -81,14 +87,17 @@ Optional environment variables:
 |---|---|
 | `POKEMON_TCG_API_KEY` | Pokémon TCG API key (reserved for future live-fetch integration) |
 | `CARDSCANR_MAX_REQUESTS_PER_HOUR` | Hourly request target for updater budgets (default `90`) |
-| `CARDSCANR_MAX_REQUESTS_PER_DAY` | Daily request target for updater budgets (default `950`) |
+| `CARDSCANR_MAX_REQUESTS_PER_DAY` | Rolling 24h request target for updater budgets (default `990`) |
 | `CARDSCANR_REQUEST_SAFETY_BUFFER` | Buffer reserved below provider plan limits (default `10`) |
 | `CARDSCANR_WORKER_UNTIL_COMPLETE` | Enables until-complete loop mode for catalog worker when set to true |
+| `POKEWALLET_MAX_REQUESTS_PER_HOUR` | Compatibility alias for hourly request target |
+| `POKEWALLET_MAX_REQUESTS_PER_DAY` | Compatibility alias for rolling 24h request target |
+| `POKEWALLET_REQUEST_SAFETY_BUFFER` | Compatibility alias for request safety buffer |
 
 Recommended local updater settings:
 
 - `CARDSCANR_MAX_REQUESTS_PER_HOUR=90`
-- `CARDSCANR_MAX_REQUESTS_PER_DAY=950`
+- `CARDSCANR_MAX_REQUESTS_PER_DAY=990`
 - `CARDSCANR_REQUEST_SAFETY_BUFFER=10`
 - `--batch-size 5`
 
