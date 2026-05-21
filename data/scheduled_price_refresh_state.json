@@ -1,30 +1,30 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 34,
-  "lastUpdatedAtUtc": "2026-05-21T20:23:33Z",
+  "enCurrentPriceCursor": 44,
+  "lastUpdatedAtUtc": "2026-05-21T20:26:02Z",
   "lastBatchSetIds": [
-    "det1",
-    "dp1",
-    "dp2",
-    "dp3",
-    "dp4",
-    "dp5",
-    "dp6",
-    "dp7",
-    "dpp",
-    "dv1"
+    "ecard1",
+    "ecard2",
+    "ecard3",
+    "ex1",
+    "ex10",
+    "ex11",
+    "ex12",
+    "ex13",
+    "ex14",
+    "ex15"
   ],
   "lastProcessedSetIds": [
-    "det1",
-    "dp1",
-    "dp2",
-    "dp3",
-    "dp4",
-    "dp5",
-    "dp6",
-    "dp7",
-    "dpp",
-    "dv1"
+    "ecard1",
+    "ecard2",
+    "ecard3",
+    "ex1",
+    "ex10",
+    "ex11",
+    "ex12",
+    "ex13",
+    "ex14",
+    "ex15"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
@@ -438,11 +438,21 @@
       "timestampUtc": "2026-05-21T20:22:46Z"
     },
     {
-      "timestampUtc": "2026-05-21T20:25:24Z",
-      "requests": 20,
       "providerRequestCounts": {
         "pokemon_tcg_api": 9,
         "pokewallet": 11
+      },
+      "requests": 20,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-21T20:25:24Z"
+    },
+    {
+      "timestampUtc": "2026-05-21T20:28:02Z",
+      "requests": 23,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 11,
+        "pokewallet": 12
       },
       "status": "built",
       "source": "local_price_update"
