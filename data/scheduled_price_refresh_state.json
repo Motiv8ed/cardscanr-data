@@ -1,30 +1,30 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 10,
-  "lastUpdatedAtUtc": "2026-05-21T12:55:15Z",
+  "enCurrentPriceCursor": 20,
+  "lastUpdatedAtUtc": "2026-05-21T12:57:10Z",
   "lastBatchSetIds": [
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6",
-    "basep",
-    "bp",
-    "bw1",
-    "bw10"
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp"
   ],
   "lastProcessedSetIds": [
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6",
-    "basep",
-    "bp",
-    "bw1",
-    "bw10"
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
@@ -108,8 +108,14 @@
       "timestampUtc": "2026-05-21T11:25:26Z"
     },
     {
-      "timestampUtc": "2026-05-21T12:56:43Z",
       "requests": 18,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-21T12:56:43Z"
+    },
+    {
+      "timestampUtc": "2026-05-21T12:58:35Z",
+      "requests": 19,
       "status": "built",
       "source": "local_price_update"
     }
