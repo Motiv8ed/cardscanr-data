@@ -1,5 +1,7 @@
 {
-  "enCurrentPriceCursor": 51,
+  "schemaVersion": "1.0.0",
+  "enCurrentPriceCursor": 50,
+  "lastUpdatedAtUtc": "2026-05-21T13:56:44Z",
   "lastBatchSetIds": [
     "ex13",
     "ex14",
@@ -21,12 +23,10 @@
     "ex3",
     "ex4",
     "ex5",
-    "ex6",
-    "ex7"
+    "ex6"
   ],
+  "lastStopReason": "request_cap_reached",
   "lastRateLimited": false,
-  "lastStopReason": "completed_with_transient_failures",
-  "lastUpdatedAtUtc": "2026-05-21T13:27:46Z",
   "requestLedger": [
     {
       "requests": 20,
@@ -135,7 +135,12 @@
       "source": "local_price_update",
       "status": "partial_built",
       "timestampUtc": "2026-05-21T13:02:56Z"
+    },
+    {
+      "timestampUtc": "2026-05-21T13:57:46Z",
+      "requests": 18,
+      "status": "partial_built",
+      "source": "local_price_update"
     }
-  ],
-  "schemaVersion": "1.0.0"
+  ]
 }
