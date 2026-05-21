@@ -1,0 +1,121 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-21T14:03:15Z",
+  "isLivePricing": false,
+  "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T14:03:15Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-22T08:03:15Z",
+  "priceCount": 2,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|en|neo2|26|magnemite",
+      "canonicalId": "pokemon|en|neo2|26|magnemite|1st_edition|near_mint",
+      "collectorNumber": "26",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Magnemite (26)",
+          "cardNumber": "26",
+          "variant": "1st Edition"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T14:03:15Z",
+      "highPrice": 212.7,
+      "lowPrice": 8.99,
+      "market": "us",
+      "marketPrice": 10.06,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T08:03:15Z",
+      "normalizedName": "magnemite",
+      "priceIdentityId": "pokemon|en|neo2|26|magnemite|1st_edition|near_mint|us|usd",
+      "setId": "neo2",
+      "setName": "Neo Discovery",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "1st_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|en|neo2|26|magnemite",
+      "canonicalId": "pokemon|en|neo2|26|magnemite|unlimited|near_mint",
+      "collectorNumber": "26",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Magnemite (26)",
+          "cardNumber": "26",
+          "variant": "Unlimited"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T14:03:15Z",
+      "highPrice": 78.34,
+      "lowPrice": 3.99,
+      "market": "us",
+      "marketPrice": 6.47,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T08:03:15Z",
+      "normalizedName": "magnemite",
+      "priceIdentityId": "pokemon|en|neo2|26|magnemite|unlimited|near_mint|us|usd",
+      "setId": "neo2",
+      "setName": "Neo Discovery",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    }
+  ],
+  "providerDiagnostics": {
+    "pokewallet": {
+      "dedupedRecords": 0,
+      "duplicateCanonicalIdCounts": {},
+      "rawItems": 150,
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 148
+      },
+      "sampleDedupedProviderRows": [],
+      "usableRecordsAfterDedupe": 2,
+      "usableRecordsBeforeDedupe": 2
+    }
+  },
+  "schemaVersion": "1.0.0",
+  "setId": "neo2",
+  "setName": "Neo Discovery",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
+}
