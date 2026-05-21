@@ -1,0 +1,163 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-21T13:00:28Z",
+  "isLivePricing": false,
+  "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T13:00:28Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:00:28Z",
+  "priceCount": 3,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|en|dp7|SH1|drifloon",
+      "canonicalId": "pokemon|en|dp7|SH1|drifloon|reverse|near_mint",
+      "collectorNumber": "SH1",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Drifloon (Shiny)",
+          "cardNumber": "SH1",
+          "variant": "Reverse Holofoil"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T13:00:28Z",
+      "highPrice": 660.0,
+      "lowPrice": 95.0,
+      "market": "us",
+      "marketPrice": 67.45,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:00:28Z",
+      "normalizedName": "drifloon",
+      "priceIdentityId": "pokemon|en|dp7|SH1|drifloon|reverse|near_mint|us|usd",
+      "setId": "dp7",
+      "setName": "Stormfront",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "reverse"
+    },
+    {
+      "canonicalCardId": "pokemon|en|dp7|SH2|duskull",
+      "canonicalId": "pokemon|en|dp7|SH2|duskull|reverse|near_mint",
+      "collectorNumber": "SH2",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Duskull (Shiny)",
+          "cardNumber": "SH2",
+          "variant": "Reverse Holofoil"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T13:00:28Z",
+      "highPrice": 1400.0,
+      "lowPrice": 99.99,
+      "market": "us",
+      "marketPrice": 95.0,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:00:28Z",
+      "normalizedName": "duskull",
+      "priceIdentityId": "pokemon|en|dp7|SH2|duskull|reverse|near_mint|us|usd",
+      "setId": "dp7",
+      "setName": "Stormfront",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "reverse"
+    },
+    {
+      "canonicalCardId": "pokemon|en|dp7|SH3|voltorb",
+      "canonicalId": "pokemon|en|dp7|SH3|voltorb|reverse|near_mint",
+      "collectorNumber": "SH3",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Voltorb (Shiny)",
+          "cardNumber": "SH3",
+          "variant": "Reverse Holofoil"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T13:00:28Z",
+      "highPrice": 650.0,
+      "lowPrice": 53.5,
+      "market": "us",
+      "marketPrice": 35.98,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:00:28Z",
+      "normalizedName": "voltorb",
+      "priceIdentityId": "pokemon|en|dp7|SH3|voltorb|reverse|near_mint|us|usd",
+      "setId": "dp7",
+      "setName": "Stormfront",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "reverse"
+    }
+  ],
+  "providerDiagnostics": {
+    "pokewallet": {
+      "dedupedRecords": 0,
+      "duplicateCanonicalIdCounts": {},
+      "rawItems": 201,
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 198
+      },
+      "sampleDedupedProviderRows": [],
+      "usableRecordsAfterDedupe": 3,
+      "usableRecordsBeforeDedupe": 3
+    }
+  },
+  "schemaVersion": "1.0.0",
+  "setId": "dp7",
+  "setName": "Stormfront",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
+}
