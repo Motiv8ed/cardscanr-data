@@ -554,6 +554,7 @@ REQUIRED_SUPPORTED_SOURCE_ALIASES = {
     "ebay_sold_manual": {"ebaySoldListingsManual"},
 }
 LEGACY_PRIMARY_SOURCE_IDS = {"pokemonTcgApi", "ebaySoldListingsManual"}
+EN_CURRENT_PRICE_SOURCE_IDS = {"pokemon_tcg_api", "pokewallet"}
 SNAKE_CASE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
 MARKET_KEY_PATTERN = re.compile(r"^[a-z0-9_]+$")
 ISO_4217_PATTERN = re.compile(r"^[A-Z]{3}$")
@@ -739,6 +740,34 @@ def load_json_file(path: Path) -> object | None:
         return None
 
 
+def supported_source_ids_from_file() -> set[str]:
+    data = load_json_file(SUPPORTED_SOURCES_PATH)
+    if not isinstance(data, dict):
+        return set(CANONICAL_SUPPORTED_SOURCE_IDS)
+    source_ids: set[str] = set()
+    sources = data.get("sources")
+    if not isinstance(sources, list):
+        return set(CANONICAL_SUPPORTED_SOURCE_IDS)
+    for entry in sources:
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str) and entry.get("id"):
+            source_ids.add(str(entry["id"]))
+    return source_ids or set(CANONICAL_SUPPORTED_SOURCE_IDS)
+
+
+def allowed_en_current_price_source_ids(supported_source_ids: set[str] | None = None) -> set[str]:
+    known_source_ids = supported_source_ids if supported_source_ids is not None else supported_source_ids_from_file()
+    return EN_CURRENT_PRICE_SOURCE_IDS & known_source_ids
+
+
+def validate_en_current_price_source(source: object, label: str, supported_source_ids: set[str] | None = None) -> None:
+    allowed_sources = allowed_en_current_price_source_ids(supported_source_ids)
+    if not isinstance(source, str) or not source:
+        err(f"{label}: source must be a non-empty canonical source id")
+        return
+    if source not in allowed_sources:
+        err(f"{label}: source must be one of {sorted(allowed_sources)}")
+
+
 def check_required(data: dict, fields: set[str], label: str) -> bool:
     missing = fields - set(data.keys())
     if missing:
@@ -864,6 +893,7 @@ def check_price_files() -> None:
     strict_price_contract = parse_bool_env("CARDSCANR_VALIDATE_STRICT_PRICE_CONTRACT")
     en_current_legacy_record_count = 0
     en_current_stage1_record_count = 0
+    supported_source_ids = supported_source_ids_from_file()
 
     for path in price_files:
         rel = path.relative_to(ROOT)
@@ -883,8 +913,7 @@ def check_price_files() -> None:
             continue
         if is_current_set_file:
             if current_language == "en":
-                if data.get("source") != "pokemon_tcg_api":
-                    err(f"{rel}: source must be pokemon_tcg_api")
+                validate_en_current_price_source(data.get("source"), str(rel), supported_source_ids)
                 if data.get("currency") != "USD":
                     err(f"{rel}: currency must be USD")
             elif current_language == "jp":
@@ -1031,6 +1060,7 @@ def check_price_files() -> None:
                         err(f"{rel}: prices[{i}] matchSignals must be a list for JP entries")
                         entry_errors += 1
                 elif current_language == "en":
+                    validate_en_current_price_source(entry.get("source"), f"{rel}: prices[{i}]", supported_source_ids)
                     present_stage1_fields = STAGE1_EN_CURRENT_PRICE_ADDITIVE_FIELDS & set(entry.keys())
                     if not present_stage1_fields:
                         file_en_current_legacy_record_count += 1

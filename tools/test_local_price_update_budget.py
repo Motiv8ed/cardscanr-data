@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import run_local_price_update as updater  # noqa: E402
 import build_price_cache as builder  # noqa: E402
+import validate_cache as validator  # noqa: E402
 
 
 def test_budget_usage_and_stop_logic() -> None:
@@ -102,6 +103,51 @@ def test_price_provider_priority_prefers_pokewallet_when_configured() -> None:
             os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
         else:
             os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+
+
+def test_validate_cache_accepts_pokewallet_for_en_current_prices() -> None:
+    original_errors = list(validator.errors)
+    try:
+        validator.errors.clear()
+        validator.validate_en_current_price_source(
+            "pokewallet",
+            "public/v1/prices/current/pokemon/en/bwp.json",
+            {"pokemon_tcg_api", "pokewallet"},
+        )
+        assert validator.errors == []
+    finally:
+        validator.errors[:] = original_errors
+
+
+def test_validate_cache_rejects_unknown_en_current_price_source() -> None:
+    original_errors = list(validator.errors)
+    original_err = validator.err
+    try:
+        validator.errors.clear()
+        validator.err = lambda msg: validator.errors.append(f"ERROR: {msg}")
+        validator.validate_en_current_price_source(
+            "not_a_source",
+            "public/v1/prices/current/pokemon/en/bwp.json",
+            {"pokemon_tcg_api", "pokewallet"},
+        )
+        assert any("source must be one of" in item for item in validator.errors)
+    finally:
+        validator.err = original_err
+        validator.errors[:] = original_errors
+
+
+def test_validate_cache_accepts_pokemon_tcg_api_fallback_source() -> None:
+    original_errors = list(validator.errors)
+    try:
+        validator.errors.clear()
+        validator.validate_en_current_price_source(
+            "pokemon_tcg_api",
+            "public/v1/prices/current/pokemon/en/base1.json",
+            {"pokemon_tcg_api", "pokewallet"},
+        )
+        assert validator.errors == []
+    finally:
+        validator.errors[:] = original_errors
 
 
 def test_daily_budget_stop() -> None:
@@ -430,6 +476,186 @@ def test_pokewallet_parser_rejects_missing_tcgplayer_price() -> None:
     )
     assert records == []
     assert "unsupported_currency" in reasons or "missing_tcgplayer_price" in reasons
+
+
+def test_pokewallet_duplicate_canonicalids_are_deduped_deterministically() -> None:
+    common = {
+        "set_id": "bwp",
+        "set_name": "BW Black Star Promos",
+        "collector_number": "BW29",
+        "normalized_name": "victory_cup",
+        "variant": "holo",
+        "ts": "2026-05-21T00:00:00Z",
+        "source": "pokewallet",
+        "currency": "USD",
+        "market": "us",
+        "country": "US",
+        "diagnostics_notes": ["pokewallet_tcgplayer_usd"],
+    }
+    lower_quality = builder.build_current_price_record_from_fields(
+        **common,
+        pricing={"market": None, "low": 60.0, "high": 90.0},
+        confidence="medium",
+        provider_diagnostics={"providerId": "low"},
+    )
+    better_quality = builder.build_current_price_record_from_fields(
+        **common,
+        pricing={"market": 59.95, "low": 74.9, "high": 100.99},
+        confidence="high",
+        provider_diagnostics={"providerId": "high"},
+    )
+    assert lower_quality is not None
+    assert better_quality is not None
+
+    deduped, diagnostics = builder.dedupe_pokewallet_current_price_records([lower_quality, better_quality])
+    assert len(deduped) == 1
+    assert deduped[0]["marketPrice"] == 59.95
+    assert diagnostics["dedupedRecords"] == 1
+    assert diagnostics["duplicateCanonicalIdCounts"][better_quality["canonicalId"]] == 2
+
+
+def test_pokewallet_bwp_mocked_duplicate_victory_cup_rows_produce_unique_records() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_catalog_index_loader = builder.load_catalogue_card_index_for_set
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "true"
+        builder.load_existing_current_price_files = lambda language="en": []
+        builder.load_pokewallet_set_code_map = lambda: {
+            "blackandwhitepromos": [
+                {
+                    "providerSetCode": "PR",
+                    "providerSetId": "1407",
+                    "providerSetName": "Black and White Promos",
+                    "language": "en",
+                    "cardCount": 98,
+                    "releaseDate": "25th April, 2011",
+                    "lookupName": "blackandwhitepromos",
+                }
+            ]
+        }
+        builder.load_catalogue_card_index_for_set = lambda set_id, language="en": {
+            "BW29": [{"collectorNumber": "BW29", "normalizedName": "victory_cup"}],
+            "BW30": [{"collectorNumber": "BW30", "normalizedName": "victory_cup"}],
+            "BW95": [{"collectorNumber": "BW95", "normalizedName": "champions_festival"}],
+        }
+        builder.fetch_pokemon_tcg_paginated = lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("pokemon_tcg_api fallback should not run when PokeWallet succeeds")
+        )
+
+        builder.pokewallet_get_detailed = lambda endpoint, api_key, params=None: (
+            {
+                "data": [
+                    {
+                        "id": "pw-bw29-a",
+                        "name": "Victory Cup - BW29",
+                        "card_number": "BW29",
+                        "variant": "Holofoil",
+                        "tcgplayer": {"prices": {"holofoil": {"market": 49.08, "low": 65.0, "high": 660.0}}},
+                    },
+                    {
+                        "id": "pw-bw29-b",
+                        "name": "Victory Cup - BW29",
+                        "card_number": "BW29",
+                        "variant": "Holofoil",
+                        "tcgplayer": {"prices": {"holofoil": {"market": 59.95, "low": 74.9, "high": 100.99}}},
+                    },
+                    {
+                        "id": "pw-bw30-a",
+                        "name": "Victory Cup - BW30",
+                        "card_number": "BW30",
+                        "variant": "Holofoil",
+                        "tcgplayer": {"prices": {"holofoil": {"market": 70.0, "low": 70.0, "high": 79.94}}},
+                    },
+                    {
+                        "id": "pw-bw30-b",
+                        "name": "Victory Cup - BW30",
+                        "card_number": "BW30",
+                        "variant": "Holofoil",
+                        "tcgplayer": {"prices": {"holofoil": {"market": 68.47, "low": 100.0, "high": 9999.0}}},
+                    },
+                    {
+                        "id": "pw-bw95-a",
+                        "name": "Champions Festival - BW95",
+                        "card_number": "BW95",
+                        "variant": "Normal",
+                        "tcgplayer": {"prices": {"normal": {"market": 399.0, "low": 399.0, "high": 399.0}}},
+                    },
+                    {
+                        "id": "pw-bw95-b",
+                        "name": "Champions Festival - BW95",
+                        "card_number": "BW95",
+                        "variant": "Normal",
+                        "tcgplayer": {"prices": {"normal": {"market": 184.5, "low": 174.99, "high": 300.0}}},
+                    },
+                ]
+            },
+            200,
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                "2026-05-21T00:00:00Z",
+                {
+                    "buildCurrentPricesFromPokemonTcgApi": True,
+                    "scheduledCurrentPriceBatchEnabled": False,
+                    "continueOnSetError": True,
+                    "usePokewalletPrices": True,
+                },
+                {
+                    "catalogueStatus": "built",
+                    "sets": [{"id": "bwp", "name": "BW Black Star Promos", "printedTotal": 101}],
+                },
+                output_dir,
+                "current_prices",
+                {"enCurrentPriceCursor": 0},
+                fail_after_set_count=0,
+            )
+
+            assert [item[0] for item in written_files] == ["bwp"]
+            assert metrics["currentPriceEnSource"] == "pokewallet"
+            payload = builder.load_json(output_dir / "bwp.json")
+            canonical_ids = [item["canonicalId"] for item in payload["prices"]]
+            assert len(canonical_ids) == len(set(canonical_ids))
+            assert payload["priceCount"] == 3
+            diagnostics = payload["providerDiagnostics"]["pokewallet"]
+            assert diagnostics["rawItems"] == 6
+            assert diagnostics["usableRecordsBeforeDedupe"] == 6
+            assert diagnostics["usableRecordsAfterDedupe"] == 3
+            assert diagnostics["dedupedRecords"] == 3
+            assert all(count == 2 for count in diagnostics["duplicateCanonicalIdCounts"].values())
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.load_catalogue_card_index_for_set = original_catalog_index_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
 
 
 def test_require_mode_fails_when_raw_items_have_no_usable_prices() -> None:
@@ -1167,6 +1393,9 @@ if __name__ == "__main__":
     test_updater_passes_request_cap_to_builder_env()
     test_pokewallet_api_key_resolution_prefers_cardscanr_alias()
     test_price_provider_priority_prefers_pokewallet_when_configured()
+    test_validate_cache_accepts_pokewallet_for_en_current_prices()
+    test_validate_cache_rejects_unknown_en_current_price_source()
+    test_validate_cache_accepts_pokemon_tcg_api_fallback_source()
     test_daily_budget_stop()
     test_all_day_hourly_exhaustion_returns_sleep_window()
     test_all_day_daily_exhaustion_stops_without_sleep()
@@ -1179,6 +1408,8 @@ if __name__ == "__main__":
     test_builder_uses_pokewallet_current_price_source_when_available()
     test_pokewallet_parser_extracts_records_from_flat_price_shape()
     test_pokewallet_parser_rejects_missing_tcgplayer_price()
+    test_pokewallet_duplicate_canonicalids_are_deduped_deterministically()
+    test_pokewallet_bwp_mocked_duplicate_victory_cup_rows_produce_unique_records()
     test_require_mode_fails_when_raw_items_have_no_usable_prices()
     test_fallback_mode_falls_back_when_raw_items_unusable_and_reports_rejections()
     test_pokewallet_logging_and_diagnostics_when_enabled()

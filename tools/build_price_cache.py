@@ -24,6 +24,7 @@ import shutil
 import sys
 import time
 import unicodedata
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -2767,6 +2768,7 @@ def summarize_pokewallet_raw_item(record: object) -> dict[str, object]:
         "cardName": card_info.get("name") or record.get("name") or record.get("card_name"),
         "cardNumber": card_info.get("number") or record.get("card_number") or record.get("number"),
         "variant": card_info.get("sub_type_name") or record.get("variant") or record.get("sub_type_name"),
+        "providerId": record.get("id") or record.get("provider_id") or record.get("product_id"),
         "keys": sorted(list(record.keys()))[:24],
         "tcgplayerKeys": sorted(list(tcgplayer.keys()))[:24],
         "cardmarketKeys": sorted(list(cardmarket.keys()))[:24],
@@ -2844,6 +2846,7 @@ def build_current_price_record_from_fields(
     country: str = "US",
     confidence: str = "medium",
     diagnostics_notes: list[str] | None = None,
+    provider_diagnostics: dict[str, object] | None = None,
 ) -> dict | None:
     compacted = compact_current_price(pricing)
     if compacted is None:
@@ -2854,6 +2857,13 @@ def build_current_price_record_from_fields(
     price_identity_id = (
         f"{canonical_card_id}|{variant}|{condition_value}|{market}|{currency.lower()}"
     )
+
+    diagnostics_payload: dict[str, object] = {
+        "sourceRecordStatus": "priced",
+        "notes": list(diagnostics_notes or []),
+    }
+    if provider_diagnostics:
+        diagnostics_payload["providerRecord"] = provider_diagnostics
 
     return {
         "canonicalId": f"{canonical_card_id}|{variant}|{condition_value}",
@@ -2873,10 +2883,7 @@ def build_current_price_record_from_fields(
         "conversionPolicy": "none",
         "status": "priced",
         "confidence": confidence,
-        "diagnostics": {
-            "sourceRecordStatus": "priced",
-            "notes": list(diagnostics_notes or []),
-        },
+        "diagnostics": diagnostics_payload,
         "marketPrice": compacted["marketPrice"],
         "lowPrice": compacted["lowPrice"],
         "highPrice": compacted["highPrice"],
@@ -2923,6 +2930,112 @@ def iter_pokewallet_price_variants(record: dict) -> list[tuple[str, str, str, di
         variants.append((SOURCE_ID_POKEWALLET, "USD", "us", item, variant))
 
     return variants
+
+
+def pokewallet_provider_record_diagnostics(record: dict) -> dict[str, object]:
+    card_info = record.get("card_info") if isinstance(record.get("card_info"), dict) else {}
+    tcgplayer = record.get("tcgplayer") if isinstance(record.get("tcgplayer"), dict) else {}
+    identifiers = {
+        "providerId": record.get("id") or record.get("provider_id") or record.get("product_id"),
+        "tcgplayerProductId": (
+            tcgplayer.get("product_id")
+            or tcgplayer.get("productId")
+            or record.get("tcgplayer_product_id")
+            or record.get("tcgplayerProductId")
+        ),
+        "cardName": card_info.get("name") or record.get("name") or record.get("card_name"),
+        "cardNumber": card_info.get("number") or record.get("card_number") or record.get("number"),
+        "variant": card_info.get("sub_type_name") or record.get("variant") or record.get("sub_type_name"),
+    }
+    return {key: value for key, value in identifiers.items() if value not in (None, "")}
+
+
+def confidence_rank(value: object) -> int:
+    return {"high": 3, "medium": 2, "low": 1, "unknown": 0}.get(str(value or "unknown"), 0)
+
+
+def utc_sort_value(value: object) -> str:
+    parsed = parse_utc_timestamp(str(value or ""))
+    if parsed is None:
+        return ""
+    return parsed.isoformat()
+
+
+def is_numeric_price(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def pokewallet_record_quality_key(record: dict, original_index: int) -> tuple[object, ...]:
+    notes = []
+    diagnostics = record.get("diagnostics")
+    if isinstance(diagnostics, dict) and isinstance(diagnostics.get("notes"), list):
+        notes = [str(item) for item in diagnostics["notes"]]
+    return (
+        1 if is_numeric_price(record.get("marketPrice")) else 0,
+        confidence_rank(record.get("confidence")),
+        1
+        if (
+            record.get("source") == SOURCE_ID_POKEWALLET
+            and record.get("currency") == "USD"
+            and record.get("market") == "us"
+            and "pokewallet_tcgplayer_usd" in notes
+        )
+        else 0,
+        utc_sort_value(record.get("fetchedAtUtc")),
+        -original_index,
+    )
+
+
+def dedupe_pokewallet_current_price_records(records: list[dict]) -> tuple[list[dict], dict[str, object]]:
+    counts = Counter(str(record.get("canonicalId") or "") for record in records if record.get("canonicalId"))
+    duplicate_counts = {cid: count for cid, count in sorted(counts.items()) if count > 1}
+    best_by_canonical_id: dict[str, tuple[tuple[object, ...], dict, int]] = {}
+    deduped_provider_rows: list[dict[str, object]] = []
+
+    for index, record in enumerate(records):
+        canonical_id = str(record.get("canonicalId") or "")
+        if not canonical_id:
+            continue
+        quality_key = pokewallet_record_quality_key(record, index)
+        existing = best_by_canonical_id.get(canonical_id)
+        if existing is None or quality_key > existing[0]:
+            if existing is not None:
+                deduped_provider_rows.append(
+                    {
+                        "canonicalId": canonical_id,
+                        "keptIndex": index,
+                        "dedupedIndex": existing[2],
+                        "dedupedProviderRecord": (
+                            existing[1].get("diagnostics", {}).get("providerRecord")
+                            if isinstance(existing[1].get("diagnostics"), dict)
+                            else None
+                        ),
+                    }
+                )
+            best_by_canonical_id[canonical_id] = (quality_key, record, index)
+        else:
+            deduped_provider_rows.append(
+                {
+                    "canonicalId": canonical_id,
+                    "keptIndex": existing[2],
+                    "dedupedIndex": index,
+                    "dedupedProviderRecord": (
+                        record.get("diagnostics", {}).get("providerRecord")
+                        if isinstance(record.get("diagnostics"), dict)
+                        else None
+                    ),
+                }
+            )
+
+    deduped = [item[1] for item in sorted(best_by_canonical_id.values(), key=lambda item: item[2])]
+    diagnostics = {
+        "usableRecordsBeforeDedupe": len(records),
+        "usableRecordsAfterDedupe": len(deduped),
+        "dedupedRecords": max(0, len(records) - len(deduped)),
+        "duplicateCanonicalIdCounts": duplicate_counts,
+        "sampleDedupedProviderRows": deduped_provider_rows[:25],
+    }
+    return deduped, diagnostics
 
 
 def extract_pokewallet_current_price_records(
@@ -2987,6 +3100,7 @@ def extract_pokewallet_current_price_records(
             country=market.upper(),
             confidence="medium",
             diagnostics_notes=["pokewallet_tcgplayer_usd"],
+            provider_diagnostics=pokewallet_provider_record_diagnostics(record),
         )
         if current is not None:
             records.append(current)
@@ -3193,6 +3307,7 @@ def build_english_current_prices_by_set(
         fallback_reason = ""
         attempted_pokewallet_for_set = False
         used_pokemon_fallback = False
+        provider_diagnostics: dict[str, object] | None = None
         providers_to_try = [item for item in provider_priority if item in {SOURCE_ID_POKEWALLET, SOURCE_ID_POKEMON_TCG_API}]
         if use_pokewallet_prices and SOURCE_ID_POKEWALLET not in providers_to_try:
             providers_to_try = [SOURCE_ID_POKEWALLET] + providers_to_try
@@ -3270,6 +3385,7 @@ def build_english_current_prices_by_set(
                             print(f"  PokeWallet raw item {idx + 1}: {summarize_pokewallet_raw_item(sample)}")
 
                     rejection_counts: dict[str, int] = {}
+                    pokewallet_prices: list[dict] = []
                     for record in provider_records:
                         extracted_records, reject_reasons = extract_pokewallet_current_price_records(
                             record,
@@ -3277,16 +3393,34 @@ def build_english_current_prices_by_set(
                             ts,
                             catalog_index=catalog_index,
                         )
-                        prices.extend(extracted_records)
+                        pokewallet_prices.extend(extracted_records)
                         for reason in reject_reasons:
                             rejection_counts[reason] = int(rejection_counts.get(reason, 0)) + 1
 
+                    deduped_prices, dedupe_diagnostics = dedupe_pokewallet_current_price_records(pokewallet_prices)
+                    prices = deduped_prices
+                    provider_diagnostics = {
+                        "pokewallet": {
+                            "rawItems": len(provider_records),
+                            "usableRecordsBeforeDedupe": dedupe_diagnostics["usableRecordsBeforeDedupe"],
+                            "usableRecordsAfterDedupe": dedupe_diagnostics["usableRecordsAfterDedupe"],
+                            "dedupedRecords": dedupe_diagnostics["dedupedRecords"],
+                            "duplicateCanonicalIdCounts": dedupe_diagnostics["duplicateCanonicalIdCounts"],
+                            "rejectionReasonCounts": rejection_counts,
+                            "sampleDedupedProviderRows": dedupe_diagnostics["sampleDedupedProviderRows"],
+                        }
+                    }
+
                     if debug_pokewallet_response:
-                        usable_records = len(prices)
-                        rejected_records = max(0, len(provider_records) - usable_records)
+                        usable_records_before_dedupe = len(pokewallet_prices)
+                        usable_records_after_dedupe = len(prices)
+                        rejected_records = max(0, len(provider_records) - usable_records_before_dedupe)
                         print(
                             "  PokeWallet parse summary: "
-                            f"rawItems={len(provider_records)}, usableRecords={usable_records}, "
+                            f"rawItems={len(provider_records)}, "
+                            f"usableRecordsBeforeDedupe={usable_records_before_dedupe}, "
+                            f"usableRecordsAfterDedupe={usable_records_after_dedupe}, "
+                            f"dedupedRecords={dedupe_diagnostics['dedupedRecords']}, "
                             f"rejectedRecords={rejected_records}, rejectionReasonCounts={rejection_counts}"
                         )
 
@@ -3409,6 +3543,8 @@ def build_english_current_prices_by_set(
                 "priceCount": len(prices),
                 "prices": prices,
             }
+            if current_source == SOURCE_ID_POKEWALLET and provider_diagnostics is not None:
+                payload["providerDiagnostics"] = provider_diagnostics
             enriched_payload = enrich_en_current_set_payload(
                 payload,
                 now_utc=ts,
