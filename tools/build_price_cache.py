@@ -104,6 +104,7 @@ CURRENT_PRICE_VARIANTS = [
 ]
 TMP_BUILD_ROOT = ROOT / ".cache_build_tmp"
 CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_CURRENT_PRICE_REQUEST_CAP"
+CURRENT_PRICE_TRANSIENT_RETRY_COUNT_ENV = "CARDSCANR_CURRENT_PRICE_TRANSIENT_RETRY_COUNT"
 POKEWALLET_API_KEY_ENV = "CARDSCANR_POKEWALLET_API_KEY"
 POKEWALLET_API_KEY_ALIAS_ENV = "POKEWALLET_API_KEY"
 POKEWALLET_SET_SUMMARY_PATH = PUBLIC_DIR / "provider-catalog" / "pokewallet" / "sets-summary.json"
@@ -189,6 +190,16 @@ def parse_bool_env(name: str, default: bool = False) -> bool:
     if not raw_value:
         return default
     return raw_value.lower() in {"1", "true", "yes", "y", "on"}
+
+
+def parse_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return default
+    try:
+        return int(raw_value)
+    except ValueError:
+        return default
 
 
 def resolve_pokewallet_api_key() -> str:
@@ -488,6 +499,10 @@ def is_rate_limited_response(response: requests.Response, detail_text: str = "")
 
 
 def pokewallet_get_detailed(endpoint: str, api_key: str, params: dict | None = None) -> tuple[dict, int]:
+    if CURRENT_PRICE_REQUEST_CAP > 0 and int(REQUEST_TRACKER.get("attempted", 0)) >= CURRENT_PRICE_REQUEST_CAP:
+        raise RequestCapReachedError(
+            f"current price request cap reached before requesting PokeWallet {endpoint}"
+        )
     response = requests.get(
         f"{POKEWALLET_API_BASE}/{endpoint.lstrip('/')}",
         params=params or {},
@@ -546,6 +561,51 @@ def mark_request_attempt(success: bool, rate_limited: bool = False) -> None:
         REQUEST_TRACKER["failed"] += 1
     if rate_limited:
         REQUEST_TRACKER["rateLimited"] += 1
+
+
+def is_transient_request_error(exc: BaseException) -> bool:
+    return isinstance(
+        exc,
+        (
+            requests.Timeout,
+            requests.ConnectionError,
+            requests.ReadTimeout,
+            requests.ConnectTimeout,
+        ),
+    )
+
+
+def record_untracked_transient_request_failure(exc: BaseException) -> None:
+    if is_transient_request_error(exc):
+        mark_request_attempt(success=False)
+
+
+def transient_failure_reason(provider: str, exc: BaseException) -> str:
+    return f"{provider}_{exc.__class__.__name__}"
+
+
+def retry_transient_request(callable_obj, *, provider: str, retries: int, sleep_seconds: float):
+    attempts = max(1, retries + 1)
+    last_exc: requests.RequestException | None = None
+    for attempt in range(1, attempts + 1):
+        if remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
+            raise RequestCapReachedError(f"current price request cap reached before retrying {provider}")
+        try:
+            return callable_obj()
+        except requests.RequestException as exc:
+            if not is_transient_request_error(exc):
+                raise
+            record_untracked_transient_request_failure(exc)
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            if remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
+                raise RequestCapReachedError(f"current price request cap reached after {provider} transient failure") from exc
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("unreachable retry state")
 
 
 def is_rate_limit_detail_text(text: str) -> bool:
@@ -3151,6 +3211,9 @@ def build_english_current_prices_by_set(
         "currentPriceEnStatus": "not_built_yet",
         "currentPriceEnSetsAttempted": 0,
         "currentPriceEnSetsWritten": 0,
+        "currentPriceEnSetsUpdated": 0,
+        "currentPriceEnSetsKeptExisting": 0,
+        "currentPriceEnSetsFailedTransient": 0,
         "currentPriceEnPriceRecordsWritten": 0,
         "currentPriceEnSkippedNoPriceSets": 0,
         "currentPriceEnSource": CURRENT_PRICE_SOURCE,
@@ -3162,6 +3225,10 @@ def build_english_current_prices_by_set(
         "currentPriceEnProviderPriority": provider_priority,
         "currentPriceEnProviderUsed": [],
         "currentPriceEnFallbackReasons": [],
+        "currentPriceEnTransientFailureReasons": [],
+        "currentPriceEnProviderFailureReasons": [],
+        "currentPriceEnKeptExistingSetIds": [],
+        "currentPriceEnFailedTransientSetIds": [],
         "pokewalletEnabled": use_pokewallet_prices,
         "pokewalletApiKeyPresent": pokewallet_api_key_present,
         "providerPriority": provider_priority,
@@ -3172,6 +3239,14 @@ def build_english_current_prices_by_set(
         "pokemonTcgApiFallbackSets": 0,
         "providerFallbackReasons": [],
         "providerSourceCounts": {},
+        "setsAttempted": 0,
+        "setsUpdated": 0,
+        "setsKeptExisting": 0,
+        "setsFailedTransient": 0,
+        "transientFailureReasons": [],
+        "providerFailureReasons": [],
+        "pokewalletNoUsableRecords": 0,
+        "fallbackTimeout": 0,
         "currentPriceEnRequirePokewallet": require_pokewallet_prices,
         "currentPriceEnTargetSetId": None,
     }
@@ -3244,6 +3319,10 @@ def build_english_current_prices_by_set(
     prepare_empty_dir(output_dir)
 
     existing_current_files = load_existing_current_price_files("en")
+    existing_current_file_by_set_id = {
+        str(existing_set_id): (str(existing_set_name), existing_path)
+        for existing_set_id, existing_set_name, existing_path in existing_current_files
+    }
     selected_set_id_lookup = {str(item.get("id") or "") for item in selected_sets}
     for existing_set_id, _existing_set_name, existing_path in existing_current_files:
         if existing_set_id in selected_set_id_lookup:
@@ -3263,8 +3342,20 @@ def build_english_current_prices_by_set(
     page_size = int(config.get("pageSize", 250))
     max_pages_per_set = int(config.get("maxPagesPerSet", 50))
     sleep_seconds = float(config.get("catalogueRequestSleepSeconds", 0.15))
+    transient_retry_count = max(
+        0,
+        min(
+            2,
+            parse_int_env(
+                CURRENT_PRICE_TRANSIENT_RETRY_COUNT_ENV,
+                safe_int(config.get("currentPriceTransientRetryCount"), 1),
+            ),
+        ),
+    )
+    transient_retry_sleep_seconds = max(0.0, float(config.get("currentPriceTransientRetrySleepSeconds", 0.05)))
     written_files: list[tuple[str, str, Path]] = []
     failed_set_ids: list[str] = []
+    transient_failed_set_ids: list[str] = []
     request_cap_reached = False
     pokewallet_set_map = load_pokewallet_set_code_map() if use_pokewallet_prices and pokewallet_api_key else {}
 
@@ -3288,6 +3379,46 @@ def build_english_current_prices_by_set(
             f"{POKEWALLET_REQUIRE_PRICES_ENV}=true requires a configured PokeWallet API key"
         )
 
+    def keep_existing_after_transient_failure(set_id: str, set_name: str, reason: str) -> None:
+        transient_failed_set_ids.append(set_id)
+        if set_id not in metrics["currentPriceEnFailedTransientSetIds"]:
+            metrics["currentPriceEnFailedTransientSetIds"].append(set_id)
+        metrics["currentPriceEnSetsFailedTransient"] += 1
+        metrics["setsFailedTransient"] += 1
+        reason_entry = {"setId": set_id, "reason": reason}
+        metrics["currentPriceEnTransientFailureReasons"].append(reason_entry)
+        metrics["transientFailureReasons"].append(reason_entry)
+        metrics["currentPriceEnProviderFailureReasons"].append(reason_entry)
+        metrics["providerFailureReasons"].append(reason_entry)
+        kept_path = keep_existing_current_price_file(
+            set_id=set_id,
+            output_dir=output_dir,
+            existing_file_by_set_id=existing_current_file_by_set_id,
+        )
+        if kept_path is not None:
+            metrics["currentPriceEnSetsKeptExisting"] += 1
+            metrics["setsKeptExisting"] += 1
+            metrics["currentPriceEnKeptExistingSetIds"].append(set_id)
+            written_files.append((set_id, set_name, kept_path))
+        else:
+            metrics["currentPriceEnSkippedNoPriceSets"] += 1
+        processed_set_ids.append(set_id)
+        print(f"  Failed transiently for set {set_id}, keeping existing file and continuing")
+
+    def keep_existing_after_budget_stop(set_id: str, set_name: str) -> None:
+        kept_path = keep_existing_current_price_file(
+            set_id=set_id,
+            output_dir=output_dir,
+            existing_file_by_set_id=existing_current_file_by_set_id,
+        )
+        if kept_path is not None:
+            metrics["currentPriceEnSetsKeptExisting"] += 1
+            metrics["setsKeptExisting"] += 1
+            metrics["currentPriceEnKeptExistingSetIds"].append(set_id)
+            written_files.append((set_id, set_name, kept_path))
+            if set_id not in processed_set_ids:
+                processed_set_ids.append(set_id)
+
     for set_data in selected_sets:
         set_id = str(set_data.get("id"))
         set_name = str(set_data.get("name") or set_id)
@@ -3300,6 +3431,7 @@ def build_english_current_prices_by_set(
             request_cap_reached = True
             break
         metrics["currentPriceEnSetsAttempted"] += 1
+        metrics["setsAttempted"] += 1
         print(f"  Fetching current prices for set {set_id} ({set_name})")
 
         prices: list[dict] = []
@@ -3430,6 +3562,7 @@ def build_english_current_prices_by_set(
                         print(f"  PokeWallet success for set {set_id}: records={len(prices)}")
                     else:
                         fallback_reason = "pokewallet_no_price_records"
+                        metrics["pokewalletNoUsableRecords"] += 1
                         metrics["pokewalletSetsFailed"] += 1
                         if rejection_counts:
                             metrics["providerFallbackReasons"].append(
@@ -3448,6 +3581,7 @@ def build_english_current_prices_by_set(
                             )
                 except RequestCapReachedError:
                     print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+                    keep_existing_after_budget_stop(set_id, set_name)
                     metrics["currentPriceEnStopReason"] = "request_cap_reached"
                     request_cap_reached = True
                     break
@@ -3464,7 +3598,7 @@ def build_english_current_prices_by_set(
                     metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
                     rate_limited = True
                     break
-                except (requests.RequestException, ValueError) as exc:
+                except requests.RequestException as exc:
                     fallback_reason = f"pokewallet_unavailable:{exc.__class__.__name__}"
                     metrics["pokewalletSetsFailed"] += 1
                     metrics["providerFallbackReasons"].append({"setId": set_id, "reason": fallback_reason})
@@ -3483,15 +3617,21 @@ def build_english_current_prices_by_set(
                     print(f"  Falling back to pokemon_tcg_api for set {set_id}")
                     used_pokemon_fallback = True
                 try:
-                    cards, _total_cards, _pages = fetch_pokemon_tcg_paginated(
-                        "cards",
-                        base_params={"q": f"set.id:{set_id}"},
-                        page_size=page_size,
-                        max_pages=max_pages_per_set,
-                        sleep_seconds=sleep_seconds,
+                    cards, _total_cards, _pages = retry_transient_request(
+                        lambda: fetch_pokemon_tcg_paginated(
+                            "cards",
+                            base_params={"q": f"set.id:{set_id}"},
+                            page_size=page_size,
+                            max_pages=max_pages_per_set,
+                            sleep_seconds=sleep_seconds,
+                        ),
+                        provider=SOURCE_ID_POKEMON_TCG_API,
+                        retries=transient_retry_count,
+                        sleep_seconds=transient_retry_sleep_seconds,
                     )
                 except RequestCapReachedError:
                     print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+                    keep_existing_after_budget_stop(set_id, set_name)
                     metrics["currentPriceEnStopReason"] = "request_cap_reached"
                     request_cap_reached = True
                     break
@@ -3502,12 +3642,17 @@ def build_english_current_prices_by_set(
                     metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
                     rate_limited = True
                     break
-                except (requests.RequestException, ValueError) as exc:
+                except requests.RequestException as exc:
+                    reason = transient_failure_reason(SOURCE_ID_POKEMON_TCG_API, exc)
                     print(f"  [WARN] Failed to build current prices for set {set_id}: {exc}")
-                    failed_set_ids.append(set_id)
+                    if isinstance(exc, (requests.Timeout, requests.ReadTimeout, requests.ConnectTimeout)):
+                        metrics["fallbackTimeout"] += 1
                     if not config.get("continueOnSetError", True):
+                        failed_set_ids.append(set_id)
                         break
-                    continue
+                    keep_existing_after_transient_failure(set_id, set_name, reason)
+                    prices = []
+                    break
 
                 for card in cards:
                     prices.extend(extract_current_price_records(card, ts))
@@ -3523,6 +3668,9 @@ def build_english_current_prices_by_set(
 
         if require_pokewallet_prices and use_pokewallet_prices and not attempted_pokewallet_for_set:
             raise RuntimeError(f"PokeWallet required for set {set_id} but it was not attempted")
+
+        if set_id in transient_failed_set_ids:
+            continue
 
         prices.sort(key=price_sort_key)
         if not prices:
@@ -3556,6 +3704,8 @@ def build_english_current_prices_by_set(
             write_json(price_path, enriched_payload)
             written_files.append((set_id, set_name, price_path))
             metrics["currentPriceEnSetsWritten"] += 1
+            metrics["currentPriceEnSetsUpdated"] += 1
+            metrics["setsUpdated"] += 1
             metrics["currentPriceEnPriceRecordsWritten"] += len(prices)
             processed_set_ids.append(set_id)
             if current_source not in metrics["currentPriceEnProviderUsed"]:
@@ -3591,8 +3741,29 @@ def build_english_current_prices_by_set(
         )
 
     metrics["currentPriceEnRequestsUsed"] = int(REQUEST_TRACKER.get("attempted", 0))
+    if (
+        request_cap_reached
+        and int(metrics.get("currentPriceEnSetsUpdated", 0) or 0) <= 0
+        and int(metrics.get("currentPriceEnSetsKeptExisting", 0) or 0) <= 0
+    ):
+        metrics["currentPriceEnStatus"] = "partial_built"
+        metrics["currentPriceEnStopReason"] = "request_cap_reached"
+        raise RuntimeError(
+            "Request cap reached before any safe EN current price output could be produced; "
+            "leaving existing public current-price cache untouched."
+        )
+    if transient_failed_set_ids and int(metrics.get("currentPriceEnSetsUpdated", 0) or 0) <= 0:
+        metrics["currentPriceEnStatus"] = "failed_transient"
+        metrics["currentPriceEnStopReason"] = "all_sets_failed_transiently"
+        failed_preview = ", ".join(transient_failed_set_ids[:10])
+        raise RuntimeError(
+            "All selected EN current price sets failed transiently; "
+            f"leaving existing public current-price cache untouched. sets={failed_preview}"
+        )
     if metrics["providerFallbackReasons"]:
         metrics["currentPriceEnFallbackReasons"] = list(metrics["providerFallbackReasons"])
+    if metrics["providerFailureReasons"]:
+        metrics["currentPriceEnProviderFailureReasons"] = list(metrics["providerFailureReasons"])
 
     if require_pokewallet_prices and use_pokewallet_prices and metrics["currentPriceEnSetsAttempted"] > 0:
         if int(metrics["pokewalletSetsAttempted"]) <= 0:
@@ -3610,6 +3781,9 @@ def build_english_current_prices_by_set(
     if request_cap_reached:
         metrics["currentPriceEnStatus"] = "partial_built"
         metrics["currentPriceEnStopReason"] = "request_cap_reached"
+    elif transient_failed_set_ids:
+        metrics["currentPriceEnStatus"] = "partial_built"
+        metrics["currentPriceEnStopReason"] = "completed_with_transient_failures"
     elif not rate_limited:
         metrics["currentPriceEnStatus"] = "built"
         metrics["currentPriceEnStopReason"] = "completed"
@@ -3650,6 +3824,24 @@ def load_existing_current_price_files(language: str = "en") -> list[tuple[str, s
         set_name = str(payload.get("setName") or set_id)
         files.append((set_id, set_name, path))
     return files
+
+
+def keep_existing_current_price_file(
+    *,
+    set_id: str,
+    output_dir: Path,
+    existing_file_by_set_id: dict[str, tuple[str, Path]],
+) -> Path | None:
+    existing = existing_file_by_set_id.get(set_id)
+    if existing is None:
+        return None
+    _existing_set_name, existing_path = existing
+    if not existing_path.exists():
+        return None
+    destination = output_dir / existing_path.name
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(existing_path, destination)
+    return destination
 
 
 def build_index_dataset_entry(

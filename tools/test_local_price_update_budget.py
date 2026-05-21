@@ -19,6 +19,40 @@ import build_price_cache as builder  # noqa: E402
 import validate_cache as validator  # noqa: E402
 
 
+def write_existing_current_price_file(path: Path, set_id: str, set_name: str = "Existing Set") -> None:
+    record = builder.build_current_price_record_from_fields(
+        set_id=set_id,
+        set_name=set_name,
+        collector_number="1",
+        normalized_name="existing_card",
+        variant="normal",
+        pricing={"market": 1.0, "low": 0.8, "high": 1.2},
+        ts="2026-05-20T00:00:00Z",
+        source="pokemon_tcg_api",
+    )
+    assert record is not None
+    payload = builder.enrich_en_current_set_payload(
+        {
+            "schemaVersion": builder.SCHEMA_VERSION,
+            "generatedAtUtc": "2026-05-20T00:00:00Z",
+            "game": "pokemon",
+            "language": "en",
+            "setId": set_id,
+            "setName": set_name,
+            "source": "pokemon_tcg_api",
+            "currency": "USD",
+            "priceCount": 1,
+            "prices": [record],
+        },
+        now_utc="2026-05-20T00:00:00Z",
+        expected_update_interval_minutes=60,
+        full_rotation_hours=24,
+        force_last_successful_update_utc="2026-05-20T00:00:00Z",
+        force_next_expected_update_utc="2026-05-20T01:00:00Z",
+    )
+    builder.write_json(path, payload)
+
+
 def test_budget_usage_and_stop_logic() -> None:
     now = datetime.now(timezone.utc)
     state = {
@@ -1248,6 +1282,338 @@ def test_provider_source_counts_track_pokewallet_and_pokemon_fallback() -> None:
             os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
 
 
+def test_transient_fallback_timeout_keeps_existing_file_and_continues() -> None:
+    original_get_detailed = builder.pokewallet_get_detailed
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_catalog_index_loader = builder.load_catalogue_card_index_for_set
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+        builder.load_pokewallet_set_code_map = lambda: {
+            "baseset": [{"providerSetCode": "BS", "providerSetName": "Base Set", "cardCount": 102}]
+        }
+        builder.load_catalogue_card_index_for_set = lambda set_id, language="en": {
+            "1": [{"collectorNumber": "1", "normalizedName": "test_card"}]
+        }
+        builder.pokewallet_get_detailed = lambda endpoint, api_key, params=None: (
+            {"data": [{"card_number": "1", "name": "Test Card", "tcgplayer": {}}]},
+            200,
+        )
+
+        def fake_fetch(endpoint: str, *, base_params=None, page_size=250, max_pages=50, sleep_seconds=0.15):
+            set_id = str((base_params or {}).get("q", "set.id:test")).split(":", 1)[1]
+            if set_id == "base1":
+                raise builder.requests.ReadTimeout("timed out")
+            card = {
+                "id": f"{set_id}-1",
+                "set": {"id": set_id},
+                "number": "1",
+                "name": "Fallback Card",
+                "tcgplayer": {"prices": {"normal": {"market": 2.0, "low": 1.5, "high": 2.5}}},
+            }
+            return [card], 1, 1
+
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+
+        with TemporaryDirectory() as tmp_dir:
+            existing_dir = Path(tmp_dir) / "existing"
+            output_dir = Path(tmp_dir) / "out"
+            existing_dir.mkdir()
+            existing_path = existing_dir / "base1.json"
+            write_existing_current_price_file(existing_path, "base1", "Base Set")
+            existing_bytes = existing_path.read_bytes()
+            builder.load_existing_current_price_files = lambda language="en": [("base1", "Base Set", existing_path)]
+
+            stdout_buffer = io.StringIO()
+            with contextlib.redirect_stdout(stdout_buffer):
+                written_files, metrics, _next_state = builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                        "currentPriceTransientRetryCount": 1,
+                        "currentPriceTransientRetrySleepSeconds": 0,
+                    },
+                    {
+                        "catalogueStatus": "built",
+                        "sets": [
+                            {"id": "base1", "name": "Base Set", "printedTotal": 102},
+                            {"id": "setx", "name": "Set X"},
+                        ],
+                    },
+                    output_dir,
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+
+            assert "Failed transiently for set base1, keeping existing file and continuing" in stdout_buffer.getvalue()
+            assert sorted(item[0] for item in written_files) == ["base1", "setx"]
+            assert (output_dir / "base1.json").read_bytes() == existing_bytes
+            assert (output_dir / "setx.json").exists()
+            assert metrics["currentPriceEnSetsUpdated"] == 1
+            assert metrics["currentPriceEnSetsKeptExisting"] == 1
+            assert metrics["currentPriceEnSetsFailedTransient"] == 1
+            assert metrics["setsUpdated"] == 1
+            assert metrics["setsKeptExisting"] == 1
+            assert metrics["setsFailedTransient"] == 1
+            assert metrics["pokewalletNoUsableRecords"] == 1
+            assert metrics["fallbackTimeout"] == 1
+            assert metrics["currentPriceEnStopReason"] == "completed_with_transient_failures"
+            assert metrics["currentPriceEnKeptExistingSetIds"] == ["base1"]
+            assert metrics["transientFailureReasons"][0]["setId"] == "base1"
+    finally:
+        builder.pokewallet_get_detailed = original_get_detailed
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_catalogue_card_index_for_set = original_catalog_index_loader
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_all_transient_failures_raise_clear_error() -> None:
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_api_key = os.environ.get("CARDSCANR_POKEWALLET_API_KEY")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    original_require = os.environ.get("CARDSCANR_REQUIRE_POKEWALLET_PRICES")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "true"
+        os.environ["CARDSCANR_POKEWALLET_API_KEY"] = "test-key"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokewallet,pokemon_tcg_api"
+        os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = "false"
+        builder.load_pokewallet_set_code_map = lambda: {}
+        builder.load_existing_current_price_files = lambda language="en": []
+        builder.fetch_pokemon_tcg_paginated = lambda *args, **kwargs: (_ for _ in ()).throw(
+            builder.requests.Timeout("temporary")
+        )
+
+        with TemporaryDirectory() as tmp_dir:
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "usePokewalletPrices": True,
+                        "currentPriceTransientRetryCount": 0,
+                        "currentPriceTransientRetrySleepSeconds": 0,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "setx", "name": "Set X"}]},
+                    Path(tmp_dir) / "out",
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected all-transient failure"
+            except RuntimeError as exc:
+                assert "All selected EN current price sets failed transiently" in str(exc)
+    finally:
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_api_key is None:
+            os.environ.pop("CARDSCANR_POKEWALLET_API_KEY", None)
+        else:
+            os.environ["CARDSCANR_POKEWALLET_API_KEY"] = original_api_key
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+        if original_require is None:
+            os.environ.pop("CARDSCANR_REQUIRE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_REQUIRE_POKEWALLET_PRICES"] = original_require
+
+
+def test_structural_fallback_failure_still_raises() -> None:
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "false"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokemon_tcg_api"
+        builder.load_pokewallet_set_code_map = lambda: {}
+        builder.load_existing_current_price_files = lambda language="en": []
+        builder.fetch_pokemon_tcg_paginated = lambda *args, **kwargs: (_ for _ in ()).throw(
+            ValueError("non-list data")
+        )
+        with TemporaryDirectory() as tmp_dir:
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "setx", "name": "Set X"}]},
+                    Path(tmp_dir) / "out",
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected structural failure"
+            except ValueError as exc:
+                assert "non-list data" in str(exc)
+    finally:
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+
+
+def test_transient_retry_count_is_bounded() -> None:
+    original_map_loader = builder.load_pokewallet_set_code_map
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    calls = {"count": 0}
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "false"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokemon_tcg_api"
+        builder.load_pokewallet_set_code_map = lambda: {}
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        def fake_fetch(*args, **kwargs):
+            calls["count"] += 1
+            raise builder.requests.Timeout("temporary")
+
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+        with TemporaryDirectory() as tmp_dir:
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "currentPriceTransientRetryCount": 2,
+                        "currentPriceTransientRetrySleepSeconds": 0,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "setx", "name": "Set X"}]},
+                    Path(tmp_dir) / "out",
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected all-transient failure"
+            except RuntimeError:
+                pass
+        assert calls["count"] == 3
+    finally:
+        builder.load_pokewallet_set_code_map = original_map_loader
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+
+
+def test_request_cap_is_respected_during_transient_retries() -> None:
+    original_fetch = builder.fetch_pokemon_tcg_paginated
+    original_load_existing = builder.load_existing_current_price_files
+    original_cap = builder.CURRENT_PRICE_REQUEST_CAP
+    original_tracker = dict(builder.REQUEST_TRACKER)
+    original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
+    original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
+    calls = {"count": 0}
+    try:
+        os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = "false"
+        os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = "pokemon_tcg_api"
+        builder.reset_request_tracker()
+        builder.CURRENT_PRICE_REQUEST_CAP = 1
+        builder.load_existing_current_price_files = lambda language="en": []
+
+        def fake_fetch(*args, **kwargs):
+            calls["count"] += 1
+            raise builder.requests.Timeout("temporary")
+
+        builder.fetch_pokemon_tcg_paginated = fake_fetch
+        with TemporaryDirectory() as tmp_dir:
+            try:
+                builder.build_english_current_prices_by_set(
+                    "2026-05-21T00:00:00Z",
+                    {
+                        "buildCurrentPricesFromPokemonTcgApi": True,
+                        "scheduledCurrentPriceBatchEnabled": False,
+                        "continueOnSetError": True,
+                        "currentPriceTransientRetryCount": 2,
+                        "currentPriceTransientRetrySleepSeconds": 0,
+                    },
+                    {"catalogueStatus": "built", "sets": [{"id": "setx", "name": "Set X"}]},
+                    Path(tmp_dir) / "out",
+                    "current_prices",
+                    {"enCurrentPriceCursor": 0},
+                    fail_after_set_count=0,
+                )
+                assert False, "expected request-cap failure"
+            except RuntimeError as exc:
+                assert "Request cap reached" in str(exc)
+        assert calls["count"] == 1
+        assert builder.REQUEST_TRACKER["attempted"] == 1
+    finally:
+        builder.fetch_pokemon_tcg_paginated = original_fetch
+        builder.load_existing_current_price_files = original_load_existing
+        builder.CURRENT_PRICE_REQUEST_CAP = original_cap
+        builder.REQUEST_TRACKER.update(original_tracker)
+        if original_use_flag is None:
+            os.environ.pop("CARDSCANR_USE_POKEWALLET_PRICES", None)
+        else:
+            os.environ["CARDSCANR_USE_POKEWALLET_PRICES"] = original_use_flag
+        if original_priority is None:
+            os.environ.pop("CARDSCANR_PRICE_PROVIDER_PRIORITY", None)
+        else:
+            os.environ["CARDSCANR_PRICE_PROVIDER_PRIORITY"] = original_priority
+
+
 def test_detect_rate_limited() -> None:
     assert updater.detect_rate_limited({"currentPriceEnStatus": "rate_limited"}) is True
     assert updater.detect_rate_limited({"buildStatus": "rate_limited"}) is True
@@ -1417,6 +1783,11 @@ if __name__ == "__main__":
     test_require_mode_fails_when_pokewallet_request_fails()
     test_fallback_mode_uses_pokemon_tcg_api_when_pokewallet_unmatched()
     test_provider_source_counts_track_pokewallet_and_pokemon_fallback()
+    test_transient_fallback_timeout_keeps_existing_file_and_continues()
+    test_all_transient_failures_raise_clear_error()
+    test_structural_fallback_failure_still_raises()
+    test_transient_retry_count_is_bounded()
+    test_request_cap_is_respected_during_transient_retries()
     test_detect_rate_limited()
     test_append_request_ledger_keeps_recent_entries()
     test_builder_request_cap_blocks_provider_request_before_exceeding()
