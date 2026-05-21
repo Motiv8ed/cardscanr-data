@@ -1,7 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 89,
-  "lastUpdatedAtUtc": "2026-05-20T21:02:26Z",
+  "enCurrentPriceCursor": 80,
   "lastBatchSetIds": [
     "mcd21",
     "mcd22",
@@ -12,17 +10,7 @@
     "neo1",
     "neo2",
     "neo3",
-    "neo4",
-    "np",
-    "pgo",
-    "pl1",
-    "pl2",
-    "pl3",
-    "pl4",
-    "pop1",
-    "pop2",
-    "pop3",
-    "pop4"
+    "neo4"
   ],
   "lastProcessedSetIds": [
     "mcd21",
@@ -34,19 +22,11 @@
     "neo1",
     "neo2",
     "neo3",
-    "neo4",
-    "np",
-    "pgo",
-    "pl1",
-    "pl2",
-    "pl3",
-    "pl4",
-    "pop1",
-    "pop2",
-    "pop3"
+    "neo4"
   ],
-  "lastStopReason": "request_cap_reached",
   "lastRateLimited": false,
+  "lastStopReason": "completed",
+  "lastUpdatedAtUtc": "2026-05-21T01:20:01Z",
   "requestLedger": [
     {
       "requests": 20,
@@ -65,12 +45,7 @@
       "source": "local_price_update",
       "status": "built",
       "timestampUtc": "2026-05-20T20:59:29Z"
-    },
-    {
-      "timestampUtc": "2026-05-20T21:03:33Z",
-      "requests": 20,
-      "status": "partial_built",
-      "source": "local_price_update"
     }
-  ]
+  ],
+  "schemaVersion": "1.0.0"
 }
