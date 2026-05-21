@@ -1,0 +1,79 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": 60,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-21T13:58:35Z",
+  "isLivePricing": false,
+  "language": "en",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T13:58:35Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:58:35Z",
+  "priceCount": 1,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|en|hgss1|ONE|alph_lithograph",
+      "canonicalId": "pokemon|en|hgss1|ONE|alph_lithograph|holo|near_mint",
+      "collectorNumber": "ONE",
+      "condition": "near_mint",
+      "confidence": "medium",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "notes": [
+          "pokewallet_tcgplayer_usd"
+        ],
+        "providerRecord": {
+          "cardName": "Alph Lithograph",
+          "cardNumber": "ONE",
+          "variant": "Holofoil"
+        },
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-21T13:58:35Z",
+      "highPrice": 963.0,
+      "lowPrice": 73.69,
+      "market": "us",
+      "marketPrice": 104.12,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:58:35Z",
+      "normalizedName": "alph_lithograph",
+      "priceIdentityId": "pokemon|en|hgss1|ONE|alph_lithograph|holo|near_mint|us|usd",
+      "setId": "hgss1",
+      "setName": "HeartGold & SoulSilver",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "providerDiagnostics": {
+    "pokewallet": {
+      "dedupedRecords": 0,
+      "duplicateCanonicalIdCounts": {},
+      "rawItems": 232,
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 231
+      },
+      "sampleDedupedProviderRows": [],
+      "usableRecordsAfterDedupe": 1,
+      "usableRecordsBeforeDedupe": 1
+    }
+  },
+  "schemaVersion": "1.0.0",
+  "setId": "hgss1",
+  "setName": "HeartGold & SoulSilver",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "ok"
+}

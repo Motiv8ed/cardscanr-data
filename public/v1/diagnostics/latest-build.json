@@ -1,7 +1,7 @@
 {
   "buildStatus": "success",
-  "builtAtUtc": "2026-05-21T13:56:44Z",
-  "cacheVersion": "2026.05.21.1356",
+  "builtAtUtc": "2026-05-21T13:58:35Z",
+  "cacheVersion": "2026.05.21.1358",
   "cardsPriced": 0,
   "cardsRequested": 4,
   "catalogueEnCardsFetched": 20237,
@@ -43,20 +43,20 @@
   "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
   "catalogueJpStatus": "partial_built",
   "catalogueJpStoppedReason": "not_rebuilt",
-  "currentPriceEnBatchCursorAfter": 51,
-  "currentPriceEnBatchCursorBefore": 41,
+  "currentPriceEnBatchCursorAfter": 60,
+  "currentPriceEnBatchCursorBefore": 50,
   "currentPriceEnBatchEnabled": true,
   "currentPriceEnBatchSetIds": [
-    "ex13",
-    "ex14",
-    "ex15",
-    "ex16",
-    "ex2",
-    "ex3",
-    "ex4",
-    "ex5",
-    "ex6",
-    "ex7"
+    "ex7",
+    "ex8",
+    "ex9",
+    "fut20",
+    "g1",
+    "gym1",
+    "gym2",
+    "hgss1",
+    "hgss2",
+    "hgss3"
   ],
   "currentPriceEnBatchSize": 10,
   "currentPriceEnBatchStrategy": "rotating_set_batch",
@@ -67,80 +67,65 @@
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 210
+        "unsupported_currency": 111
       },
-      "setId": "ex13"
+      "setId": "ex7"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 189
+        "no_catalogue_match": 224
       },
-      "setId": "ex14"
+      "setId": "ex8"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 191
+        "no_catalogue_match": 214
       },
-      "setId": "ex15"
+      "setId": "ex9"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 199
+        "unsupported_currency": 5
       },
-      "setId": "ex16"
+      "setId": "fut20"
+    },
+    {
+      "reason": "pokewallet_set_code_unresolved:ambiguous_exact_code_match",
+      "setId": "g1"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 193
+        "no_catalogue_match": 264
       },
-      "setId": "ex2"
+      "setId": "gym1"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 188
+        "missing_tcgplayer_price": 1,
+        "no_catalogue_match": 264
       },
-      "setId": "ex3"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 185
-      },
-      "setId": "ex4"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 194
-      },
-      "setId": "ex5"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 241
-      },
-      "setId": "ex6"
+      "setId": "gym2"
     }
   ],
   "currentPriceEnFullRotationEstimatedHours": 18,
   "currentPriceEnKeptExistingSetIds": [],
-  "currentPriceEnPriceRecordsWritten": 1781,
+  "currentPriceEnPriceRecordsWritten": 882,
   "currentPriceEnProcessedSetIds": [
-    "ex13",
-    "ex14",
-    "ex15",
-    "ex16",
-    "ex2",
-    "ex3",
-    "ex4",
-    "ex5",
-    "ex6"
+    "ex7",
+    "ex8",
+    "ex9",
+    "fut20",
+    "g1",
+    "gym1",
+    "gym2",
+    "hgss1",
+    "hgss2",
+    "hgss3"
   ],
   "currentPriceEnProviderFailureReasons": [],
   "currentPriceEnProviderPriority": [
@@ -148,21 +133,22 @@
     "pokemon_tcg_api"
   ],
   "currentPriceEnProviderUsed": [
-    "pokemon_tcg_api"
+    "pokemon_tcg_api",
+    "pokewallet"
   ],
   "currentPriceEnRateLimited": false,
-  "currentPriceEnRequestCap": 18,
-  "currentPriceEnRequestsUsed": 18,
+  "currentPriceEnRequestCap": 19,
+  "currentPriceEnRequestsUsed": 16,
   "currentPriceEnRequirePokewallet": false,
-  "currentPriceEnSetsAttempted": 9,
+  "currentPriceEnSetsAttempted": 10,
   "currentPriceEnSetsFailedTransient": 0,
   "currentPriceEnSetsKeptExisting": 0,
-  "currentPriceEnSetsUpdated": 9,
-  "currentPriceEnSetsWritten": 9,
+  "currentPriceEnSetsUpdated": 10,
+  "currentPriceEnSetsWritten": 10,
   "currentPriceEnSkippedNoPriceSets": 0,
-  "currentPriceEnSource": "pokemon_tcg_api",
-  "currentPriceEnStatus": "partial_built",
-  "currentPriceEnStopReason": "request_cap_reached",
+  "currentPriceEnSource": "mixed",
+  "currentPriceEnStatus": "built",
+  "currentPriceEnStopReason": "completed",
   "currentPriceEnTargetSetId": null,
   "currentPriceEnTransientFailureReasons": [],
   "currentPriceJpPriceRecordsWritten": 0,
@@ -458,6 +444,16 @@
     "prices_current_pokemon_en_ex4",
     "prices_current_pokemon_en_ex5",
     "prices_current_pokemon_en_ex6",
+    "prices_current_pokemon_en_ex7",
+    "prices_current_pokemon_en_ex8",
+    "prices_current_pokemon_en_ex9",
+    "prices_current_pokemon_en_fut20",
+    "prices_current_pokemon_en_g1",
+    "prices_current_pokemon_en_gym1",
+    "prices_current_pokemon_en_gym2",
+    "prices_current_pokemon_en_hgss1",
+    "prices_current_pokemon_en_hgss2",
+    "prices_current_pokemon_en_hgss3",
     "prices_current_pokemon_en_status",
     "prices_current_pokemon_jp_status",
     "prices_pokemon_en",
@@ -475,78 +471,62 @@
   "livePriceCount": 0,
   "manualFallbackCount": 0,
   "noResultCount": 0,
-  "pokemonTcgApiFallbackSets": 9,
+  "pokemonTcgApiFallbackSets": 7,
   "pokewalletApiKeyPresent": true,
   "pokewalletEnabled": true,
-  "pokewalletNoUsableRecords": 9,
+  "pokewalletNoUsableRecords": 6,
   "pokewalletSetsAttempted": 9,
-  "pokewalletSetsFailed": 9,
-  "pokewalletSetsSkippedNoMatch": 0,
-  "pokewalletSetsSucceeded": 0,
+  "pokewalletSetsFailed": 6,
+  "pokewalletSetsSkippedNoMatch": 1,
+  "pokewalletSetsSucceeded": 3,
   "providerFailureReasons": [],
   "providerFallbackReasons": [
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 210
+        "unsupported_currency": 111
       },
-      "setId": "ex13"
+      "setId": "ex7"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 189
+        "no_catalogue_match": 224
       },
-      "setId": "ex14"
+      "setId": "ex8"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 191
+        "no_catalogue_match": 214
       },
-      "setId": "ex15"
+      "setId": "ex9"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 199
+        "unsupported_currency": 5
       },
-      "setId": "ex16"
+      "setId": "fut20"
+    },
+    {
+      "reason": "pokewallet_set_code_unresolved:ambiguous_exact_code_match",
+      "setId": "g1"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 193
+        "no_catalogue_match": 264
       },
-      "setId": "ex2"
+      "setId": "gym1"
     },
     {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 188
+        "missing_tcgplayer_price": 1,
+        "no_catalogue_match": 264
       },
-      "setId": "ex3"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 185
-      },
-      "setId": "ex4"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 194
-      },
-      "setId": "ex5"
-    },
-    {
-      "reason": "pokewallet_no_price_records",
-      "rejectionReasonCounts": {
-        "no_catalogue_match": 241
-      },
-      "setId": "ex6"
+      "setId": "gym2"
     }
   ],
   "providerPriority": [
@@ -554,21 +534,22 @@
     "pokemon_tcg_api"
   ],
   "providerRateLimitedCount": 0,
-  "providerRequestsAttempted": 18,
+  "providerRequestsAttempted": 16,
   "providerRequestsFailed": 0,
-  "providerRequestsSucceeded": 18,
+  "providerRequestsSucceeded": 16,
   "providerSourceCounts": {
-    "pokemon_tcg_api": 9
+    "pokemon_tcg_api": 7,
+    "pokewallet": 3
   },
   "rateLimitStatus": "not_limited",
-  "requestCap": 18,
-  "requestsUsed": 18,
-  "setsAttempted": 9,
+  "requestCap": 19,
+  "requestsUsed": 16,
+  "setsAttempted": 10,
   "setsFailedTransient": 0,
   "setsKeptExisting": 0,
-  "setsUpdated": 9,
+  "setsUpdated": 10,
   "sourcesUsed": [],
-  "stopReason": "request_cap_reached",
+  "stopReason": "completed",
   "tcgdexAttempted": 0,
   "tcgdexMatched": 0,
   "tcgdexNoMatch": 0,
