@@ -1,7 +1,7 @@
 {
   "buildStatus": "success",
-  "builtAtUtc": "2026-05-21T14:04:57Z",
-  "cacheVersion": "2026.05.21.1404",
+  "builtAtUtc": "2026-05-21T14:57:47Z",
+  "cacheVersion": "2026.05.21.1457",
   "cardsPriced": 0,
   "cardsRequested": 4,
   "catalogueEnCardsFetched": 20237,
@@ -43,12 +43,10 @@
   "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
   "catalogueJpStatus": "partial_built",
   "catalogueJpStoppedReason": "not_rebuilt",
-  "currentPriceEnBatchCursorAfter": 91,
-  "currentPriceEnBatchCursorBefore": 81,
+  "currentPriceEnBatchCursorAfter": 93,
+  "currentPriceEnBatchCursorBefore": 83,
   "currentPriceEnBatchEnabled": true,
   "currentPriceEnBatchSetIds": [
-    "pgo",
-    "pl1",
     "pl2",
     "pl3",
     "pl4",
@@ -56,7 +54,9 @@
     "pop2",
     "pop3",
     "pop4",
-    "pop5"
+    "pop5",
+    "pop6",
+    "pop7"
   ],
   "currentPriceEnBatchSize": 10,
   "currentPriceEnBatchStrategy": "rotating_set_batch",
@@ -65,19 +65,57 @@
   "currentPriceEnFailedTransientSetIds": [],
   "currentPriceEnFallbackReasons": [
     {
+      "reason": "pokewallet_set_code_unresolved:ambiguous_exact_code_match",
+      "setId": "pl2"
+    },
+    {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 148
+        "no_catalogue_match": 24
       },
-      "setId": "pgo"
+      "setId": "pop1"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 24
+      },
+      "setId": "pop2"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 26
+      },
+      "setId": "pop3"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 26
+      },
+      "setId": "pop4"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 23
+      },
+      "setId": "pop5"
     }
   ],
   "currentPriceEnFullRotationEstimatedHours": 18,
   "currentPriceEnKeptExistingSetIds": [],
-  "currentPriceEnPriceRecordsWritten": 148,
+  "currentPriceEnPriceRecordsWritten": 640,
   "currentPriceEnProcessedSetIds": [
-    "pgo",
-    "pl1"
+    "pl2",
+    "pl3",
+    "pl4",
+    "pop1",
+    "pop2",
+    "pop3",
+    "pop4",
+    "pop5"
   ],
   "currentPriceEnProviderFailureReasons": [],
   "currentPriceEnProviderPriority": [
@@ -89,14 +127,14 @@
     "pokewallet"
   ],
   "currentPriceEnRateLimited": false,
-  "currentPriceEnRequestCap": 3,
-  "currentPriceEnRequestsUsed": 3,
+  "currentPriceEnRequestCap": 18,
+  "currentPriceEnRequestsUsed": 18,
   "currentPriceEnRequirePokewallet": false,
-  "currentPriceEnSetsAttempted": 2,
+  "currentPriceEnSetsAttempted": 8,
   "currentPriceEnSetsFailedTransient": 0,
   "currentPriceEnSetsKeptExisting": 0,
-  "currentPriceEnSetsUpdated": 2,
-  "currentPriceEnSetsWritten": 2,
+  "currentPriceEnSetsUpdated": 8,
+  "currentPriceEnSetsWritten": 8,
   "currentPriceEnSkippedNoPriceSets": 0,
   "currentPriceEnSource": "mixed",
   "currentPriceEnStatus": "partial_built",
@@ -422,6 +460,14 @@
     "prices_current_pokemon_en_np",
     "prices_current_pokemon_en_pgo",
     "prices_current_pokemon_en_pl1",
+    "prices_current_pokemon_en_pl2",
+    "prices_current_pokemon_en_pl3",
+    "prices_current_pokemon_en_pl4",
+    "prices_current_pokemon_en_pop1",
+    "prices_current_pokemon_en_pop2",
+    "prices_current_pokemon_en_pop3",
+    "prices_current_pokemon_en_pop4",
+    "prices_current_pokemon_en_pop5",
     "prices_current_pokemon_en_status",
     "prices_current_pokemon_jp_status",
     "prices_pokemon_en",
@@ -439,22 +485,54 @@
   "livePriceCount": 0,
   "manualFallbackCount": 0,
   "noResultCount": 0,
-  "pokemonTcgApiFallbackSets": 1,
+  "pokemonTcgApiFallbackSets": 6,
   "pokewalletApiKeyPresent": true,
   "pokewalletEnabled": true,
-  "pokewalletNoUsableRecords": 1,
-  "pokewalletSetsAttempted": 2,
-  "pokewalletSetsFailed": 1,
-  "pokewalletSetsSkippedNoMatch": 0,
-  "pokewalletSetsSucceeded": 1,
+  "pokewalletNoUsableRecords": 5,
+  "pokewalletSetsAttempted": 7,
+  "pokewalletSetsFailed": 5,
+  "pokewalletSetsSkippedNoMatch": 1,
+  "pokewalletSetsSucceeded": 2,
   "providerFailureReasons": [],
   "providerFallbackReasons": [
     {
+      "reason": "pokewallet_set_code_unresolved:ambiguous_exact_code_match",
+      "setId": "pl2"
+    },
+    {
       "reason": "pokewallet_no_price_records",
       "rejectionReasonCounts": {
-        "no_catalogue_match": 148
+        "no_catalogue_match": 24
       },
-      "setId": "pgo"
+      "setId": "pop1"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 24
+      },
+      "setId": "pop2"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 26
+      },
+      "setId": "pop3"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 26
+      },
+      "setId": "pop4"
+    },
+    {
+      "reason": "pokewallet_no_price_records",
+      "rejectionReasonCounts": {
+        "no_catalogue_match": 23
+      },
+      "setId": "pop5"
     }
   ],
   "providerPriority": [
@@ -462,20 +540,20 @@
     "pokemon_tcg_api"
   ],
   "providerRateLimitedCount": 0,
-  "providerRequestsAttempted": 3,
+  "providerRequestsAttempted": 18,
   "providerRequestsFailed": 0,
-  "providerRequestsSucceeded": 3,
+  "providerRequestsSucceeded": 18,
   "providerSourceCounts": {
-    "pokemon_tcg_api": 1,
-    "pokewallet": 1
+    "pokemon_tcg_api": 6,
+    "pokewallet": 2
   },
   "rateLimitStatus": "not_limited",
-  "requestCap": 3,
-  "requestsUsed": 3,
-  "setsAttempted": 2,
+  "requestCap": 18,
+  "requestsUsed": 18,
+  "setsAttempted": 8,
   "setsFailedTransient": 0,
   "setsKeptExisting": 0,
-  "setsUpdated": 2,
+  "setsUpdated": 8,
   "sourcesUsed": [],
   "stopReason": "request_cap_reached",
   "tcgdexAttempted": 0,
