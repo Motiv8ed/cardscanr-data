@@ -26,6 +26,7 @@ import time
 import unicodedata
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
@@ -65,6 +66,7 @@ DIAGNOSTICS_CACHE_TTL_SECONDS = 900
 HISTORY_CACHE_TTL_SECONDS = 86400
 CATALOG_CACHE_TTL_SECONDS = 86400
 POKEMON_TCG_API_BASE = "https://api.pokemontcg.io/v2"
+POKEWALLET_API_BASE = "https://api.pokewallet.io"
 SOURCE_ID_POKEMON_TCG_API = "pokemon_tcg_api"
 SOURCE_ID_TCGDEX = "tcgdex"
 SOURCE_ID_TCGDEX_TCGPLAYER = "tcgdex_tcgplayer"
@@ -101,6 +103,11 @@ CURRENT_PRICE_VARIANTS = [
 ]
 TMP_BUILD_ROOT = ROOT / ".cache_build_tmp"
 CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_CURRENT_PRICE_REQUEST_CAP"
+POKEWALLET_API_KEY_ENV = "CARDSCANR_POKEWALLET_API_KEY"
+POKEWALLET_API_KEY_ALIAS_ENV = "POKEWALLET_API_KEY"
+POKEWALLET_SET_SUMMARY_PATH = PUBLIC_DIR / "provider-catalog" / "pokewallet" / "sets-summary.json"
+POKEWALLET_PRICE_PROVIDER_PRIORITY_ENV = "CARDSCANR_PRICE_PROVIDER_PRIORITY"
+POKEWALLET_USE_PRICES_ENV = "CARDSCANR_USE_POKEWALLET_PRICES"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -172,6 +179,138 @@ def parse_positive_int_env(name: str) -> int:
     if value < 0:
         raise ValueError(f"{name} must be >= 0")
     return value
+
+
+def parse_bool_env(name: str, default: bool = False) -> bool:
+    raw_value = os.getenv(name, "").strip()
+    if not raw_value:
+        return default
+    return raw_value.lower() in {"1", "true", "yes", "y", "on"}
+
+
+def resolve_pokewallet_api_key() -> str:
+    for env_name in (POKEWALLET_API_KEY_ENV, POKEWALLET_API_KEY_ALIAS_ENV):
+        raw_value = os.getenv(env_name, "").strip()
+        if raw_value:
+            return raw_value
+    return ""
+
+
+def normalize_lookup_text(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "", normalize_catalog_name(str(value or "")))
+
+
+def load_pokewallet_set_code_map() -> dict[str, list[dict[str, object]]]:
+    if not POKEWALLET_SET_SUMMARY_PATH.exists():
+        return {}
+    payload = load_json(POKEWALLET_SET_SUMMARY_PATH)
+    languages = payload.get("languages") if isinstance(payload.get("languages"), dict) else {}
+    entries: list[dict[str, object]] = []
+    for language_data in languages.values():
+        if not isinstance(language_data, dict):
+            continue
+        for item in language_data.get("setFiles", []):
+            if not isinstance(item, dict):
+                continue
+            provider_set_code = str(item.get("providerSetCode") or "").strip()
+            provider_set_name = str(item.get("providerSetName") or "").strip()
+            provider_set_id = str(item.get("providerSetId") or "").strip()
+            if not provider_set_code and not provider_set_name and not provider_set_id:
+                continue
+            entries.append(
+                {
+                    "providerSetCode": provider_set_code,
+                    "providerSetName": provider_set_name,
+                    "providerSetId": provider_set_id,
+                    "cardCount": int(item.get("cardCount") or 0),
+                    "updatedAtUtc": str(item.get("updatedAtUtc") or ""),
+                    "language": str(item.get("cardScanRLanguage") or "").strip().lower(),
+                    "lookupName": normalize_lookup_text(provider_set_name),
+                }
+            )
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for item in entries:
+        lookup_name = str(item.get("lookupName") or "")
+        if not lookup_name:
+            continue
+        grouped.setdefault(lookup_name, []).append(item)
+    return grouped
+
+
+def resolve_pokewallet_set_code(set_data: dict, set_map: dict[str, list[dict[str, object]]]) -> str | None:
+    set_name = str(set_data.get("name") or "").strip()
+    if not set_name:
+        return None
+    lookup_name = normalize_lookup_text(set_name)
+    candidates = list(set_map.get(lookup_name, []))
+    if not candidates:
+        return None
+
+    printed_total = safe_int(set_data.get("printedTotal"))
+    total = safe_int(set_data.get("total"))
+    set_card_count = printed_total if printed_total is not None else total
+
+    def score_candidate(candidate: dict[str, object]) -> tuple[int, int, int, str]:
+        score = 0
+        if normalize_lookup_text(candidate.get("providerSetName")) == lookup_name:
+            score += 3
+        candidate_card_count = safe_int(candidate.get("cardCount"))
+        if set_card_count is not None and candidate_card_count is not None:
+            diff = abs(candidate_card_count - set_card_count)
+            if diff == 0:
+                score += 4
+            elif diff <= 3:
+                score += 2
+            elif diff <= 10:
+                score += 1
+        provider_set_code = str(candidate.get("providerSetCode") or "")
+        provider_set_id = str(candidate.get("providerSetId") or "")
+        return score, len(provider_set_code), len(provider_set_id), provider_set_code
+
+    best_candidate = sorted(candidates, key=score_candidate, reverse=True)[0]
+    best_code = str(best_candidate.get("providerSetCode") or "").strip()
+    return best_code or None
+
+
+def is_rate_limited_response(response: requests.Response, detail_text: str = "") -> bool:
+    if response.status_code == 429:
+        return True
+    if response.status_code in {401, 403, 400} and is_rate_limit_detail_text(detail_text):
+        return True
+    return False
+
+
+def pokewallet_get(endpoint: str, api_key: str, params: dict | None = None) -> dict:
+    response = requests.get(
+        f"{POKEWALLET_API_BASE}/{endpoint.lstrip('/')}",
+        params=params or {},
+        headers={"X-API-Key": api_key},
+        timeout=30,
+    )
+    payload: object = {}
+    detail_text = ""
+    try:
+        payload = response.json()
+        detail_text = extract_error_detail(payload)
+    except ValueError:
+        detail_text = (response.text or "").strip()
+
+    if is_rate_limited_response(response, detail_text):
+        mark_request_attempt(success=False, rate_limited=True)
+        raise ProviderRateLimitError(
+            provider=SOURCE_ID_POKEWALLET,
+            status_code=response.status_code,
+            detail=detail_text or "provider reported a request limit",
+        )
+
+    if response.status_code >= 400:
+        mark_request_attempt(success=False)
+        response.raise_for_status()
+
+    mark_request_attempt(success=True)
+    if not isinstance(payload, dict):
+        raise ValueError(f"PokéWallet API returned non-object payload for {endpoint}")
+    return payload
 
 
 def reset_request_tracker() -> None:
@@ -2354,22 +2493,28 @@ def compact_current_price(pricing: dict) -> dict | None:
     }
 
 
-def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str) -> dict | None:
+def build_current_price_record_from_fields(
+    *,
+    set_id: str,
+    set_name: str,
+    collector_number: str,
+    normalized_name: str,
+    variant: str,
+    pricing: dict,
+    ts: str,
+    source: str = CURRENT_PRICE_SOURCE,
+    currency: str = CURRENT_PRICE_CURRENCY,
+    market: str = "us",
+    country: str = "US",
+) -> dict | None:
     compacted = compact_current_price(pricing)
     if compacted is None:
         return None
 
-    set_data = card.get("set") if isinstance(card.get("set"), dict) else {}
-    set_id = str(set_data.get("id") or "")
-    collector_number = str(card.get("number") or "")
-    normalized_name = normalize_catalog_name(card.get("name", ""))
-
     canonical_card_id = f"pokemon|en|{set_id}|{collector_number}|{normalized_name}"
-    currency_value = CURRENT_PRICE_CURRENCY
-    market_value = "us"
     condition_value = "near_mint"
     price_identity_id = (
-        f"{canonical_card_id}|{variant}|{condition_value}|{market_value}|{currency_value.lower()}"
+        f"{canonical_card_id}|{variant}|{condition_value}|{market}|{currency.lower()}"
     )
 
     return {
@@ -2377,15 +2522,16 @@ def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str)
         "canonicalCardId": canonical_card_id,
         "priceIdentityId": price_identity_id,
         "setId": set_id,
+        "setName": set_name,
         "collectorNumber": collector_number,
         "normalizedName": normalized_name,
         "variant": variant,
         "condition": condition_value,
-        "currency": currency_value,
-        "market": market_value,
-        "country": "US",
-        "sourceCurrency": currency_value,
-        "targetCurrency": currency_value,
+        "currency": currency,
+        "market": market,
+        "country": country,
+        "sourceCurrency": currency,
+        "targetCurrency": currency,
         "conversionPolicy": "none",
         "status": "priced",
         "confidence": "medium",
@@ -2396,9 +2542,22 @@ def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str)
         "marketPrice": compacted["marketPrice"],
         "lowPrice": compacted["lowPrice"],
         "highPrice": compacted["highPrice"],
-        "source": CURRENT_PRICE_SOURCE,
+        "source": source,
         "fetchedAtUtc": ts,
     }
+
+
+def build_current_price_record(card: dict, variant: str, pricing: dict, ts: str) -> dict | None:
+    set_data = card.get("set") if isinstance(card.get("set"), dict) else {}
+    return build_current_price_record_from_fields(
+        set_id=str(set_data.get("id") or ""),
+        set_name=str(set_data.get("name") or ""),
+        collector_number=str(card.get("number") or ""),
+        normalized_name=normalize_catalog_name(card.get("name", "")),
+        variant=variant,
+        pricing=pricing,
+        ts=ts,
+    )
 
 
 def extract_current_price_records(card: dict, ts: str) -> list[dict]:
@@ -2418,6 +2577,72 @@ def extract_current_price_records(card: dict, ts: str) -> list[dict]:
         if record is not None:
             records.append(record)
     return records
+
+
+def iter_pokewallet_price_variants(record: dict) -> list[tuple[str, str, str, dict]]:
+    variants: list[tuple[str, str, str, dict]] = []
+    tcgplayer = record.get("tcgplayer") if isinstance(record.get("tcgplayer"), dict) else None
+    if isinstance(tcgplayer, dict):
+        prices = tcgplayer.get("prices")
+        price_objects: list[dict] = []
+        if isinstance(prices, dict):
+            price_objects = [item for item in prices.values() if isinstance(item, dict)]
+        elif isinstance(prices, list):
+            price_objects = [item for item in prices if isinstance(item, dict)]
+        for item in price_objects:
+            if compact_current_price(item) is None:
+                continue
+            variant = str(item.get("sub_type_name") or item.get("variant") or record.get("variant") or "normal")
+            variants.append((SOURCE_ID_POKEWALLET, "USD", "us", item, variant))
+
+    return variants
+
+
+def extract_pokewallet_current_price_records(record: dict, set_data: dict, ts: str) -> list[dict]:
+    collector_number = str(record.get("card_number") or record.get("number") or "").strip()
+    normalized_name = normalize_catalog_name(str(record.get("name") or ""))
+    set_id = str(set_data.get("id") or "")
+    set_name = str(set_data.get("name") or "")
+
+    records: list[dict] = []
+    for source, currency, market, pricing, variant in iter_pokewallet_price_variants(record):
+        current = build_current_price_record_from_fields(
+            set_id=set_id,
+            set_name=set_name,
+            collector_number=collector_number,
+            normalized_name=normalized_name,
+            variant=variant,
+            pricing=pricing,
+            ts=ts,
+            source=source,
+            currency=currency,
+            market=market,
+            country=market.upper(),
+        )
+        if current is not None:
+            records.append(current)
+    return records
+
+
+def resolve_price_provider_priority(config: dict) -> list[str]:
+    raw_value = str(
+        os.getenv(POKEWALLET_PRICE_PROVIDER_PRIORITY_ENV, "")
+        or config.get("priceProviderPriority")
+        or config.get("currentPriceProviderPriority")
+        or ""
+    ).strip()
+    if not raw_value:
+        return [SOURCE_ID_POKEMON_TCG_API]
+    providers = [item.strip().lower() for item in raw_value.split(",") if item.strip()]
+    return providers or [SOURCE_ID_POKEMON_TCG_API]
+
+
+def should_use_pokewallet_prices(config: dict) -> bool:
+    flag = parse_bool_env(POKEWALLET_USE_PRICES_ENV, default=False)
+    if bool(config.get("usePokewalletPrices", False)):
+        flag = True
+    priority = resolve_price_provider_priority(config)
+    return flag or (priority and priority[0] == SOURCE_ID_POKEWALLET)
 
 
 def build_english_current_prices_by_set(
@@ -2441,6 +2666,9 @@ def build_english_current_prices_by_set(
         "currentPriceEnRequestCap": CURRENT_PRICE_REQUEST_CAP,
         "currentPriceEnRequestsUsed": 0,
         "currentPriceEnStopReason": None,
+        "currentPriceEnProviderPriority": resolve_price_provider_priority(config),
+        "currentPriceEnProviderUsed": [],
+        "currentPriceEnFallbackReasons": [],
     }
 
     if not config.get("buildCurrentPricesFromPokemonTcgApi", True):
@@ -2522,6 +2750,9 @@ def build_english_current_prices_by_set(
     written_files: list[tuple[str, str, Path]] = []
     failed_set_ids: list[str] = []
     request_cap_reached = False
+    use_pokewallet_prices = should_use_pokewallet_prices(config)
+    pokewallet_api_key = resolve_pokewallet_api_key() if use_pokewallet_prices else ""
+    pokewallet_set_map = load_pokewallet_set_code_map() if use_pokewallet_prices and pokewallet_api_key else {}
 
     for set_data in selected_sets:
         set_id = str(set_data.get("id"))
@@ -2533,36 +2764,74 @@ def build_english_current_prices_by_set(
         metrics["currentPriceEnSetsAttempted"] += 1
         print(f"  Fetching current prices for set {set_id} ({set_name})")
 
-        try:
-            cards, _total_cards, _pages = fetch_pokemon_tcg_paginated(
-                "cards",
-                base_params={"q": f"set.id:{set_id}"},
-                page_size=page_size,
-                max_pages=max_pages_per_set,
-                sleep_seconds=sleep_seconds,
-            )
-        except RequestCapReachedError:
-            print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
-            metrics["currentPriceEnStopReason"] = "request_cap_reached"
-            request_cap_reached = True
-            break
-        except ProviderRateLimitError as exc:
-            print(f"  [WARN] Provider rate limit while building EN prices for set {set_id}: {exc}")
-            metrics["currentPriceEnStatus"] = "rate_limited"
-            metrics["currentPriceEnRateLimited"] = True
-            metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
-            rate_limited = True
-            break
-        except (requests.RequestException, ValueError) as exc:
-            print(f"  [WARN] Failed to build current prices for set {set_id}: {exc}")
-            failed_set_ids.append(set_id)
-            if not config.get("continueOnSetError", True):
-                break
-            continue
-
         prices: list[dict] = []
-        for card in cards:
-            prices.extend(extract_current_price_records(card, ts))
+        current_source = CURRENT_PRICE_SOURCE
+        fallback_reason = ""
+
+        if use_pokewallet_prices and pokewallet_api_key:
+            set_code = resolve_pokewallet_set_code(set_data, pokewallet_set_map)
+            if set_code:
+                try:
+                    payload = pokewallet_get(f"prices/{quote(set_code, safe='')}", pokewallet_api_key)
+                    raw_records = payload.get("data") if isinstance(payload.get("data"), list) else payload.get("results")
+                    provider_records = [item for item in raw_records if isinstance(item, dict)] if isinstance(raw_records, list) else []
+                    for record in provider_records:
+                        prices.extend(extract_pokewallet_current_price_records(record, set_data, ts))
+                    if prices:
+                        current_source = SOURCE_ID_POKEWALLET
+                    else:
+                        fallback_reason = "pokewallet_no_price_records"
+                except RequestCapReachedError:
+                    print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+                    metrics["currentPriceEnStopReason"] = "request_cap_reached"
+                    request_cap_reached = True
+                    break
+                except ProviderRateLimitError as exc:
+                    print(f"  [WARN] Provider rate limit while building EN prices for set {set_id}: {exc}")
+                    metrics["currentPriceEnStatus"] = "rate_limited"
+                    metrics["currentPriceEnRateLimited"] = True
+                    metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
+                    rate_limited = True
+                    break
+                except (requests.RequestException, ValueError) as exc:
+                    print(f"  [WARN] PokéWallet prices unavailable for set {set_id}, falling back: {exc}")
+                    fallback_reason = f"pokewallet_unavailable:{exc.__class__.__name__}"
+            else:
+                fallback_reason = "pokewallet_set_code_unresolved"
+
+        if not prices:
+            try:
+                cards, _total_cards, _pages = fetch_pokemon_tcg_paginated(
+                    "cards",
+                    base_params={"q": f"set.id:{set_id}"},
+                    page_size=page_size,
+                    max_pages=max_pages_per_set,
+                    sleep_seconds=sleep_seconds,
+                )
+            except RequestCapReachedError:
+                print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+                metrics["currentPriceEnStopReason"] = "request_cap_reached"
+                request_cap_reached = True
+                break
+            except ProviderRateLimitError as exc:
+                print(f"  [WARN] Provider rate limit while building EN prices for set {set_id}: {exc}")
+                metrics["currentPriceEnStatus"] = "rate_limited"
+                metrics["currentPriceEnRateLimited"] = True
+                metrics["currentPriceEnStopReason"] = f"rate_limited:{set_id}"
+                rate_limited = True
+                break
+            except (requests.RequestException, ValueError) as exc:
+                print(f"  [WARN] Failed to build current prices for set {set_id}: {exc}")
+                failed_set_ids.append(set_id)
+                if not config.get("continueOnSetError", True):
+                    break
+                continue
+
+            for card in cards:
+                prices.extend(extract_current_price_records(card, ts))
+
+            if not prices and fallback_reason == "":
+                fallback_reason = "pokemon_tcg_api_no_price_records"
 
         prices.sort(key=price_sort_key)
         if not prices:
@@ -2578,7 +2847,7 @@ def build_english_current_prices_by_set(
                 "language": "en",
                 "setId": set_id,
                 "setName": set_name,
-                "source": CURRENT_PRICE_SOURCE,
+                "source": current_source,
                 "currency": CURRENT_PRICE_CURRENCY,
                 "priceCount": len(prices),
                 "prices": prices,
@@ -2596,6 +2865,10 @@ def build_english_current_prices_by_set(
             metrics["currentPriceEnSetsWritten"] += 1
             metrics["currentPriceEnPriceRecordsWritten"] += len(prices)
             processed_set_ids.append(set_id)
+            if current_source not in metrics["currentPriceEnProviderUsed"]:
+                metrics["currentPriceEnProviderUsed"].append(current_source)
+            if fallback_reason:
+                metrics["currentPriceEnFallbackReasons"].append({"setId": set_id, "reason": fallback_reason})
             if fail_after_set_count > 0 and metrics["currentPriceEnSetsWritten"] >= fail_after_set_count:
                 raise RuntimeError(
                     "Intentional failure for local safety testing via "
@@ -2615,6 +2888,13 @@ def build_english_current_prices_by_set(
         )
 
     metrics["currentPriceEnRequestsUsed"] = int(REQUEST_TRACKER.get("attempted", 0))
+    if metrics["currentPriceEnProviderUsed"]:
+        if len(metrics["currentPriceEnProviderUsed"]) == 1:
+            metrics["currentPriceEnSource"] = metrics["currentPriceEnProviderUsed"][0]
+        else:
+            metrics["currentPriceEnSource"] = "mixed"
+    elif metrics["currentPriceEnSource"] is None:
+        metrics["currentPriceEnSource"] = CURRENT_PRICE_SOURCE
     if request_cap_reached:
         metrics["currentPriceEnStatus"] = "partial_built"
         metrics["currentPriceEnStopReason"] = "request_cap_reached"
