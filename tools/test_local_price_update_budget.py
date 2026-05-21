@@ -89,6 +89,168 @@ def test_cycle_request_cap_uses_safety_buffer() -> None:
     assert daily_remaining == 895
 
 
+def test_pokewallet_dashboard_style_budget_only_counts_pokewallet_calls() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {
+                "timestampUtc": (now - timedelta(minutes=10)).isoformat().replace("+00:00", "Z"),
+                "requests": 100,
+                "providerRequestCounts": {
+                    "pokewallet": 42,
+                    "pokemon_tcg_api": 58,
+                },
+            },
+            {
+                "timestampUtc": (now - timedelta(hours=12)).isoformat().replace("+00:00", "Z"),
+                "requests": 262,
+                "providerRequestCounts": {
+                    "pokewallet": 262,
+                    "pokemon_tcg_api": 90,
+                },
+            },
+        ]
+    }
+    snapshot = updater.build_provider_budget_snapshot(
+        state,
+        "pokewallet",
+        {"hourlyTarget": 100, "dailyTarget": 1000},
+        now,
+    )
+    assert snapshot["hourlyUsed"] == 42
+    assert snapshot["dailyUsed"] == 304
+    assert snapshot["hourlyRemaining"] == 58
+    assert snapshot["dailyRemaining"] == 696
+
+
+def test_pokemon_tcg_fallback_calls_do_not_exhaust_pokewallet_budget() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {
+                "timestampUtc": (now - timedelta(minutes=20)).isoformat().replace("+00:00", "Z"),
+                "requests": 130,
+                "providerRequestCounts": {
+                    "pokewallet": 40,
+                    "pokemon_tcg_api": 90,
+                },
+            }
+        ]
+    }
+    should_stop, reason, hourly_remaining, daily_remaining = updater.should_stop_for_provider_budget(
+        state,
+        "pokewallet",
+        {"hourlyTarget": 90, "dailyTarget": 990},
+    )
+    assert should_stop is False
+    assert reason == "none"
+    assert hourly_remaining == 50
+    assert daily_remaining == 950
+
+
+def test_updater_does_not_sleep_when_pokewallet_has_remaining_budget() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {
+                "timestampUtc": (now - timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
+                "requests": 90,
+                "providerRequestCounts": {"pokemon_tcg_api": 90},
+            }
+        ]
+    }
+    snapshots = updater.build_all_provider_budget_snapshots(
+        state,
+        {
+            "pokewallet": {"hourlyTarget": 90, "dailyTarget": 990},
+            "pokemon_tcg_api": {"hourlyTarget": 90, "dailyTarget": 900},
+        },
+        now,
+    )
+    sleep_seconds, reason, provider = updater.next_provider_safe_wake_seconds(snapshots["pokewallet"])
+    assert reason == "none"
+    assert provider is None
+    assert sleep_seconds == 0
+    assert updater.all_provider_budgets_exhausted(snapshots) is False
+
+
+def test_updater_sleeps_when_pokewallet_budget_is_exhausted() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {
+                "timestampUtc": (now - timedelta(minutes=30)).isoformat().replace("+00:00", "Z"),
+                "requests": 90,
+                "providerRequestCounts": {"pokewallet": 90},
+            }
+        ]
+    }
+    snapshot = updater.build_provider_budget_snapshot(
+        state,
+        "pokewallet",
+        {"hourlyTarget": 90, "dailyTarget": 990},
+        now,
+    )
+    sleep_seconds, reason, provider = updater.next_provider_safe_wake_seconds(snapshot)
+    assert reason == "pokewallet_hourly_exhausted"
+    assert provider == "pokewallet"
+    assert sleep_seconds > 0
+
+
+def test_all_provider_budgets_exhausted_sleeps_or_stops() -> None:
+    now = datetime.now(timezone.utc)
+    state = {
+        "requestLedger": [
+            {
+                "timestampUtc": (now - timedelta(minutes=15)).isoformat().replace("+00:00", "Z"),
+                "requests": 180,
+                "providerRequestCounts": {
+                    "pokewallet": 90,
+                    "pokemon_tcg_api": 90,
+                },
+            }
+        ]
+    }
+    snapshots = updater.build_all_provider_budget_snapshots(
+        state,
+        {
+            "pokewallet": {"hourlyTarget": 90, "dailyTarget": 990},
+            "pokemon_tcg_api": {"hourlyTarget": 90, "dailyTarget": 900},
+        },
+        now,
+    )
+    assert updater.all_provider_budgets_exhausted(snapshots) is True
+
+
+def test_provider_specific_diagnostics_include_remaining_counts() -> None:
+    now = datetime.now(timezone.utc)
+    diagnostics = {
+        "providerRequestCounts": {
+            "pokewallet": 3,
+            "pokemon_tcg_api": 7,
+        }
+    }
+    counts = updater.provider_counts_from_diagnostics(diagnostics)
+    state = updater.append_request_ledger(
+        {"requestLedger": []},
+        requests_used=sum(counts.values()),
+        status="built",
+        now_iso=now.isoformat().replace("+00:00", "Z"),
+        provider_request_counts=counts,
+    )
+    snapshots = updater.build_all_provider_budget_snapshots(
+        state,
+        {
+            "pokewallet": {"hourlyTarget": 90, "dailyTarget": 990},
+            "pokemon_tcg_api": {"hourlyTarget": 90, "dailyTarget": 900},
+        },
+        now,
+    )
+    assert counts == {"pokewallet": 3, "pokemon_tcg_api": 7}
+    assert snapshots["pokewallet"]["hourlyRemaining"] == 87
+    assert snapshots["pokemon_tcg_api"]["dailyRemaining"] == 893
+
+
 def test_updater_does_not_start_cycle_when_cap_is_exhausted() -> None:
     assert updater.should_start_current_price_cycle(0) is False
     assert updater.should_start_current_price_cycle(-3) is False
@@ -1561,6 +1723,7 @@ def test_request_cap_is_respected_during_transient_retries() -> None:
     original_fetch = builder.fetch_pokemon_tcg_paginated
     original_load_existing = builder.load_existing_current_price_files
     original_cap = builder.CURRENT_PRICE_REQUEST_CAP
+    original_provider_caps = dict(builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS)
     original_tracker = dict(builder.REQUEST_TRACKER)
     original_use_flag = os.environ.get("CARDSCANR_USE_POKEWALLET_PRICES")
     original_priority = os.environ.get("CARDSCANR_PRICE_PROVIDER_PRIORITY")
@@ -1648,10 +1811,12 @@ def test_builder_request_cap_blocks_provider_request_before_exceeding() -> None:
         return FakeResponse()
 
     original_cap = builder.CURRENT_PRICE_REQUEST_CAP
+    original_provider_caps = dict(builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS)
     original_get = builder.requests.get
     try:
         builder.reset_request_tracker()
         builder.CURRENT_PRICE_REQUEST_CAP = 1
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = {}
         builder.REQUEST_TRACKER["attempted"] = 1
         builder.requests.get = fake_get
 
@@ -1664,13 +1829,43 @@ def test_builder_request_cap_blocks_provider_request_before_exceeding() -> None:
         assert calls == []
     finally:
         builder.CURRENT_PRICE_REQUEST_CAP = original_cap
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = original_provider_caps
         builder.requests.get = original_get
+
+
+def test_builder_provider_request_caps_are_separate() -> None:
+    original_cap = builder.CURRENT_PRICE_REQUEST_CAP
+    original_provider_caps = dict(builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS)
+    original_tracker = dict(builder.REQUEST_TRACKER)
+    original_provider_tracker = {
+        provider: dict(counts)
+        for provider, counts in builder.PROVIDER_REQUEST_TRACKER.items()
+    }
+    try:
+        builder.reset_request_tracker()
+        builder.CURRENT_PRICE_REQUEST_CAP = 0
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = {
+            "pokewallet": 90,
+            "pokemon_tcg_api": 1,
+        }
+        builder.mark_request_attempt(success=True, provider="pokemon_tcg_api")
+        assert builder.remaining_current_price_requests("pokemon_tcg_api") == 0
+        assert builder.remaining_current_price_requests("pokewallet") == 90
+        assert builder.provider_request_counts_summary() == {"pokemon_tcg_api": 1}
+    finally:
+        builder.CURRENT_PRICE_REQUEST_CAP = original_cap
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = original_provider_caps
+        builder.REQUEST_TRACKER.clear()
+        builder.REQUEST_TRACKER.update(original_tracker)
+        builder.PROVIDER_REQUEST_TRACKER.clear()
+        builder.PROVIDER_REQUEST_TRACKER.update(original_provider_tracker)
 
 
 def test_builder_stops_when_cap_is_reached_and_cursor_remains_valid() -> None:
     original_fetch = builder.fetch_pokemon_tcg_paginated
     original_load_existing = builder.load_existing_current_price_files
     original_cap = builder.CURRENT_PRICE_REQUEST_CAP
+    original_provider_caps = dict(builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS)
     original_tracker = dict(builder.REQUEST_TRACKER)
 
     def fake_fetch(endpoint: str, *, base_params=None, page_size=250, max_pages=50, sleep_seconds=0.15):
@@ -1694,6 +1889,7 @@ def test_builder_stops_when_cap_is_reached_and_cursor_remains_valid() -> None:
     try:
         builder.reset_request_tracker()
         builder.CURRENT_PRICE_REQUEST_CAP = 1
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = {}
         builder.fetch_pokemon_tcg_paginated = fake_fetch
         builder.load_existing_current_price_files = lambda language="en": []
 
@@ -1740,6 +1936,7 @@ def test_builder_stops_when_cap_is_reached_and_cursor_remains_valid() -> None:
         builder.fetch_pokemon_tcg_paginated = original_fetch
         builder.load_existing_current_price_files = original_load_existing
         builder.CURRENT_PRICE_REQUEST_CAP = original_cap
+        builder.CURRENT_PRICE_PROVIDER_REQUEST_CAPS = original_provider_caps
         builder.REQUEST_TRACKER.update(original_tracker)
 
 
@@ -1755,6 +1952,12 @@ def test_request_cap_stop_is_not_detected_as_provider_rate_limit() -> None:
 if __name__ == "__main__":
     test_budget_usage_and_stop_logic()
     test_cycle_request_cap_uses_safety_buffer()
+    test_pokewallet_dashboard_style_budget_only_counts_pokewallet_calls()
+    test_pokemon_tcg_fallback_calls_do_not_exhaust_pokewallet_budget()
+    test_updater_does_not_sleep_when_pokewallet_has_remaining_budget()
+    test_updater_sleeps_when_pokewallet_budget_is_exhausted()
+    test_all_provider_budgets_exhausted_sleeps_or_stops()
+    test_provider_specific_diagnostics_include_remaining_counts()
     test_updater_does_not_start_cycle_when_cap_is_exhausted()
     test_updater_passes_request_cap_to_builder_env()
     test_pokewallet_api_key_resolution_prefers_cardscanr_alias()
@@ -1791,6 +1994,7 @@ if __name__ == "__main__":
     test_detect_rate_limited()
     test_append_request_ledger_keeps_recent_entries()
     test_builder_request_cap_blocks_provider_request_before_exceeding()
+    test_builder_provider_request_caps_are_separate()
     test_builder_stops_when_cap_is_reached_and_cursor_remains_valid()
     test_request_cap_stop_is_not_detected_as_provider_rate_limit()
     print("Local updater budget tests passed.")

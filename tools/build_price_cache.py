@@ -104,6 +104,8 @@ CURRENT_PRICE_VARIANTS = [
 ]
 TMP_BUILD_ROOT = ROOT / ".cache_build_tmp"
 CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_CURRENT_PRICE_REQUEST_CAP"
+POKEWALLET_CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_POKEWALLET_CURRENT_PRICE_REQUEST_CAP"
+POKEMON_TCG_CURRENT_PRICE_REQUEST_CAP_ENV = "CARDSCANR_POKEMON_TCG_CURRENT_PRICE_REQUEST_CAP"
 CURRENT_PRICE_TRANSIENT_RETRY_COUNT_ENV = "CARDSCANR_CURRENT_PRICE_TRANSIENT_RETRY_COUNT"
 POKEWALLET_API_KEY_ENV = "CARDSCANR_POKEWALLET_API_KEY"
 POKEWALLET_API_KEY_ALIAS_ENV = "POKEWALLET_API_KEY"
@@ -146,15 +148,45 @@ REQUEST_TRACKER: dict[str, int] = {
     "failed": 0,
     "rateLimited": 0,
 }
+PROVIDER_REQUEST_TRACKER: dict[str, dict[str, int]] = {}
 CURRENT_PRICE_REQUEST_CAP = 0
+CURRENT_PRICE_PROVIDER_REQUEST_CAPS: dict[str, int] = {}
 
 
 class RequestCapReachedError(RuntimeError):
     """Raised when the current-price request cap has been reached."""
 
+    def __init__(self, message: str, provider: str | None = None) -> None:
+        self.provider = provider
+        super().__init__(message)
+
 
 def resolve_current_price_request_cap() -> int:
     return parse_positive_int_env(CURRENT_PRICE_REQUEST_CAP_ENV)
+
+
+def parse_non_negative_int_env_if_present(name: str) -> int | None:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return None
+    try:
+        value = int(raw_value.strip())
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a non-negative integer when set") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be >= 0")
+    return value
+
+
+def resolve_provider_current_price_request_caps() -> dict[str, int]:
+    caps: dict[str, int] = {}
+    pokewallet_cap = parse_non_negative_int_env_if_present(POKEWALLET_CURRENT_PRICE_REQUEST_CAP_ENV)
+    pokemon_tcg_cap = parse_non_negative_int_env_if_present(POKEMON_TCG_CURRENT_PRICE_REQUEST_CAP_ENV)
+    if pokewallet_cap is not None:
+        caps[SOURCE_ID_POKEWALLET] = pokewallet_cap
+    if pokemon_tcg_cap is not None:
+        caps[SOURCE_ID_POKEMON_TCG_API] = pokemon_tcg_cap
+    return caps
 
 
 def now_utc() -> str:
@@ -499,9 +531,10 @@ def is_rate_limited_response(response: requests.Response, detail_text: str = "")
 
 
 def pokewallet_get_detailed(endpoint: str, api_key: str, params: dict | None = None) -> tuple[dict, int]:
-    if CURRENT_PRICE_REQUEST_CAP > 0 and int(REQUEST_TRACKER.get("attempted", 0)) >= CURRENT_PRICE_REQUEST_CAP:
+    if remaining_current_price_requests(SOURCE_ID_POKEWALLET) is not None and remaining_current_price_requests(SOURCE_ID_POKEWALLET) <= 0:
         raise RequestCapReachedError(
-            f"current price request cap reached before requesting PokeWallet {endpoint}"
+            f"current price request cap reached before requesting PokeWallet {endpoint}",
+            provider=SOURCE_ID_POKEWALLET,
         )
     response = requests.get(
         f"{POKEWALLET_API_BASE}/{endpoint.lstrip('/')}",
@@ -518,7 +551,7 @@ def pokewallet_get_detailed(endpoint: str, api_key: str, params: dict | None = N
         detail_text = (response.text or "").strip()
 
     if is_rate_limited_response(response, detail_text):
-        mark_request_attempt(success=False, rate_limited=True)
+        mark_request_attempt(success=False, rate_limited=True, provider=SOURCE_ID_POKEWALLET)
         raise ProviderRateLimitError(
             provider=SOURCE_ID_POKEWALLET,
             status_code=response.status_code,
@@ -526,10 +559,10 @@ def pokewallet_get_detailed(endpoint: str, api_key: str, params: dict | None = N
         )
 
     if response.status_code >= 400:
-        mark_request_attempt(success=False)
+        mark_request_attempt(success=False, provider=SOURCE_ID_POKEWALLET)
         response.raise_for_status()
 
-    mark_request_attempt(success=True)
+    mark_request_attempt(success=True, provider=SOURCE_ID_POKEWALLET)
     if not isinstance(payload, dict):
         raise ValueError(f"PokéWallet API returned non-object payload for {endpoint}")
     return payload, int(response.status_code)
@@ -545,15 +578,48 @@ def reset_request_tracker() -> None:
     REQUEST_TRACKER["succeeded"] = 0
     REQUEST_TRACKER["failed"] = 0
     REQUEST_TRACKER["rateLimited"] = 0
+    PROVIDER_REQUEST_TRACKER.clear()
 
 
-def remaining_current_price_requests() -> int | None:
-    if CURRENT_PRICE_REQUEST_CAP <= 0:
+def provider_request_count(provider: str, key: str = "attempted") -> int:
+    counts = PROVIDER_REQUEST_TRACKER.get(provider)
+    if not isinstance(counts, dict):
+        return 0
+    return int(counts.get(key, 0) or 0)
+
+
+def current_price_request_cap_for_provider(provider: str | None = None) -> int:
+    if provider and provider in CURRENT_PRICE_PROVIDER_REQUEST_CAPS:
+        return int(CURRENT_PRICE_PROVIDER_REQUEST_CAPS.get(provider) or 0)
+    return int(CURRENT_PRICE_REQUEST_CAP or 0)
+
+
+def remaining_current_price_requests(provider: str | None = None) -> int | None:
+    if provider and provider in CURRENT_PRICE_PROVIDER_REQUEST_CAPS:
+        cap = max(0, int(CURRENT_PRICE_PROVIDER_REQUEST_CAPS.get(provider) or 0))
+        used = provider_request_count(provider, "attempted")
+        return max(0, cap - int(used))
+    cap = current_price_request_cap_for_provider(provider)
+    if cap <= 0:
         return None
-    return max(0, CURRENT_PRICE_REQUEST_CAP - int(REQUEST_TRACKER.get("attempted", 0)))
+    used = int(REQUEST_TRACKER.get("attempted", 0))
+    return max(0, cap - int(used))
 
 
-def mark_request_attempt(success: bool, rate_limited: bool = False) -> None:
+def provider_request_counts_summary() -> dict[str, int]:
+    return {
+        provider: int(counts.get("attempted", 0) or 0)
+        for provider, counts in sorted(PROVIDER_REQUEST_TRACKER.items())
+        if isinstance(counts, dict) and int(counts.get("attempted", 0) or 0) > 0
+    }
+
+
+def provider_request_metric(provider: str, key: str) -> int:
+    counts = PROVIDER_REQUEST_TRACKER.get(provider, {})
+    return int(counts.get(key, 0) or 0) if isinstance(counts, dict) else 0
+
+
+def mark_request_attempt(success: bool, rate_limited: bool = False, provider: str | None = None) -> None:
     REQUEST_TRACKER["attempted"] += 1
     if success:
         REQUEST_TRACKER["succeeded"] += 1
@@ -561,6 +627,18 @@ def mark_request_attempt(success: bool, rate_limited: bool = False) -> None:
         REQUEST_TRACKER["failed"] += 1
     if rate_limited:
         REQUEST_TRACKER["rateLimited"] += 1
+    if provider:
+        provider_counts = PROVIDER_REQUEST_TRACKER.setdefault(
+            provider,
+            {"attempted": 0, "succeeded": 0, "failed": 0, "rateLimited": 0},
+        )
+        provider_counts["attempted"] += 1
+        if success:
+            provider_counts["succeeded"] += 1
+        else:
+            provider_counts["failed"] += 1
+        if rate_limited:
+            provider_counts["rateLimited"] += 1
 
 
 def is_transient_request_error(exc: BaseException) -> bool:
@@ -575,9 +653,9 @@ def is_transient_request_error(exc: BaseException) -> bool:
     )
 
 
-def record_untracked_transient_request_failure(exc: BaseException) -> None:
+def record_untracked_transient_request_failure(exc: BaseException, provider: str | None = None) -> None:
     if is_transient_request_error(exc):
-        mark_request_attempt(success=False)
+        mark_request_attempt(success=False, provider=provider)
 
 
 def transient_failure_reason(provider: str, exc: BaseException) -> str:
@@ -588,19 +666,19 @@ def retry_transient_request(callable_obj, *, provider: str, retries: int, sleep_
     attempts = max(1, retries + 1)
     last_exc: requests.RequestException | None = None
     for attempt in range(1, attempts + 1):
-        if remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
-            raise RequestCapReachedError(f"current price request cap reached before retrying {provider}")
+        if remaining_current_price_requests(provider) is not None and remaining_current_price_requests(provider) <= 0:
+            raise RequestCapReachedError(f"current price request cap reached before retrying {provider}", provider=provider)
         try:
             return callable_obj()
         except requests.RequestException as exc:
             if not is_transient_request_error(exc):
                 raise
-            record_untracked_transient_request_failure(exc)
+            record_untracked_transient_request_failure(exc, provider=provider)
             last_exc = exc
             if attempt >= attempts:
                 raise
-            if remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
-                raise RequestCapReachedError(f"current price request cap reached after {provider} transient failure") from exc
+            if remaining_current_price_requests(provider) is not None and remaining_current_price_requests(provider) <= 0:
+                raise RequestCapReachedError(f"current price request cap reached after {provider} transient failure", provider=provider) from exc
             if sleep_seconds > 0:
                 time.sleep(sleep_seconds)
     if last_exc is not None:
@@ -2011,9 +2089,10 @@ def pokemon_tcg_headers() -> dict:
 
 
 def pokemon_tcg_get(endpoint: str, params: dict | None = None) -> dict:
-    if CURRENT_PRICE_REQUEST_CAP > 0 and int(REQUEST_TRACKER.get("attempted", 0)) >= CURRENT_PRICE_REQUEST_CAP:
+    if remaining_current_price_requests(SOURCE_ID_POKEMON_TCG_API) is not None and remaining_current_price_requests(SOURCE_ID_POKEMON_TCG_API) <= 0:
         raise RequestCapReachedError(
-            f"current price request cap reached before requesting {endpoint}"
+            f"current price request cap reached before requesting {endpoint}",
+            provider=SOURCE_ID_POKEMON_TCG_API,
         )
     response = requests.get(
         f"{POKEMON_TCG_API_BASE}/{endpoint.lstrip('/')}",
@@ -2038,7 +2117,7 @@ def pokemon_tcg_get(endpoint: str, params: dict | None = None) -> dict:
         is_rate_limited = is_rate_limit_detail_text(detail_text)
 
     if is_rate_limited:
-        mark_request_attempt(success=False, rate_limited=True)
+        mark_request_attempt(success=False, rate_limited=True, provider=SOURCE_ID_POKEMON_TCG_API)
         raise ProviderRateLimitError(
             provider=SOURCE_ID_POKEMON_TCG_API,
             status_code=response.status_code,
@@ -2046,10 +2125,10 @@ def pokemon_tcg_get(endpoint: str, params: dict | None = None) -> dict:
         )
 
     if response.status_code >= 400:
-        mark_request_attempt(success=False)
+        mark_request_attempt(success=False, provider=SOURCE_ID_POKEMON_TCG_API)
         response.raise_for_status()
 
-    mark_request_attempt(success=True)
+    mark_request_attempt(success=True, provider=SOURCE_ID_POKEMON_TCG_API)
     if not isinstance(payload, dict):
         raise ValueError(f"PokemonTCG API returned non-object payload for {endpoint}")
     return payload
@@ -2312,7 +2391,11 @@ def merge_japanese_set_cards(set_detail_records: list[dict], global_records: lis
 
 def fetch_global_jp_cards(max_probe: int) -> list[dict]:
     response = requests.get("https://api.tcgdex.net/v2/ja/cards", timeout=90)
-    mark_request_attempt(success=response.status_code < 400, rate_limited=(response.status_code == 429))
+    mark_request_attempt(
+        success=response.status_code < 400,
+        rate_limited=(response.status_code == 429),
+        provider=SOURCE_ID_TCGDEX,
+    )
     if response.status_code == 429:
         raise ProviderRateLimitError(provider=SOURCE_ID_TCGDEX, status_code=429, detail="TCGdex global cards endpoint")
     response.raise_for_status()
@@ -2369,6 +2452,11 @@ def build_japanese_pokemon_catalogue(
 
     print("[build_price_cache] Fetching TCGdex sets for JP catalogue")
     response = requests.get("https://api.tcgdex.net/v2/ja/sets", timeout=30)
+    mark_request_attempt(
+        success=response.status_code < 400,
+        rate_limited=(response.status_code == 429),
+        provider=SOURCE_ID_TCGDEX,
+    )
     response.raise_for_status()
     sets = response.json()
     if not isinstance(sets, list):
@@ -2454,6 +2542,11 @@ def build_japanese_pokemon_catalogue(
 
         try:
             set_response = requests.get(f"https://api.tcgdex.net/v2/ja/sets/{set_id}", timeout=30)
+            mark_request_attempt(
+                success=set_response.status_code < 400,
+                rate_limited=(set_response.status_code == 429),
+                provider=SOURCE_ID_TCGDEX,
+            )
             set_response.raise_for_status()
             set_payload = set_response.json()
             if not isinstance(set_payload, dict):
@@ -3220,7 +3313,9 @@ def build_english_current_prices_by_set(
         "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
         "currentPriceEnRateLimited": False,
         "currentPriceEnRequestCap": CURRENT_PRICE_REQUEST_CAP,
+        "currentPriceEnProviderRequestCaps": dict(CURRENT_PRICE_PROVIDER_REQUEST_CAPS),
         "currentPriceEnRequestsUsed": 0,
+        "currentPriceEnProviderRequestCounts": {},
         "currentPriceEnStopReason": None,
         "currentPriceEnProviderPriority": provider_priority,
         "currentPriceEnProviderUsed": [],
@@ -3419,6 +3514,9 @@ def build_english_current_prices_by_set(
             if set_id not in processed_set_ids:
                 processed_set_ids.append(set_id)
 
+    def provider_budget_remaining(provider: str) -> int | None:
+        return remaining_current_price_requests(provider)
+
     for set_data in selected_sets:
         set_id = str(set_data.get("id"))
         set_name = str(set_data.get("name") or set_id)
@@ -3426,10 +3524,6 @@ def build_english_current_prices_by_set(
         debug_pokewallet_response = mode == "current_prices" and (
             require_pokewallet_prices or bool(metrics.get("currentPriceEnTargetSetId"))
         )
-        if request_cap > 0 and remaining_current_price_requests() is not None and remaining_current_price_requests() <= 0:
-            metrics["currentPriceEnStopReason"] = "request_cap_reached"
-            request_cap_reached = True
-            break
         metrics["currentPriceEnSetsAttempted"] += 1
         metrics["setsAttempted"] += 1
         print(f"  Fetching current prices for set {set_id} ({set_name})")
@@ -3453,6 +3547,12 @@ def build_english_current_prices_by_set(
             if provider == SOURCE_ID_POKEWALLET:
                 if not use_pokewallet_prices:
                     continue
+                if provider_budget_remaining(SOURCE_ID_POKEWALLET) is not None and provider_budget_remaining(SOURCE_ID_POKEWALLET) <= 0:
+                    print(f"  [WARN] Stopping EN current prices because PokeWallet request cap is exhausted before set {set_id}")
+                    keep_existing_after_budget_stop(set_id, set_name)
+                    metrics["currentPriceEnStopReason"] = "request_cap_reached:pokewallet"
+                    request_cap_reached = True
+                    break
                 if not pokewallet_api_key:
                     fallback_reason = "pokewallet_api_key_missing"
                     print(f"  PokeWallet failed for set {set_id}: reason=api_key_missing")
@@ -3579,10 +3679,10 @@ def build_english_current_prices_by_set(
                             raise RuntimeError(
                                 f"PokeWallet required for set {set_id} but returned no usable price records"
                             )
-                except RequestCapReachedError:
-                    print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
+                except RequestCapReachedError as exc:
+                    print(f"  [WARN] Stopping EN current prices due to PokeWallet request cap while building set {set_id}")
                     keep_existing_after_budget_stop(set_id, set_name)
-                    metrics["currentPriceEnStopReason"] = "request_cap_reached"
+                    metrics["currentPriceEnStopReason"] = f"request_cap_reached:{exc.provider or SOURCE_ID_POKEWALLET}"
                     request_cap_reached = True
                     break
                 except ProviderRateLimitError as exc:
@@ -3613,6 +3713,18 @@ def build_english_current_prices_by_set(
                 continue
 
             if provider == SOURCE_ID_POKEMON_TCG_API:
+                if provider_budget_remaining(SOURCE_ID_POKEMON_TCG_API) is not None and provider_budget_remaining(SOURCE_ID_POKEMON_TCG_API) <= 0:
+                    if not use_pokewallet_prices:
+                        print(f"  [WARN] Stopping EN current prices because pokemon_tcg_api request cap is exhausted before set {set_id}")
+                        keep_existing_after_budget_stop(set_id, set_name)
+                        metrics["currentPriceEnStopReason"] = "request_cap_reached"
+                        request_cap_reached = True
+                        break
+                    fallback_reason = "pokemon_tcg_api_request_cap_reached"
+                    metrics["providerFallbackReasons"].append({"setId": set_id, "reason": fallback_reason})
+                    print(f"  Skipping pokemon_tcg_api fallback for set {set_id}: request cap exhausted")
+                    keep_existing_after_budget_stop(set_id, set_name)
+                    break
                 if use_pokewallet_prices and not prices and not require_pokewallet_prices:
                     print(f"  Falling back to pokemon_tcg_api for set {set_id}")
                     used_pokemon_fallback = True
@@ -3629,10 +3741,16 @@ def build_english_current_prices_by_set(
                         retries=transient_retry_count,
                         sleep_seconds=transient_retry_sleep_seconds,
                     )
-                except RequestCapReachedError:
+                except RequestCapReachedError as exc:
+                    if exc.provider == SOURCE_ID_POKEMON_TCG_API and use_pokewallet_prices:
+                        fallback_reason = "pokemon_tcg_api_request_cap_reached"
+                        metrics["providerFallbackReasons"].append({"setId": set_id, "reason": fallback_reason})
+                        print(f"  Skipping pokemon_tcg_api fallback for set {set_id}: request cap exhausted")
+                        keep_existing_after_budget_stop(set_id, set_name)
+                        break
                     print(f"  [WARN] Stopping EN current prices due to request cap while building set {set_id}")
                     keep_existing_after_budget_stop(set_id, set_name)
-                    metrics["currentPriceEnStopReason"] = "request_cap_reached"
+                    metrics["currentPriceEnStopReason"] = f"request_cap_reached:{exc.provider or 'unknown'}"
                     request_cap_reached = True
                     break
                 except ProviderRateLimitError as exc:
@@ -3741,6 +3859,7 @@ def build_english_current_prices_by_set(
         )
 
     metrics["currentPriceEnRequestsUsed"] = int(REQUEST_TRACKER.get("attempted", 0))
+    metrics["currentPriceEnProviderRequestCounts"] = provider_request_counts_summary()
     if (
         request_cap_reached
         and int(metrics.get("currentPriceEnSetsUpdated", 0) or 0) <= 0
@@ -3780,7 +3899,8 @@ def build_english_current_prices_by_set(
         metrics["currentPriceEnSource"] = CURRENT_PRICE_SOURCE
     if request_cap_reached:
         metrics["currentPriceEnStatus"] = "partial_built"
-        metrics["currentPriceEnStopReason"] = "request_cap_reached"
+        if not metrics.get("currentPriceEnStopReason"):
+            metrics["currentPriceEnStopReason"] = "request_cap_reached"
     elif transient_failed_set_ids:
         metrics["currentPriceEnStatus"] = "partial_built"
         metrics["currentPriceEnStopReason"] = "completed_with_transient_failures"
@@ -4195,7 +4315,7 @@ def should_build_japanese_catalogue(mode: str, config: dict) -> bool:
 # Main build
 # ---------------------------------------------------------------------------
 def build() -> None:
-    global CURRENT_PRICE_REQUEST_CAP
+    global CURRENT_PRICE_REQUEST_CAP, CURRENT_PRICE_PROVIDER_REQUEST_CAPS
     ts = now_utc()
     day = ts[:10]
     catalog_config = load_catalog_config()
@@ -4216,8 +4336,10 @@ def build() -> None:
     reset_request_tracker()
     if mode == "current_prices":
         CURRENT_PRICE_REQUEST_CAP = resolve_current_price_request_cap()
+        CURRENT_PRICE_PROVIDER_REQUEST_CAPS = resolve_provider_current_price_request_caps()
     else:
         CURRENT_PRICE_REQUEST_CAP = 0
+        CURRENT_PRICE_PROVIDER_REQUEST_CAPS = {}
     print(f"[build_price_cache] Starting {mode} build at {ts}")
 
     cards: list[dict] = load_json(CARDS_PATH).get("cards", [])
@@ -4295,6 +4417,11 @@ def build() -> None:
         "currentPriceJpPriceRecordsWritten": 0,
         "currentPriceJpSkippedNoPriceSets": 0,
             "providerRequestsAttempted": 0,
+            "providerRequestCounts": {},
+            "providerRequestCaps": {},
+            "pokewalletRequestsAttempted": 0,
+            "pokemonTcgApiRequestsAttempted": 0,
+            "tcgdexRequestsAttempted": 0,
             "providerRequestsSucceeded": 0,
             "providerRequestsFailed": 0,
             "providerRateLimitedCount": 0,
@@ -4427,7 +4554,9 @@ def build() -> None:
                 "currentPriceEnSource": CURRENT_PRICE_SOURCE,
                 "currentPriceEnCurrency": CURRENT_PRICE_CURRENCY,
                 "currentPriceEnRequestCap": CURRENT_PRICE_REQUEST_CAP,
+                "currentPriceEnProviderRequestCaps": dict(CURRENT_PRICE_PROVIDER_REQUEST_CAPS),
                 "currentPriceEnRequestsUsed": int(REQUEST_TRACKER.get("attempted", 0)),
+                "currentPriceEnProviderRequestCounts": provider_request_counts_summary(),
             }
         diagnostics.update(current_price_metrics)
         diagnostics["requestCap"] = current_price_metrics.get("currentPriceEnRequestCap")
@@ -4488,6 +4617,11 @@ def build() -> None:
         diagnostics.update(jp_current_price_metrics)
 
         diagnostics["providerRequestsAttempted"] = int(REQUEST_TRACKER.get("attempted", 0))
+        diagnostics["providerRequestCounts"] = provider_request_counts_summary()
+        diagnostics["providerRequestCaps"] = dict(CURRENT_PRICE_PROVIDER_REQUEST_CAPS)
+        diagnostics["pokewalletRequestsAttempted"] = provider_request_metric(SOURCE_ID_POKEWALLET, "attempted")
+        diagnostics["pokemonTcgApiRequestsAttempted"] = provider_request_metric(SOURCE_ID_POKEMON_TCG_API, "attempted")
+        diagnostics["tcgdexRequestsAttempted"] = provider_request_metric(SOURCE_ID_TCGDEX, "attempted")
         diagnostics["providerRequestsSucceeded"] = int(REQUEST_TRACKER.get("succeeded", 0))
         diagnostics["providerRequestsFailed"] = int(REQUEST_TRACKER.get("failed", 0))
         diagnostics["providerRateLimitedCount"] = int(REQUEST_TRACKER.get("rateLimited", 0))

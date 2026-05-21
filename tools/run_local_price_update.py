@@ -20,6 +20,16 @@ DEFAULT_STATE_PATH = ROOT / "data" / "scheduled_price_refresh_state.json"
 DEFAULT_RESULT_PATH = ROOT / "logs" / "local_price_update_last_result.json"
 DEFAULT_DIAGNOSTICS_PATH = ROOT / "public" / "v1" / "diagnostics" / "latest-build.json"
 PHASE_PREFIX = "CARDSCANR_PHASE "
+PROVIDER_POKEWALLET = "pokewallet"
+PROVIDER_POKEMON_TCG_API = "pokemon_tcg_api"
+PROVIDER_TCGDEX = "tcgdex"
+PROVIDER_OTHER = "other"
+KNOWN_REQUEST_PROVIDERS = {
+    PROVIDER_POKEWALLET,
+    PROVIDER_POKEMON_TCG_API,
+    PROVIDER_TCGDEX,
+    PROVIDER_OTHER,
+}
 
 
 def load_json(path: Path) -> dict:
@@ -113,6 +123,18 @@ def get_int_env_with_alias(primary: str, aliases: list[str], default: int) -> in
     return default
 
 
+def normalize_request_provider(value: object) -> str:
+    provider = str(value or "").strip().lower()
+    aliases = {
+        "pokemon-tcg-api": PROVIDER_POKEMON_TCG_API,
+        "pokemon_tcg": PROVIDER_POKEMON_TCG_API,
+        "pokemontcg": PROVIDER_POKEMON_TCG_API,
+        "pokewallet_api": PROVIDER_POKEWALLET,
+    }
+    provider = aliases.get(provider, provider)
+    return provider if provider in KNOWN_REQUEST_PROVIDERS else PROVIDER_OTHER
+
+
 def resolve_budget_settings(target_hourly: int | None = None, target_daily: int | None = None) -> dict:
     provider_hour = get_int_env_with_alias(
         "CARDSCANR_PROVIDER_PLAN_REQUESTS_PER_HOUR",
@@ -168,6 +190,93 @@ def resolve_budget_settings(target_hourly: int | None = None, target_daily: int 
     }
 
 
+def resolve_single_provider_budget_settings(
+    provider: str,
+    *,
+    plan_hour_env: str,
+    plan_day_env: str,
+    max_hour_env: str,
+    max_day_env: str,
+    safety_env: str,
+    plan_hour_aliases: list[str] | None = None,
+    plan_day_aliases: list[str] | None = None,
+    max_hour_aliases: list[str] | None = None,
+    max_day_aliases: list[str] | None = None,
+    safety_aliases: list[str] | None = None,
+    default_plan_hour: int,
+    default_plan_day: int,
+    default_max_hour: int,
+    default_max_day: int,
+    default_safety: int,
+    target_hourly: int | None = None,
+    target_daily: int | None = None,
+) -> dict:
+    provider_hour = get_int_env_with_alias(plan_hour_env, plan_hour_aliases or [], default_plan_hour)
+    provider_day = get_int_env_with_alias(plan_day_env, plan_day_aliases or [], default_plan_day)
+    max_hour = get_int_env_with_alias(max_hour_env, max_hour_aliases or [], default_max_hour)
+    max_day = get_int_env_with_alias(max_day_env, max_day_aliases or [], default_max_day)
+    safety = get_int_env_with_alias(safety_env, safety_aliases or [], default_safety)
+
+    if target_hourly is not None and target_hourly > 0:
+        max_hour = int(target_hourly)
+    if target_daily is not None and target_daily > 0:
+        max_day = int(target_daily)
+
+    hourly_target = max(1, min(max_hour, max(1, provider_hour - safety)))
+    daily_target = max(1, min(max_day, max(1, provider_day - safety)))
+    return {
+        "provider": normalize_request_provider(provider),
+        "providerPlanHour": provider_hour,
+        "providerPlanDay": provider_day,
+        "hourlyTarget": hourly_target,
+        "dailyTarget": daily_target,
+        "safetyBuffer": safety,
+        "authoritativeEnv": [max_hour_env, max_day_env, safety_env],
+        "aliasEnv": list((max_hour_aliases or []) + (max_day_aliases or []) + (safety_aliases or [])),
+    }
+
+
+def resolve_provider_budget_settings(
+    target_hourly: int | None = None,
+    target_daily: int | None = None,
+) -> dict[str, dict]:
+    return {
+        PROVIDER_POKEWALLET: resolve_single_provider_budget_settings(
+            PROVIDER_POKEWALLET,
+            plan_hour_env="CARDSCANR_POKEWALLET_PLAN_REQUESTS_PER_HOUR",
+            plan_day_env="CARDSCANR_POKEWALLET_PLAN_REQUESTS_PER_DAY",
+            max_hour_env="CARDSCANR_POKEWALLET_MAX_REQUESTS_PER_HOUR",
+            max_day_env="CARDSCANR_POKEWALLET_MAX_REQUESTS_PER_DAY",
+            safety_env="CARDSCANR_POKEWALLET_REQUEST_SAFETY_BUFFER",
+            plan_hour_aliases=["CARDSCANR_PROVIDER_PLAN_REQUESTS_PER_HOUR", "POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_HOUR"],
+            plan_day_aliases=["CARDSCANR_PROVIDER_PLAN_REQUESTS_PER_DAY", "POKEWALLET_PROVIDER_PLAN_REQUESTS_PER_DAY"],
+            max_hour_aliases=["CARDSCANR_MAX_REQUESTS_PER_HOUR", "CARDSCANR_MAX_PRICE_REQUESTS_PER_HOUR", "POKEWALLET_MAX_REQUESTS_PER_HOUR"],
+            max_day_aliases=["CARDSCANR_MAX_REQUESTS_PER_DAY", "CARDSCANR_MAX_PRICE_REQUESTS_PER_DAY", "POKEWALLET_MAX_REQUESTS_PER_DAY"],
+            safety_aliases=["CARDSCANR_REQUEST_SAFETY_BUFFER", "CARDSCANR_PRICE_REQUEST_SAFETY_BUFFER", "POKEWALLET_REQUEST_SAFETY_BUFFER"],
+            default_plan_hour=100,
+            default_plan_day=1000,
+            default_max_hour=90,
+            default_max_day=990,
+            default_safety=10,
+            target_hourly=target_hourly,
+            target_daily=target_daily,
+        ),
+        PROVIDER_POKEMON_TCG_API: resolve_single_provider_budget_settings(
+            PROVIDER_POKEMON_TCG_API,
+            plan_hour_env="CARDSCANR_POKEMON_TCG_PLAN_REQUESTS_PER_HOUR",
+            plan_day_env="CARDSCANR_POKEMON_TCG_PLAN_REQUESTS_PER_DAY",
+            max_hour_env="CARDSCANR_POKEMON_TCG_MAX_REQUESTS_PER_HOUR",
+            max_day_env="CARDSCANR_POKEMON_TCG_MAX_REQUESTS_PER_DAY",
+            safety_env="CARDSCANR_POKEMON_TCG_REQUEST_SAFETY_BUFFER",
+            default_plan_hour=100,
+            default_plan_day=1000,
+            default_max_hour=90,
+            default_max_day=900,
+            default_safety=10,
+        ),
+    }
+
+
 def calculate_cycle_request_cap(state: dict, budget: dict) -> tuple[int, int, int]:
     usage = estimate_budget_usage(state, datetime.now(timezone.utc))
     safety = max(0, int(budget.get("safetyBuffer", 0) or 0))
@@ -178,15 +287,34 @@ def calculate_cycle_request_cap(state: dict, budget: dict) -> tuple[int, int, in
     return min(hourly_remaining, daily_remaining), hourly_remaining, daily_remaining
 
 
+def calculate_provider_cycle_request_cap(state: dict, budget: dict, provider: str) -> tuple[int, int, int]:
+    usage = estimate_budget_usage(state, datetime.now(timezone.utc), provider=provider)
+    hourly_limit = max(0, int(budget.get("hourlyTarget") or 0))
+    daily_limit = max(0, int(budget.get("dailyTarget") or 0))
+    hourly_remaining = max(0, hourly_limit - int(usage["hourlyUsed"]))
+    daily_remaining = max(0, daily_limit - int(usage["dailyUsed"]))
+    return min(hourly_remaining, daily_remaining), hourly_remaining, daily_remaining
+
+
 def build_current_price_builder_env(
     base_env: dict[str, str],
     batch_size: int,
     request_cap: int,
     set_id: str | None = None,
+    provider_request_caps: dict[str, int] | None = None,
 ) -> dict[str, str]:
     env = dict(base_env)
     env["CARDSCANR_CURRENT_PRICE_BATCH_SIZE"] = str(max(1, batch_size))
     env["CARDSCANR_CURRENT_PRICE_REQUEST_CAP"] = str(max(0, request_cap))
+    provider_request_caps = provider_request_caps or {}
+    if PROVIDER_POKEWALLET in provider_request_caps:
+        env["CARDSCANR_POKEWALLET_CURRENT_PRICE_REQUEST_CAP"] = str(
+            max(0, int(provider_request_caps.get(PROVIDER_POKEWALLET) or 0))
+        )
+    if PROVIDER_POKEMON_TCG_API in provider_request_caps:
+        env["CARDSCANR_POKEMON_TCG_CURRENT_PRICE_REQUEST_CAP"] = str(
+            max(0, int(provider_request_caps.get(PROVIDER_POKEMON_TCG_API) or 0))
+        )
     if set_id:
         env["CARDSCANR_CURRENT_PRICE_SET_ID"] = str(set_id).strip()
     return env
@@ -205,22 +333,43 @@ def parse_utc(value: str | None) -> datetime | None:
         return None
 
 
-def estimate_budget_usage(state: dict, now: datetime) -> dict:
+def provider_count_from_ledger_item(item: dict, provider: str) -> int:
+    requested_provider = normalize_request_provider(provider)
+    counts = item.get("providerRequestCounts")
+    if isinstance(counts, dict):
+        try:
+            return max(0, int(counts.get(requested_provider) or 0))
+        except (TypeError, ValueError):
+            return 0
+    legacy_provider = normalize_request_provider(item.get("provider") or item.get("requestProvider"))
+    if legacy_provider == requested_provider:
+        try:
+            return max(0, int(item.get("requests") or 0))
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
+def estimate_budget_usage(state: dict, now: datetime, provider: str | None = None) -> dict:
     hourly_cutoff = now.timestamp() - 3600
     rolling_day_cutoff = now.timestamp() - 86400
     hourly_used = 0
     daily_used = 0
+    provider = normalize_request_provider(provider) if provider else None
     for item in state.get("requestLedger", []):
         if not isinstance(item, dict):
             continue
         ts = parse_utc(str(item.get("timestampUtc") or ""))
         if ts is None:
             continue
-        requests = 0
-        try:
-            requests = max(0, int(item.get("requests") or 0))
-        except (TypeError, ValueError):
+        if provider:
+            requests = provider_count_from_ledger_item(item, provider)
+        else:
             requests = 0
+            try:
+                requests = max(0, int(item.get("requests") or 0))
+            except (TypeError, ValueError):
+                requests = 0
         ts_seconds = ts.timestamp()
         if ts_seconds >= hourly_cutoff:
             hourly_used += requests
@@ -229,10 +378,13 @@ def estimate_budget_usage(state: dict, now: datetime) -> dict:
     return {"hourlyUsed": hourly_used, "dailyUsed": daily_used}
 
 
-def next_budget_reset_seconds(state: dict, now: datetime, window_seconds: int) -> int:
+def next_budget_reset_seconds(state: dict, now: datetime, window_seconds: int, provider: str | None = None) -> int:
     timestamps: list[float] = []
+    provider = normalize_request_provider(provider) if provider else None
     for item in state.get("requestLedger", []):
         if not isinstance(item, dict):
+            continue
+        if provider and provider_count_from_ledger_item(item, provider) <= 0:
             continue
         ts = parse_utc(str(item.get("timestampUtc") or ""))
         if ts is None:
@@ -261,12 +413,69 @@ def build_budget_snapshot(state: dict, budget: dict, now: datetime | None = None
     }
 
 
-def append_request_ledger(state: dict, requests_used: int, status: str, now_iso: str) -> dict:
+def build_provider_budget_snapshot(
+    state: dict,
+    provider: str,
+    budget: dict,
+    now: datetime | None = None,
+) -> dict:
+    provider = normalize_request_provider(provider)
+    now = now or datetime.now(timezone.utc)
+    usage = estimate_budget_usage(state, now, provider=provider)
+    hourly_remaining = max(0, int(budget["hourlyTarget"]) - int(usage["hourlyUsed"]))
+    daily_remaining = max(0, int(budget["dailyTarget"]) - int(usage["dailyUsed"]))
+    return {
+        "provider": provider,
+        "hourlyUsed": int(usage["hourlyUsed"]),
+        "dailyUsed": int(usage["dailyUsed"]),
+        "hourlyRemaining": int(hourly_remaining),
+        "dailyRemaining": int(daily_remaining),
+        "hourlySleepSeconds": next_budget_reset_seconds(state, now, 3600, provider=provider),
+        "dailySleepSeconds": next_budget_reset_seconds(state, now, 86400, provider=provider),
+    }
+
+
+def build_all_provider_budget_snapshots(
+    state: dict,
+    budgets: dict[str, dict],
+    now: datetime | None = None,
+) -> dict[str, dict]:
+    now = now or datetime.now(timezone.utc)
+    return {
+        normalize_request_provider(provider): build_provider_budget_snapshot(state, provider, budget, now)
+        for provider, budget in budgets.items()
+    }
+
+
+def normalize_provider_request_counts(provider_request_counts: dict | None, requests_used: int = 0) -> dict[str, int]:
+    normalized = {provider: 0 for provider in sorted(KNOWN_REQUEST_PROVIDERS)}
+    if isinstance(provider_request_counts, dict):
+        for provider, count in provider_request_counts.items():
+            key = normalize_request_provider(provider)
+            try:
+                normalized[key] = int(normalized.get(key, 0)) + max(0, int(count or 0))
+            except (TypeError, ValueError):
+                continue
+    elif requests_used:
+        normalized[PROVIDER_OTHER] = max(0, int(requests_used))
+    return {provider: count for provider, count in normalized.items() if count > 0}
+
+
+def append_request_ledger(
+    state: dict,
+    requests_used: int,
+    status: str,
+    now_iso: str,
+    provider_request_counts: dict | None = None,
+) -> dict:
+    counts = normalize_provider_request_counts(provider_request_counts, requests_used=requests_used)
+    total_requests = sum(counts.values()) if counts else max(0, int(requests_used))
     ledger = list(state.get("requestLedger", []))
     ledger.append(
         {
             "timestampUtc": now_iso,
-            "requests": max(0, int(requests_used)),
+            "requests": max(0, int(total_requests)),
+            "providerRequestCounts": counts,
             "status": status,
             "source": "local_price_update",
         }
@@ -318,6 +527,18 @@ def should_stop_for_budget(state: dict, budget: dict) -> tuple[bool, str, int, i
     return False, "none", hourly_remaining, daily_remaining
 
 
+def should_stop_for_provider_budget(state: dict, provider: str, budget: dict) -> tuple[bool, str, int, int]:
+    provider = normalize_request_provider(provider)
+    snapshot = build_provider_budget_snapshot(state, provider, budget)
+    hourly_remaining = int(snapshot["hourlyRemaining"])
+    daily_remaining = int(snapshot["dailyRemaining"])
+    if daily_remaining <= 0:
+        return True, f"{provider}_daily_exhausted", hourly_remaining, daily_remaining
+    if hourly_remaining <= 0:
+        return True, f"{provider}_hourly_exhausted", hourly_remaining, daily_remaining
+    return False, "none", hourly_remaining, daily_remaining
+
+
 def next_safe_wake_seconds(snapshot: dict) -> tuple[int, str]:
     daily_remaining = int(snapshot.get("dailyRemaining") or 0)
     hourly_remaining = int(snapshot.get("hourlyRemaining") or 0)
@@ -326,6 +547,59 @@ def next_safe_wake_seconds(snapshot: dict) -> tuple[int, str]:
     if hourly_remaining <= 0:
         return int(snapshot.get("hourlySleepSeconds") or 0), "hourly_budget_exhausted"
     return 0, "none"
+
+
+def next_provider_safe_wake_seconds(snapshot: dict) -> tuple[int, str, str | None]:
+    provider = normalize_request_provider(snapshot.get("provider"))
+    daily_remaining = int(snapshot.get("dailyRemaining") or 0)
+    hourly_remaining = int(snapshot.get("hourlyRemaining") or 0)
+    if daily_remaining <= 0:
+        return int(snapshot.get("dailySleepSeconds") or 0), f"{provider}_daily_exhausted", provider
+    if hourly_remaining <= 0:
+        return int(snapshot.get("hourlySleepSeconds") or 0), f"{provider}_hourly_exhausted", provider
+    return 0, "none", None
+
+
+def all_provider_budgets_exhausted(snapshots: dict[str, dict]) -> bool:
+    if not snapshots:
+        return False
+    for snapshot in snapshots.values():
+        if int(snapshot.get("hourlyRemaining") or 0) > 0 and int(snapshot.get("dailyRemaining") or 0) > 0:
+            return False
+    return True
+
+
+def resolve_local_provider_priority(config: dict) -> list[str]:
+    raw_value = os.getenv("CARDSCANR_PRICE_PROVIDER_PRIORITY", "").strip()
+    if not raw_value:
+        raw_value = str(config.get("priceProviderPriority") or "").strip()
+    providers = [normalize_request_provider(item) for item in raw_value.split(",") if item.strip()]
+    providers = [item for item in providers if item in {PROVIDER_POKEWALLET, PROVIDER_POKEMON_TCG_API}]
+    return providers or [PROVIDER_POKEMON_TCG_API]
+
+
+def local_pokewallet_pricing_enabled(config: dict) -> bool:
+    raw_value = os.getenv("CARDSCANR_USE_POKEWALLET_PRICES", "").strip().lower()
+    enabled = raw_value in {"1", "true", "yes", "y", "on"}
+    if bool(config.get("usePokewalletPrices", False)):
+        enabled = True
+    priority = resolve_local_provider_priority(config)
+    return enabled or (priority and priority[0] == PROVIDER_POKEWALLET)
+
+
+def provider_counts_from_diagnostics(diagnostics: dict) -> dict[str, int]:
+    counts = diagnostics.get("providerRequestCounts")
+    if not isinstance(counts, dict):
+        counts = {
+            PROVIDER_POKEWALLET: diagnostics.get("pokewalletRequestsAttempted", 0),
+            PROVIDER_POKEMON_TCG_API: diagnostics.get("pokemonTcgApiRequestsAttempted", 0),
+            PROVIDER_TCGDEX: diagnostics.get("tcgdexRequestsAttempted", 0),
+        }
+    fallback_total = int(diagnostics.get("providerRequestsAttempted") or 0)
+    normalized = normalize_provider_request_counts(counts if isinstance(counts, dict) else None)
+    if not normalized and fallback_total:
+        normalized[PROVIDER_OTHER] = fallback_total
+    return normalized
 
 
 def planned_batch(batch_size: int, config: dict) -> tuple[int, list[str], Path]:
@@ -469,6 +743,17 @@ def main() -> int:
         "requestsUsedLast24Hours": 0,
         "hourlyBudgetRemaining": None,
         "dailyBudgetRemaining": None,
+        "pokewalletRequestsUsedLastHour": 0,
+        "pokewalletRequestsUsedLast24Hours": 0,
+        "pokewalletHourlyRemaining": None,
+        "pokewalletDailyRemaining": None,
+        "pokemonTcgApiRequestsUsedLastHour": 0,
+        "pokemonTcgApiRequestsUsedLast24Hours": 0,
+        "pokemonTcgApiHourlyRemaining": None,
+        "pokemonTcgApiDailyRemaining": None,
+        "providerRequestCounts": {},
+        "sleepReason": None,
+        "sleepProvider": None,
         "nextSafeWakeAtUtc": None,
         "nextSafeWakeReason": None,
         "stopReason": None,
@@ -497,6 +782,11 @@ def main() -> int:
         target_hourly=args.target_hourly_requests if args.target_hourly_requests > 0 else None,
         target_daily=args.target_daily_requests if args.target_daily_requests > 0 else None,
     )
+    provider_budgets = resolve_provider_budget_settings(
+        target_hourly=args.target_hourly_requests if args.target_hourly_requests > 0 else None,
+        target_daily=args.target_daily_requests if args.target_daily_requests > 0 else None,
+    )
+    pokewallet_active = local_pokewallet_pricing_enabled(config)
     cursor, set_ids, _ = planned_batch(args.batch_size, config)
     if set_id_override:
         set_ids = [set_id_override]
@@ -518,55 +808,127 @@ def main() -> int:
         while True:
             state = load_state(state_path)
             budget_snapshot = build_budget_snapshot(state, budget)
+            provider_snapshots = build_all_provider_budget_snapshots(state, provider_budgets)
+            pokewallet_snapshot = provider_snapshots[PROVIDER_POKEWALLET]
+            pokemon_tcg_snapshot = provider_snapshots[PROVIDER_POKEMON_TCG_API]
             hourly_remaining = int(budget_snapshot["hourlyRemaining"])
             daily_remaining = int(budget_snapshot["dailyRemaining"])
             result["requestsUsedLastHour"] = int(budget_snapshot["hourlyUsed"])
             result["requestsUsedLast24Hours"] = int(budget_snapshot["dailyUsed"])
             result["hourlyBudgetRemaining"] = hourly_remaining
             result["dailyBudgetRemaining"] = daily_remaining
+            result["pokewalletRequestsUsedLastHour"] = int(pokewallet_snapshot["hourlyUsed"])
+            result["pokewalletRequestsUsedLast24Hours"] = int(pokewallet_snapshot["dailyUsed"])
+            result["pokewalletHourlyRemaining"] = int(pokewallet_snapshot["hourlyRemaining"])
+            result["pokewalletDailyRemaining"] = int(pokewallet_snapshot["dailyRemaining"])
+            result["pokemonTcgApiRequestsUsedLastHour"] = int(pokemon_tcg_snapshot["hourlyUsed"])
+            result["pokemonTcgApiRequestsUsedLast24Hours"] = int(pokemon_tcg_snapshot["dailyUsed"])
+            result["pokemonTcgApiHourlyRemaining"] = int(pokemon_tcg_snapshot["hourlyRemaining"])
+            result["pokemonTcgApiDailyRemaining"] = int(pokemon_tcg_snapshot["dailyRemaining"])
 
-            wake_seconds, wake_reason = next_safe_wake_seconds(budget_snapshot)
-            if wake_reason == "daily_budget_exhausted":
-                print(f"Budget stop: {wake_reason} (hourlyRemaining={hourly_remaining}, dailyRemaining={daily_remaining})")
-                result["stopReason"] = wake_reason
-                return finalize(0)
-            if wake_reason == "hourly_budget_exhausted":
+            wake_seconds = 0
+            wake_reason = "none"
+            wake_provider = None
+            if pokewallet_active:
+                wake_seconds, wake_reason, wake_provider = next_provider_safe_wake_seconds(pokewallet_snapshot)
+            elif all_provider_budgets_exhausted(provider_snapshots):
+                wake_reason = "all_provider_budgets_exhausted"
+                wake_seconds = max(
+                    int(snapshot.get("hourlySleepSeconds") or snapshot.get("dailySleepSeconds") or 0)
+                    for snapshot in provider_snapshots.values()
+                )
+
+            if wake_reason != "none":
                 if args.all_day:
                     sleep_seconds = max(1, wake_seconds)
                     wake_at = datetime.now(timezone.utc) + timedelta(seconds=sleep_seconds)
                     result["nextSafeWakeAtUtc"] = wake_at.replace(microsecond=0).isoformat().replace("+00:00", "Z")
                     result["nextSafeWakeReason"] = wake_reason
+                    result["sleepReason"] = wake_reason
+                    result["sleepProvider"] = wake_provider
                     print(
                         f"Budget sleep: {wake_reason} "
-                        f"(usedLastHour={budget_snapshot['hourlyUsed']}, usedLast24Hours={budget_snapshot['dailyUsed']}, "
+                        f"(sleepProvider={wake_provider or 'all'}, "
+                        f"pokewalletHourlyRemaining={result['pokewalletHourlyRemaining']}, "
+                        f"pokewalletDailyRemaining={result['pokewalletDailyRemaining']}, "
+                        f"pokemonTcgApiHourlyRemaining={result['pokemonTcgApiHourlyRemaining']}, "
+                        f"pokemonTcgApiDailyRemaining={result['pokemonTcgApiDailyRemaining']}, "
                         f"wakeInSeconds={sleep_seconds})"
                     )
                     time.sleep(sleep_seconds)
                     continue
-                print(f"Budget stop: {wake_reason} (hourlyRemaining={hourly_remaining}, dailyRemaining={daily_remaining})")
+                print(
+                    f"Budget stop: {wake_reason} "
+                    f"(sleepProvider={wake_provider or 'all'}, "
+                    f"pokewalletHourlyRemaining={result['pokewalletHourlyRemaining']}, "
+                    f"pokewalletDailyRemaining={result['pokewalletDailyRemaining']}, "
+                    f"pokemonTcgApiHourlyRemaining={result['pokemonTcgApiHourlyRemaining']}, "
+                    f"pokemonTcgApiDailyRemaining={result['pokemonTcgApiDailyRemaining']})"
+                )
                 result["stopReason"] = wake_reason
+                result["sleepReason"] = wake_reason
+                result["sleepProvider"] = wake_provider
                 return finalize(0)
 
-            cycle_request_cap, cycle_hourly_remaining, cycle_daily_remaining = calculate_cycle_request_cap(state, budget)
-            result["hourlyBudgetRemaining"] = cycle_hourly_remaining
-            result["dailyBudgetRemaining"] = cycle_daily_remaining
+            pokewallet_cap, pokewallet_hourly_remaining, pokewallet_daily_remaining = calculate_provider_cycle_request_cap(
+                state,
+                provider_budgets[PROVIDER_POKEWALLET],
+                PROVIDER_POKEWALLET,
+            )
+            pokemon_tcg_cap, pokemon_tcg_hourly_remaining, pokemon_tcg_daily_remaining = calculate_provider_cycle_request_cap(
+                state,
+                provider_budgets[PROVIDER_POKEMON_TCG_API],
+                PROVIDER_POKEMON_TCG_API,
+            )
+            cycle_request_cap = pokewallet_cap if pokewallet_active else pokemon_tcg_cap
+            result["pokewalletHourlyRemaining"] = pokewallet_hourly_remaining
+            result["pokewalletDailyRemaining"] = pokewallet_daily_remaining
+            result["pokemonTcgApiHourlyRemaining"] = pokemon_tcg_hourly_remaining
+            result["pokemonTcgApiDailyRemaining"] = pokemon_tcg_daily_remaining
+            result["hourlyBudgetRemaining"] = pokewallet_hourly_remaining if pokewallet_active else pokemon_tcg_hourly_remaining
+            result["dailyBudgetRemaining"] = pokewallet_daily_remaining if pokewallet_active else pokemon_tcg_daily_remaining
             if not should_start_current_price_cycle(cycle_request_cap):
+                cap_reason = f"{PROVIDER_POKEWALLET}_hourly_exhausted" if pokewallet_active else "all_provider_budgets_exhausted"
+                if pokewallet_active and pokewallet_daily_remaining <= 0:
+                    cap_reason = f"{PROVIDER_POKEWALLET}_daily_exhausted"
                 if args.all_day:
-                    sleep_seconds = max(1, int(budget_snapshot.get("hourlySleepSeconds") or args.cycle_delay_seconds or 60))
+                    sleep_snapshot = pokewallet_snapshot if pokewallet_active else pokemon_tcg_snapshot
+                    sleep_seconds = max(
+                        1,
+                        int(
+                            sleep_snapshot.get("hourlySleepSeconds")
+                            or sleep_snapshot.get("dailySleepSeconds")
+                            or args.cycle_delay_seconds
+                            or 60
+                        ),
+                    )
                     wake_at = datetime.now(timezone.utc) + timedelta(seconds=sleep_seconds)
                     result["nextSafeWakeAtUtc"] = wake_at.replace(microsecond=0).isoformat().replace("+00:00", "Z")
-                    result["nextSafeWakeReason"] = "request_cap_exhausted"
+                    result["nextSafeWakeReason"] = cap_reason
+                    result["sleepReason"] = cap_reason
+                    result["sleepProvider"] = PROVIDER_POKEWALLET if pokewallet_active else None
                     print(
-                        "Budget sleep: request_cap_exhausted "
-                        f"(hourlyRemaining={cycle_hourly_remaining}, dailyRemaining={cycle_daily_remaining}, wakeInSeconds={sleep_seconds})"
+                        f"Budget sleep: {cap_reason} "
+                        f"(sleepProvider={result['sleepProvider'] or 'all'}, "
+                        f"pokewalletHourlyRemaining={pokewallet_hourly_remaining}, "
+                        f"pokewalletDailyRemaining={pokewallet_daily_remaining}, "
+                        f"pokemonTcgApiHourlyRemaining={pokemon_tcg_hourly_remaining}, "
+                        f"pokemonTcgApiDailyRemaining={pokemon_tcg_daily_remaining}, "
+                        f"wakeInSeconds={sleep_seconds})"
                     )
                     time.sleep(sleep_seconds)
                     continue
                 print(
-                    "Budget stop: request_cap_exhausted "
-                    f"(hourlyRemaining={cycle_hourly_remaining}, dailyRemaining={cycle_daily_remaining})"
+                    f"Budget stop: {cap_reason} "
+                    f"(sleepProvider={PROVIDER_POKEWALLET if pokewallet_active else 'all'}, "
+                    f"pokewalletHourlyRemaining={pokewallet_hourly_remaining}, "
+                    f"pokewalletDailyRemaining={pokewallet_daily_remaining}, "
+                    f"pokemonTcgApiHourlyRemaining={pokemon_tcg_hourly_remaining}, "
+                    f"pokemonTcgApiDailyRemaining={pokemon_tcg_daily_remaining})"
                 )
-                result["stopReason"] = "request_cap_exhausted"
+                result["stopReason"] = cap_reason
+                result["sleepReason"] = cap_reason
+                result["sleepProvider"] = PROVIDER_POKEWALLET if pokewallet_active else None
                 return finalize(0)
 
             env = build_current_price_builder_env(
@@ -574,6 +936,10 @@ def main() -> int:
                 args.batch_size,
                 cycle_request_cap,
                 set_id=set_id_override or None,
+                provider_request_caps={
+                    PROVIDER_POKEWALLET: pokewallet_cap,
+                    PROVIDER_POKEMON_TCG_API: pokemon_tcg_cap,
+                },
             )
 
             emit_phase("updating")
@@ -581,8 +947,13 @@ def main() -> int:
             run_cmd([sys.executable, "tools/build_price_cache.py", "current_prices"], env=env)
 
             diagnostics = read_latest_diagnostics()
-            requests_used = int(diagnostics.get("providerRequestsAttempted") or 0)
+            provider_counts = provider_counts_from_diagnostics(diagnostics)
+            requests_used = sum(provider_counts.values())
             result["requestsUsedThisRun"] = int(result["requestsUsedThisRun"] or 0) + requests_used
+            cumulative_counts = dict(result.get("providerRequestCounts") or {})
+            for provider, count in provider_counts.items():
+                cumulative_counts[provider] = int(cumulative_counts.get(provider, 0) or 0) + int(count)
+            result["providerRequestCounts"] = cumulative_counts
 
             state = load_state(state_path)
             state = append_request_ledger(
@@ -590,6 +961,7 @@ def main() -> int:
                 requests_used=requests_used,
                 status=str(diagnostics.get("currentPriceEnStatus") or "ok"),
                 now_iso=utc_now_iso(),
+                provider_request_counts=provider_counts,
             )
             write_json_atomic(state_path, state)
 
