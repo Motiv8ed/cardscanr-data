@@ -487,6 +487,37 @@ REQUIRED_IMAGE_CACHE_POLICY_FIELDS = {
     "defaultPolicy",
     "notes",
 }
+REQUIRED_IMAGE_MANIFEST_FIELDS = {
+    "schemaVersion",
+    "generatedAtUtc",
+    "mode",
+    "cdnBaseUrl",
+    "imageFormat",
+    "recordCount",
+    "records",
+}
+REQUIRED_IMAGE_MANIFEST_RECORD_FIELDS = {
+    "canonicalCardId",
+    "game",
+    "language",
+    "setId",
+    "setName",
+    "collectorNumber",
+    "normalizedName",
+    "imageSmallUrl",
+    "imageLargeUrl",
+    "sourceImageSmallUrl",
+    "sourceImageLargeUrl",
+    "imageSource",
+    "imageCached",
+    "localImageSmallPath",
+    "localImageLargePath",
+    "cacheStatus",
+    "lastCheckedAtUtc",
+    "providerIds",
+    "error",
+}
+ALLOWED_IMAGE_CACHE_STATUS_VALUES = {"remote_only", "cdn_ready", "cached", "failed", "skipped"}
 
 REQUIRED_TRACKED_CARDS_FIELDS = {"schemaVersion", "generatedAtUtc", "cards"}
 REQUIRED_TRACKED_CARD_ENTRY_FIELDS = {
@@ -2025,6 +2056,101 @@ def check_image_cache_policy() -> None:
         err("images/cache-policy.json notes must be a list")
 
 
+def validate_image_manifest_data(data: object, label: str = "images/cards-manifest.json", root: Path = ROOT) -> None:
+    if not isinstance(data, dict):
+        err(f"{label} must be a JSON object")
+        return
+    if not check_required(data, REQUIRED_IMAGE_MANIFEST_FIELDS, label):
+        return
+
+    records = data.get("records")
+    if not isinstance(records, list):
+        err(f"{label} records must be a list")
+        return
+    if data.get("recordCount") != len(records):
+        err(f"{label} recordCount must equal records length")
+
+    image_format = data.get("imageFormat")
+    if image_format not in {"jpg", "webp"}:
+        err(f"{label} imageFormat must be jpg or webp")
+
+    seen_ids: set[str] = set()
+    strict_image_files = parse_bool_env("CARDSCANR_VALIDATE_STRICT_IMAGE_FILES")
+    for i, record in enumerate(records):
+        record_label = f"{label} records[{i}]"
+        if not isinstance(record, dict):
+            err(f"{record_label} must be an object")
+            continue
+
+        missing = REQUIRED_IMAGE_MANIFEST_RECORD_FIELDS - set(record.keys())
+        if missing:
+            err(f"{record_label} missing fields: {sorted(missing)}")
+            continue
+
+        canonical_id = record.get("canonicalCardId")
+        if not isinstance(canonical_id, str) or not canonical_id:
+            err(f"{record_label} canonicalCardId must be a non-empty string")
+        elif canonical_id in seen_ids:
+            err(f"{label} duplicate canonicalCardId: {canonical_id}")
+        else:
+            seen_ids.add(canonical_id)
+
+        cache_status = record.get("cacheStatus")
+        if cache_status not in ALLOWED_IMAGE_CACHE_STATUS_VALUES:
+            err(f"{record_label} cacheStatus must be one of {sorted(ALLOWED_IMAGE_CACHE_STATUS_VALUES)}")
+
+        for field in ["imageSmallUrl", "imageLargeUrl", "sourceImageSmallUrl", "sourceImageLargeUrl"]:
+            value = record.get(field)
+            if not isinstance(value, str) or not value.startswith(("http://", "https://")):
+                err(f"{record_label} {field} must be an http(s) URL")
+
+        if not isinstance(record.get("imageCached"), bool):
+            err(f"{record_label} imageCached must be boolean")
+        if not isinstance(record.get("providerIds"), dict):
+            err(f"{record_label} providerIds must be an object")
+        last_checked = record.get("lastCheckedAtUtc")
+        if not isinstance(last_checked, str) or not last_checked.endswith("Z"):
+            err(f"{record_label} lastCheckedAtUtc must be a UTC string ending with 'Z'")
+
+        local_small = record.get("localImageSmallPath")
+        local_large = record.get("localImageLargePath")
+        if cache_status == "cached":
+            if not isinstance(local_small, str) or not local_small:
+                err(f"{record_label} localImageSmallPath is required when cacheStatus=cached")
+            if not isinstance(local_large, str) or not local_large:
+                err(f"{record_label} localImageLargePath is required when cacheStatus=cached")
+            if strict_image_files:
+                for local_path in [local_small, local_large]:
+                    if isinstance(local_path, str) and local_path:
+                        candidate = Path(local_path)
+                        if not candidate.is_absolute():
+                            candidate = root / candidate
+                        if not candidate.exists():
+                            err(f"{record_label} local image path does not exist: {local_path}")
+        else:
+            if local_small is not None and not isinstance(local_small, str):
+                err(f"{record_label} localImageSmallPath must be a string or null")
+            if local_large is not None and not isinstance(local_large, str):
+                err(f"{record_label} localImageLargePath must be a string or null")
+
+        if cache_status == "failed" and not record.get("error"):
+            err(f"{record_label} error is required when cacheStatus=failed")
+        if cache_status not in {"failed", "skipped"} and record.get("error") is not None:
+            err(f"{record_label} error must be null unless cacheStatus=failed or skipped")
+
+    ok(f"{label}: {len(records)} image manifest records validated")
+
+
+def check_image_manifest() -> None:
+    print("\n[6k] Image manifest check")
+    path = V1_DIR / "images" / "cards-manifest.json"
+    if not path.exists():
+        warn("No image manifest found at public/v1/images/cards-manifest.json")
+        return
+    data = load_json_file(path)
+    validate_image_manifest_data(data, "images/cards-manifest.json", ROOT)
+
+
 def check_api_manifest() -> None:
     print("\n[7] API manifest check")
     path = V1_DIR / "api-manifest.json"
@@ -2710,6 +2836,7 @@ def main() -> None:
     check_pokewallet_catalog_foundation_diagnostics()
     check_pokewallet_provider_catalog()
     check_image_cache_policy()
+    check_image_manifest()
     check_api_manifest()
     check_api_notes()
     check_schemas()
