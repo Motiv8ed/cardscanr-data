@@ -1,30 +1,30 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 146,
-  "lastUpdatedAtUtc": "2026-05-21T20:11:23Z",
+  "enCurrentPriceCursor": 156,
+  "lastUpdatedAtUtc": "2026-05-21T20:13:45Z",
   "lastBatchSetIds": [
-    "swsh12",
-    "swsh12pt5",
-    "swsh12pt5gg",
-    "swsh12tg",
-    "swsh2",
-    "swsh3",
-    "swsh35",
-    "swsh4",
-    "swsh45",
-    "swsh45sv"
+    "swsh5",
+    "swsh6",
+    "swsh7",
+    "swsh8",
+    "swsh9",
+    "swsh9tg",
+    "swshp",
+    "tk1a",
+    "tk1b",
+    "tk2a"
   ],
   "lastProcessedSetIds": [
-    "swsh12",
-    "swsh12pt5",
-    "swsh12pt5gg",
-    "swsh12tg",
-    "swsh2",
-    "swsh3",
-    "swsh35",
-    "swsh4",
-    "swsh45",
-    "swsh45sv"
+    "swsh5",
+    "swsh6",
+    "swsh7",
+    "swsh8",
+    "swsh9",
+    "swsh9tg",
+    "swshp",
+    "tk1a",
+    "tk1b",
+    "tk2a"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
@@ -378,11 +378,21 @@
       "timestampUtc": "2026-05-21T20:08:51Z"
     },
     {
-      "timestampUtc": "2026-05-21T20:13:09Z",
-      "requests": 17,
       "providerRequestCounts": {
         "pokemon_tcg_api": 10,
         "pokewallet": 7
+      },
+      "requests": 17,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-21T20:13:09Z"
+    },
+    {
+      "timestampUtc": "2026-05-21T20:14:40Z",
+      "requests": 15,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 7,
+        "pokewallet": 8
       },
       "status": "built",
       "source": "local_price_update"
