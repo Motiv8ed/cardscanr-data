@@ -5,14 +5,14 @@
   "generatedAtUtc": "2026-05-21T13:59:56Z",
   "isLivePricing": false,
   "language": "en",
-  "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T13:58:35Z",
-  "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:58:35Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T13:59:56Z",
+  "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:59:56Z",
   "priceCount": 1,
   "prices": [
     {
-      "canonicalCardId": "pokemon|en|hgss2|TWO|alph_lithograph",
-      "canonicalId": "pokemon|en|hgss2|TWO|alph_lithograph|holo|near_mint",
-      "collectorNumber": "TWO",
+      "canonicalCardId": "pokemon|en|hgss4|FOUR|alph_lithograph",
+      "canonicalId": "pokemon|en|hgss4|FOUR|alph_lithograph|holo|near_mint",
+      "collectorNumber": "FOUR",
       "condition": "near_mint",
       "confidence": "medium",
       "conversionPolicy": "none",
@@ -24,25 +24,25 @@
         ],
         "providerRecord": {
           "cardName": "Alph Lithograph",
-          "cardNumber": "TWO",
+          "cardNumber": "FOUR",
           "variant": "Holofoil"
         },
         "sourceRecordStatus": "priced"
       },
-      "fetchedAtUtc": "2026-05-21T13:58:35Z",
-      "highPrice": 1246.8,
-      "lowPrice": 83.99,
+      "fetchedAtUtc": "2026-05-21T13:59:56Z",
+      "highPrice": 799.5,
+      "lowPrice": 99.99,
       "market": "us",
-      "marketPrice": 121.74,
-      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:58:35Z",
+      "marketPrice": 88.57,
+      "nextExpectedPriceUpdateAtUtc": "2026-05-22T07:59:56Z",
       "normalizedName": "alph_lithograph",
-      "priceIdentityId": "pokemon|en|hgss2|TWO|alph_lithograph|holo|near_mint|us|usd",
-      "setId": "hgss2",
-      "setName": "HS—Unleashed",
+      "priceIdentityId": "pokemon|en|hgss4|FOUR|alph_lithograph|holo|near_mint|us|usd",
+      "setId": "hgss4",
+      "setName": "HS—Triumphant",
       "source": "pokewallet",
       "sourceCurrency": "USD",
       "staleness": {
-        "ageSeconds": 81,
+        "ageSeconds": 0,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 172800,
         "status": "fresh"
@@ -56,9 +56,9 @@
     "pokewallet": {
       "dedupedRecords": 0,
       "duplicateCanonicalIdCounts": {},
-      "rawItems": 179,
+      "rawItems": 194,
       "rejectionReasonCounts": {
-        "no_catalogue_match": 178
+        "no_catalogue_match": 193
       },
       "sampleDedupedProviderRows": [],
       "usableRecordsAfterDedupe": 1,
@@ -66,11 +66,11 @@
     }
   },
   "schemaVersion": "1.0.0",
-  "setId": "hgss2",
-  "setName": "HS—Unleashed",
+  "setId": "hgss4",
+  "setName": "HS—Triumphant",
   "source": "pokewallet",
   "staleness": {
-    "ageSeconds": 81,
+    "ageSeconds": 0,
     "freshForSeconds": 86400,
     "staleAfterSeconds": 172800,
     "status": "fresh"
