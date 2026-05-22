@@ -1,32 +1,53 @@
 {
-  "enCurrentPriceCursor": 99,
+  "schemaVersion": "1.0.0",
+  "enCurrentPriceCursor": 119,
+  "lastUpdatedAtUtc": "2026-05-22T08:00:07Z",
   "lastBatchSetIds": [
-    "pop4",
-    "pop5",
-    "pop6",
-    "pop7",
-    "pop8",
-    "pop9",
-    "rsv10pt5",
-    "ru1",
-    "si1",
-    "sm1"
+    "sm10",
+    "sm11",
+    "sm115",
+    "sm12",
+    "sm2",
+    "sm3",
+    "sm35",
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma",
+    "smp",
+    "sv1",
+    "sv10",
+    "sv2",
+    "sv3"
   ],
   "lastProcessedSetIds": [
-    "pop4",
-    "pop5",
-    "pop6",
-    "pop7",
-    "pop8",
-    "pop9",
-    "rsv10pt5",
-    "ru1",
-    "si1",
-    "sm1"
+    "sm10",
+    "sm11",
+    "sm115",
+    "sm12",
+    "sm2",
+    "sm3",
+    "sm35",
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma",
+    "smp",
+    "sv1",
+    "sv10",
+    "sv2",
+    "sv3"
   ],
+  "lastStopReason": "completed_with_transient_failures",
   "lastRateLimited": false,
-  "lastStopReason": "completed",
-  "lastUpdatedAtUtc": "2026-05-22T01:18:37Z",
   "requestLedger": [
     {
       "requests": 20,
@@ -493,7 +514,15 @@
       "source": "local_price_update",
       "status": "built",
       "timestampUtc": "2026-05-21T22:02:21Z"
+    },
+    {
+      "timestampUtc": "2026-05-22T08:01:02Z",
+      "requests": 21,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 21
+      },
+      "status": "partial_built",
+      "source": "local_price_update"
     }
-  ],
-  "schemaVersion": "1.0.0"
+  ]
 }
