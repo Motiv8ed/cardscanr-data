@@ -133,6 +133,7 @@ function Test-AllowedDirtyPath {
 
     $exact = @(
         'data\pokewallet_catalog_full_state.json',
+        'data\scheduled_price_refresh_state.json.tmp',
         'public\v1\diagnostics\pokewallet-catalog-foundation-latest.json',
         'public\v1\index.json',
         'public\v1\api-manifest.json',
