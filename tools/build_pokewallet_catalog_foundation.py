@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -69,9 +70,81 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    rendered = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    encoded = rendered.encode("utf-8")
+    if path.exists() and path.read_bytes() == encoded:
+        return
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=True, ensure_ascii=False)
-        fh.write("\n")
+        fh.write(rendered)
+
+
+def payload_without_top_level_fields(payload: dict[str, Any], fields: set[str]) -> dict[str, Any]:
+    return {key: value for key, value in payload.items() if key not in fields}
+
+
+def preserve_top_level_timestamps_if_unchanged(path: Path, payload: dict[str, Any], fields: set[str]) -> dict[str, Any]:
+    if not path.exists() or not fields:
+        return payload
+    try:
+        existing = load_json(path)
+    except Exception:
+        return payload
+    if payload_without_top_level_fields(existing, fields) == payload_without_top_level_fields(payload, fields):
+        merged = dict(payload)
+        for field in fields:
+            if field in existing:
+                merged[field] = existing[field]
+        return merged
+    return payload
+
+
+def preserve_generated_at_if_unchanged(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    return preserve_top_level_timestamps_if_unchanged(path, payload, {"generatedAtUtc"})
+
+
+def preserve_updated_at_if_unchanged(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    return preserve_top_level_timestamps_if_unchanged(path, payload, {"updatedAtUtc"})
+
+
+def provider_card_sort_key(card: dict[str, Any]) -> tuple[str, str, str, str, str, str]:
+    return (
+        string_value(card.get("cardScanRLanguage")),
+        string_value(card.get("providerSetId") or card.get("providerSetCode")),
+        normalized_key_part(card.get("cardNumber")),
+        normalized_key_part(card.get("name") or card.get("cleanName")),
+        string_value(card.get("providerCardId")),
+        string_value(card.get("providerCanonicalImageKey")),
+    )
+
+
+def sort_provider_cards(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(cards, key=provider_card_sort_key)
+
+
+def sort_image_samples(samples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        samples,
+        key=lambda sample: (
+            string_value(sample.get("cardScanRLanguage")),
+            string_value(sample.get("providerSetId")),
+            string_value(sample.get("providerCardId")),
+            string_value(sample.get("size")),
+            string_value(sample.get("imageEndpoint")),
+        ),
+    )
+
+
+def sort_public_set_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        records,
+        key=lambda record: (
+            string_value(record.get("cardScanRLanguage")),
+            string_value(record.get("providerLanguage")),
+            string_value(record.get("providerSetId")),
+            string_value(record.get("providerSetCode")),
+            string_value(record.get("providerSetName")),
+        ),
+    )
 
 
 def safe_log(message: str) -> None:
@@ -190,13 +263,14 @@ def load_full_state(path: Path, run_id: str) -> dict[str, Any]:
         return default_full_state(run_id)
     state = default_full_state(run_id)
     state.update({key: data.get(key, value) for key, value in state.items()})
-    state["lastRunId"] = run_id
     return state
 
 
 def write_full_state(path: Path, state: dict[str, Any]) -> None:
-    state["updatedAtUtc"] = now_utc()
-    write_json(path, state)
+    payload = copy.deepcopy(state)
+    payload["updatedAtUtc"] = now_utc()
+    payload = preserve_updated_at_if_unchanged(path, payload)
+    write_json(path, payload)
 
 
 def add_state_item(state: dict[str, Any], field: str, value: str) -> None:
@@ -751,7 +825,14 @@ def provider_catalog_file_records() -> dict[str, list[dict[str, Any]]]:
         }
         records_by_language.setdefault(language, []).append(record)
     for language, records in records_by_language.items():
-        records_by_language[language] = sorted(records, key=lambda item: (item["providerSetId"], item["providerSetCode"]))
+        records_by_language[language] = sorted(
+            records,
+            key=lambda item: (
+                string_value(item.get("providerSetId")),
+                string_value(item.get("providerSetCode")),
+                string_value(item.get("providerSetName")),
+            ),
+        )
     return dict(sorted(records_by_language.items()))
 
 
@@ -818,6 +899,8 @@ def write_provider_catalog_app_files(ts: str, *, state_path: Path | None = None)
         "totalCards": total_cards,
         "languages": manifest_languages,
     }
+    status_payload = preserve_generated_at_if_unchanged(STATUS_PATH, status_payload)
+    manifest_payload = preserve_generated_at_if_unchanged(CARDS_MANIFEST_PATH, manifest_payload)
     write_json(STATUS_PATH, status_payload)
     write_json(CARDS_MANIFEST_PATH, manifest_payload)
     return [STATUS_PATH, CARDS_MANIFEST_PATH]
@@ -906,10 +989,10 @@ def write_provider_outputs(
             "setsFetched": len(sets),
             "languagesSeen": dict(sorted(provider_language_counts.items())),
             "setsSelectedByLanguage": {
-                language: [public_set_record(item) for item in items]
+                language: sort_public_set_records([public_set_record(item) for item in items])
                 for language, items in sorted(selected.items())
             },
-            "sets": [public_set_record(item) for item in sets],
+            "sets": sort_public_set_records([public_set_record(item) for item in sorted(sets, key=sort_set_key)]),
         }
     )
     payloads["languages-summary.json"]["languages"] = [
@@ -928,19 +1011,21 @@ def write_provider_outputs(
         }
         for app_language in sorted(language_counts)
     ]
+    cards = sort_provider_cards(cards)
     sample_cards = cards[:100]
     payloads["cards-sample.json"].update({"cardCount": len(sample_cards), "cards": sample_cards})
     payloads["image-availability-sample.json"].update(
         {
             "imageSamplesChecked": diag["imageSamplesChecked"],
             "imageSamplesAvailable": diag["imageSamplesAvailable"],
-            "samples": image_samples,
+            "samples": sort_image_samples(image_samples),
         }
     )
 
     written: list[Path] = []
     for filename, payload in payloads.items():
         path = OUTPUT_DIR / filename
+        payload = preserve_generated_at_if_unchanged(path, payload)
         write_json(path, payload)
         written.append(path)
     return written
@@ -965,7 +1050,9 @@ def per_set_payload(ts: str, set_item: ProviderSet, cards: list[dict[str, Any]])
 
 def write_per_set_file(ts: str, set_item: ProviderSet, cards: list[dict[str, Any]], *, prefer_numeric: bool) -> Path:
     path = per_set_path(set_item, prefer_numeric=prefer_numeric)
-    write_json(path, per_set_payload(ts, set_item, cards))
+    payload = per_set_payload(ts, set_item, sort_provider_cards(cards))
+    payload = preserve_generated_at_if_unchanged(path, payload)
+    write_json(path, payload)
     return path
 
 
@@ -1059,12 +1146,20 @@ def update_index(ts: str) -> None:
     datasets = index.get("datasets")
     if not isinstance(datasets, list):
         raise ValueError("index.json datasets must be a list")
-    by_id = {str(item.get("id")): item for item in datasets if isinstance(item, dict)}
+    previous_by_id = {str(item.get("id")): item for item in datasets if isinstance(item, dict)}
+    previous_sorted = [previous_by_id[key] for key in sorted(previous_by_id)]
+    by_id = dict(previous_by_id)
     for dataset_id, entry in provider_dataset_entries(ts).items():
         local_path = PUBLIC_DIR / str(entry["url"]).removeprefix("/v1/").lstrip("/")
         if local_path.exists():
+            previous = previous_by_id.get(dataset_id)
+            if isinstance(previous, dict) and previous.get("sha256") == entry.get("sha256") and previous.get("updatedAtUtc"):
+                entry["updatedAtUtc"] = previous["updatedAtUtc"]
             by_id[dataset_id] = entry
-    index["datasets"] = [by_id[key] for key in sorted(by_id)]
+    next_sorted = [by_id[key] for key in sorted(by_id)]
+    if next_sorted == previous_sorted:
+        return
+    index["datasets"] = next_sorted
     index["generatedAtUtc"] = ts
     write_json(INDEX_PATH, index)
 
@@ -1127,6 +1222,7 @@ def run_sample(args: argparse.Namespace, config: dict[str, Any], ts: str) -> dic
     elif bool(config.get("writeImageFiles", False)):
         append_sample(diag["sampleSkipped"], {"reason": "image_check_disabled_by_config"})
 
+    cards = sort_provider_cards(cards)
     full_summary = summarize_existing_full_catalogue()
     written = write_provider_outputs(
         ts=ts,
@@ -1172,7 +1268,6 @@ def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str
     state_path = configured_path(full_cfg.get("statePath"), DEFAULT_FULL_STATE_PATH)
     run_id = str(uuid.uuid4())
     state = load_full_state(state_path, run_id)
-    write_full_state(state_path, state)
 
     if not api_key:
         diag["status"] = "key_missing"
@@ -1233,6 +1328,7 @@ def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str
             break
 
         set_key = set_key_for(item, prefer_numeric=prefer_numeric)
+        state["lastRunId"] = run_id
         state["lastProcessedSetKey"] = set_key
         cards, rate_limited = fetch_set_cards(
             api_key=api_key,
@@ -1257,7 +1353,7 @@ def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str
             add_state_item(state, "completedSetKeys", set_key)
             for card in cards[:3]:
                 append_sample(diag["sampleCards"], card)
-            all_sample_cards.extend(cards[:5])
+            all_sample_cards.extend(sort_provider_cards(cards)[:5])
         else:
             add_state_item(state, "failedSetKeys", set_key)
             append_sample(diag["sampleSkipped"], {"reason": "set_detail_no_cards", "setId": set_key, "language": language})
@@ -1271,6 +1367,7 @@ def run_full_catalogue(args: argparse.Namespace, config: dict[str, Any], ts: str
     diag["cardsWrittenByLanguage"] = dict(sorted(cards_written_by_language.items()))
     diag["cardsFetchedByLanguage"] = dict(sorted(cards_written_by_language.items()))
     diag["setsRemainingAfterRun"] = max(0, len(selected_items) - diag["setsProcessedThisRun"])
+    all_sample_cards = sort_provider_cards(all_sample_cards)
 
     completed_sets = set(state.get("completedSetKeys") if isinstance(state.get("completedSetKeys"), list) else [])
     languages_completed: dict[str, bool] = {}
