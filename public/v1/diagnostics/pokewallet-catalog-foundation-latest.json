@@ -1,11 +1,11 @@
 {
   "apiKeyPresent": true,
-  "blockerReason": "Full catalogue export stopped before all selected sets were processed.",
+  "blockerReason": "",
   "cardsFetchedByLanguage": {},
   "cardsWrittenByLanguage": {},
   "cardsWrittenThisRun": 0,
   "fullCatalogueEnabled": true,
-  "generatedAtUtc": "2026-05-22T13:06:58Z",
+  "generatedAtUtc": "2026-05-22T13:15:07Z",
   "imageSamplesAvailable": 0,
   "imageSamplesChecked": 0,
   "languagesSeen": {
@@ -15,356 +15,245 @@
   },
   "mode": "full_catalogue",
   "provider": "pokewallet",
-  "recommendation": "Resume the full Pokewallet catalogue export until selected languages are complete.",
-  "requestsAttempted": 13,
-  "requestsFailed": 11,
+  "recommendation": "Full Pokewallet catalogue export completed for the selected scope.",
+  "requestsAttempted": 2,
+  "requestsFailed": 0,
   "requestsSucceeded": 2,
   "sampleCards": [],
-  "sampleSkipped": [
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24529"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24529"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "23692"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "23692"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24002"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24002"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24003"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24003"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24196"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24196"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24197"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24197"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24203"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24203"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24468"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24468"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24489"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24489"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24425"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24425"
-    }
-  ],
+  "sampleSkipped": [],
   "schemaVersion": "1.0.0",
   "setFilesWritten": 0,
   "setsFetched": 855,
   "setsProcessedThisRun": 0,
-  "setsRemainingAfterRun": 11,
+  "setsRemainingAfterRun": 0,
   "setsSelectedByLanguage": {
-    "jp": [
+    "zh": [
       {
-        "cardCount": 94,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "S3a",
-        "providerSetId": "23635",
-        "providerSetName": "S3a: Legendary Heartbeat",
-        "releaseDate": "10th July, 2020"
+        "cardCount": 23,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4.1C",
+        "providerSetId": "-34",
+        "providerSetName": "Paradise Dragona",
+        "releaseDate": "13th September, 2024"
       },
       {
-        "cardCount": 115,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "sD",
-        "providerSetId": "23853",
-        "providerSetName": "sD: V Starter Decks",
-        "releaseDate": "10th July, 2020"
+        "cardCount": 184,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4aC",
+        "providerSetId": "-36",
+        "providerSetName": "Super Electric Breaker: A",
+        "releaseDate": "18th October, 2024"
       },
       {
-        "cardCount": 51,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "PCG8",
-        "providerSetId": "24099",
-        "providerSetName": "Miracle Crystal",
-        "releaseDate": "10th March, 2006"
+        "cardCount": 177,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4bC",
+        "providerSetId": "-37",
+        "providerSetName": "Super Electric Breaker: B",
+        "releaseDate": "18th October, 2024"
       },
       {
-        "cardCount": 103,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "SV1a",
-        "providerSetId": "23598",
-        "providerSetName": "SV1a: Triplet Beat",
-        "releaseDate": "10th March, 2023"
+        "cardCount": 9,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "30th-P",
+        "providerSetId": "-241",
+        "providerSetName": "30th Anniversary Celebration Simplified Chinese Singles",
+        "releaseDate": "20th March, 2026"
       },
       {
-        "cardCount": 95,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "Pt1",
-        "providerSetId": "23998",
-        "providerSetName": "Pt1: Galactic's Conquest",
-        "releaseDate": "10th October, 2008"
+        "cardCount": 194,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CBB5C",
+        "providerSetId": "-242",
+        "providerSetName": "Gem Pack Vol.5",
+        "releaseDate": "24th April 2026"
       },
       {
-        "cardCount": 82,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY9",
-        "providerSetId": "23927",
-        "providerSetName": "XY9: Rage of the Broken Heavens",
-        "releaseDate": "11th December, 2015"
-      },
-      {
-        "cardCount": 16,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "L2",
-        "providerSetId": "24080",
-        "providerSetName": "L2: Steelix Constructed Standard Deck",
-        "releaseDate": "11th February, 2010"
-      },
-      {
-        "cardCount": 10,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "L2",
-        "providerSetId": "24081",
-        "providerSetName": "L2: Tyranitar Constructed Standard Deck",
-        "releaseDate": "11th February, 2010"
-      },
-      {
-        "cardCount": 66,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "SM9a",
-        "providerSetId": "23701",
-        "providerSetName": "SM9a: Night Unison",
-        "releaseDate": "11th January, 2019"
+        "cardCount": 83,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4.5C",
+        "providerSetId": "-35",
+        "providerSetName": "Final Flame Dance",
+        "releaseDate": "26th April, 2024"
       },
       {
         "cardCount": 24,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "T-P",
-        "providerSetId": "-172",
-        "providerSetName": "Black Star Promos",
-        "releaseDate": "12th September, 2025"
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS6.1C",
+        "providerSetId": "-42",
+        "providerSetName": "Wild Force",
+        "releaseDate": "26th January, 2024"
       },
       {
-        "cardCount": 62,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY-Bx",
-        "providerSetId": "23914",
-        "providerSetName": "XY-Bx: Collection X",
-        "releaseDate": "13th December, 2013"
-      },
-      {
-        "cardCount": 62,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY-By",
-        "providerSetId": "23915",
-        "providerSetName": "XY-By: Collection Y",
-        "releaseDate": "13th December, 2013"
-      },
-      {
-        "cardCount": 75,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY5-Bg",
-        "providerSetId": "23921",
-        "providerSetName": "XY5-Bg: Gaia Volcano",
-        "releaseDate": "13th December, 2014"
-      },
-      {
-        "cardCount": 69,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY5-Bt",
-        "providerSetId": "23922",
-        "providerSetName": "XY5-Bt: Tidal Storm",
-        "releaseDate": "13th December, 2014"
-      },
-      {
-        "cardCount": 64,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "BW6",
-        "providerSetId": "23901",
-        "providerSetName": "BW6: Freeze Bolt",
-        "releaseDate": "13th July, 2012"
-      },
-      {
-        "cardCount": 60,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "BW6",
-        "providerSetId": "23902",
-        "providerSetName": "BW6: Cold Flare",
-        "releaseDate": "13th July, 2012"
+        "cardCount": 23,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS5.1C",
+        "providerSetId": "-38",
+        "providerSetName": "Ancient Roar",
+        "releaseDate": "27th October, 2023"
       },
       {
         "cardCount": 96,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "EBB",
-        "providerSetId": "23912",
-        "providerSetName": "EX Battle Boost",
-        "releaseDate": "13th July, 2013"
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS1.5C",
+        "providerSetId": "-25",
+        "providerSetName": "Dynamax Tactics",
+        "releaseDate": "28th June, 2023"
       },
       {
-        "cardCount": 11,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "MG",
-        "providerSetId": "23937",
-        "providerSetName": "Mewtwo vs Genesect Deck Kit (Mewtwo)",
-        "releaseDate": "13th July, 2013"
+        "cardCount": 79,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS2.5C",
+        "providerSetId": "-28",
+        "providerSetName": "Brilliant Counterattack",
+        "releaseDate": "29th September, 2023"
       },
       {
-        "cardCount": 10,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "MG",
-        "providerSetId": "23955",
-        "providerSetName": "Mewtwo vs Genesect Deck Kit (Genesect)",
-        "releaseDate": "13th July, 2013"
+        "cardCount": 89,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS5.5C",
+        "providerSetId": "-39",
+        "providerSetName": "Shadow of Glory",
+        "releaseDate": "2nd August, 2024"
       },
       {
-        "cardCount": 111,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "smH",
-        "providerSetId": "23888",
-        "providerSetName": "smH: GX Starter Decks",
-        "releaseDate": "13th July, 2018"
+        "cardCount": 167,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV1C",
+        "providerSetId": "-66",
+        "providerSetName": "Scarlet & Violet Chinese 1",
+        "releaseDate": "31st March, 2023"
       },
       {
-        "cardCount": 120,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "m4",
-        "providerSetId": "24653",
-        "providerSetName": "M4: Ninja Spinner",
-        "releaseDate": "13th March, 2026"
+        "cardCount": 163,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV2C",
+        "providerSetId": "-67",
+        "providerSetName": "Scarlet & Violet Chinese 2",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 165,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV3C",
+        "providerSetId": "-68",
+        "providerSetName": "Scarlet & Violet Chinese 3",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 165,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV4C",
+        "providerSetId": "-69",
+        "providerSetName": "Scarlet & Violet Chinese 4",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 164,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV5C",
+        "providerSetId": "-70",
+        "providerSetName": "Scarlet & Violet Chinese 5",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 101,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSVH3C",
+        "providerSetId": "-71",
+        "providerSetName": "Scarlet & Violet High Class Chinese 3",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 139,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSVL1C",
+        "providerSetId": "-72",
+        "providerSetName": "Scarlet & Violet Low Class Chinese 1",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 88,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1.5C",
+        "providerSetId": "-52",
+        "providerSetName": "Sun & Moon Chinese: 1.5",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 211,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1aC",
+        "providerSetId": "-53",
+        "providerSetName": "Sun & Moon Chinese: A",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 204,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1bC",
+        "providerSetId": "-54",
+        "providerSetName": "Sun & Moon Chinese: B",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 212,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1cC",
+        "providerSetId": "-55",
+        "providerSetName": "Sun & Moon Chinese: C",
+        "releaseDate": "3rd February, 2017"
       },
       {
         "cardCount": 99,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "S10a",
-        "providerSetId": "23640",
-        "providerSetName": "S10a: Dark Phantasma",
-        "releaseDate": "13th May, 2022"
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2.5C",
+        "providerSetId": "-56",
+        "providerSetName": "Sun & Moon 2 Chinese: 2.5",
+        "releaseDate": "3rd February, 2017"
       },
       {
-        "cardCount": 93,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XY4",
-        "providerSetId": "23920",
-        "providerSetName": "XY4: Phantom Gate",
-        "releaseDate": "13th September, 2014"
+        "cardCount": 194,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2aC",
+        "providerSetId": "-57",
+        "providerSetName": "Sun & Moon 2 Chinese: A",
+        "releaseDate": "3rd February, 2017"
       },
       {
-        "cardCount": 12,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "XYB",
-        "providerSetId": "23959",
-        "providerSetName": "XYB: Dialga-EX + Aegislash-EX Hyper Metal Chain Deck",
-        "releaseDate": "13th September, 2014"
-      },
-      {
-        "cardCount": 94,
-        "cardScanRLanguage": "jp",
-        "providerLanguage": "jap",
-        "providerSetCode": "SV7a",
-        "providerSetId": "23604",
-        "providerSetName": "SV7a: Paradise Dragona",
-        "releaseDate": "13th September, 2024"
+        "cardCount": 193,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2bC",
+        "providerSetId": "-58",
+        "providerSetName": "Sun & Moon 2 Chinese: B",
+        "releaseDate": "3rd February, 2017"
       }
     ]
   },
-  "status": "partial"
+  "status": "ok"
 }
