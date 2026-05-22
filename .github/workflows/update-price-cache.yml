@@ -1,10 +1,16 @@
 name: Update Price Cache
-
+# NOTE: Scheduled auto-commit is intentionally disabled.
+# The local PokéWallet catalogue worker (run_pokewallet_catalog_cycle.ps1) is the
+# primary data writer for catalogue, price, and image data right now.
+# Enabling the schedule while the local worker is active causes push races.
+# Re-enable the schedule trigger only when the local worker is decommissioned.
 on:
   workflow_dispatch:
-  schedule:
-    # Every 12 hours
-    - cron: "17 */12 * * *"
+
+# Prevent concurrent repo-writing workflows from racing each other.
+concurrency:
+  group: cardscanr-data-writer-main
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -17,6 +23,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Full history needed so git pull --rebase can integrate remote changes cleanly.
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,10 +55,14 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Exclude temp files from staging to avoid committing runtime state.
           git add public/v1/ data/scheduled_price_refresh_state.json
+          git reset HEAD -- '*.tmp' 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git commit -m "chore: update price cache [skip ci]"
+            # Rebase onto any commits the local worker may have pushed since checkout.
+            git pull --rebase origin main
             git push
           fi

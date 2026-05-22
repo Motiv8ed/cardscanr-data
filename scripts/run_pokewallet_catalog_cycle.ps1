@@ -315,6 +315,27 @@ try {
     $cycleStarted = Get-UtcIso
     Update-WorkerStatus -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStarted -LastCycleFinishedAtUtc $null -LastCommit $null -LastError $null -IntervalMinutes $intervalMinutes -Mode 'once' -CurrentPriorityLanguage $targetLanguage
 
+    # --- Pre-cycle sync: fast-forward if local is behind remote and nothing unpushed ---
+    Write-CycleLog 'Fetching origin to detect remote changes before provider calls.'
+    git -C $RepoRoot fetch origin 2>&1 | ForEach-Object { Write-OutputLog $_ }
+    $localHead  = (git -C $RepoRoot rev-parse HEAD).Trim()
+    $remoteHead = (git -C $RepoRoot rev-parse 'origin/main' 2>$null).Trim()
+    if ($LASTEXITCODE -eq 0 -and $localHead -ne $remoteHead) {
+        $mergeBase = (git -C $RepoRoot merge-base HEAD 'origin/main' 2>$null).Trim()
+        if ($mergeBase -eq $localHead) {
+            # Local is strictly behind; no unpushed commits – safe to fast-forward.
+            Write-CycleLog 'Local branch is behind origin/main with no local-only commits; fast-forwarding before cycle.'
+            git -C $RepoRoot merge --ff-only origin/main 2>&1 | ForEach-Object { Write-OutputLog $_ }
+            if ($LASTEXITCODE -ne 0) {
+                Stop-WithStatus -Status 'sync_failed' -Message 'Pre-cycle fast-forward failed unexpectedly.' -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+            }
+        }
+        else {
+            Write-CycleLog 'Local branch has unpushed commits and remote has moved; proceeding – push will use rebase-on-failure retry.'
+        }
+    }
+    # --- End pre-cycle sync ---
+
     $statusLines = Get-GitStatusLines
     $unrelated = @()
     foreach ($line in $statusLines) {
@@ -413,7 +434,22 @@ try {
         if ([bool]$workerConfig.pushAfterCycle) {
             $pushResult = Invoke-RepoCommand -FilePath 'git' -Arguments @('-C', $RepoRoot, 'push')
             if ($pushResult.ExitCode -ne 0) {
-                Stop-WithStatus -Status 'git_push_failed' -Message "Git push failed with exit code $($pushResult.ExitCode)." -Commit $commitHash -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+                # Push rejected – remote may have moved since we committed.
+                # Attempt a safe fetch+rebase and retry once before giving up.
+                Write-CycleLog 'Push failed; attempting fetch + rebase onto origin/main and retrying push once.'
+                git -C $RepoRoot fetch origin 2>&1 | ForEach-Object { Write-OutputLog $_ }
+                git -C $RepoRoot rebase origin/main 2>&1 | ForEach-Object { Write-OutputLog $_ }
+                if ($LASTEXITCODE -ne 0) {
+                    Write-CycleLog 'Rebase after failed push has conflicts. Aborting rebase – manual resolution required.'
+                    git -C $RepoRoot rebase --abort 2>&1 | Out-Null
+                    Stop-WithStatus -Status 'git_push_failed' -Message 'Push failed and rebase produced conflicts; manual resolution required. Do NOT force-push.' -Commit $commitHash -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+                }
+                $commitHash = (git -C $RepoRoot rev-parse --short HEAD).Trim()
+                $pushRetry = Invoke-RepoCommand -FilePath 'git' -Arguments @('-C', $RepoRoot, 'push')
+                if ($pushRetry.ExitCode -ne 0) {
+                    Stop-WithStatus -Status 'git_push_failed' -Message "Git push failed after rebase retry (exit code $($pushRetry.ExitCode)). Do NOT force-push; check remote state." -Commit $commitHash -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+                }
+                Write-CycleLog 'Push succeeded after rebase retry.'
             }
         }
     }
