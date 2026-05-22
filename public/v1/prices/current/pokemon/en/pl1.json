@@ -2,7 +2,7 @@
   "currency": "USD",
   "expectedUpdateIntervalMinutes": 60,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-22T13:13:17Z",
+  "generatedAtUtc": "2026-05-22T22:15:51Z",
   "isLivePricing": false,
   "language": "en",
   "lastSuccessfulPriceUpdateAtUtc": "2026-05-21T22:00:27Z",
@@ -42,10 +42,10 @@
       "source": "pokewallet",
       "sourceCurrency": "USD",
       "staleness": {
-        "ageSeconds": 54770,
+        "ageSeconds": 87324,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 172800,
-        "status": "fresh"
+        "status": "stale"
       },
       "status": "priced",
       "targetCurrency": "USD",
@@ -84,10 +84,10 @@
       "source": "pokewallet",
       "sourceCurrency": "USD",
       "staleness": {
-        "ageSeconds": 54770,
+        "ageSeconds": 87324,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 172800,
-        "status": "fresh"
+        "status": "stale"
       },
       "status": "priced",
       "targetCurrency": "USD",
@@ -126,10 +126,10 @@
       "source": "pokewallet",
       "sourceCurrency": "USD",
       "staleness": {
-        "ageSeconds": 54770,
+        "ageSeconds": 87324,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 172800,
-        "status": "fresh"
+        "status": "stale"
       },
       "status": "priced",
       "targetCurrency": "USD",
@@ -154,10 +154,10 @@
   "setName": "Platinum",
   "source": "pokewallet",
   "staleness": {
-    "ageSeconds": 54770,
+    "ageSeconds": 87324,
     "freshForSeconds": 86400,
     "staleAfterSeconds": 172800,
-    "status": "fresh"
+    "status": "stale"
   },
-  "status": "ok"
+  "status": "stale"
 }
