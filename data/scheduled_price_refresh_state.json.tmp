@@ -1,5 +1,7 @@
 {
+  "schemaVersion": "1.0.0",
   "enCurrentPriceCursor": 99,
+  "lastUpdatedAtUtc": "2026-05-21T22:02:50Z",
   "lastBatchSetIds": [
     "pop4",
     "pop5",
@@ -24,9 +26,8 @@
     "si1",
     "sm1"
   ],
-  "lastRateLimited": false,
   "lastStopReason": "completed",
-  "lastUpdatedAtUtc": "2026-05-21T22:02:50Z",
+  "lastRateLimited": false,
   "requestLedger": [
     {
       "requests": 20,
@@ -493,7 +494,16 @@
       "source": "local_price_update",
       "status": "built",
       "timestampUtc": "2026-05-21T22:02:21Z"
+    },
+    {
+      "timestampUtc": "2026-05-21T22:04:45Z",
+      "requests": 26,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 10,
+        "pokewallet": 16
+      },
+      "status": "built",
+      "source": "local_price_update"
     }
-  ],
-  "schemaVersion": "1.0.0"
+  ]
 }
