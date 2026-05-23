@@ -187,6 +187,46 @@ def history_coverage() -> dict[str, Any]:
     }
 
 
+def provider_blocked_summary(languages: list[str]) -> dict[str, Any]:
+    try:
+        from report_provider_blocked_cards import build_report
+    except Exception as exc:  # pragma: no cover - defensive runtime report guard
+        return {"error": str(exc)}
+    try:
+        report = build_report(languages or ["en", "jp"], include_zh=False, sample_limit=0)
+    except Exception as exc:  # pragma: no cover - defensive runtime report guard
+        return {"error": str(exc)}
+    missing = report.get("missingCollectorNumberSummary", {})
+    return {
+        "blockedReasonCounts": report.get("blockedReasonCounts", {}),
+        "blockedReasonCountsByLanguage": report.get("blockedReasonCountsByLanguage", {}),
+        "missingCollectorNumber": {
+            "total": missing.get("total", 0),
+            "safeRecoverableCount": missing.get("safeRecoverableCount", 0),
+            "remainingBlockedCount": missing.get("remainingBlockedCount", 0),
+            "looksLikeCounts": missing.get("looksLikeCounts", {}),
+        },
+    }
+
+
+def app_source_summary(languages: list[str]) -> dict[str, Any]:
+    try:
+        from report_app_catalogue_sources import build_report
+    except Exception as exc:  # pragma: no cover - defensive runtime report guard
+        return {"error": str(exc)}
+    try:
+        report = build_report(languages or None)
+    except Exception as exc:  # pragma: no cover - defensive runtime report guard
+        return {"error": str(exc)}
+    return {
+        "primarySourceCountsByLanguage": report.get("primarySourceCountsByLanguage", {}),
+        "appRecordsWithPokewalletProviderIds": report.get("appRecordsWithPokewalletProviderIds", {}),
+        "appRecordsWithoutPokewalletProviderIds": report.get("appRecordsWithoutPokewalletProviderIds", {}),
+        "appRecordsWithUnknownSource": report.get("appRecordsWithUnknownSource", {}),
+        "appRecordsWithMultipleProviderIds": report.get("appRecordsWithMultipleProviderIds", {}),
+    }
+
+
 def production_checklist(
     *,
     provider: dict[str, int],
@@ -231,6 +271,8 @@ def main() -> int:
     images, cached_files = image_counts()
     prices = price_counts()
     history = history_coverage()
+    provider_blocked = provider_blocked_summary(languages)
+    source_audit = app_source_summary(languages)
     checklist = production_checklist(
         provider=provider,
         app=app,
@@ -249,6 +291,19 @@ def main() -> int:
     print(f"enabled markets: {', '.join(markets) or 'none'}")
     print(f"provider records by language: {provider}")
     print(f"app catalogue records by language: {app}")
+    print(f"blocked provider records by reason: {provider_blocked.get('blockedReasonCounts', provider_blocked)}")
+    missing_summary = provider_blocked.get("missingCollectorNumber", {})
+    if missing_summary:
+        print(
+            "missing collector number recoverability: "
+            f"total={missing_summary.get('total', 0)} "
+            f"safeRecoverable={missing_summary.get('safeRecoverableCount', 0)} "
+            f"remainingBlocked={missing_summary.get('remainingBlockedCount', 0)} "
+            f"looksLike={missing_summary.get('looksLikeCounts', {})}"
+        )
+    print(f"app catalogue source/provenance by language: {source_audit.get('primarySourceCountsByLanguage', source_audit)}")
+    print(f"app catalogue records without source attribution: {source_audit.get('appRecordsWithUnknownSource', {})}")
+    print(f"app catalogue records without Pokewallet provider IDs: {source_audit.get('appRecordsWithoutPokewalletProviderIds', {})}")
     print(f"image records by language: {images}")
     print(f"actual cached image files: {cached_files}")
     print("current price records by language/source/status:")
