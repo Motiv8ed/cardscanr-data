@@ -1,11 +1,15 @@
 {
   "apiKeyPresent": true,
   "blockerReason": "Full catalogue export stopped before all selected sets were processed.",
-  "cardsFetchedByLanguage": {},
-  "cardsWrittenByLanguage": {},
-  "cardsWrittenThisRun": 0,
+  "cardsFetchedByLanguage": {
+    "en": 121
+  },
+  "cardsWrittenByLanguage": {
+    "en": 121
+  },
+  "cardsWrittenThisRun": 121,
   "fullCatalogueEnabled": true,
-  "generatedAtUtc": "2026-05-23T05:01:38Z",
+  "generatedAtUtc": "2026-05-23T05:08:26Z",
   "imageSamplesAvailable": 0,
   "imageSamplesChecked": 0,
   "languagesSeen": {
@@ -16,15 +20,189 @@
   "mode": "full_catalogue",
   "provider": "pokewallet",
   "recommendation": "Resume the full Pokewallet catalogue export until selected languages are complete.",
-  "requestsAttempted": 13,
-  "requestsFailed": 11,
-  "requestsSucceeded": 2,
-  "sampleCards": [],
+  "requestsAttempted": 18,
+  "requestsFailed": 15,
+  "requestsSucceeded": 3,
+  "sampleCards": [
+    {
+      "canonicalImageKey": null,
+      "cardNumber": "001/086",
+      "cardScanRImageCacheCandidateKey": "pokemon|en|cri|001-086|weedle|normal",
+      "cardScanRLanguage": "en",
+      "cleanName": "Weedle",
+      "hasCardmarketFields": true,
+      "hasPriceFields": true,
+      "hasTcgplayerFields": true,
+      "imageAvailable": null,
+      "imageCacheIdentityBasis": {
+        "basisConfidence": "provider_catalog_candidate",
+        "collectorNumber": "001/086",
+        "game": "pokemon",
+        "language": "en",
+        "normalizedName": "weedle",
+        "setId": "CRI",
+        "variant": "normal"
+      },
+      "imageCacheKey": "pokemon|en|cri|001-086|weedle|normal",
+      "imageCacheStrategy": "cache_once_recheck_on_failure",
+      "imageEndpoint": "/images/pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+      "imageEndpointHigh": "/images/pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c?size=high",
+      "imageEndpointLow": "/images/pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c?size=low",
+      "imageHighAvailable": null,
+      "imageLastCheckedAtUtc": null,
+      "imageLowAvailable": null,
+      "name": "Weedle",
+      "providerCanonicalImageKey": "pokemon|en|cri|001-086|weedle|normal",
+      "providerCardId": "pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+      "providerLanguage": "eng",
+      "providerSetCode": "CRI",
+      "providerSetId": "24655",
+      "providerSetName": "Chaos Rising",
+      "rarity": "Common",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "variants": []
+    },
+    {
+      "canonicalImageKey": null,
+      "cardNumber": "002/086",
+      "cardScanRImageCacheCandidateKey": "pokemon|en|cri|002-086|kakuna|normal",
+      "cardScanRLanguage": "en",
+      "cleanName": "Kakuna",
+      "hasCardmarketFields": true,
+      "hasPriceFields": true,
+      "hasTcgplayerFields": true,
+      "imageAvailable": null,
+      "imageCacheIdentityBasis": {
+        "basisConfidence": "provider_catalog_candidate",
+        "collectorNumber": "002/086",
+        "game": "pokemon",
+        "language": "en",
+        "normalizedName": "kakuna",
+        "setId": "CRI",
+        "variant": "normal"
+      },
+      "imageCacheKey": "pokemon|en|cri|002-086|kakuna|normal",
+      "imageCacheStrategy": "cache_once_recheck_on_failure",
+      "imageEndpoint": "/images/pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102",
+      "imageEndpointHigh": "/images/pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102?size=high",
+      "imageEndpointLow": "/images/pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102?size=low",
+      "imageHighAvailable": null,
+      "imageLastCheckedAtUtc": null,
+      "imageLowAvailable": null,
+      "name": "Kakuna",
+      "providerCanonicalImageKey": "pokemon|en|cri|002-086|kakuna|normal",
+      "providerCardId": "pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102",
+      "providerLanguage": "eng",
+      "providerSetCode": "CRI",
+      "providerSetId": "24655",
+      "providerSetName": "Chaos Rising",
+      "rarity": "Common",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "variants": []
+    },
+    {
+      "canonicalImageKey": null,
+      "cardNumber": "003/086",
+      "cardScanRImageCacheCandidateKey": "pokemon|en|cri|003-086|beedrill-ex-003-086|normal",
+      "cardScanRLanguage": "en",
+      "cleanName": "Beedrill ex 003 086",
+      "hasCardmarketFields": true,
+      "hasPriceFields": true,
+      "hasTcgplayerFields": true,
+      "imageAvailable": null,
+      "imageCacheIdentityBasis": {
+        "basisConfidence": "provider_catalog_candidate",
+        "collectorNumber": "003/086",
+        "game": "pokemon",
+        "language": "en",
+        "normalizedName": "beedrill-ex-003-086",
+        "setId": "CRI",
+        "variant": "normal"
+      },
+      "imageCacheKey": "pokemon|en|cri|003-086|beedrill-ex-003-086|normal",
+      "imageCacheStrategy": "cache_once_recheck_on_failure",
+      "imageEndpoint": "/images/pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824",
+      "imageEndpointHigh": "/images/pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824?size=high",
+      "imageEndpointLow": "/images/pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824?size=low",
+      "imageHighAvailable": null,
+      "imageLastCheckedAtUtc": null,
+      "imageLowAvailable": null,
+      "name": "Beedrill ex - 003/086",
+      "providerCanonicalImageKey": "pokemon|en|cri|003-086|beedrill-ex-003-086|normal",
+      "providerCardId": "pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824",
+      "providerLanguage": "eng",
+      "providerSetCode": "CRI",
+      "providerSetId": "24655",
+      "providerSetName": "Chaos Rising",
+      "rarity": "Double Rare",
+      "rawKeys": [
+        "card_info",
+        "cardmarket",
+        "id",
+        "tcgplayer"
+      ],
+      "variants": []
+    }
+  ],
   "sampleSkipped": [
     {
       "detail": "http_500",
       "page": 1,
       "reason": "set_detail_failed",
+      "setId": "24521"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "24521"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "609"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "609"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "610"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "610"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
+      "setId": "24493"
+    },
+    {
+      "language": "en",
+      "reason": "set_detail_no_cards",
+      "setId": "24493"
+    },
+    {
+      "detail": "http_500",
+      "page": 1,
+      "reason": "set_detail_failed",
       "setId": "24529"
     },
     {
@@ -86,58 +264,241 @@
       "language": "jp",
       "reason": "set_detail_no_cards",
       "setId": "24197"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24203"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24203"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24468"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24468"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24489"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24489"
-    },
-    {
-      "detail": "http_500",
-      "page": 1,
-      "reason": "set_detail_failed",
-      "setId": "24425"
-    },
-    {
-      "language": "jp",
-      "reason": "set_detail_no_cards",
-      "setId": "24425"
     }
   ],
   "schemaVersion": "1.0.0",
-  "setFilesWritten": 0,
+  "setFilesWritten": 1,
   "setsFetched": 855,
-  "setsProcessedThisRun": 0,
-  "setsRemainingAfterRun": 11,
+  "setsProcessedThisRun": 1,
+  "setsRemainingAfterRun": 15,
   "setsSelectedByLanguage": {
+    "en": [
+      {
+        "cardCount": 62,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "FO",
+        "providerSetId": "630",
+        "providerSetName": "Fossil",
+        "releaseDate": "10th October, 1999"
+      },
+      {
+        "cardCount": 14,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MED",
+        "providerSetId": "-121",
+        "providerSetName": "Mega Evolution Deck",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 8,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEE",
+        "providerSetId": "24461",
+        "providerSetName": "MEE: Mega Evolution Energies",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 188,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEG",
+        "providerSetId": "24380",
+        "providerSetName": "ME01: Mega Evolution",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 52,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MEP",
+        "providerSetId": "24451",
+        "providerSetName": "ME: Mega Evolution Promo",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 51,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "mAA",
+        "providerSetId": "-205",
+        "providerSetName": "Mega Evolution All-Stars",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 24,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "xMEG",
+        "providerSetId": "-233",
+        "providerSetName": "Extended Art: Mega Evolution",
+        "releaseDate": "10th October, 2025"
+      },
+      {
+        "cardCount": 230,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "OBF",
+        "providerSetId": "23228",
+        "providerSetName": "SV03: Obsidian Flames",
+        "releaseDate": "11th August, 2023"
+      },
+      {
+        "cardCount": 130,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PL",
+        "providerSetId": "1406",
+        "providerSetName": "Platinum",
+        "releaseDate": "11th February, 2009"
+      },
+      {
+        "cardCount": 211,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PPS1",
+        "providerSetId": "-153",
+        "providerSetName": "Play! Pokemon Prize Pack Series One",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 215,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH12",
+        "providerSetId": "3170",
+        "providerSetName": "SWSH12: Silver Tempest",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 30,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH12: TG",
+        "providerSetId": "17674",
+        "providerSetName": "SWSH12: Silver Tempest Trainer Gallery",
+        "releaseDate": "11th November, 2022"
+      },
+      {
+        "cardCount": 100,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "AOR",
+        "providerSetId": "1576",
+        "providerSetName": "XY - Ancient Origins",
+        "releaseDate": "12th August, 2015"
+      },
+      {
+        "cardCount": 30,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "PR",
+        "providerSetId": "1532",
+        "providerSetName": "XY Trainer Kit: Sylveon & Noivern",
+        "releaseDate": "12th March, 2014"
+      },
+      {
+        "cardCount": 61,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "TK6",
+        "providerSetId": "-179",
+        "providerSetName": "XY Trainer Kit: Sylveon & Noivern",
+        "releaseDate": "12th March, 2014"
+      },
+      {
+        "cardCount": 178,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SK",
+        "providerSetId": "1372",
+        "providerSetName": "Skyridge",
+        "releaseDate": "12th May, 2003"
+      },
+      {
+        "cardCount": 96,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "UL",
+        "providerSetId": "1399",
+        "providerSetName": "Unleashed",
+        "releaseDate": "12th May, 2010"
+      },
+      {
+        "cardCount": 284,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH08",
+        "providerSetId": "2906",
+        "providerSetName": "SWSH08: Fusion Strike",
+        "releaseDate": "12th November, 2021"
+      },
+      {
+        "cardCount": 113,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "FFI",
+        "providerSetId": "1481",
+        "providerSetName": "XY - Furious Fists",
+        "releaseDate": "13th August, 2014"
+      },
+      {
+        "cardCount": 93,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "LM",
+        "providerSetId": "1378",
+        "providerSetName": "Legend Maker",
+        "releaseDate": "13th February, 2006"
+      },
+      {
+        "cardCount": 106,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "GE",
+        "providerSetId": "1405",
+        "providerSetName": "Great Encounters",
+        "releaseDate": "13th February, 2008"
+      },
+      {
+        "cardCount": 9,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "RAID",
+        "providerSetId": "-160",
+        "providerSetName": "Raid Battle Cards",
+        "releaseDate": "13th July, 2020"
+      },
+      {
+        "cardCount": 203,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SWSH04",
+        "providerSetId": "2701",
+        "providerSetName": "SWSH04: Vivid Voltage",
+        "releaseDate": "13th November, 2020"
+      },
+      {
+        "cardCount": 12,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "MCD13",
+        "providerSetId": "-117",
+        "providerSetName": "McDonald's Collection 2013",
+        "releaseDate": "13th October, 2013"
+      },
+      {
+        "cardCount": 175,
+        "cardScanRLanguage": "en",
+        "providerLanguage": "eng",
+        "providerSetCode": "SCR",
+        "providerSetId": "23537",
+        "providerSetName": "SV07: Stellar Crown",
+        "releaseDate": "13th September, 2024"
+      }
+    ],
     "jp": [
       {
         "cardCount": 94,
@@ -363,6 +724,233 @@
         "providerSetId": "23604",
         "providerSetName": "SV7a: Paradise Dragona",
         "releaseDate": "13th September, 2024"
+      }
+    ],
+    "zh": [
+      {
+        "cardCount": 23,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4.1C",
+        "providerSetId": "-34",
+        "providerSetName": "Paradise Dragona",
+        "releaseDate": "13th September, 2024"
+      },
+      {
+        "cardCount": 184,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4aC",
+        "providerSetId": "-36",
+        "providerSetName": "Super Electric Breaker: A",
+        "releaseDate": "18th October, 2024"
+      },
+      {
+        "cardCount": 177,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4bC",
+        "providerSetId": "-37",
+        "providerSetName": "Super Electric Breaker: B",
+        "releaseDate": "18th October, 2024"
+      },
+      {
+        "cardCount": 9,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "30th-P",
+        "providerSetId": "-241",
+        "providerSetName": "30th Anniversary Celebration Simplified Chinese Singles",
+        "releaseDate": "20th March, 2026"
+      },
+      {
+        "cardCount": 194,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CBB5C",
+        "providerSetId": "-242",
+        "providerSetName": "Gem Pack Vol.5",
+        "releaseDate": "24th April 2026"
+      },
+      {
+        "cardCount": 83,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS4.5C",
+        "providerSetId": "-35",
+        "providerSetName": "Final Flame Dance",
+        "releaseDate": "26th April, 2024"
+      },
+      {
+        "cardCount": 24,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS6.1C",
+        "providerSetId": "-42",
+        "providerSetName": "Wild Force",
+        "releaseDate": "26th January, 2024"
+      },
+      {
+        "cardCount": 23,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS5.1C",
+        "providerSetId": "-38",
+        "providerSetName": "Ancient Roar",
+        "releaseDate": "27th October, 2023"
+      },
+      {
+        "cardCount": 96,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS1.5C",
+        "providerSetId": "-25",
+        "providerSetName": "Dynamax Tactics",
+        "releaseDate": "28th June, 2023"
+      },
+      {
+        "cardCount": 79,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS2.5C",
+        "providerSetId": "-28",
+        "providerSetName": "Brilliant Counterattack",
+        "releaseDate": "29th September, 2023"
+      },
+      {
+        "cardCount": 89,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CS5.5C",
+        "providerSetId": "-39",
+        "providerSetName": "Shadow of Glory",
+        "releaseDate": "2nd August, 2024"
+      },
+      {
+        "cardCount": 167,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV1C",
+        "providerSetId": "-66",
+        "providerSetName": "Scarlet & Violet Chinese 1",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 163,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV2C",
+        "providerSetId": "-67",
+        "providerSetName": "Scarlet & Violet Chinese 2",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 165,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV3C",
+        "providerSetId": "-68",
+        "providerSetName": "Scarlet & Violet Chinese 3",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 165,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV4C",
+        "providerSetId": "-69",
+        "providerSetName": "Scarlet & Violet Chinese 4",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 164,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSV5C",
+        "providerSetId": "-70",
+        "providerSetName": "Scarlet & Violet Chinese 5",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 101,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSVH3C",
+        "providerSetId": "-71",
+        "providerSetName": "Scarlet & Violet High Class Chinese 3",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 139,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSVL1C",
+        "providerSetId": "-72",
+        "providerSetName": "Scarlet & Violet Low Class Chinese 1",
+        "releaseDate": "31st March, 2023"
+      },
+      {
+        "cardCount": 88,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1.5C",
+        "providerSetId": "-52",
+        "providerSetName": "Sun & Moon Chinese: 1.5",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 211,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1aC",
+        "providerSetId": "-53",
+        "providerSetName": "Sun & Moon Chinese: A",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 204,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1bC",
+        "providerSetId": "-54",
+        "providerSetName": "Sun & Moon Chinese: B",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 212,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM1cC",
+        "providerSetId": "-55",
+        "providerSetName": "Sun & Moon Chinese: C",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 99,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2.5C",
+        "providerSetId": "-56",
+        "providerSetName": "Sun & Moon 2 Chinese: 2.5",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 194,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2aC",
+        "providerSetId": "-57",
+        "providerSetName": "Sun & Moon 2 Chinese: A",
+        "releaseDate": "3rd February, 2017"
+      },
+      {
+        "cardCount": 193,
+        "cardScanRLanguage": "zh",
+        "providerLanguage": "chn",
+        "providerSetCode": "CSM2bC",
+        "providerSetId": "-58",
+        "providerSetName": "Sun & Moon 2 Chinese: B",
+        "releaseDate": "3rd February, 2017"
       }
     ]
   },

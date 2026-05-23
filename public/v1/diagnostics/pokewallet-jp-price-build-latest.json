@@ -11,11 +11,11 @@
     "SV9a",
     "S12a"
   ],
-  "catalogueSampleTargetsBuilt": 2559,
-  "catalogueSearchQueriesBuilt": 14,
+  "catalogueSampleTargetsBuilt": 2979,
+  "catalogueSearchQueriesBuilt": 0,
   "confidentMatches": 0,
   "currenciesSeen": [],
-  "generatedAtUtc": "2026-05-17T01:58:13Z",
+  "generatedAtUtc": "2026-05-23T05:28:13Z",
   "lowConfidenceMatches": 0,
   "matchScoreDistribution": {
     "0.00-0.59": 0,
@@ -25,24 +25,24 @@
     "0.90-1.00": 0
   },
   "mode": "controlled_test",
-  "pokewalletCardsFetchedFromSetDetails": 2593,
+  "pokewalletCardsFetchedFromSetDetails": 3013,
   "pokewalletJapaneseLikeSets": 462,
   "pokewalletSetDetailsAttempted": 25,
-  "pokewalletSetDetailsSucceeded": 21,
+  "pokewalletSetDetailsSucceeded": 25,
   "pokewalletSetLanguagesSeen": [
     "chn",
     "eng",
     "jap"
   ],
-  "pokewalletSetsFetched": 854,
-  "possibleJapaneseResults": 2559,
+  "pokewalletSetsFetched": 855,
+  "possibleJapaneseResults": 2979,
   "priceFilesWritten": 0,
   "priceRecordsWritten": 0,
   "provider": "pokewallet",
   "recommendation": "Set-detail cards matched the JP catalogue, but no useful numeric TCGPlayer/CardMarket prices were present. Keep JP as catalogue-only.",
-  "requestsAttempted": 40,
-  "requestsFailed": 18,
-  "requestsSucceeded": 22,
+  "requestsAttempted": 26,
+  "requestsFailed": 0,
+  "requestsSucceeded": 26,
   "resultsFound": 0,
   "sampleMatches": [],
   "samplePokewalletSets": [
@@ -143,142 +143,8 @@
       "setId": "24122"
     }
   ],
-  "sampleSearchQueries": [
-    {
-      "collectorNumber": "001",
-      "query": "23611 001",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "002",
-      "query": "23611 002",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "003",
-      "query": "23611 003",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "004",
-      "query": "23611 004",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "005",
-      "query": "23611 005",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "006",
-      "query": "23611 006",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "007",
-      "query": "23611 007",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "008",
-      "query": "23611 008",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "009",
-      "query": "23611 009",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "010",
-      "query": "23611 010",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "011",
-      "query": "23611 011",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "012",
-      "query": "23611 012",
-      "setId": "SV4M"
-    }
-  ],
-  "sampleSearchTargets": [
-    {
-      "collectorNumber": "001",
-      "query": "23611 001",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "002",
-      "query": "23611 002",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "003",
-      "query": "23611 003",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "004",
-      "query": "23611 004",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "005",
-      "query": "23611 005",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "006",
-      "query": "23611 006",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "007",
-      "query": "23611 007",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "008",
-      "query": "23611 008",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "009",
-      "query": "23611 009",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "010",
-      "query": "23611 010",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "011",
-      "query": "23611 011",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    },
-    {
-      "collectorNumber": "012",
-      "query": "23611 012",
-      "reason": "search_fallback",
-      "setId": "SV4M"
-    }
-  ],
+  "sampleSearchQueries": [],
+  "sampleSearchTargets": [],
   "sampleSetDetailCards": [
     {
       "cleanName": "Pineco",
@@ -701,13 +567,13 @@
     }
   ],
   "schemaVersion": "1.0.0",
-  "searchFallbackRequestsAttempted": 14,
+  "searchFallbackRequestsAttempted": 0,
   "searchFallbackResultsFound": 0,
   "searchTargetsTested": [],
   "setMatchCandidatesBuilt": 25,
   "skippedLowConfidence": 0,
   "skippedNoCanonicalMatch": 34,
   "skippedNoCurrency": 0,
-  "skippedNoPrice": 2559,
+  "skippedNoPrice": 2979,
   "unmappedResults": 0
 }

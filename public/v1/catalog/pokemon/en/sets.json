@@ -1,19 +1,21 @@
 {
-  "cardCount": 20237,
+  "cardCount": 20289,
   "cardsAvailable": true,
-  "catalogueStatus": "built",
-  "failedSetCount": 0,
-  "failedSetIds": [],
+  "catalogueStatus": "partial_built",
+  "failedSetCount": 1,
+  "failedSetIds": [
+    "swsh12pt5gg"
+  ],
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-13T22:25:42Z",
+  "generatedAtUtc": "2026-05-23T05:09:22Z",
   "language": "en",
   "notes": [
     "English catalogue is built from official PokemonTCG API endpoints.",
     "Card records store image URLs only; images are not mirrored into this cache."
   ],
-  "partialSetCount": 0,
+  "partialSetCount": 1,
   "schemaVersion": "1.0.0",
-  "setCount": 172,
+  "setCount": 173,
   "sets": [
     {
       "id": "base1",
@@ -2422,6 +2424,20 @@
       "symbolUrl": "https://images.scrydex.com/pokemon/me3-symbol/symbol",
       "total": 124,
       "updatedAt": "2026/003/26 15:00:00"
+    },
+    {
+      "id": "me4",
+      "imageCached": false,
+      "imageSource": "pokemon_tcg_api",
+      "logoUrl": "https://images.scrydex.com/pokemon/me4-logo/logo",
+      "name": "Chaos Rising",
+      "printedTotal": 86,
+      "ptcgoCode": "CRI",
+      "releaseDate": "2026/05/22",
+      "series": "Mega Evolution",
+      "symbolUrl": "https://images.scrydex.com/pokemon/me4-symbol/symbol",
+      "total": 122,
+      "updatedAt": "2026/05/21 15:00:00"
     }
   ],
   "source": "pokemon_tcg_api"
