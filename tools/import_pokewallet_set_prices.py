@@ -685,6 +685,8 @@ def build_set_payload(target: TargetSet, records: list[dict[str, Any]], ts: str)
 
 
 def update_price_status_files(ts: str, written_languages: set[str]) -> None:
+    if not written_languages:
+        return
     counts = summarize_current_counts()
     prices_status = try_load_json(PRICES_STATUS_PATH)
     if not isinstance(prices_status, dict):
@@ -728,6 +730,8 @@ def update_price_status_files(ts: str, written_languages: set[str]) -> None:
 
         has_records = record_count > 0
         wrote_language = language in written_languages
+        if not wrote_language:
+            continue
         status_value = "partial" if language == "jp" and has_records else previous_status.get("status", "ok")
         if not has_records:
             status_value = "not_available" if language == "jp" else "unavailable"
