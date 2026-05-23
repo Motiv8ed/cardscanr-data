@@ -103,6 +103,33 @@ Recommended local updater settings:
 
 The updater derives `CARDSCANR_CURRENT_PRICE_REQUEST_CAP` automatically from the remaining hourly and daily headroom before each cycle.
 
+## Safe data release workflow
+
+After generating data, run the controlled release command:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1
+```
+
+Dry-run mode validates and summarizes but does not stage, commit, or push:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1 -DryRun
+```
+
+Push is always explicit:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1 -Push
+```
+
+Optional paths are opt-in only:
+
+- `-IncludeDocs` to include `docs/` changes.
+- `-IncludeReports` to include `reports/` changes.
+
+The release workflow stages only allowed generated paths (`public/v1`, `data/*.json`, and optional docs/reports) and refuses temporary/cache paths, local image binaries, runtime logs/reports, and secret-like files.
+
 ---
 
 ## Cloudflare Pages setup

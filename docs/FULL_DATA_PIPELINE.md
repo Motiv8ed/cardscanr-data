@@ -63,6 +63,33 @@ The watcher displays current priority language, next language to process, last c
 
 No eBay scraping, eBay sold-listing pricing, marketplace scraping, or AU sold-listing ingestion is implemented by this runner.
 
+## Release Command
+
+After the pipeline has generated data, use the controlled release script:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1
+```
+
+Dry-run mode:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1 -DryRun
+```
+
+Push mode:
+
+```powershell
+.\scripts\release_cardscanr_data.ps1 -Push
+```
+
+Optional release scope:
+
+- `-IncludeDocs` includes `docs/` changes.
+- `-IncludeReports` includes `reports/` changes.
+
+The release script always starts by printing git status, runs health/coverage/gap/validation reports, summarizes key totals, stages only allowed generated paths, refuses cache/tmp/runtime/secrets paths, commits only when staged changes are meaningful, and only pushes when `-Push` is provided.
+
 ## Image Cache
 
 `-DownloadImages` writes a bounded local cache under `.cache/cardscanr-images/`, which is ignored by Git. The default image path is URL-manifest only.
