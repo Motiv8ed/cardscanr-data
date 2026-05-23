@@ -4,7 +4,8 @@ param(
     [switch]$IncludeDocs,
     [switch]$IncludeReports,
     [string]$Languages = "en,jp",
-    [switch]$IncludeZh
+    [switch]$IncludeZh,
+    [switch]$ExportChatGPTReport
 )
 
 $ErrorActionPreference = "Stop"
@@ -170,6 +171,10 @@ else {
 
 if ($DryRun) {
     Write-Host "[release] Dry-run mode enabled. Skipping stage, commit, and push."
+    if ($ExportChatGPTReport) {
+        Write-Host "[release] Generating ChatGPT upload report..."
+        & $pythonPath "tools/export_chatgpt_report.py"
+    }
     exit 0
 }
 
@@ -212,4 +217,9 @@ if ($Push) {
 }
 else {
     Write-Host "[release] Push skipped. Use -Push to push this release commit."
+}
+
+if ($ExportChatGPTReport) {
+    Write-Host "[release] Generating ChatGPT upload report..."
+    & $pythonPath "tools/export_chatgpt_report.py"
 }

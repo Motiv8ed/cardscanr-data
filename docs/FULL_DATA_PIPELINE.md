@@ -90,6 +90,28 @@ Optional release scope:
 
 The release script always starts by printing git status, runs health/coverage/gap/validation reports, summarizes key totals, stages only allowed generated paths, refuses cache/tmp/runtime/secrets paths, commits only when staged changes are meaningful, and only pushes when `-Push` is provided.
 
+## ChatGPT Upload Report
+
+After any major command, generate a concise uploadable bundle:
+
+```powershell
+# Standalone — any time
+.\scripts\export_chatgpt_report.ps1
+
+# After full pipeline run
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -NoFetch -BuildAppCatalogue -BuildImages -BuildHistory -Validate -ExportChatGPTReport
+
+# After release (dry-run safe)
+.\scripts\release_cardscanr_data.ps1 -DryRun -ExportChatGPTReport
+```
+
+Output in `reports/chatgpt_exports/` (git-ignored):
+- `cardscanr_chatgpt_report_latest.md` — human-readable: git status, data counts, blocked records, pipeline status, next recommended action
+- `cardscanr_chatgpt_report_latest.json` — structured form of the same data
+- `cardscanr_chatgpt_report_latest.zip` — safe bundle including supporting status/report files from `public/v1/` and `reports/`
+
+The export excludes `.env`, secrets, credentials, local image binaries, and runtime logs. Add `--include-large-reports` / `-IncludeLargeReports` to include the full blocked-cards and promotion JSON reports in the zip.
+
 ## Image Cache
 
 `-DownloadImages` writes a bounded local cache under `.cache/cardscanr-images/`, which is ignored by Git. The default image path is URL-manifest only.

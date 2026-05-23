@@ -132,6 +132,30 @@ The release workflow stages only allowed generated paths (`public/v1`, `data/*.j
 
 ---
 
+## How to upload a clean report to ChatGPT
+
+After running any major command, create a concise upload bundle:
+
+```powershell
+# Standalone export (any time)
+.\scripts\export_chatgpt_report.ps1
+
+# After a full pipeline run
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -NoFetch -BuildAppCatalogue -BuildImages -BuildHistory -Validate -ExportChatGPTReport
+
+# After a release (dry-run safe)
+.\scripts\release_cardscanr_data.ps1 -DryRun -ExportChatGPTReport
+```
+
+The export writes to `reports/chatgpt_exports/`:
+- `cardscanr_chatgpt_report_latest.md` — human-readable summary
+- `cardscanr_chatgpt_report_latest.json` — structured data
+- `cardscanr_chatgpt_report_latest.zip` — safe bundle with all supporting files
+
+Upload the `.zip` or `.md` file directly to ChatGPT. The bundle excludes `.env`, secrets, credentials, local image binaries, and large runtime logs. The export folder is git-ignored and will not dirty the worktree.
+
+---
+
 ## Cloudflare Pages setup
 
 1. Set **Build output directory** to `public`.  

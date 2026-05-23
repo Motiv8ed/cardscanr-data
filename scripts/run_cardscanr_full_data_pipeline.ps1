@@ -17,7 +17,8 @@ param(
     [switch]$Validate,
     [switch]$SkipValidate,
     [switch]$Commit,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$ExportChatGPTReport
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,4 +50,9 @@ if ($DryRun) { $argsList += '--dry-run' }
 & $pythonPath @argsList
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
+}
+
+if ($ExportChatGPTReport) {
+    Write-Host "[pipeline] Generating ChatGPT upload report..."
+    & $pythonPath "tools/export_chatgpt_report.py"
 }
