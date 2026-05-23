@@ -1,56 +1,56 @@
 {
-  "cacheVersion": "2026.05.23.2044",
-  "generatedAtUtc": "2026-05-23T22:26:20Z",
+  "cacheVersion": "2026.05.23.2245",
+  "generatedAtUtc": "2026-05-23T22:45:18Z",
   "intendedConsumer": "cardscanr_app",
   "languages": {
     "en": {
       "currentPriceFilesAvailable": true,
-      "currentPriceRecordCount": 31211,
-      "currentPriceSetFileCount": 159,
+      "currentPriceRecordCount": 31420,
+      "currentPriceSetFileCount": 160,
       "expectedUpdateIntervalMinutes": 60,
       "fullRotationEstimatedHours": 8,
       "game": "pokemon",
       "language": "en",
       "lastBatchDurationSeconds": 0,
-      "lastBatchFinishedAtUtc": "2026-05-23T20:44:24Z",
+      "lastBatchFinishedAtUtc": "2026-05-23T22:45:18Z",
       "lastBatchSetIds": [
-        "tk8",
-        "tk9",
-        "tlvs",
-        "wcd22",
-        "wcd23",
-        "wp",
-        "wpr",
-        "xblk",
-        "xdri",
-        "xjtg",
-        "xmeg",
-        "xpre",
-        "xsv11b",
-        "xsv11w",
-        "xsv8a",
-        "xwht",
-        "xy0",
-        "xy1",
-        "xy10",
-        "xy11"
+        "xy12",
+        "xy2",
+        "xy3",
+        "xy4",
+        "xy5",
+        "xy6",
+        "xy7",
+        "xy8",
+        "xy9",
+        "xyp",
+        "zsv10pt5",
+        "1375",
+        "1381",
+        "1387",
+        "1393",
+        "1399",
+        "1400",
+        "1401",
+        "1403",
+        "1407"
       ],
       "lastBatchSize": 20,
-      "lastBatchStartedAtUtc": "2026-05-23T20:44:24Z",
-      "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T20:44:24Z",
-      "lastSuccessfulPushAtUtc": "2026-05-23T20:44:24Z",
-      "lastUpdatedAtUtc": "2026-05-23T20:44:24Z",
-      "newestSetPriceUpdateAtUtc": "2026-05-23T20:44:24Z",
-      "nextExpectedPriceUpdateAtUtc": "2026-05-23T21:44:24Z",
-      "oldestSetPriceUpdateAtUtc": "2026-05-22T12:07:38Z",
-      "recordCount": 31211,
+      "lastBatchStartedAtUtc": "2026-05-23T22:45:18Z",
+      "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T22:45:18Z",
+      "lastSuccessfulPushAtUtc": "2026-05-23T22:45:18Z",
+      "lastUpdatedAtUtc": "2026-05-23T22:45:18Z",
+      "newestSetPriceUpdateAtUtc": "2026-05-23T22:45:18Z",
+      "nextExpectedPriceUpdateAtUtc": "2026-05-23T23:45:18Z",
+      "oldestSetPriceUpdateAtUtc": "2026-05-23T07:25:54Z",
+      "recordCount": 31420,
       "source": "pokemon_tcg_api",
       "sourceSummary": {
         "currency": "USD",
         "isLivePricing": false,
         "primarySource": "pokemon_tcg_api",
         "sourceCounts": {
-          "pokemon_tcg_api": 31211
+          "pokemon_tcg_api": 31420
         }
       },
       "staleness": {
@@ -61,30 +61,27 @@
       },
       "status": "ok",
       "statusCounts": {
-        "priced": 31211
+        "priced": 31420
       }
     },
     "jp": {
-      "currentPriceFilesAvailable": true,
+      "currentPriceFilesAvailable": false,
       "currentPriceRecordCount": 2728,
       "currentPriceSetFileCount": 10,
       "game": "pokemon",
       "language": "jp",
-      "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T22:26:20Z",
-      "lastUpdatedAtUtc": "2026-05-23T22:26:20Z",
+      "lastSuccessfulPriceUpdateAtUtc": null,
+      "lastUpdatedAtUtc": null,
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
         "Japanese catalogue support is partial.",
         "Japanese current price cache is not available yet.",
-        "Timestamps are UTC. Apps should convert to the user's local timezone.",
-        "JP current prices are partial PokeWallet set-price imports.",
-        "Provider currency is stored as-is; no currency conversion is applied.",
-        "TCGPlayer USD and CardMarket EUR records remain separate."
+        "Timestamps are UTC. Apps should convert to the user's local timezone."
       ],
       "recordCount": 2728,
       "source": "pokewallet",
       "sourceSummary": {
-        "currency": "mixed",
+        "currency": null,
         "isLivePricing": false,
         "primarySource": "pokewallet",
         "sourceCounts": {
@@ -92,12 +89,12 @@
         }
       },
       "staleness": {
-        "ageSeconds": 0,
+        "ageSeconds": null,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 259200,
-        "status": "fresh"
+        "status": "unavailable"
       },
-      "status": "partial",
+      "status": "catalogue_only",
       "statusCounts": {
         "priced": 2728
       }
