@@ -39,6 +39,8 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/provider_to_app_promotion_gaps.md",
     "reports/provider_blocked_cards_latest.md",
     "reports/app_catalogue_source_audit_latest.md",
+    "reports/pokewallet_api_capability_audit_latest.json",
+    "reports/pokewallet_api_capability_audit_latest.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -342,6 +344,83 @@ def _collect_price_updater_info() -> dict[str, Any]:
     }
 
 
+def _collect_pokewallet_api_capability_audit() -> dict[str, Any]:
+    data = _load_json("reports/pokewallet_api_capability_audit_latest.json")
+    if data is None:
+        return {"available": False}
+
+    summary = data.get("endpointAvailabilitySummary")
+    if not isinstance(summary, dict):
+        summary = {}
+    price_plan = data.get("priceImporterPlan")
+    if not isinstance(price_plan, dict):
+        price_plan = {}
+    image_audit = data.get("imageCacheAudit")
+    if not isinstance(image_audit, dict):
+        image_audit = {}
+    set_logo_plan = data.get("setLogoRefreshPlan")
+    if not isinstance(set_logo_plan, dict):
+        set_logo_plan = {}
+
+    endpoint_rows: list[dict[str, Any]] = []
+    expected_pro_endpoints: list[str] = []
+    for item in data.get("endpoints", []):
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or item.get("name") or "")
+        signals = item.get("priceSignals")
+        if not isinstance(signals, dict):
+            signals = {}
+        if item.get("expectedPro") and label:
+            expected_pro_endpoints.append(label)
+        endpoint_rows.append(
+            {
+                "name": item.get("name"),
+                "label": label,
+                "path": item.get("path"),
+                "query": item.get("query") if isinstance(item.get("query"), dict) else {},
+                "statusCode": item.get("statusCode"),
+                "availability": item.get("availability"),
+                "available": item.get("available") is True,
+                "expectedPro": item.get("expectedPro") is True,
+                "hasUsablePrices": signals.get("hasUsablePrices") is True,
+            }
+        )
+
+    samples_requested = int(image_audit.get("samplesRequested") or 0)
+    samples_succeeded = int(image_audit.get("samplesSucceeded") or 0)
+
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "status": data.get("status", "unknown"),
+        "apiKeyPresent": data.get("apiKeyPresent") is True,
+        "requestsAttempted": data.get("requestsAttempted", 0),
+        "requestsSucceeded": data.get("requestsSucceeded", 0),
+        "availableEndpoints": summary.get("availableEndpoints", []),
+        "planLimitedEndpoints": summary.get("planLimitedEndpoints", []),
+        "notFoundEndpoints": summary.get("notFoundEndpoints", []),
+        "rateLimitedEndpoints": summary.get("rateLimitedEndpoints", []),
+        "otherUnavailableEndpoints": summary.get("otherUnavailableEndpoints", []),
+        "expectedProEndpoints": expected_pro_endpoints,
+        "endpoints": endpoint_rows,
+        "pricesEndpointWorks": price_plan.get("pricesEndpointWorks") is True,
+        "jpPriceAvailability": price_plan.get("jpPriceAvailability") or "unknown",
+        "cardmarketOnlyUseful": price_plan.get("cardmarketOnlyUseful") is True,
+        "tcgplayerUsdUseful": price_plan.get("tcgplayerUsdUseful") is True,
+        "imageEndpointWorks": samples_succeeded > 0,
+        "imageSamplesRequested": samples_requested,
+        "imageSamplesSucceeded": samples_succeeded,
+        "setLogoEndpoint": set_logo_plan.get("endpoint"),
+        "setLogoTested": set_logo_plan.get("tested") is True,
+        "setLogoCandidateCount": len(set_logo_plan.get("candidateSamples", []))
+        if isinstance(set_logo_plan.get("candidateSamples"), list)
+        else 0,
+        "setLogoReason": set_logo_plan.get("reason"),
+        "recommendation": data.get("recommendation", ""),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -374,6 +453,7 @@ def _recommend_next_action(
     pipeline: dict[str, Any],
     worker: dict[str, Any],
     git: dict[str, Any],
+    pokewallet_api_audit: dict[str, Any] | None = None,
 ) -> str:
     issues: list[str] = []
 
@@ -398,6 +478,22 @@ def _recommend_next_action(
         )
 
     if not issues:
+        if (
+            pokewallet_api_audit
+            and pokewallet_api_audit.get("available")
+            and pokewallet_api_audit.get("pricesEndpointWorks")
+        ):
+            if pokewallet_api_audit.get("jpPriceAvailability") == "usable_prices_found":
+                return (
+                    "All checks passing. PokeWallet /prices is available and the sampled JP set returned usable price data. "
+                    "Build the staged diagnostics-only price importer next; keep public JP prices unavailable until source, "
+                    "currency, variant, and count validation pass."
+                )
+            return (
+                "All checks passing. PokeWallet /prices is available for sampled EN data. "
+                "Build the staged diagnostics-only price importer next; keep JP pricing unavailable unless a JP endpoint "
+                "returns validated usable records."
+            )
         missing_jp = (
             pipeline.get("available")
             and pipeline.get("pricesByLanguage", {}).get("jp", {}).get("recordCount", 0) == 0
@@ -619,6 +715,45 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **JP price records:** {jp_ps.get('recordCount', 0):,} (source: {jp_ps.get('source', 'n/a')}, status: {jp_ps.get('status', 'n/a')}, last updated: {jp_ps.get('lastUpdatedAtUtc') or 'n/a'})")
         a("")
 
+    # PokeWallet API capability audit
+    api_audit = report.get("pokewalletApiCapabilityAudit", {})
+    if api_audit.get("available"):
+        a("## PokeWallet API Capability Audit")
+        a("")
+        a(f"- **Generated:** {api_audit.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Requests:** {api_audit.get('requestsSucceeded', 0)} succeeded / {api_audit.get('requestsAttempted', 0)} attempted")
+        a(f"- **/prices works:** {'yes' if api_audit.get('pricesEndpointWorks') else 'no'}")
+        a(f"- **JP price availability:** {api_audit.get('jpPriceAvailability', 'unknown')}")
+        a(f"- **TCGPlayer USD useful:** {'yes' if api_audit.get('tcgplayerUsdUseful') else 'no'}")
+        a(f"- **CardMarket-only useful:** {'yes' if api_audit.get('cardmarketOnlyUseful') else 'no'}")
+        a(f"- **Image endpoint samples:** {api_audit.get('imageSamplesSucceeded', 0)} / {api_audit.get('imageSamplesRequested', 0)} succeeded")
+        a(f"- **Set logo endpoint:** {api_audit.get('setLogoEndpoint') or 'n/a'} ({'tested' if api_audit.get('setLogoTested') else 'planned only'})")
+        plan_limited = api_audit.get("planLimitedEndpoints", [])
+        expected_pro = api_audit.get("expectedProEndpoints", [])
+        if plan_limited:
+            a(f"- **Plan/pro/trial required:** {', '.join(plan_limited)}")
+        elif expected_pro:
+            a(f"- **Plan/pro/trial required:** none observed on current plan; docs/pro-labeled endpoints tested: {', '.join(expected_pro)}")
+        else:
+            a("- **Plan/pro/trial required:** none observed")
+        if api_audit.get("recommendation"):
+            a(f"- **Recommended next action:** {api_audit.get('recommendation')}")
+        endpoints = api_audit.get("endpoints", [])
+        if endpoints:
+            a("")
+            a("### Endpoint Availability")
+            a("")
+            a("| Endpoint | HTTP | Availability | Usable prices |")
+            a("|----------|-----:|--------------|---------------|")
+            for item in endpoints:
+                a(
+                    f"| {item.get('label', '')} | "
+                    f"{item.get('statusCode') if item.get('statusCode') is not None else 'n/a'} | "
+                    f"{item.get('availability', 'unknown')} | "
+                    f"{'yes' if item.get('hasUsablePrices') else 'no'} |"
+                )
+        a("")
+
     # Next action
     a("## Next Recommended Action")
     a("")
@@ -697,13 +832,19 @@ def main() -> None:
     promotion_info = _collect_promotion_info()
     worker_info = _collect_worker_info()
     price_updater_info = _collect_price_updater_info()
+    pokewallet_api_audit_info = _collect_pokewallet_api_capability_audit()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
         pipeline_info["pricesByLanguage"] = v1_info["pricesByLanguage"]
         pipeline_info["pricesByLanguageSource"] = "public_v1_current_price_files"
 
-    next_action = _recommend_next_action(pipeline_info, worker_info, git_info)
+    next_action = _recommend_next_action(
+        pipeline_info,
+        worker_info,
+        git_info,
+        pokewallet_api_audit_info,
+    )
 
     report: dict[str, Any] = {
         "schemaVersion": "1.0.0",
@@ -714,6 +855,7 @@ def main() -> None:
         "promotion": promotion_info,
         "worker": worker_info,
         "priceUpdater": price_updater_info,
+        "pokewalletApiCapabilityAudit": pokewallet_api_audit_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }

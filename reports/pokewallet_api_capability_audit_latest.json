@@ -1,0 +1,938 @@
+{
+  "apiBaseUrl": "https://api.pokewallet.io",
+  "apiKeyEnvNamesChecked": [
+    "POKEWALLET_API_KEY",
+    "CARDSCANR_POKEWALLET_API_KEY"
+  ],
+  "apiKeyEnvUsed": "POKEWALLET_API_KEY",
+  "apiKeyPresent": true,
+  "endpointAvailabilitySummary": {
+    "availableEndpoints": [
+      "/analytics/top-cards",
+      "/cards/:id",
+      "/cards/:id/price-history",
+      "/health",
+      "/prices/:setCode EN",
+      "/prices/:setCode EN source=cm",
+      "/prices/:setCode EN source=tcg",
+      "/prices/:setCode JP",
+      "/sets/:setCode EN",
+      "/sets/:setCode JP",
+      "/sets",
+      "/sets/trending"
+    ],
+    "notFoundEndpoints": [],
+    "otherUnavailableEndpoints": [],
+    "planLimitedEndpoints": [],
+    "rateLimitedEndpoints": []
+  },
+  "endpoints": [
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": false,
+      "label": "/health",
+      "method": "GET",
+      "name": "health",
+      "path": "/health",
+      "priceSignals": {
+        "cardmarketSignalCount": 0,
+        "currencies": [],
+        "hasUsablePrices": false,
+        "priceFieldCount": 0,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 0
+      },
+      "query": {},
+      "requiresAuth": false,
+      "responseShape": {
+        "itemCount": 0,
+        "pagination": {},
+        "sampleItemKeys": [],
+        "topLevelKeys": [
+          "checks",
+          "region",
+          "responseTime",
+          "status",
+          "timestamp",
+          "version"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": false,
+      "label": "/sets",
+      "method": "GET",
+      "name": "sets",
+      "path": "/sets",
+      "priceSignals": {
+        "cardmarketSignalCount": 0,
+        "currencies": [],
+        "hasUsablePrices": false,
+        "priceFieldCount": 0,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 0
+      },
+      "query": {
+        "limit": "10",
+        "page": "1"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 856,
+        "pagination": {},
+        "sampleItemKeys": [
+          "card_count",
+          "language",
+          "name",
+          "release_date",
+          "set_code",
+          "set_id"
+        ],
+        "topLevelKeys": [
+          "data",
+          "success",
+          "total"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": false,
+      "label": "/sets/:setCode EN",
+      "method": "GET",
+      "name": "set_en",
+      "path": "/sets/604",
+      "priceSignals": {
+        "cardmarketSignalCount": 5,
+        "currencies": [],
+        "hasUsablePrices": false,
+        "priceFieldCount": 0,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 5
+      },
+      "query": {
+        "limit": "5",
+        "page": "1"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 5,
+        "pagination": {
+          "limit": 5,
+          "page": 1,
+          "total": 101,
+          "totalPages": null
+        },
+        "sampleItemKeys": [
+          "card_info",
+          "cardmarket",
+          "id",
+          "tcgplayer"
+        ],
+        "topLevelKeys": [
+          "cards",
+          "pagination",
+          "set",
+          "success"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": false,
+      "label": "/sets/:setCode JP",
+      "method": "GET",
+      "name": "set_jp",
+      "path": "/sets/23599",
+      "priceSignals": {
+        "cardmarketSignalCount": 5,
+        "currencies": [],
+        "hasUsablePrices": false,
+        "priceFieldCount": 0,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 5
+      },
+      "query": {
+        "limit": "5",
+        "page": "1"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 5,
+        "pagination": {
+          "limit": 5,
+          "page": 1,
+          "total": 210,
+          "totalPages": null
+        },
+        "sampleItemKeys": [
+          "card_info",
+          "cardmarket",
+          "id",
+          "tcgplayer"
+        ],
+        "topLevelKeys": [
+          "cards",
+          "pagination",
+          "set",
+          "success"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/prices/:setCode EN",
+      "method": "GET",
+      "name": "prices_en",
+      "path": "/prices/604",
+      "priceSignals": {
+        "cardmarketSignalCount": 104,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 935,
+        "scanNodeLimitReached": false,
+        "sources": [
+          "both"
+        ],
+        "tcgplayerSignalCount": 104
+      },
+      "query": {},
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 104,
+        "pagination": {},
+        "sampleItemKeys": [
+          "card_number",
+          "cardmarket",
+          "name",
+          "tcgplayer",
+          "variant"
+        ],
+        "topLevelKeys": [
+          "data",
+          "group_id",
+          "set_code",
+          "source",
+          "success",
+          "total"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/prices/:setCode JP",
+      "method": "GET",
+      "name": "prices_jp",
+      "path": "/prices/23599",
+      "priceSignals": {
+        "cardmarketSignalCount": 200,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 1954,
+        "scanNodeLimitReached": false,
+        "sources": [
+          "both"
+        ],
+        "tcgplayerSignalCount": 200
+      },
+      "query": {},
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 519,
+        "pagination": {},
+        "sampleItemKeys": [
+          "card_number",
+          "cardmarket",
+          "name",
+          "tcgplayer",
+          "variant"
+        ],
+        "topLevelKeys": [
+          "data",
+          "group_id",
+          "set_code",
+          "source",
+          "success",
+          "total"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/prices/:setCode EN source=tcg",
+      "method": "GET",
+      "name": "prices_en_source_tcg",
+      "path": "/prices/604",
+      "priceSignals": {
+        "cardmarketSignalCount": 104,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 497,
+        "scanNodeLimitReached": false,
+        "sources": [
+          "tcg"
+        ],
+        "tcgplayerSignalCount": 104
+      },
+      "query": {
+        "source": "tcg"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 104,
+        "pagination": {},
+        "sampleItemKeys": [
+          "card_number",
+          "cardmarket",
+          "name",
+          "tcgplayer",
+          "variant"
+        ],
+        "topLevelKeys": [
+          "data",
+          "group_id",
+          "set_code",
+          "source",
+          "success",
+          "total"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/prices/:setCode EN source=cm",
+      "method": "GET",
+      "name": "prices_en_source_cm",
+      "path": "/prices/604",
+      "priceSignals": {
+        "cardmarketSignalCount": 104,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 438,
+        "scanNodeLimitReached": false,
+        "sources": [
+          "cm"
+        ],
+        "tcgplayerSignalCount": 104
+      },
+      "query": {
+        "source": "cm"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 104,
+        "pagination": {},
+        "sampleItemKeys": [
+          "card_number",
+          "cardmarket",
+          "name",
+          "tcgplayer",
+          "variant"
+        ],
+        "topLevelKeys": [
+          "data",
+          "group_id",
+          "set_code",
+          "source",
+          "success",
+          "total"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": false,
+      "label": "/cards/:id",
+      "method": "GET",
+      "name": "card_detail",
+      "path": "/cards/pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+      "priceSignals": {
+        "cardmarketSignalCount": 1,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 19,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 1
+      },
+      "query": {},
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 0,
+        "pagination": {},
+        "sampleItemKeys": [],
+        "topLevelKeys": [
+          "card_info",
+          "cardmarket",
+          "id",
+          "tcgplayer"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/cards/:id/price-history",
+      "method": "GET",
+      "name": "card_price_history",
+      "path": "/cards/pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c/price-history",
+      "priceSignals": {
+        "cardmarketSignalCount": 1,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 19,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 1
+      },
+      "query": {},
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 0,
+        "pagination": {},
+        "sampleItemKeys": [],
+        "topLevelKeys": [
+          "card_name",
+          "cardmarket",
+          "id",
+          "tcgplayer"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/sets/trending",
+      "method": "GET",
+      "name": "sets_trending",
+      "path": "/sets/trending",
+      "priceSignals": {
+        "cardmarketSignalCount": 5,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 10,
+        "scanNodeLimitReached": false,
+        "sources": [],
+        "tcgplayerSignalCount": 5
+      },
+      "query": {
+        "limit": "5"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 0,
+        "pagination": {},
+        "sampleItemKeys": [],
+        "topLevelKeys": [
+          "period",
+          "trending_sets"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    },
+    {
+      "availability": "available",
+      "available": true,
+      "contentType": "application/json",
+      "error": null,
+      "errorSnippet": null,
+      "expectedPro": true,
+      "label": "/analytics/top-cards",
+      "method": "GET",
+      "name": "analytics_top_cards",
+      "path": "/analytics/top-cards",
+      "priceSignals": {
+        "cardmarketSignalCount": 0,
+        "currencies": [],
+        "hasUsablePrices": true,
+        "priceFieldCount": 5,
+        "scanNodeLimitReached": false,
+        "sources": [
+          "tcg"
+        ],
+        "tcgplayerSignalCount": 0
+      },
+      "query": {
+        "limit": "5"
+      },
+      "requiresAuth": true,
+      "responseShape": {
+        "itemCount": 0,
+        "pagination": {},
+        "sampleItemKeys": [],
+        "topLevelKeys": [
+          "metric",
+          "source",
+          "top_cards"
+        ],
+        "topLevelType": "object"
+      },
+      "statusCode": 200
+    }
+  ],
+  "generatedAtUtc": "2026-05-23T21:23:09Z",
+  "imageCacheAudit": {
+    "attempted": true,
+    "policy": "Only 3 low and 3 high image metadata probes are allowed; no image binaries are written.",
+    "samples": [
+      {
+        "availability": "unavailable",
+        "available": false,
+        "contentLengthBytes": 326,
+        "contentType": "application/json",
+        "endpointTemplate": "/images/:id",
+        "error": "http_404",
+        "errorSnippet": "{\"error\":\"Image not found\",\"message\":\"Image not available on R2 storage\",\"debug\":{\"groupId\":\"24655\",\"cardNumber\":\"1/086\",\"size\":\"low\",\"r2Url\":\"https://storage.pokewallet.io/2465...",
+        "providerCardId": "pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+        "size": "low",
+        "statusCode": 404
+      },
+      {
+        "availability": "unavailable",
+        "available": false,
+        "contentLengthBytes": 328,
+        "contentType": "application/json",
+        "endpointTemplate": "/images/:id",
+        "error": "http_404",
+        "errorSnippet": "{\"error\":\"Image not found\",\"message\":\"Image not available on R2 storage\",\"debug\":{\"groupId\":\"24655\",\"cardNumber\":\"1/086\",\"size\":\"high\",\"r2Url\":\"https://storage.pokewallet.io/246...",
+        "providerCardId": "pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+        "size": "high",
+        "statusCode": 404
+      },
+      {
+        "availability": "available",
+        "available": true,
+        "contentLengthBytes": 15727,
+        "contentType": "image/jpeg",
+        "endpointTemplate": "/images/:id",
+        "error": null,
+        "errorSnippet": null,
+        "providerCardId": "pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102",
+        "size": "low",
+        "statusCode": 200
+      },
+      {
+        "availability": "available",
+        "available": true,
+        "contentLengthBytes": 170772,
+        "contentType": "image/jpeg",
+        "endpointTemplate": "/images/:id",
+        "error": null,
+        "errorSnippet": null,
+        "providerCardId": "pk_d9bad5e2c7e96836627933c933d0c377bbd1b09806545d414aed3de4453a10e5758272b361f8297ed24f5e3e2102",
+        "size": "high",
+        "statusCode": 200
+      },
+      {
+        "availability": "available",
+        "available": true,
+        "contentLengthBytes": 17607,
+        "contentType": "image/jpeg",
+        "endpointTemplate": "/images/:id",
+        "error": null,
+        "errorSnippet": null,
+        "providerCardId": "pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824",
+        "size": "low",
+        "statusCode": 200
+      },
+      {
+        "availability": "available",
+        "available": true,
+        "contentLengthBytes": 169114,
+        "contentType": "image/jpeg",
+        "endpointTemplate": "/images/:id",
+        "error": null,
+        "errorSnippet": null,
+        "providerCardId": "pk_7edb1fc84b42c5a3543cb8c71bd3cb8f602d579d62fafcc34de1eecfcb8030f5f92829ad435fa581cf6b7a529824",
+        "size": "high",
+        "statusCode": 200
+      }
+    ],
+    "samplesRequested": 6,
+    "samplesSucceeded": 4
+  },
+  "notes": [
+    "No API keys are written to this report.",
+    "No generated price files are written by this audit.",
+    "No image binaries are written by this audit.",
+    "Authenticated endpoint results reflect only the current environment and provider plan at audit time."
+  ],
+  "priceImporterPlan": {
+    "cardmarketOnlyUseful": true,
+    "jpPriceAvailability": "usable_prices_found",
+    "pricesEndpointWorks": true,
+    "stageDesign": [
+      "Add a staged importer that reads /prices/:numericSetId into a temporary diagnostics file first.",
+      "Import by numeric Pokewallet set_id when available; use set_code only as a reviewed fallback.",
+      "Preserve provider variants and map them into Stage 1 variant/condition fields without collapsing finishes.",
+      "Store TCGPlayer USD and CardMarket EUR as separate source/currency records.",
+      "Do not convert currencies until a validated conversion system exists.",
+      "Do not fabricate missing market, low, high, or history values.",
+      "Mark JP current pricing unavailable when the endpoint returns no usable JP price records.",
+      "Only promote into public/v1/prices/current after validate_cache and focused count/source/status checks pass."
+    ],
+    "tcgplayerUsdUseful": true
+  },
+  "provider": "pokewallet",
+  "recommendation": "Build a staged /prices importer behind diagnostics-only output, then validate source/currency/status counts before public promotion.",
+  "requestsAttempted": 18,
+  "requestsFailed": 2,
+  "requestsSucceeded": 16,
+  "sampleSelection": {
+    "knownEnNumericSetId": "604",
+    "knownEnSetCode": "BS",
+    "knownEnSetName": "Base Set",
+    "knownJpNumericSetId": "23599",
+    "knownJpSetCode": "SV2a",
+    "knownJpSetName": "SV2a: Pokemon Card 151",
+    "sampleProviderCardId": "pk_7fbf4d523ee4552cb3df73070e119fd27b170107ce3b2b9931e9fe43a393f08f249f6b9d0d1c3d75bc893d05179c",
+    "sampleProviderCardName": "Weedle",
+    "sampleProviderCardSetId": "24655"
+  },
+  "schemaVersion": "1.0.0",
+  "setLogoRefreshPlan": {
+    "candidateSamples": [
+      {
+        "endpoint": "/sets/604/image",
+        "language": "en",
+        "name": "Base Set",
+        "set_code": "BS",
+        "set_id": "604"
+      },
+      {
+        "endpoint": "/sets/23599/image",
+        "language": "jp",
+        "name": "SV2a: Pokemon Card 151",
+        "set_code": "SV2a",
+        "set_id": "23599"
+      }
+    ],
+    "endpoint": "/sets/:setCode/image",
+    "reason": "Not fetched by default because this audit limits image-cache probes to 3 low and 3 high card images.",
+    "safePolicy": [
+      "Probe set logos through an explicit allowlist before enabling any cache writes.",
+      "Record status code, content type, and size before storing binaries.",
+      "Do not overwrite better existing app set logos or symbols without review.",
+      "Keep downloaded logo binaries ignored by Git."
+    ],
+    "tested": false
+  },
+  "setMetadataRefreshStage": {
+    "ambiguousSetCodeMappings": [
+      {
+        "mappingKey": "en:BKP",
+        "setIds": [
+          "1701",
+          "2175"
+        ]
+      },
+      {
+        "mappingKey": "en:BLW",
+        "setIds": [
+          "1400",
+          "1538"
+        ]
+      },
+      {
+        "mappingKey": "en:CL",
+        "setIds": [
+          "1415",
+          "23323"
+        ]
+      },
+      {
+        "mappingKey": "en:GEN",
+        "setIds": [
+          "1728",
+          "1729"
+        ]
+      },
+      {
+        "mappingKey": "en:LTR",
+        "setIds": [
+          "1409",
+          "1465"
+        ]
+      },
+      {
+        "mappingKey": "en:POP",
+        "setIds": [
+          "1414",
+          "1422",
+          "1432",
+          "1439",
+          "1442",
+          "1446",
+          "1447",
+          "1450",
+          "1452"
+        ]
+      },
+      {
+        "mappingKey": "en:PR",
+        "setIds": [
+          "1407",
+          "1418",
+          "1421",
+          "1423",
+          "1451",
+          "1453",
+          "1455",
+          "1528",
+          "1532",
+          "1533",
+          "1536",
+          "1539",
+          "1540",
+          "1541",
+          "1542",
+          "1543",
+          "1796",
+          "1840",
+          "1938",
+          "609",
+          "610"
+        ]
+      },
+      {
+        "mappingKey": "en:RR",
+        "setIds": [
+          "1367",
+          "1428"
+        ]
+      }
+    ],
+    "apiSampleCount": 8,
+    "apiSamples": [
+      {
+        "card_count": 11,
+        "language": "jap",
+        "name": "10th Movie Commemoration Set",
+        "release_date": "3rd August, 2007",
+        "set_code": "10M",
+        "set_id": "24146"
+      },
+      {
+        "card_count": 9,
+        "language": "jap",
+        "name": "11th Movie Commemoration Set",
+        "release_date": "1st August, 2008",
+        "set_code": "11M",
+        "set_id": "24145"
+      },
+      {
+        "card_count": 108,
+        "language": "eng",
+        "name": "2022 World Championship Decks",
+        "release_date": null,
+        "set_code": "WCD22",
+        "set_id": "-188"
+      },
+      {
+        "card_count": 109,
+        "language": "eng",
+        "name": "2023 World Championship Decks",
+        "release_date": null,
+        "set_code": "WCD23",
+        "set_id": "-189"
+      },
+      {
+        "card_count": 102,
+        "language": "eng",
+        "name": "2024 World Championship Decks",
+        "release_date": null,
+        "set_code": "WCD24",
+        "set_id": "-190"
+      },
+      {
+        "card_count": 9,
+        "language": "chn",
+        "name": "30th Anniversary Celebration Simplified Chinese Singles",
+        "release_date": "20th March, 2026",
+        "set_code": "30th-P",
+        "set_id": "-241"
+      },
+      {
+        "card_count": 0,
+        "language": "jap",
+        "name": "64 Mario Stadium Best Photo Contest",
+        "release_date": null,
+        "set_code": "24197",
+        "set_id": "24197"
+      },
+      {
+        "card_count": 111,
+        "language": "jap",
+        "name": "Abyss Eye",
+        "release_date": "22nd May, 2026",
+        "set_code": "m5",
+        "set_id": "24711"
+      }
+    ],
+    "available": true,
+    "fieldsCaptured": [
+      "set_id",
+      "set_code",
+      "name",
+      "language",
+      "release_date",
+      "card_count"
+    ],
+    "numericSetIdMappingsSample": [
+      {
+        "card_count": 114,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Rising Rivals",
+        "release_date": "20th May, 2009",
+        "set_code": "RR",
+        "set_id": "1367"
+      },
+      {
+        "card_count": 124,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Mysterious Treasures",
+        "release_date": "22nd August, 2007",
+        "set_code": "MT",
+        "set_id": "1368"
+      },
+      {
+        "card_count": 103,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Stormfront",
+        "release_date": "5th November, 2008",
+        "set_code": "SF",
+        "set_id": "1369"
+      },
+      {
+        "card_count": 105,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Plasma Blast",
+        "release_date": "14th August, 2013",
+        "set_code": "PLB",
+        "set_id": "1370"
+      },
+      {
+        "card_count": 178,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Skyridge",
+        "release_date": "12th May, 2003",
+        "set_code": "SK",
+        "set_id": "1372"
+      },
+      {
+        "card_count": 83,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Team Rocket",
+        "release_date": "24th April, 2000",
+        "set_code": "TR",
+        "set_id": "1373"
+      },
+      {
+        "card_count": 110,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Legendary Collection",
+        "release_date": "24th May, 2002",
+        "set_code": "LC",
+        "set_id": "1374"
+      },
+      {
+        "card_count": 165,
+        "cardscanr_language": "en",
+        "language": "eng",
+        "name": "Expedition",
+        "release_date": "15th September, 2002",
+        "set_code": "EX",
+        "set_id": "1375"
+      }
+    ],
+    "safeMergePolicy": [
+      "Match by numeric provider set_id before set_code.",
+      "Treat duplicate language/set_code mappings as ambiguous and require manual review.",
+      "Only fill missing provider metadata fields; do not overwrite better app catalogue names, release dates, card counts, logos, or symbols.",
+      "Keep provider metadata separate from app canonical set metadata until validation approves promotion."
+    ],
+    "sourceEndpoint": "/sets"
+  },
+  "status": "completed"
+}
