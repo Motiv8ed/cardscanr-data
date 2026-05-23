@@ -1,90 +1,54 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 297,
-  "lastUpdatedAtUtc": "2026-05-23T16:36:27Z",
+  "enCurrentPriceCursor": 317,
+  "lastUpdatedAtUtc": "2026-05-23T17:37:57Z",
   "lastBatchSetIds": [
-    "pps3",
-    "pps4",
-    "pps5",
-    "pps6",
-    "pps7",
-    "rsv10pt5",
-    "ru1",
-    "sea",
-    "shc",
-    "si1",
-    "si100",
-    "skv",
-    "sm1",
-    "sm10",
-    "sm11",
-    "sm115",
-    "sm12",
-    "sm2",
-    "sm3",
-    "sm35"
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma",
+    "smp",
+    "stf",
+    "sv1",
+    "sv10",
+    "sv2",
+    "sv3",
+    "sv3pt5",
+    "sv4",
+    "sv4pt5",
+    "sv5",
+    "sv6",
+    "sv6pt5"
   ],
   "lastProcessedSetIds": [
-    "pps3",
-    "pps4",
-    "pps5",
-    "pps6",
-    "pps7",
-    "rsv10pt5",
-    "ru1",
-    "sea",
-    "shc",
-    "si1",
-    "si100",
-    "skv",
-    "sm1",
-    "sm10",
-    "sm11",
-    "sm115",
-    "sm12",
-    "sm2",
-    "sm3",
-    "sm35"
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma",
+    "smp",
+    "stf",
+    "sv1",
+    "sv10",
+    "sv2",
+    "sv3",
+    "sv3pt5",
+    "sv4",
+    "sv4pt5",
+    "sv5",
+    "sv6",
+    "sv6pt5"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
   "requestLedger": [
-    {
-      "requests": 18,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:02:11Z"
-    },
-    {
-      "requests": 16,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:04:59Z"
-    },
-    {
-      "requests": 3,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:05:51Z"
-    },
-    {
-      "requests": 18,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:09:31Z"
-    },
-    {
-      "requests": 18,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:11:44Z"
-    },
-    {
-      "requests": 7,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T17:12:43Z"
-    },
     {
       "requests": 18,
       "source": "local_price_update",
@@ -453,10 +417,19 @@
       "timestampUtc": "2026-05-23T15:36:10Z"
     },
     {
-      "timestampUtc": "2026-05-23T16:37:40Z",
-      "requests": 22,
       "providerRequestCounts": {
         "pokemon_tcg_api": 22
+      },
+      "requests": 22,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-23T16:37:40Z"
+    },
+    {
+      "timestampUtc": "2026-05-23T17:40:17Z",
+      "requests": 24,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 24
       },
       "status": "built",
       "source": "local_price_update"
