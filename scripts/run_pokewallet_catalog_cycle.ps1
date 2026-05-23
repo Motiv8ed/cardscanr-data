@@ -74,6 +74,126 @@ function Write-JsonFile {
     Move-Item -Path $tmpPath -Destination $Path -Force
 }
 
+function Get-ObjectPropertyValue {
+    param(
+        $Object,
+        [string[]]$Names
+    )
+
+    if ($null -eq $Object -or $null -eq $Names) {
+        return $null
+    }
+
+    if ($Object -is [System.Collections.IDictionary]) {
+        foreach ($name in $Names) {
+            if ($Object.Contains($name)) {
+                return $Object[$name]
+            }
+            foreach ($key in $Object.Keys) {
+                if ([string]$key -ieq $name) {
+                    return $Object[$key]
+                }
+            }
+        }
+    }
+
+    if ($null -ne $Object.PSObject) {
+        foreach ($name in $Names) {
+            $prop = $Object.PSObject.Properties | Where-Object { $_.Name -ieq $name } | Select-Object -First 1
+            if ($null -ne $prop) {
+                return $prop.Value
+            }
+        }
+    }
+
+    return $null
+}
+
+function Convert-ToIntOrNull {
+    param(
+        $Value,
+        [switch]$AllowCollectionCount,
+        [int]$Depth = 0
+    )
+
+    if ($Depth -gt 3 -or $null -eq $Value) {
+        return $null
+    }
+
+    if ($Value -is [byte] -or $Value -is [sbyte] -or $Value -is [int16] -or $Value -is [uint16] -or $Value -is [int] -or $Value -is [uint32] -or $Value -is [int64] -or $Value -is [uint64] -or $Value -is [decimal] -or $Value -is [double] -or $Value -is [single]) {
+        try {
+            return [int]$Value
+        }
+        catch {
+            return $null
+        }
+    }
+
+    if ($Value -is [string]) {
+        $trimmed = $Value.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed)) {
+            return $null
+        }
+        $parsed = 0
+        if ([int]::TryParse($trimmed, [ref]$parsed)) {
+            return $parsed
+        }
+        return $null
+    }
+
+    $nestedFieldValue = Get-ObjectPropertyValue -Object $Value -Names @('count', 'cardCount', 'cards', 'total', 'after', 'current', 'setFileCount', 'recordCount')
+    if ($null -ne $nestedFieldValue) {
+        $allowNestedCollectionCount = $AllowCollectionCount -or ($nestedFieldValue -is [System.Collections.IEnumerable] -and -not ($nestedFieldValue -is [string]))
+        return Convert-ToIntOrNull -Value $nestedFieldValue -AllowCollectionCount:$allowNestedCollectionCount -Depth ($Depth + 1)
+    }
+
+    if ($AllowCollectionCount -and $Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string]) -and -not ($Value -is [System.Collections.IDictionary])) {
+        return @($Value).Count
+    }
+
+    return $null
+}
+
+function Get-LanguageCountMap {
+    param(
+        $MapLike,
+        [string]$MapName = 'languageCountMap'
+    )
+
+    $result = [ordered]@{}
+    if ($null -eq $MapLike) {
+        return $result
+    }
+
+    $entries = @()
+    if ($MapLike -is [System.Collections.IDictionary]) {
+        $entries = @($MapLike.GetEnumerator())
+    }
+    elseif ($null -ne $MapLike.PSObject) {
+        $entries = @($MapLike.PSObject.Properties | ForEach-Object {
+                [pscustomobject]@{
+                    Key = $_.Name
+                    Value = $_.Value
+                }
+            })
+    }
+
+    foreach ($entry in $entries) {
+        $key = [string]$entry.Key
+        if ([string]::IsNullOrWhiteSpace($key)) {
+            continue
+        }
+        $parsed = Convert-ToIntOrNull -Value $entry.Value -AllowCollectionCount
+        if ($null -eq $parsed) {
+            Write-CycleLog "Skipping non-numeric $MapName value for key '$key'."
+            continue
+        }
+        $result[$key] = [int]$parsed
+    }
+
+    return $result
+}
+
 function Get-ProviderSummary {
     $providerStatusPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\status.json'
     $providerManifestPath = Join-Path $RepoRoot 'public\v1\provider-catalog\pokewallet\cards-manifest.json'
@@ -83,12 +203,24 @@ function Get-ProviderSummary {
     $cardsByLanguage = [ordered]@{}
     $setFilesByLanguage = [ordered]@{}
     if ($null -ne $status -and $null -ne $status.languages) {
-        $langProps = $status.languages.PSObject.Properties | Sort-Object Name
-        foreach ($prop in $langProps) {
-            $language = [string]$prop.Name
-            $payload = $prop.Value
-            $cardsByLanguage[$language] = if ($null -ne $payload -and $null -ne $payload.cardCount) { [int]$payload.cardCount } else { 0 }
-            $setFilesByLanguage[$language] = if ($null -ne $payload -and $null -ne $payload.setFileCount) { [int]$payload.setFileCount } else { 0 }
+        $langEntries = @()
+        if ($status.languages -is [System.Collections.IDictionary]) {
+            $langEntries = @($status.languages.GetEnumerator() | Sort-Object Key)
+        }
+        else {
+            $langEntries = @($status.languages.PSObject.Properties | Sort-Object Name)
+        }
+
+        foreach ($entry in $langEntries) {
+            $language = if ($null -ne $entry.Name) { [string]$entry.Name } else { [string]$entry.Key }
+            if ([string]::IsNullOrWhiteSpace($language)) {
+                continue
+            }
+            $payload = if ($null -ne $entry.Value) { $entry.Value } else { $entry }
+            $cardCount = Convert-ToIntOrNull -Value (Get-ObjectPropertyValue -Object $payload -Names @('cardCount', 'cards', 'count', 'total', 'current')) -AllowCollectionCount
+            $setFileCount = Convert-ToIntOrNull -Value (Get-ObjectPropertyValue -Object $payload -Names @('setFileCount', 'count', 'total', 'current')) -AllowCollectionCount
+            $cardsByLanguage[$language] = if ($null -ne $cardCount) { [int]$cardCount } else { 0 }
+            $setFilesByLanguage[$language] = if ($null -ne $setFileCount) { [int]$setFileCount } else { 0 }
         }
     }
 
@@ -101,11 +233,13 @@ function Get-ProviderSummary {
         $totalSetFiles += [int]$value
     }
     if ($null -ne $manifest) {
-        if ($null -ne $manifest.totalCards) {
-            $totalCards = [int]$manifest.totalCards
+        $manifestTotalCards = Convert-ToIntOrNull -Value (Get-ObjectPropertyValue -Object $manifest -Names @('totalCards', 'cardCount', 'total', 'count'))
+        if ($null -ne $manifestTotalCards) {
+            $totalCards = [int]$manifestTotalCards
         }
-        if ($null -ne $manifest.totalSetFiles) {
-            $totalSetFiles = [int]$manifest.totalSetFiles
+        $manifestTotalSets = Convert-ToIntOrNull -Value (Get-ObjectPropertyValue -Object $manifest -Names @('totalSetFiles', 'setFileCount', 'total', 'count'))
+        if ($null -ne $manifestTotalSets) {
+            $totalSetFiles = [int]$manifestTotalSets
         }
     }
 
@@ -188,12 +322,7 @@ function Build-CycleCommitMessage {
 
     $validationTag = if ($ValidationResult -eq 'passed') { 'val ok' } else { 'val skipped' }
 
-    $cardsWritten = [ordered]@{}
-    if ($null -ne $Diag -and $null -ne $Diag.cardsWrittenByLanguage) {
-        foreach ($prop in ($Diag.cardsWrittenByLanguage.PSObject.Properties | Sort-Object Name)) {
-            $cardsWritten[[string]$prop.Name] = [int]$prop.Value
-        }
-    }
+    $cardsWritten = Get-LanguageCountMap -MapLike $(if ($null -ne $Diag) { $Diag.cardsWrittenByLanguage } else { $null }) -MapName 'cardsWrittenByLanguage'
 
     $deltaParts = @()
     $totalDelta = 0
@@ -225,23 +354,28 @@ function Convert-ProviderSummaryToFingerprint {
         return ''
     }
 
-    $cardsByLanguage = [ordered]@{}
-    if ($null -ne $Summary.cardsByLanguage) {
-        foreach ($prop in ($Summary.cardsByLanguage.PSObject.Properties | Sort-Object Name)) {
-            $cardsByLanguage[[string]$prop.Name] = [int]$prop.Value
+    $cardsByLanguage = Get-LanguageCountMap -MapLike $Summary.cardsByLanguage -MapName 'providerSummary.cardsByLanguage'
+    $setFilesByLanguage = Get-LanguageCountMap -MapLike $Summary.setFilesByLanguage -MapName 'providerSummary.setFilesByLanguage'
+
+    $totalCards = Convert-ToIntOrNull -Value $Summary.totalCards
+    if ($null -eq $totalCards) {
+        $totalCards = 0
+        foreach ($value in $cardsByLanguage.Values) {
+            $totalCards += [int]$value
         }
     }
 
-    $setFilesByLanguage = [ordered]@{}
-    if ($null -ne $Summary.setFilesByLanguage) {
-        foreach ($prop in ($Summary.setFilesByLanguage.PSObject.Properties | Sort-Object Name)) {
-            $setFilesByLanguage[[string]$prop.Name] = [int]$prop.Value
+    $totalSetFiles = Convert-ToIntOrNull -Value $Summary.totalSetFiles
+    if ($null -eq $totalSetFiles) {
+        $totalSetFiles = 0
+        foreach ($value in $setFilesByLanguage.Values) {
+            $totalSetFiles += [int]$value
         }
     }
 
     $normalized = [ordered]@{
-        totalCards = if ($null -ne $Summary.totalCards) { [int]$Summary.totalCards } else { 0 }
-        totalSetFiles = if ($null -ne $Summary.totalSetFiles) { [int]$Summary.totalSetFiles } else { 0 }
+        totalCards = [int]$totalCards
+        totalSetFiles = [int]$totalSetFiles
         cardsByLanguage = $cardsByLanguage
         setFilesByLanguage = $setFilesByLanguage
     }
@@ -292,10 +426,12 @@ function Test-HasMeaningfulGeneratedChanges {
     )
 
     if ($null -ne $Diag) {
-        if ([int]($Diag.cardsWrittenThisRun) -gt 0) {
+        $cardsWrittenThisRun = Convert-ToIntOrNull -Value $Diag.cardsWrittenThisRun
+        if ($null -ne $cardsWrittenThisRun -and [int]$cardsWrittenThisRun -gt 0) {
             return $true
         }
-        if ([int]($Diag.setFilesWritten) -gt 0) {
+        $setFilesWritten = Convert-ToIntOrNull -Value $Diag.setFilesWritten
+        if ($null -ne $setFilesWritten -and [int]$setFilesWritten -gt 0) {
             return $true
         }
     }
