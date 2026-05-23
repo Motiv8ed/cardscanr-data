@@ -1171,12 +1171,19 @@ def summarize_en_set_freshness(current_dir: Path) -> dict:
     }
 
 
-def summarize_current_price_files(current_dir: Path) -> tuple[int, int]:
+def summarize_current_price_files(current_dir: Path) -> dict:
     if not current_dir.exists():
-        return 0, 0
+        return {
+            "setFileCount": 0,
+            "recordCount": 0,
+            "sourceCounts": {},
+            "statusCounts": {},
+        }
 
     set_file_count = 0
     record_count = 0
+    source_counts: Counter[str] = Counter()
+    status_counts: Counter[str] = Counter()
     for path in sorted(current_dir.glob("*.json")):
         if path.name == "status.json":
             continue
@@ -1187,8 +1194,24 @@ def summarize_current_price_files(current_dir: Path) -> tuple[int, int]:
         if not isinstance(prices, list):
             continue
         set_file_count += 1
-        record_count += len(prices)
-    return set_file_count, record_count
+        for record in prices:
+            if not isinstance(record, dict):
+                continue
+            record_count += 1
+            source_counts[str(record.get("source") or payload.get("source") or "unknown")] += 1
+            status_counts[str(record.get("status") or payload.get("status") or "unknown")] += 1
+    return {
+        "setFileCount": set_file_count,
+        "recordCount": record_count,
+        "sourceCounts": dict(sorted(source_counts.items())),
+        "statusCounts": dict(sorted(status_counts.items())),
+    }
+
+
+def primary_count_key(counts: dict) -> str | None:
+    if not isinstance(counts, dict) or not counts:
+        return None
+    return sorted(counts.items(), key=lambda item: (-int(item[1]), str(item[0])))[0][0]
 
 
 def estimate_full_rotation_hours(set_count: int, batch_size: int, interval_minutes: int) -> int:
@@ -1226,8 +1249,14 @@ def build_public_price_status_payloads(
     refresh_state: dict,
     previous_prices_status: dict | None,
 ) -> tuple[dict, dict, dict]:
-    en_set_count, en_record_count = summarize_current_price_files(CURRENT_PRICES_EN_DIR)
-    jp_set_count, jp_record_count = summarize_current_price_files(CURRENT_PRICES_JP_DIR)
+    en_counts = summarize_current_price_files(CURRENT_PRICES_EN_DIR)
+    jp_counts = summarize_current_price_files(CURRENT_PRICES_JP_DIR)
+    en_set_count = int(en_counts["setFileCount"])
+    en_record_count = int(en_counts["recordCount"])
+    jp_set_count = int(jp_counts["setFileCount"])
+    jp_record_count = int(jp_counts["recordCount"])
+    en_primary_source = primary_count_key(en_counts["sourceCounts"])
+    jp_primary_source = primary_count_key(jp_counts["sourceCounts"])
     en_set_freshness = summarize_en_set_freshness(CURRENT_PRICES_EN_DIR)
 
     interval_minutes = max(1, safe_int(config.get("localUpdaterIntervalMinutes"), 60))
@@ -1277,7 +1306,9 @@ def build_public_price_status_payloads(
         "currentPriceFilesAvailable": en_set_count > 0,
         "currentPriceSetFileCount": en_set_count,
         "currentPriceRecordCount": en_record_count,
+        "recordCount": en_record_count,
         "lastSuccessfulPriceUpdateAtUtc": last_successful_update_utc,
+        "lastUpdatedAtUtc": last_successful_update_utc,
         "lastSuccessfulPushAtUtc": last_successful_push_utc,
         "lastBatchSetIds": last_batch_set_ids,
         "lastBatchSize": batch_size,
@@ -1291,6 +1322,14 @@ def build_public_price_status_payloads(
         "fullRotationEstimatedHours": full_rotation_hours,
         "currency": CURRENT_PRICE_CURRENCY,
         "isLivePricing": False,
+        "source": en_primary_source,
+        "sourceSummary": {
+            "primarySource": en_primary_source,
+            "sourceCounts": en_counts["sourceCounts"],
+            "currency": CURRENT_PRICE_CURRENCY,
+            "isLivePricing": False,
+        },
+        "statusCounts": en_counts["statusCounts"],
         "staleness": {
             "status": staleness_status,
             "ageSeconds": staleness_age_seconds,
@@ -1313,7 +1352,9 @@ def build_public_price_status_payloads(
         "currentPriceFilesAvailable": False,
         "currentPriceSetFileCount": jp_set_count,
         "currentPriceRecordCount": jp_record_count,
+        "recordCount": jp_record_count,
         "lastSuccessfulPriceUpdateAtUtc": None,
+        "lastUpdatedAtUtc": None,
         "lastSuccessfulPushAtUtc": None,
         "lastBatchSetIds": [],
         "lastBatchSize": 0,
@@ -1325,6 +1366,14 @@ def build_public_price_status_payloads(
         "fullRotationEstimatedHours": None,
         "currency": None,
         "isLivePricing": False,
+        "source": jp_primary_source,
+        "sourceSummary": {
+            "primarySource": jp_primary_source,
+            "sourceCounts": jp_counts["sourceCounts"],
+            "currency": None,
+            "isLivePricing": False,
+        },
+        "statusCounts": jp_counts["statusCounts"],
         "staleness": {
             "status": "unavailable",
             "ageSeconds": None,
@@ -1358,7 +1407,9 @@ def build_public_price_status_payloads(
                 "currentPriceFilesAvailable": en_payload["currentPriceFilesAvailable"],
                 "currentPriceSetFileCount": en_payload["currentPriceSetFileCount"],
                 "currentPriceRecordCount": en_payload["currentPriceRecordCount"],
+                "recordCount": en_payload["recordCount"],
                 "lastSuccessfulPriceUpdateAtUtc": en_payload["lastSuccessfulPriceUpdateAtUtc"],
+                "lastUpdatedAtUtc": en_payload["lastUpdatedAtUtc"],
                 "lastSuccessfulPushAtUtc": en_payload["lastSuccessfulPushAtUtc"],
                 "lastBatchSize": en_payload["lastBatchSize"],
                 "lastBatchSetIds": en_payload["lastBatchSetIds"],
@@ -1371,11 +1422,9 @@ def build_public_price_status_payloads(
                 "expectedUpdateIntervalMinutes": en_payload["expectedUpdateIntervalMinutes"],
                 "fullRotationEstimatedHours": en_payload["fullRotationEstimatedHours"],
                 "staleness": en_payload["staleness"],
-                "sourceSummary": {
-                    "primarySource": CURRENT_PRICE_SOURCE,
-                    "currency": CURRENT_PRICE_CURRENCY,
-                    "isLivePricing": False,
-                },
+                "source": en_payload["source"],
+                "sourceSummary": en_payload["sourceSummary"],
+                "statusCounts": en_payload["statusCounts"],
             },
             "jp": {
                 "game": "pokemon",
@@ -1384,14 +1433,14 @@ def build_public_price_status_payloads(
                 "currentPriceFilesAvailable": False,
                 "currentPriceSetFileCount": jp_payload["currentPriceSetFileCount"],
                 "currentPriceRecordCount": jp_payload["currentPriceRecordCount"],
+                "recordCount": jp_payload["recordCount"],
                 "lastSuccessfulPriceUpdateAtUtc": None,
+                "lastUpdatedAtUtc": None,
                 "nextExpectedPriceUpdateAtUtc": None,
                 "staleness": jp_payload["staleness"],
-                "sourceSummary": {
-                    "primarySource": SOURCE_ID_TCGDEX,
-                    "currency": None,
-                    "isLivePricing": False,
-                },
+                "source": jp_payload["source"],
+                "sourceSummary": jp_payload["sourceSummary"],
+                "statusCounts": jp_payload["statusCounts"],
                 "notes": jp_payload["notes"],
             },
         },

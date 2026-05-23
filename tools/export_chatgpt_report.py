@@ -26,6 +26,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 EXPORT_DIR = ROOT / "reports" / "chatgpt_exports"
+CURRENT_PRICE_ROOT = ROOT / "public" / "v1" / "prices" / "current" / "pokemon"
 
 # Safe files to always include in zip (relative to ROOT)
 ZIP_FILES_DEFAULT: list[str] = [
@@ -182,6 +183,89 @@ def _collect_pipeline_info() -> dict[str, Any]:
     }
 
 
+def _count_current_price_records() -> dict[str, dict[str, Any]]:
+    """Count current public price records from the per-set files."""
+    result: dict[str, dict[str, Any]] = {}
+    if not CURRENT_PRICE_ROOT.exists():
+        return result
+
+    for language_dir in sorted([item for item in CURRENT_PRICE_ROOT.iterdir() if item.is_dir()], key=lambda item: item.name.lower()):
+        record_count = 0
+        source_counts: dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        file_count = 0
+
+        for path in sorted(language_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            if path.name == "status.json":
+                continue
+            payload = _load_json(str(path.relative_to(ROOT).as_posix())) or {}
+            prices = payload.get("prices")
+            if not isinstance(prices, list):
+                continue
+
+            file_count += 1
+            for record in prices:
+                if not isinstance(record, dict):
+                    continue
+                record_count += 1
+                source = str(record.get("source") or payload.get("source") or "unknown")
+                status = str(record.get("status") or payload.get("status") or "unknown")
+                source_counts[source] = source_counts.get(source, 0) + 1
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+        result[language_dir.name] = {
+            "recordCount": record_count,
+            "fileCount": file_count,
+            "sourceCounts": dict(sorted(source_counts.items())),
+            "statusCounts": dict(sorted(status_counts.items())),
+        }
+
+    return result
+
+
+def _single_key_or_none(counts: dict[str, int]) -> str | None:
+    positive_keys = [key for key, count in counts.items() if count > 0]
+    return positive_keys[0] if len(positive_keys) == 1 else None
+
+
+def _price_status_summary(status_payload: dict[str, Any], actual_counts: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status_payload.get("sourceSummary")
+    if not isinstance(source_summary, dict):
+        source_summary = {}
+
+    staleness = status_payload.get("staleness")
+    if not isinstance(staleness, dict):
+        staleness = {}
+
+    actual_record_count = int(actual_counts.get("recordCount") or 0)
+    status_record_count = status_payload.get("currentPriceRecordCount", status_payload.get("recordCount"))
+    record_count = actual_record_count
+    if actual_record_count == 0 and isinstance(status_record_count, int):
+        record_count = status_record_count
+
+    source_counts = actual_counts.get("sourceCounts") if isinstance(actual_counts.get("sourceCounts"), dict) else {}
+    status_counts = actual_counts.get("statusCounts") if isinstance(actual_counts.get("statusCounts"), dict) else {}
+
+    source = source_summary.get("primarySource") or status_payload.get("source") or _single_key_or_none(source_counts) or "none"
+    display_status = _single_key_or_none(status_counts)
+    if not display_status:
+        display_status = str(staleness.get("status") or status_payload.get("status") or "unknown")
+
+    return {
+        "recordCount": record_count,
+        "statusRecordCount": status_record_count,
+        "actualRecordCount": actual_record_count,
+        "fileCount": actual_counts.get("fileCount", 0),
+        "source": source,
+        "status": display_status,
+        "languageStatus": status_payload.get("status"),
+        "sourceCounts": source_counts,
+        "statusCounts": status_counts,
+        "lastUpdatedAtUtc": status_payload.get("lastSuccessfulPriceUpdateAtUtc") or status_payload.get("lastUpdatedAtUtc"),
+        "recordCountMatchesStatus": status_record_count == actual_record_count if isinstance(status_record_count, int) else None,
+    }
+
+
 def _collect_blocked_info() -> dict[str, Any]:
     data = _load_json("reports/provider_blocked_cards_latest.json")
     if data is None:
@@ -268,19 +352,13 @@ def _collect_v1_counts() -> dict[str, Any]:
     en_price_status = _load_json("public/v1/prices/current/pokemon/en/status.json") or {}
     jp_price_status = _load_json("public/v1/prices/current/pokemon/jp/status.json") or {}
     cache_policy = _load_json("public/v1/images/cache-policy.json") or {}
+    price_counts_by_language = _count_current_price_records()
 
     return {
         "indexLastUpdated": index.get("generatedAtUtc"),
-        "enPriceStatus": {
-            "recordCount": en_price_status.get("recordCount", 0),
-            "source": en_price_status.get("source"),
-            "lastUpdatedAtUtc": en_price_status.get("lastUpdatedAtUtc"),
-        },
-        "jpPriceStatus": {
-            "recordCount": jp_price_status.get("recordCount", 0),
-            "source": jp_price_status.get("source"),
-            "lastUpdatedAtUtc": jp_price_status.get("lastUpdatedAtUtc"),
-        },
+        "pricesByLanguage": price_counts_by_language,
+        "enPriceStatus": _price_status_summary(en_price_status, price_counts_by_language.get("en", {})),
+        "jpPriceStatus": _price_status_summary(jp_price_status, price_counts_by_language.get("jp", {})),
         "imageCachePolicy": {
             "strategy": cache_policy.get("strategy"),
             "localCacheEnabled": cache_policy.get("localCacheEnabled", False),
@@ -412,8 +490,10 @@ def _render_markdown(report: dict[str, Any]) -> str:
         for lang, info in sorted(prices_by_lang.items()):
             record_count = info.get("recordCount", 0) if isinstance(info, dict) else 0
             source_counts = info.get("sourceCounts", {}) if isinstance(info, dict) else {}
+            status_counts = info.get("statusCounts", {}) if isinstance(info, dict) else {}
             sources = ", ".join(f"{s}: {c:,}" for s, c in source_counts.items()) if source_counts else "none"
-            a(f"  - **{lang.upper()}:** {record_count:,} records (sources: {sources})")
+            statuses = ", ".join(f"{s}: {c:,}" for s, c in status_counts.items()) if status_counts else "none"
+            a(f"  - **{lang.upper()}:** {record_count:,} records (sources: {sources}; statuses: {statuses})")
         a("")
 
         a(f"### Local Cached Images: {pipeline.get('localCachedImageFileCount', 0):,}")
@@ -535,8 +615,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
         jp_ps = v1.get("jpPriceStatus", {})
         a("## Public v1 Price Status")
         a("")
-        a(f"- **EN price records:** {en_ps.get('recordCount', 0):,} (source: {en_ps.get('source', 'n/a')}, last updated: {en_ps.get('lastUpdatedAtUtc', 'n/a')})")
-        a(f"- **JP price records:** {jp_ps.get('recordCount', 0):,} (source: {jp_ps.get('source', 'n/a')}, last updated: {jp_ps.get('lastUpdatedAtUtc', 'n/a')})")
+        a(f"- **EN price records:** {en_ps.get('recordCount', 0):,} (source: {en_ps.get('source', 'n/a')}, status: {en_ps.get('status', 'n/a')}, last updated: {en_ps.get('lastUpdatedAtUtc') or 'n/a'})")
+        a(f"- **JP price records:** {jp_ps.get('recordCount', 0):,} (source: {jp_ps.get('source', 'n/a')}, status: {jp_ps.get('status', 'n/a')}, last updated: {jp_ps.get('lastUpdatedAtUtc') or 'n/a'})")
         a("")
 
     # Next action
@@ -618,6 +698,10 @@ def main() -> None:
     worker_info = _collect_worker_info()
     price_updater_info = _collect_price_updater_info()
     v1_info = _collect_v1_counts()
+    if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
+        pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
+        pipeline_info["pricesByLanguage"] = v1_info["pricesByLanguage"]
+        pipeline_info["pricesByLanguageSource"] = "public_v1_current_price_files"
 
     next_action = _recommend_next_action(pipeline_info, worker_info, git_info)
 

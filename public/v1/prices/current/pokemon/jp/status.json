@@ -16,18 +16,28 @@
   "lastBatchStartedAtUtc": null,
   "lastSuccessfulPriceUpdateAtUtc": null,
   "lastSuccessfulPushAtUtc": null,
+  "lastUpdatedAtUtc": null,
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
     "Japanese catalogue support is partial.",
     "Japanese current price cache is not available yet.",
     "Timestamps are UTC. Apps should convert to the user's local timezone."
   ],
+  "recordCount": 0,
   "schemaVersion": "1.0.0",
+  "source": null,
+  "sourceSummary": {
+    "currency": null,
+    "isLivePricing": false,
+    "primarySource": null,
+    "sourceCounts": {}
+  },
   "staleness": {
     "ageSeconds": null,
     "freshForSeconds": 86400,
     "staleAfterSeconds": 259200,
     "status": "unavailable"
   },
-  "status": "not_available"
+  "status": "not_available",
+  "statusCounts": {}
 }

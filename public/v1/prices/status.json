@@ -39,13 +39,19 @@
       "lastBatchStartedAtUtc": "2026-05-23T20:44:24Z",
       "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T20:44:24Z",
       "lastSuccessfulPushAtUtc": "2026-05-23T20:44:24Z",
+      "lastUpdatedAtUtc": "2026-05-23T20:44:24Z",
       "newestSetPriceUpdateAtUtc": "2026-05-23T20:44:24Z",
       "nextExpectedPriceUpdateAtUtc": "2026-05-23T21:44:24Z",
       "oldestSetPriceUpdateAtUtc": "2026-05-22T12:07:38Z",
+      "recordCount": 31211,
+      "source": "pokemon_tcg_api",
       "sourceSummary": {
         "currency": "USD",
         "isLivePricing": false,
-        "primarySource": "pokemon_tcg_api"
+        "primarySource": "pokemon_tcg_api",
+        "sourceCounts": {
+          "pokemon_tcg_api": 31211
+        }
       },
       "staleness": {
         "ageSeconds": 0,
@@ -53,7 +59,10 @@
         "staleAfterSeconds": 259200,
         "status": "fresh"
       },
-      "status": "ok"
+      "status": "ok",
+      "statusCounts": {
+        "priced": 31211
+      }
     },
     "jp": {
       "currentPriceFilesAvailable": false,
@@ -62,16 +71,20 @@
       "game": "pokemon",
       "language": "jp",
       "lastSuccessfulPriceUpdateAtUtc": null,
+      "lastUpdatedAtUtc": null,
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
         "Japanese catalogue support is partial.",
         "Japanese current price cache is not available yet.",
         "Timestamps are UTC. Apps should convert to the user's local timezone."
       ],
+      "recordCount": 0,
+      "source": null,
       "sourceSummary": {
         "currency": null,
         "isLivePricing": false,
-        "primarySource": "tcgdex"
+        "primarySource": null,
+        "sourceCounts": {}
       },
       "staleness": {
         "ageSeconds": null,
@@ -79,7 +92,8 @@
         "staleAfterSeconds": 259200,
         "status": "unavailable"
       },
-      "status": "catalogue_only"
+      "status": "catalogue_only",
+      "statusCounts": {}
     }
   },
   "notes": [

@@ -1198,6 +1198,54 @@ def check_price_status_files() -> None:
     en_status_path = V1_DIR / "prices" / "current" / "pokemon" / "en" / "status.json"
     jp_status_path = V1_DIR / "prices" / "current" / "pokemon" / "jp" / "status.json"
 
+    def summarize_current_price_files(language: str) -> tuple[int, int]:
+        current_dir = V1_DIR / "prices" / "current" / "pokemon" / language
+        if not current_dir.exists():
+            return 0, 0
+
+        set_file_count = 0
+        record_count = 0
+        for path in sorted(current_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            if path.name == "status.json":
+                continue
+            payload = load_json_file(path)
+            prices = payload.get("prices") if isinstance(payload, dict) else None
+            if not isinstance(prices, list):
+                continue
+            set_file_count += 1
+            record_count += len(prices)
+        return set_file_count, record_count
+
+    actual_counts = {
+        "en": summarize_current_price_files("en"),
+        "jp": summarize_current_price_files("jp"),
+    }
+
+    def check_status_count_matches(label: str, payload: dict, language: str) -> None:
+        actual_set_count, actual_record_count = actual_counts[language]
+        declared_set_count = payload.get("currentPriceSetFileCount")
+        declared_record_count = payload.get("currentPriceRecordCount")
+
+        if not isinstance(declared_set_count, int):
+            err(f"{label} currentPriceSetFileCount must be an integer")
+        elif declared_set_count != actual_set_count:
+            err(
+                f"{label} currentPriceSetFileCount={declared_set_count} "
+                f"does not match actual current price set files={actual_set_count}"
+            )
+        else:
+            ok(f"{label} currentPriceSetFileCount matches actual files ({actual_set_count})")
+
+        if not isinstance(declared_record_count, int):
+            err(f"{label} currentPriceRecordCount must be an integer")
+        elif declared_record_count != actual_record_count:
+            err(
+                f"{label} currentPriceRecordCount={declared_record_count} "
+                f"does not match actual current price records={actual_record_count}"
+            )
+        else:
+            ok(f"{label} currentPriceRecordCount matches actual records ({actual_record_count})")
+
     for path in [prices_status_path, en_status_path, jp_status_path]:
         if not path.exists():
             err(f"Price status file not found: {path.relative_to(ROOT)}")
@@ -1223,6 +1271,10 @@ def check_price_status_files() -> None:
     else:
         if "en" not in languages or "jp" not in languages:
             err("prices/status.json languages must include en and jp")
+        for language in ["en", "jp"]:
+            language_payload = languages.get(language)
+            if isinstance(language_payload, dict):
+                check_status_count_matches(f"prices/status.json languages.{language}", language_payload, language)
 
     for label, payload, language in [
         ("prices/current/pokemon/en/status.json", en_status, "en"),
@@ -1278,6 +1330,8 @@ def check_price_status_files() -> None:
             num_value = payload.get(num_field)
             if num_value is not None and not (isinstance(num_value, int) and num_value >= 0):
                 err(f"{label} {num_field} must be null or a non-negative integer")
+
+        check_status_count_matches(label, payload, language)
 
     ok("Price status files validated")
 
