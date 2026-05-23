@@ -1,16 +1,16 @@
 {
   "currency": "mixed",
   "currentPriceFilesAvailable": true,
-  "currentPriceRecordCount": 2728,
-  "currentPriceSetFileCount": 10,
+  "currentPriceRecordCount": 5850,
+  "currentPriceSetFileCount": 25,
   "expectedUpdateIntervalMinutes": null,
   "fullRotationEstimatedHours": null,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-23T22:45:18Z",
+  "generatedAtUtc": "2026-05-23T23:41:33Z",
   "isLivePricing": false,
   "language": "jp",
   "lastBatchDurationSeconds": 0,
-  "lastBatchFinishedAtUtc": "2026-05-23T22:26:20Z",
+  "lastBatchFinishedAtUtc": "2026-05-23T23:41:33Z",
   "lastBatchSetIds": [
     "23598",
     "23599",
@@ -21,13 +21,28 @@
     "23604",
     "23605",
     "23606",
-    "23607"
+    "23607",
+    "23608",
+    "23609",
+    "23610",
+    "23611",
+    "23612",
+    "23613",
+    "23614",
+    "23615",
+    "23616",
+    "23617",
+    "23618",
+    "23619",
+    "23620",
+    "23621",
+    "23622"
   ],
-  "lastBatchSize": 10,
-  "lastBatchStartedAtUtc": "2026-05-23T22:26:20Z",
-  "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T22:26:20Z",
+  "lastBatchSize": 25,
+  "lastBatchStartedAtUtc": "2026-05-23T23:41:33Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T23:41:33Z",
   "lastSuccessfulPushAtUtc": null,
-  "lastUpdatedAtUtc": "2026-05-23T22:26:20Z",
+  "lastUpdatedAtUtc": "2026-05-23T23:41:33Z",
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
     "JP current prices are partial PokeWallet set-price imports.",
@@ -35,7 +50,7 @@
     "TCGPlayer USD and CardMarket EUR records remain separate.",
     "Timestamps are UTC. Apps should convert to the user's local timezone."
   ],
-  "recordCount": 2728,
+  "recordCount": 5850,
   "schemaVersion": "1.0.0",
   "source": "pokewallet",
   "sourceSummary": {
@@ -43,7 +58,7 @@
     "isLivePricing": false,
     "primarySource": "pokewallet",
     "sourceCounts": {
-      "pokewallet": 2728
+      "pokewallet": 5850
     }
   },
   "staleness": {
@@ -54,6 +69,6 @@
   },
   "status": "partial",
   "statusCounts": {
-    "priced": 2728
+    "priced": 5850
   }
 }
