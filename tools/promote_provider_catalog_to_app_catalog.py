@@ -756,7 +756,9 @@ def build_markdown_report(report: dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Top Gaps")
     for item in report.get("top20GapSets", []):
-        lines.append(f"- {item['language']} {item['providerSetCode']} ({item['providerSetName']}): {item['count']}")
+        set_name = item.get("providerSetName") or item.get("setName") or item.get("providerSetCode") or item.get("providerSetId") or "unknown"
+        set_code = item.get("providerSetCode") or item.get("providerSetId") or "unknown"
+        lines.append(f"- {item.get('language', 'unknown')} {set_code} ({set_name}): {item.get('count', 0)}")
     lines.append("")
     return "\n".join(lines)
 
