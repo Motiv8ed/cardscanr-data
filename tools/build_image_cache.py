@@ -55,12 +55,14 @@ def write_json(path: Path, data: Any) -> None:
         fh.write("\n")
 
 
-def json_bytes(data: Any) -> bytes:
+def json_bytes(data: Any, *, compact: bool = False) -> bytes:
+    if compact:
+        return (json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
     return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
-def write_json_if_changed(path: Path, data: Any) -> bool:
-    encoded = json_bytes(data)
+def write_json_if_changed(path: Path, data: Any, *, compact: bool = False) -> bool:
+    encoded = json_bytes(data, compact=compact)
     if path.exists() and path.read_bytes() == encoded:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -675,7 +677,7 @@ def main() -> None:
         )
 
     manifest = preserve_manifest_timestamps_if_materially_same(manifest_path, manifest)
-    changed = write_json_if_changed(manifest_path, manifest)
+    changed = write_json_if_changed(manifest_path, manifest, compact=True)
     action = "Wrote" if changed else "Unchanged"
     print(f"{action} {relative_or_absolute(manifest_path)}")
     print(f"Records: {manifest.get('recordCount', 0)}")
