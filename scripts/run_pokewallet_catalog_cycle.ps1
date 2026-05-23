@@ -212,10 +212,112 @@ function Build-CycleCommitMessage {
 
     if ($totalDelta -gt 0) {
         $deltaText = if ($deltaParts.Count -gt 0) { $deltaParts -join ', ' } else { ('+{0} cards' -f $totalDelta) }
-        return ('Update PokéWallet {0}: {1}; totals {2}; {3}' -f $TargetLanguage, $deltaText, $totalsText, $validationTag)
+        return ('Update PokeWallet {0}: {1}; totals {2}; {3}' -f $TargetLanguage, $deltaText, $totalsText, $validationTag)
     }
 
-    return ('Refresh PokéWallet summaries ({0}): no card-count changes; totals {1}; {2}' -f $TargetLanguage, $totalsText, $validationTag)
+    return ('Refresh PokeWallet summaries ({0}): no card-count changes; totals {1}; {2}' -f $TargetLanguage, $totalsText, $validationTag)
+}
+
+function Convert-ProviderSummaryToFingerprint {
+    param($Summary)
+
+    if ($null -eq $Summary) {
+        return ''
+    }
+
+    $cardsByLanguage = [ordered]@{}
+    if ($null -ne $Summary.cardsByLanguage) {
+        foreach ($prop in ($Summary.cardsByLanguage.PSObject.Properties | Sort-Object Name)) {
+            $cardsByLanguage[[string]$prop.Name] = [int]$prop.Value
+        }
+    }
+
+    $setFilesByLanguage = [ordered]@{}
+    if ($null -ne $Summary.setFilesByLanguage) {
+        foreach ($prop in ($Summary.setFilesByLanguage.PSObject.Properties | Sort-Object Name)) {
+            $setFilesByLanguage[[string]$prop.Name] = [int]$prop.Value
+        }
+    }
+
+    $normalized = [ordered]@{
+        totalCards = if ($null -ne $Summary.totalCards) { [int]$Summary.totalCards } else { 0 }
+        totalSetFiles = if ($null -ne $Summary.totalSetFiles) { [int]$Summary.totalSetFiles } else { 0 }
+        cardsByLanguage = $cardsByLanguage
+        setFilesByLanguage = $setFilesByLanguage
+    }
+    return ($normalized | ConvertTo-Json -Depth 5 -Compress)
+}
+
+function Test-MeaningfulChangedPath {
+    param([string]$Path)
+
+    $normalized = $Path.Trim().TrimEnd('\\')
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return $false
+    }
+
+    if ($normalized.StartsWith('public\v1\provider-catalog\pokewallet\cards\')) {
+        return $true
+    }
+
+    $exact = @(
+        'public\v1\provider-catalog\pokewallet\cards-manifest.json',
+        'public\v1\images\cards-manifest.json'
+    )
+    if ($exact -contains $normalized) {
+        return $true
+    }
+
+    if ($normalized.StartsWith('public\v1\prices\')) {
+        return $true
+    }
+    if ($normalized.StartsWith('public\v1\catalog\')) {
+        return $true
+    }
+    if ($normalized.StartsWith('public\v1\history\')) {
+        return $true
+    }
+
+    return $false
+}
+
+function Test-HasMeaningfulGeneratedChanges {
+    param(
+        $Diag,
+        $ProviderBefore,
+        $ProviderAfter,
+        [int]$ImageManifestBefore,
+        [int]$ImageManifestAfter,
+        [string[]]$StatusLines
+    )
+
+    if ($null -ne $Diag) {
+        if ([int]($Diag.cardsWrittenThisRun) -gt 0) {
+            return $true
+        }
+        if ([int]($Diag.setFilesWritten) -gt 0) {
+            return $true
+        }
+    }
+
+    $beforeFingerprint = Convert-ProviderSummaryToFingerprint -Summary $ProviderBefore
+    $afterFingerprint = Convert-ProviderSummaryToFingerprint -Summary $ProviderAfter
+    if ($beforeFingerprint -ne $afterFingerprint) {
+        return $true
+    }
+
+    if ($ImageManifestBefore -ne $ImageManifestAfter) {
+        return $true
+    }
+
+    foreach ($line in $StatusLines) {
+        $path = Get-GitStatusPath -StatusLine $line
+        if (Test-MeaningfulChangedPath -Path $path) {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 function Write-CycleReport {
@@ -568,6 +670,7 @@ try {
     $script:cycleReportContext.startedAtUtc = $cycleStarted
     Update-WorkerStatus -LastStatus 'running_cycle' -LastCycleStartedAtUtc $cycleStarted -LastCycleFinishedAtUtc $null -LastCommit $null -LastError $null -IntervalMinutes $intervalMinutes -Mode 'once' -CurrentPriorityLanguage $targetLanguage
     $script:cycleReportContext.providerBefore = Get-ProviderSummary
+    $imageManifestRecordCountBefore = Get-ImageManifestRecordCount
 
     # --- Pre-cycle sync: fast-forward if local is behind remote and nothing unpushed ---
     Write-CycleLog 'Fetching origin to detect remote changes before provider calls.'
@@ -652,13 +755,16 @@ try {
 
     $changedLines = Get-GitStatusLines
     if ($changedLines.Count -eq 0) {
-        Stop-WithStatus -Status 'no_changes' -Message 'no changes' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+        Stop-WithStatus -Status 'no_changes' -Message 'No meaningful generated data changes; skipped commit.' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+    }
+
+    $hasMeaningfulChanges = Test-HasMeaningfulGeneratedChanges -Diag $diag -ProviderBefore $script:cycleReportContext.providerBefore -ProviderAfter $script:cycleReportContext.providerAfter -ImageManifestBefore $imageManifestRecordCountBefore -ImageManifestAfter $script:cycleReportContext.imageManifestRecordCount -StatusLines $changedLines
+    if (-not $hasMeaningfulChanges) {
+        Stop-WithStatus -Status 'no_changes' -Message 'No meaningful generated data changes; skipped commit.' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
     }
 
     $stagePaths = @(
-        'data\pokewallet_catalog_full_state.json',
         'public\v1\provider-catalog\pokewallet',
-        'public\v1\diagnostics\pokewallet-catalog-foundation-latest.json',
         'public\v1\index.json',
         'public\v1\api-manifest.json',
         'public\v1\api-notes.json',
@@ -676,7 +782,7 @@ try {
 
     git -C $RepoRoot diff --cached --quiet
     if ($LASTEXITCODE -eq 0) {
-        Stop-WithStatus -Status 'no_changes' -Message 'no expected catalogue changes' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
+        Stop-WithStatus -Status 'no_changes' -Message 'No meaningful generated data changes; skipped commit.' -ExitCode 0 -StartedAtUtc $cycleStarted -IntervalMinutes $intervalMinutes
     }
 
     $script:cycleReportContext.filesChanged = Get-StagedPathList
@@ -685,7 +791,7 @@ try {
     if ([bool]$workerConfig.commitAfterCycle) {
         $commitMessage = Build-CycleCommitMessage -TargetLanguage $targetLanguage -Diag $diag -ProviderAfter $script:cycleReportContext.providerAfter -ValidationResult $script:cycleReportContext.validationResult
         if ([string]::IsNullOrWhiteSpace($commitMessage)) {
-            $commitMessage = 'Update PokéWallet provider catalogue data'
+            $commitMessage = 'Update PokeWallet provider catalogue data'
         }
         $commitResult = Invoke-RepoCommand -FilePath 'git' -Arguments @('-C', $RepoRoot, 'commit', '-m', $commitMessage)
         if ($commitResult.ExitCode -ne 0) {
