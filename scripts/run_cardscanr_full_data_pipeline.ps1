@@ -12,6 +12,12 @@ param(
     [switch]$DownloadImages,
     [switch]$BuildPrices,
     [switch]$SkipPrices,
+    [switch]$ImportPokeWalletPrices,
+    [int]$PokeWalletPriceMaxSets = 0,
+    [string]$PokeWalletPriceSets = "",
+    [ValidateSet("both", "tcg", "cm")]
+    [string]$PokeWalletPriceSource = "both",
+    [switch]$PokeWalletPriceDryRun,
     [switch]$BuildHistory,
     [switch]$SkipHistory,
     [switch]$Validate,
@@ -42,6 +48,11 @@ if ($SkipAppCatalogue -or ($PSBoundParameters.ContainsKey('BuildAppCatalogue') -
 if ($SkipImages -or ($PSBoundParameters.ContainsKey('BuildImages') -and -not $BuildImages)) { $argsList += '--skip-images' }
 if ($DownloadImages) { $argsList += '--download-images' }
 if ($SkipPrices -or ($PSBoundParameters.ContainsKey('BuildPrices') -and -not $BuildPrices)) { $argsList += '--skip-prices' }
+if ($ImportPokeWalletPrices) { $argsList += '--import-pokewallet-prices' }
+if ($PokeWalletPriceMaxSets -gt 0) { $argsList += @('--pokewallet-price-max-sets', [string]$PokeWalletPriceMaxSets) }
+if ($PokeWalletPriceSets) { $argsList += @('--pokewallet-price-sets', $PokeWalletPriceSets) }
+if ($PokeWalletPriceSource) { $argsList += @('--pokewallet-price-source', $PokeWalletPriceSource) }
+if ($PokeWalletPriceDryRun) { $argsList += '--pokewallet-price-dry-run' }
 if ($SkipHistory -or ($PSBoundParameters.ContainsKey('BuildHistory') -and -not $BuildHistory)) { $argsList += '--skip-history' }
 if ($SkipValidate -or ($PSBoundParameters.ContainsKey('Validate') -and -not $Validate)) { $argsList += '--skip-validate' }
 if ($Commit) { $argsList += '--commit' }

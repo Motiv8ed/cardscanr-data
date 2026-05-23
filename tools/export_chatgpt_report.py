@@ -41,6 +41,8 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/app_catalogue_source_audit_latest.md",
     "reports/pokewallet_api_capability_audit_latest.json",
     "reports/pokewallet_api_capability_audit_latest.md",
+    "reports/pokewallet_price_import_latest.json",
+    "reports/pokewallet_price_import_latest.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -421,6 +423,41 @@ def _collect_pokewallet_api_capability_audit() -> dict[str, Any]:
     }
 
 
+def _collect_pokewallet_price_import_report() -> dict[str, Any]:
+    data = _load_json("reports/pokewallet_price_import_latest.json")
+    if data is None:
+        return {"available": False}
+
+    return {
+        "available": True,
+        "startedAtUtc": data.get("startedAtUtc"),
+        "finishedAtUtc": data.get("finishedAtUtc"),
+        "mode": data.get("mode"),
+        "languages": data.get("languages", []),
+        "sourceMode": data.get("sourceMode"),
+        "setsSelected": data.get("setsSelected", []),
+        "apiRequestsUsed": data.get("apiRequestsUsed", 0),
+        "endpointSuccesses": data.get("endpointSuccesses", 0),
+        "endpointFailures": data.get("endpointFailures", 0),
+        "priceRecordsReceived": data.get("priceRecordsReceived", 0),
+        "matchedRecords": data.get("matchedRecords", 0),
+        "wouldImportRecords": data.get("wouldImportRecords", 0),
+        "importedRecords": data.get("importedRecords", 0),
+        "skippedExistingBetterRecords": data.get("skippedExistingBetterRecords", 0),
+        "ambiguousRecords": data.get("ambiguousRecords", 0),
+        "unmatchedRecords": data.get("unmatchedRecords", 0),
+        "unusableRecords": data.get("unusableRecords", 0),
+        "recordsByLanguage": data.get("recordsByLanguage", {}),
+        "recordsBySource": data.get("recordsBySource", {}),
+        "recordsByCurrency": data.get("recordsByCurrency", {}),
+        "recordsByVariant": data.get("recordsByVariant", {}),
+        "beforeCurrentPriceCounts": data.get("beforeCurrentPriceCounts", {}),
+        "afterCurrentPriceCounts": data.get("afterCurrentPriceCounts", {}),
+        "validationResult": data.get("validationResult"),
+        "nextRecommendedAction": data.get("nextRecommendedAction", ""),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -754,6 +791,29 @@ def _render_markdown(report: dict[str, Any]) -> str:
                 )
         a("")
 
+    # PokeWallet price import report
+    price_import = report.get("pokewalletPriceImport", {})
+    if price_import.get("available"):
+        a("## PokeWallet Price Import")
+        a("")
+        a(f"- **Mode:** {price_import.get('mode', 'n/a')}")
+        a(f"- **Languages:** {', '.join(price_import.get('languages', []))}")
+        a(f"- **Source mode:** {price_import.get('sourceMode', 'n/a')}")
+        a(f"- **API requests:** {price_import.get('apiRequestsUsed', 0)}")
+        a(f"- **Endpoint success/failure:** {price_import.get('endpointSuccesses', 0)} / {price_import.get('endpointFailures', 0)}")
+        a(f"- **Price records received:** {price_import.get('priceRecordsReceived', 0):,}")
+        a(f"- **Matched records:** {price_import.get('matchedRecords', 0):,}")
+        a(f"- **Imported records:** {price_import.get('importedRecords', 0):,}")
+        a(f"- **Would import records:** {price_import.get('wouldImportRecords', 0):,}")
+        a(f"- **Skipped existing better records:** {price_import.get('skippedExistingBetterRecords', 0):,}")
+        a(f"- **Ambiguous/unmatched/unusable:** {price_import.get('ambiguousRecords', 0):,} / {price_import.get('unmatchedRecords', 0):,} / {price_import.get('unusableRecords', 0):,}")
+        a(f"- **By source:** {price_import.get('recordsBySource', {})}")
+        a(f"- **By currency:** {price_import.get('recordsByCurrency', {})}")
+        a(f"- **Validation result:** {price_import.get('validationResult', 'n/a')}")
+        if price_import.get("nextRecommendedAction"):
+            a(f"- **Recommended next action:** {price_import.get('nextRecommendedAction')}")
+        a("")
+
     # Next action
     a("## Next Recommended Action")
     a("")
@@ -833,6 +893,7 @@ def main() -> None:
     worker_info = _collect_worker_info()
     price_updater_info = _collect_price_updater_info()
     pokewallet_api_audit_info = _collect_pokewallet_api_capability_audit()
+    pokewallet_price_import_info = _collect_pokewallet_price_import_report()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -856,6 +917,7 @@ def main() -> None:
         "worker": worker_info,
         "priceUpdater": price_updater_info,
         "pokewalletApiCapabilityAudit": pokewallet_api_audit_info,
+        "pokewalletPriceImport": pokewallet_price_import_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }

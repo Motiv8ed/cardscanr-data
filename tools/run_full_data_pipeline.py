@@ -582,6 +582,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-batch-size", type=int, default=20, help="Image download record batch size.")
     parser.add_argument("--build-prices", dest="build_prices", action="store_true", default=True)
     parser.add_argument("--skip-prices", dest="build_prices", action="store_false")
+    parser.add_argument("--import-pokewallet-prices", action="store_true", help="Run the staged PokeWallet set-price importer.")
+    parser.add_argument("--pokewallet-price-max-sets", type=int, default=0, help="Maximum PokeWallet price sets per language.")
+    parser.add_argument("--pokewallet-price-sets", default="", help="Comma-separated PokeWallet set ids/codes to import.")
+    parser.add_argument("--pokewallet-price-source", choices=["both", "tcg", "cm"], default="both")
+    parser.add_argument("--pokewallet-price-dry-run", action="store_true", help="Run PokeWallet price importer without writes.")
     parser.add_argument("--build-history", dest="build_history", action="store_true", default=True)
     parser.add_argument("--skip-history", dest="build_history", action="store_false")
     parser.add_argument("--validate", dest="validate", action="store_true", default=True)
@@ -715,6 +720,45 @@ def main() -> int:
                     )
         else:
             stages_skipped.append({"name": "current_prices", "reason": "--skip-prices"})
+
+        if args.import_pokewallet_prices:
+            if args.no_fetch:
+                stages_skipped.append({"name": "pokewallet_set_price_import", "reason": "--no-fetch"})
+            else:
+                import_languages = [language for language in languages if language in {"en", "jp"}]
+                if not import_languages:
+                    stages_skipped.append(
+                        {"name": "pokewallet_set_price_import", "reason": "No EN/JP languages selected"}
+                    )
+                else:
+                    command = [
+                        python_executable(),
+                        "tools/import_pokewallet_set_prices.py",
+                        "--languages",
+                        ",".join(import_languages),
+                        "--source",
+                        args.pokewallet_price_source,
+                        "--commit-safe-report",
+                        "--skip-existing-better-prices",
+                    ]
+                    if args.pokewallet_price_max_sets > 0:
+                        command.extend(["--max-sets", str(args.pokewallet_price_max_sets)])
+                    if args.pokewallet_price_sets:
+                        command.extend(["--sets", args.pokewallet_price_sets])
+                    if args.pokewallet_price_dry_run or args.dry_run:
+                        command.append("--dry-run")
+                    else:
+                        command.append("--write")
+                    snapshot = take_snapshot()
+                    stages_run.append(
+                        run_command(
+                            stage="pokewallet_set_price_import",
+                            command=command,
+                            env=base_env,
+                            dry_run=args.dry_run,
+                            snapshot=snapshot,
+                        )
+                    )
 
         if args.build_history:
             snapshot = take_snapshot()

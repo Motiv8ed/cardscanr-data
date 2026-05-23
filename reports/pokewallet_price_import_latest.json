@@ -1,0 +1,622 @@
+{
+  "afterCurrentPriceCounts": {
+    "en": {
+      "currencyCounts": {
+        "USD": 31211
+      },
+      "fileCount": 159,
+      "recordCount": 31211,
+      "sourceCounts": {
+        "pokemon_tcg_api": 31211
+      },
+      "statusCounts": {
+        "priced": 31211
+      }
+    },
+    "jp": {
+      "currencyCounts": {},
+      "fileCount": 0,
+      "recordCount": 0,
+      "sourceCounts": {},
+      "statusCounts": {}
+    }
+  },
+  "ambiguousRecords": 58,
+  "apiKeyEnvNamesChecked": [
+    "POKEWALLET_API_KEY",
+    "CARDSCANR_POKEWALLET_API_KEY"
+  ],
+  "apiKeyEnvUsed": "POKEWALLET_API_KEY",
+  "apiKeyPresent": true,
+  "apiRequestsUsed": 6,
+  "beforeCurrentPriceCounts": {
+    "en": {
+      "currencyCounts": {
+        "USD": 31211
+      },
+      "fileCount": 159,
+      "recordCount": 31211,
+      "sourceCounts": {
+        "pokemon_tcg_api": 31211
+      },
+      "statusCounts": {
+        "priced": 31211
+      }
+    },
+    "jp": {
+      "currencyCounts": {},
+      "fileCount": 0,
+      "recordCount": 0,
+      "sourceCounts": {},
+      "statusCounts": {}
+    }
+  },
+  "commitSafeReport": true,
+  "derivedRefresh": {},
+  "dryRun": true,
+  "endpointFailures": 0,
+  "endpointSuccesses": 6,
+  "finishedAtUtc": "2026-05-23T21:43:45Z",
+  "importedRecords": 0,
+  "languages": [
+    "en",
+    "jp"
+  ],
+  "matchedRecords": 759,
+  "mode": "dry-run",
+  "nextRecommendedAction": "Dry-run found usable mapped records. Re-run with --write for the same bounded set sample.",
+  "notes": [
+    "API keys are read from environment variables only and are not written to this report.",
+    "No prices are fabricated; rows without usable provider price fields are skipped.",
+    "TCGPlayer USD and CardMarket EUR are preserved as separate records where the schema allows it.",
+    "ZH is intentionally not processed."
+  ],
+  "priceRecordsReceived": 1295,
+  "provider": "pokewallet",
+  "recordsByCurrency": {
+    "EUR": 405,
+    "USD": 758
+  },
+  "recordsByLanguage": {
+    "en": 353,
+    "jp": 810
+  },
+  "recordsBySource": {
+    "cardmarket": 405,
+    "tcgplayer": 758
+  },
+  "recordsByVariant": {
+    "holo": 613,
+    "normal": 443,
+    "reverse": 107
+  },
+  "schemaVersion": "1.0.0",
+  "setsAttempted": [
+    {
+      "ambiguousRecords": 0,
+      "appSetId": "604",
+      "appSetName": "Base Set",
+      "classificationCounts": {
+        "imported": 101,
+        "matched_to_app_card": 102,
+        "missing_variant": 1,
+        "no_app_card_match": 1,
+        "unusable_price": 102
+      },
+      "currencyCounts": {
+        "USD": 101
+      },
+      "endpoint": "/prices/604",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "en",
+      "matchedRecords": 102,
+      "priceRecordsReceived": 203,
+      "providerRowsReceived": 104,
+      "providerSetCode": "BS",
+      "providerSetId": "604",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/102",
+          "currency": "USD",
+          "normalizedName": "alakazam",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/102",
+          "currency": "USD",
+          "normalizedName": "blastoise",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "003/102",
+          "currency": "USD",
+          "normalizedName": "chansey",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "004/102",
+          "currency": "USD",
+          "normalizedName": "charizard_black_dot_error",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "005/102",
+          "currency": "USD",
+          "normalizedName": "clefairy",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "tcgplayer": 101
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 1,
+      "unusableRecords": 103,
+      "variantCounts": {
+        "holo": 15,
+        "normal": 86
+      },
+      "wouldImportRecords": 101
+    },
+    {
+      "ambiguousRecords": 0,
+      "appSetId": "1400",
+      "appSetName": "Black and White",
+      "classificationCounts": {
+        "imported": 222,
+        "matched_to_app_card": 222
+      },
+      "currencyCounts": {
+        "USD": 222
+      },
+      "endpoint": "/prices/1400",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "en",
+      "matchedRecords": 222,
+      "priceRecordsReceived": 222,
+      "providerRowsReceived": 222,
+      "providerSetCode": "BLW",
+      "providerSetId": "1400",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "1/114",
+          "currency": "USD",
+          "normalizedName": "snivy_1",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "1/114",
+          "currency": "USD",
+          "normalizedName": "snivy_1",
+          "rawSource": "tcgplayer",
+          "variant": "reverse"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "10/114",
+          "currency": "USD",
+          "normalizedName": "lilligant",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "10/114",
+          "currency": "USD",
+          "normalizedName": "lilligant",
+          "rawSource": "tcgplayer",
+          "variant": "reverse"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "100/114",
+          "currency": "USD",
+          "normalizedName": "potion",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "tcgplayer": 222
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 0,
+      "unusableRecords": 0,
+      "variantCounts": {
+        "holo": 15,
+        "normal": 100,
+        "reverse": 107
+      },
+      "wouldImportRecords": 222
+    },
+    {
+      "ambiguousRecords": 0,
+      "appSetId": "1538",
+      "appSetName": "BW Trainer Kit: Excadrill & Zoroark",
+      "classificationCounts": {
+        "imported": 30,
+        "matched_to_app_card": 30,
+        "no_app_card_match": 30,
+        "unusable_price": 30
+      },
+      "currencyCounts": {
+        "USD": 30
+      },
+      "endpoint": "/prices/1538",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "en",
+      "matchedRecords": 30,
+      "priceRecordsReceived": 60,
+      "providerRowsReceived": 60,
+      "providerSetCode": "BLW",
+      "providerSetId": "1538",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "1/30",
+          "currency": "USD",
+          "normalizedName": "purrloin_1",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "10/30",
+          "currency": "USD",
+          "normalizedName": "darkness_energy_10",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "11/30",
+          "currency": "USD",
+          "normalizedName": "pluspower_zoroark",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "12/30",
+          "currency": "USD",
+          "normalizedName": "audino_12",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "13/30",
+          "currency": "USD",
+          "normalizedName": "zorua_13",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "tcgplayer": 30
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 30,
+      "unusableRecords": 30,
+      "variantCounts": {
+        "holo": 1,
+        "normal": 29
+      },
+      "wouldImportRecords": 30
+    },
+    {
+      "ambiguousRecords": 58,
+      "appSetId": "23599",
+      "appSetName": "SV2a: Pokemon Card 151",
+      "classificationCounts": {
+        "ambiguous_match": 58,
+        "imported": 420,
+        "matched_to_app_card": 210,
+        "missing_variant": 3,
+        "no_app_card_match": 248
+      },
+      "currencyCounts": {
+        "EUR": 210,
+        "USD": 210
+      },
+      "endpoint": "/prices/23599",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "jp",
+      "matchedRecords": 210,
+      "priceRecordsReceived": 420,
+      "providerRowsReceived": 519,
+      "providerSetCode": "SV2a",
+      "providerSetId": "23599",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/165",
+          "currency": "USD",
+          "normalizedName": "bulbasaur_001_165_master_ball_pattern",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/165",
+          "currency": "EUR",
+          "normalizedName": "bulbasaur_001_165_master_ball_pattern",
+          "rawSource": "cardmarket",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/165",
+          "currency": "USD",
+          "normalizedName": "ivysaur_002_165_master_ball_pattern",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/165",
+          "currency": "EUR",
+          "normalizedName": "ivysaur_002_165_master_ball_pattern",
+          "rawSource": "cardmarket",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "003/165",
+          "currency": "USD",
+          "normalizedName": "venusaur_ex_003_165",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "cardmarket": 210,
+        "tcgplayer": 210
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 248,
+      "unusableRecords": 3,
+      "variantCounts": {
+        "holo": 406,
+        "normal": 14
+      },
+      "wouldImportRecords": 420
+    },
+    {
+      "ambiguousRecords": 0,
+      "appSetId": "23598",
+      "appSetName": "SV1a: Triplet Beat",
+      "classificationCounts": {
+        "imported": 206,
+        "matched_to_app_card": 103,
+        "missing_variant": 1
+      },
+      "currencyCounts": {
+        "EUR": 103,
+        "USD": 103
+      },
+      "endpoint": "/prices/23598",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "jp",
+      "matchedRecords": 103,
+      "priceRecordsReceived": 206,
+      "providerRowsReceived": 104,
+      "providerSetCode": "SV1a",
+      "providerSetId": "23598",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/073",
+          "currency": "USD",
+          "normalizedName": "tropius_001_073",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/073",
+          "currency": "EUR",
+          "normalizedName": "tropius_001_073",
+          "rawSource": "cardmarket",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/073",
+          "currency": "USD",
+          "normalizedName": "foongus",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/073",
+          "currency": "EUR",
+          "normalizedName": "foongus",
+          "rawSource": "cardmarket",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "003/073",
+          "currency": "USD",
+          "normalizedName": "amoonguss",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "cardmarket": 103,
+        "tcgplayer": 103
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 0,
+      "unusableRecords": 1,
+      "variantCounts": {
+        "holo": 88,
+        "normal": 118
+      },
+      "wouldImportRecords": 206
+    },
+    {
+      "ambiguousRecords": 0,
+      "appSetId": "23600",
+      "appSetName": "SV3a: Raging Surf",
+      "classificationCounts": {
+        "imported": 184,
+        "matched_to_app_card": 92
+      },
+      "currencyCounts": {
+        "EUR": 92,
+        "USD": 92
+      },
+      "endpoint": "/prices/23600",
+      "endpointSuccess": true,
+      "error": null,
+      "importedRecords": 0,
+      "language": "jp",
+      "matchedRecords": 92,
+      "priceRecordsReceived": 184,
+      "providerRowsReceived": 92,
+      "providerSetCode": "SV3a",
+      "providerSetId": "23600",
+      "samples": [
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/062",
+          "currency": "USD",
+          "normalizedName": "froslass_ex_001_062",
+          "rawSource": "tcgplayer",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "001/062",
+          "currency": "EUR",
+          "normalizedName": "froslass_ex_001_062",
+          "rawSource": "cardmarket",
+          "variant": "holo"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/062",
+          "currency": "USD",
+          "normalizedName": "lapras",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "002/062",
+          "currency": "EUR",
+          "normalizedName": "lapras",
+          "rawSource": "cardmarket",
+          "variant": "normal"
+        },
+        {
+          "classification": "would_import",
+          "collectorNumber": "003/062",
+          "currency": "USD",
+          "normalizedName": "remoraid",
+          "rawSource": "tcgplayer",
+          "variant": "normal"
+        }
+      ],
+      "skippedExistingBetterRecords": 0,
+      "sourceCounts": {
+        "cardmarket": 92,
+        "tcgplayer": 92
+      },
+      "statusCode": 200,
+      "unmatchedRecords": 0,
+      "unusableRecords": 0,
+      "variantCounts": {
+        "holo": 88,
+        "normal": 96
+      },
+      "wouldImportRecords": 184
+    }
+  ],
+  "setsRequested": [],
+  "setsSelected": [
+    {
+      "appSetId": "604",
+      "language": "en",
+      "providerSetCode": "BS",
+      "providerSetId": "604",
+      "providerSetName": "Base Set"
+    },
+    {
+      "appSetId": "1400",
+      "language": "en",
+      "providerSetCode": "BLW",
+      "providerSetId": "1400",
+      "providerSetName": "Black and White"
+    },
+    {
+      "appSetId": "1538",
+      "language": "en",
+      "providerSetCode": "BLW",
+      "providerSetId": "1538",
+      "providerSetName": "BW Trainer Kit: Excadrill & Zoroark"
+    },
+    {
+      "appSetId": "23599",
+      "language": "jp",
+      "providerSetCode": "SV2a",
+      "providerSetId": "23599",
+      "providerSetName": "SV2a: Pokemon Card 151"
+    },
+    {
+      "appSetId": "23598",
+      "language": "jp",
+      "providerSetCode": "SV1a",
+      "providerSetId": "23598",
+      "providerSetName": "SV1a: Triplet Beat"
+    },
+    {
+      "appSetId": "23600",
+      "language": "jp",
+      "providerSetCode": "SV3a",
+      "providerSetId": "23600",
+      "providerSetName": "SV3a: Raging Surf"
+    }
+  ],
+  "skippedExistingBetterRecords": 0,
+  "sourceMode": "both",
+  "startedAtUtc": "2026-05-23T21:43:38Z",
+  "unmatchedRecords": 279,
+  "unusableRecords": 137,
+  "validationDetails": {},
+  "validationResult": "not_run",
+  "wouldImportRecords": 1163,
+  "write": false
+}

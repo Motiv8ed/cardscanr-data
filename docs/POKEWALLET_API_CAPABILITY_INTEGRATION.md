@@ -43,6 +43,19 @@ If `/prices/:numericSetId` is available, add a staged importer before writing pu
 - Mark JP pricing unavailable only when the tested JP endpoint returns no usable JP price records.
 - Promote into `public/v1/prices/current` only after focused count, source, currency, and status checks pass.
 
+Implemented staged importer:
+
+```powershell
+python tools/import_pokewallet_set_prices.py --languages jp --max-sets 3 --dry-run
+python tools/import_pokewallet_set_prices.py --languages jp --max-sets 3 --write
+```
+
+Full pipeline entrypoint:
+
+```powershell
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -ImportPokeWalletPrices -PokeWalletPriceMaxSets 3 -Validate -ExportChatGPTReport
+```
+
 ## Image and logo cache design
 
 The audit probes only 3 low and 3 high card image endpoints and writes no image binaries.
