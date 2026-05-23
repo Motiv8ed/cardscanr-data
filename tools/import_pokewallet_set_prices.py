@@ -1237,7 +1237,8 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
 
     if write and report["importedRecords"] > 0:
         report["nextRecommendedAction"] = (
-            "Review the JP current price sample and run validation/export reports before expanding max sets."
+            "Run a bounded expansion dry-run (for example: --languages jp --source both --max-sets 25 --dry-run), "
+            "then review diagnostics before the next write pass."
         )
     elif not write and report["wouldImportRecords"] > 0:
         report["nextRecommendedAction"] = (

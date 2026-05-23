@@ -84,12 +84,16 @@ EXCLUDE_PATTERNS: tuple[str, ...] = (
 
 def _git(*args: str) -> str:
     try:
-        return subprocess.check_output(
+        output = subprocess.check_output(
             ["git", *args],
             cwd=ROOT,
             stderr=subprocess.DEVNULL,
             text=True,
-        ).strip()
+        )
+        # Preserve leading spaces on porcelain lines; trimming both sides can
+        # shift the first path by one character when the first status starts
+        # with a space (for example: " M path").
+        return output.rstrip("\r\n")
     except subprocess.CalledProcessError:
         return ""
 
@@ -197,6 +201,7 @@ def _count_current_price_records() -> dict[str, dict[str, Any]]:
         record_count = 0
         source_counts: dict[str, int] = {}
         status_counts: dict[str, int] = {}
+        currency_counts: dict[str, int] = {}
         file_count = 0
 
         for path in sorted(language_dir.glob("*.json"), key=lambda item: item.name.lower()):
@@ -214,14 +219,17 @@ def _count_current_price_records() -> dict[str, dict[str, Any]]:
                 record_count += 1
                 source = str(record.get("source") or payload.get("source") or "unknown")
                 status = str(record.get("status") or payload.get("status") or "unknown")
+                currency = str(record.get("currency") or payload.get("currency") or "unknown")
                 source_counts[source] = source_counts.get(source, 0) + 1
                 status_counts[status] = status_counts.get(status, 0) + 1
+                currency_counts[currency] = currency_counts.get(currency, 0) + 1
 
         result[language_dir.name] = {
             "recordCount": record_count,
             "fileCount": file_count,
             "sourceCounts": dict(sorted(source_counts.items())),
             "statusCounts": dict(sorted(status_counts.items())),
+            "currencyCounts": dict(sorted(currency_counts.items())),
         }
 
     return result
@@ -249,6 +257,7 @@ def _price_status_summary(status_payload: dict[str, Any], actual_counts: dict[st
 
     source_counts = actual_counts.get("sourceCounts") if isinstance(actual_counts.get("sourceCounts"), dict) else {}
     status_counts = actual_counts.get("statusCounts") if isinstance(actual_counts.get("statusCounts"), dict) else {}
+    currency_counts = actual_counts.get("currencyCounts") if isinstance(actual_counts.get("currencyCounts"), dict) else {}
 
     source = source_summary.get("primarySource") or status_payload.get("source") or _single_key_or_none(source_counts) or "none"
     display_status = _single_key_or_none(status_counts)
@@ -265,6 +274,7 @@ def _price_status_summary(status_payload: dict[str, Any], actual_counts: dict[st
         "languageStatus": status_payload.get("status"),
         "sourceCounts": source_counts,
         "statusCounts": status_counts,
+        "currencyCounts": currency_counts,
         "lastUpdatedAtUtc": status_payload.get("lastSuccessfulPriceUpdateAtUtc") or status_payload.get("lastUpdatedAtUtc"),
         "recordCountMatchesStatus": status_record_count == actual_record_count if isinstance(status_record_count, int) else None,
     }
@@ -491,6 +501,8 @@ def _recommend_next_action(
     worker: dict[str, Any],
     git: dict[str, Any],
     pokewallet_api_audit: dict[str, Any] | None = None,
+    pokewallet_price_import: dict[str, Any] | None = None,
+    v1: dict[str, Any] | None = None,
 ) -> str:
     issues: list[str] = []
 
@@ -515,6 +527,23 @@ def _recommend_next_action(
         )
 
     if not issues:
+        jp_count = 0
+        if isinstance(v1, dict):
+            jp_count = int((v1.get("jpPriceStatus") or {}).get("recordCount") or 0)
+        if jp_count == 0:
+            jp_count = int((pipeline.get("pricesByLanguage", {}).get("jp") or {}).get("recordCount") or 0)
+
+        if (
+            pokewallet_price_import
+            and pokewallet_price_import.get("available")
+            and jp_count > 0
+        ):
+            return (
+                "All checks passing. JP prices are now imported from PokeWallet and currently partially covered. "
+                "Next bounded expansion: run a dry-run over a larger sample (max 25 sets), then review the import report "
+                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 25 --dry-run"
+            )
+
         if (
             pokewallet_api_audit
             and pokewallet_api_audit.get("available")
@@ -522,9 +551,9 @@ def _recommend_next_action(
         ):
             if pokewallet_api_audit.get("jpPriceAvailability") == "usable_prices_found":
                 return (
-                    "All checks passing. PokeWallet /prices is available and the sampled JP set returned usable price data. "
-                    "Build the staged diagnostics-only price importer next; keep public JP prices unavailable until source, "
-                    "currency, variant, and count validation pass."
+                    "All checks passing. PokeWallet /prices is available and sampled JP data is usable. "
+                    "Next: run a bounded JP dry-run import (max 25 sets), validate source/currency/variant distributions, "
+                    "then run a write pass if diagnostics remain clean."
                 )
             return (
                 "All checks passing. PokeWallet /prices is available for sampled EN data. "
@@ -592,6 +621,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
 
     # Data summary
     pipeline = report["pipeline"]
+    v1 = report.get("v1", {})
+    price_import = report.get("pokewalletPriceImport", {})
     if pipeline.get("available"):
         app_by_lang = pipeline.get("appCatalogueByLanguage", {})
         img_by_lang = pipeline.get("imageManifestByLanguage", {})
@@ -638,7 +669,43 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a(f"  - {history['firstDate']} → {history['lastDate']} ({history.get('dateCount', 0)} dates)")
             a("")
 
-        missing_areas = pipeline.get("missingIncompleteAreas", [])
+        raw_missing_areas = pipeline.get("missingIncompleteAreas", [])
+        missing_areas: list[str] = []
+        for area in raw_missing_areas:
+            area_text = str(area)
+            lower_area = area_text.lower()
+            if (
+                "jp current prices are unavailable" in lower_area
+                or "jp prices are unavailable" in lower_area
+                or "keep public jp prices unavailable" in lower_area
+            ):
+                continue
+            missing_areas.append(area_text)
+
+        jp_price_status = v1.get("jpPriceStatus", {}) if isinstance(v1, dict) else {}
+        jp_count = int(jp_price_status.get("recordCount") or 0)
+        provider_jp = int((pipeline.get("providerByLanguage", {}) or {}).get("jp") or 0)
+        app_jp = int((pipeline.get("appCatalogueByLanguage", {}) or {}).get("jp") or 0)
+        jp_reference = provider_jp or app_jp
+
+        source_counts = jp_price_status.get("sourceCounts") if isinstance(jp_price_status.get("sourceCounts"), dict) else {}
+        currency_counts = jp_price_status.get("currencyCounts") if isinstance(jp_price_status.get("currencyCounts"), dict) else {}
+        if not source_counts and isinstance(price_import, dict):
+            source_counts = price_import.get("recordsBySource") if isinstance(price_import.get("recordsBySource"), dict) else {}
+        if not currency_counts and isinstance(price_import, dict):
+            currency_counts = price_import.get("recordsByCurrency") if isinstance(price_import.get("recordsByCurrency"), dict) else {}
+
+        source_summary = ", ".join(f"{k}: {int(v):,}" for k, v in sorted(source_counts.items())) if source_counts else "n/a"
+        currency_summary = ", ".join(f"{k}: {int(v):,}" for k, v in sorted(currency_counts.items())) if currency_counts else "n/a"
+
+        if jp_count == 0:
+            missing_areas.append("JP current prices are unavailable from non-eBay sources.")
+        elif jp_reference > 0 and jp_count < jp_reference:
+            missing_areas.append(
+                "JP current prices are partially available from PokeWallet "
+                f"({jp_count:,} of {jp_reference:,} records; sources: {source_summary}; currencies: {currency_summary})."
+            )
+
         if missing_areas:
             a("### Known Gaps / Incomplete Areas")
             for area in missing_areas:
@@ -742,14 +809,29 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a("")
 
     # v1 status
-    v1 = report.get("v1", {})
     if v1:
         en_ps = v1.get("enPriceStatus", {})
         jp_ps = v1.get("jpPriceStatus", {})
+
+        def _format_counts(counts: dict[str, Any] | None) -> str:
+            if not isinstance(counts, dict) or not counts:
+                return "n/a"
+            return ", ".join(f"{k}: {int(v):,}" for k, v in sorted(counts.items()))
+
         a("## Public v1 Price Status")
         a("")
-        a(f"- **EN price records:** {en_ps.get('recordCount', 0):,} (source: {en_ps.get('source', 'n/a')}, status: {en_ps.get('status', 'n/a')}, last updated: {en_ps.get('lastUpdatedAtUtc') or 'n/a'})")
-        a(f"- **JP price records:** {jp_ps.get('recordCount', 0):,} (source: {jp_ps.get('source', 'n/a')}, status: {jp_ps.get('status', 'n/a')}, last updated: {jp_ps.get('lastUpdatedAtUtc') or 'n/a'})")
+        a(
+            f"- **EN price records:** {en_ps.get('recordCount', 0):,} "
+            f"(source: {en_ps.get('source', 'n/a')}, status: {en_ps.get('status', 'n/a')}, "
+            f"sources: {_format_counts(en_ps.get('sourceCounts'))}, currencies: {_format_counts(en_ps.get('currencyCounts'))}, "
+            f"last updated: {en_ps.get('lastUpdatedAtUtc') or 'n/a'})"
+        )
+        a(
+            f"- **JP price records:** {jp_ps.get('recordCount', 0):,} "
+            f"(source: {jp_ps.get('source', 'n/a')}, status: {jp_ps.get('status', 'n/a')}, "
+            f"sources: {_format_counts(jp_ps.get('sourceCounts'))}, currencies: {_format_counts(jp_ps.get('currencyCounts'))}, "
+            f"last updated: {jp_ps.get('lastUpdatedAtUtc') or 'n/a'})"
+        )
         a("")
 
     # PokeWallet API capability audit
@@ -905,6 +987,8 @@ def main() -> None:
         worker_info,
         git_info,
         pokewallet_api_audit_info,
+        pokewallet_price_import_info,
+        v1_info,
     )
 
     report: dict[str, Any] = {
