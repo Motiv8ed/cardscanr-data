@@ -271,7 +271,12 @@ def _price_status_summary(status_payload: dict[str, Any], actual_counts: dict[st
         "fileCount": actual_counts.get("fileCount", 0),
         "source": source,
         "status": display_status,
-        "languageStatus": status_payload.get("status"),
+        "languageStatus": (
+            "partial"
+            if actual_record_count > 0
+            and status_payload.get("status") in ("not_available", "unavailable", "catalogue_only")
+            else status_payload.get("status")
+        ),
         "sourceCounts": source_counts,
         "statusCounts": status_counts,
         "currencyCounts": currency_counts,
@@ -533,13 +538,9 @@ def _recommend_next_action(
         if jp_count == 0:
             jp_count = int((pipeline.get("pricesByLanguage", {}).get("jp") or {}).get("recordCount") or 0)
 
-        if (
-            pokewallet_price_import
-            and pokewallet_price_import.get("available")
-            and jp_count > 0
-        ):
+        if jp_count > 0:
             return (
-                "All checks passing. JP prices are now imported from PokeWallet and currently partially covered. "
+                "All checks passing. JP prices are partially imported from PokeWallet and currently partially covered. "
                 "Next bounded expansion: run a dry-run over a larger sample (max 25 sets), then review the import report "
                 "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 25 --dry-run"
             )

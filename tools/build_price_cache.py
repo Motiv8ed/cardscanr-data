@@ -1178,12 +1178,14 @@ def summarize_current_price_files(current_dir: Path) -> dict:
             "recordCount": 0,
             "sourceCounts": {},
             "statusCounts": {},
+            "currencyCounts": {},
         }
 
     set_file_count = 0
     record_count = 0
     source_counts: Counter[str] = Counter()
     status_counts: Counter[str] = Counter()
+    currency_counts: Counter[str] = Counter()
     for path in sorted(current_dir.glob("*.json")):
         if path.name == "status.json":
             continue
@@ -1200,11 +1202,13 @@ def summarize_current_price_files(current_dir: Path) -> dict:
             record_count += 1
             source_counts[str(record.get("source") or payload.get("source") or "unknown")] += 1
             status_counts[str(record.get("status") or payload.get("status") or "unknown")] += 1
+            currency_counts[str(record.get("currency") or payload.get("currency") or "unknown")] += 1
     return {
         "setFileCount": set_file_count,
         "recordCount": record_count,
         "sourceCounts": dict(sorted(source_counts.items())),
         "statusCounts": dict(sorted(status_counts.items())),
+        "currencyCounts": dict(sorted(currency_counts.items())),
     }
 
 
@@ -1343,48 +1347,107 @@ def build_public_price_status_payloads(
         ],
     }
 
+    # Read previous jp per-language status to preserve timestamps/batch info set by the importer.
+    _prev_jp: dict = {}
+    if JP_CURRENT_STATUS_PATH.exists():
+        _loaded = load_json(JP_CURRENT_STATUS_PATH)
+        if isinstance(_loaded, dict):
+            _prev_jp = _loaded
+    _prev_jp_status = str(_prev_jp.get("status") or "")
+    jp_has_records = jp_record_count > 0
+    # Trust preserved timestamps only when the previous status reflects an actual import run,
+    # not when it is the stale not_available / catalogue_only sentinel left by this pipeline.
+    _jp_prev_trusted = _prev_jp_status not in ("not_available", "catalogue_only", "unavailable", "")
+    if jp_has_records:
+        jp_status_value = "partial"
+        jp_files_available = True
+        jp_last_updated: str | None = (
+            _prev_jp.get("lastUpdatedAtUtc") or _prev_jp.get("lastSuccessfulPriceUpdateAtUtc")
+        ) if _jp_prev_trusted else None
+        if not jp_last_updated:
+            # Fall back to the newest set-file generatedAtUtc timestamp.
+            jp_set_freshness = summarize_en_set_freshness(CURRENT_PRICES_JP_DIR)
+            jp_last_updated = jp_set_freshness.get("newestSetPriceUpdateAtUtc")
+        _prev_batch = _prev_jp.get("lastBatchSetIds")
+        jp_last_batch_set_ids: list[str] = (
+            _prev_batch
+            if isinstance(_prev_batch, list) and _prev_batch and _jp_prev_trusted
+            else sorted(p.stem for p in CURRENT_PRICES_JP_DIR.glob("*.json") if p.name != "status.json")
+        )
+        jp_last_batch_size = int(_prev_jp.get("lastBatchSize") or jp_set_count)
+        _prev_stale = _prev_jp.get("staleness")
+        jp_staleness: dict = (
+            _prev_stale
+            if isinstance(_prev_stale, dict)
+            and _prev_stale.get("status") not in ("unavailable", None)
+            and _jp_prev_trusted
+            else {"status": "fresh", "ageSeconds": 0, "freshForSeconds": 86400, "staleAfterSeconds": 259200}
+        )
+        jp_currency_counts = jp_counts.get("currencyCounts", {})
+        if len(jp_currency_counts) == 1:
+            jp_currency: str | None = next(iter(jp_currency_counts))
+        elif len(jp_currency_counts) > 1:
+            jp_currency = "mixed"
+        else:
+            jp_currency = _prev_jp.get("currency")
+        jp_notes = [
+            "JP current prices are partial PokeWallet set-price imports.",
+            "Provider currency is stored as-is; no currency conversion is applied.",
+            "TCGPlayer USD and CardMarket EUR records remain separate.",
+            "Timestamps are UTC. Apps should convert to the user's local timezone.",
+        ]
+    else:
+        jp_status_value = "not_available"
+        jp_files_available = False
+        jp_last_updated = None
+        jp_last_batch_set_ids = []
+        jp_last_batch_size = 0
+        jp_staleness = {
+            "status": "unavailable",
+            "ageSeconds": None,
+            "freshForSeconds": 86400,
+            "staleAfterSeconds": 259200,
+        }
+        jp_currency = None
+        jp_notes = [
+            "Japanese catalogue support is partial.",
+            "Japanese current price cache is not available yet.",
+            "Timestamps are UTC. Apps should convert to the user's local timezone.",
+        ]
+
     jp_payload = {
         "schemaVersion": SCHEMA_VERSION,
         "generatedAtUtc": ts,
         "game": "pokemon",
         "language": "jp",
-        "status": "not_available",
-        "currentPriceFilesAvailable": False,
+        "status": jp_status_value,
+        "currentPriceFilesAvailable": jp_files_available,
         "currentPriceSetFileCount": jp_set_count,
         "currentPriceRecordCount": jp_record_count,
         "recordCount": jp_record_count,
-        "lastSuccessfulPriceUpdateAtUtc": None,
-        "lastUpdatedAtUtc": None,
+        "lastSuccessfulPriceUpdateAtUtc": jp_last_updated,
+        "lastUpdatedAtUtc": jp_last_updated,
         "lastSuccessfulPushAtUtc": None,
-        "lastBatchSetIds": [],
-        "lastBatchSize": 0,
-        "lastBatchStartedAtUtc": None,
-        "lastBatchFinishedAtUtc": None,
-        "lastBatchDurationSeconds": None,
+        "lastBatchSetIds": jp_last_batch_set_ids,
+        "lastBatchSize": jp_last_batch_size,
+        "lastBatchStartedAtUtc": jp_last_updated,
+        "lastBatchFinishedAtUtc": jp_last_updated,
+        "lastBatchDurationSeconds": 0 if jp_has_records else None,
         "nextExpectedPriceUpdateAtUtc": None,
         "expectedUpdateIntervalMinutes": None,
         "fullRotationEstimatedHours": None,
-        "currency": None,
+        "currency": jp_currency,
         "isLivePricing": False,
         "source": jp_primary_source,
         "sourceSummary": {
             "primarySource": jp_primary_source,
             "sourceCounts": jp_counts["sourceCounts"],
-            "currency": None,
+            "currency": jp_currency,
             "isLivePricing": False,
         },
         "statusCounts": jp_counts["statusCounts"],
-        "staleness": {
-            "status": "unavailable",
-            "ageSeconds": None,
-            "freshForSeconds": 86400,
-            "staleAfterSeconds": 259200,
-        },
-        "notes": [
-            "Japanese catalogue support is partial.",
-            "Japanese current price cache is not available yet.",
-            "Timestamps are UTC. Apps should convert to the user's local timezone.",
-        ],
+        "staleness": jp_staleness,
+        "notes": jp_notes,
     }
 
     prices_status = {
@@ -1429,13 +1492,13 @@ def build_public_price_status_payloads(
             "jp": {
                 "game": "pokemon",
                 "language": "jp",
-                "status": "catalogue_only",
-                "currentPriceFilesAvailable": False,
+                "status": jp_payload["status"],
+                "currentPriceFilesAvailable": jp_payload["currentPriceFilesAvailable"],
                 "currentPriceSetFileCount": jp_payload["currentPriceSetFileCount"],
                 "currentPriceRecordCount": jp_payload["currentPriceRecordCount"],
                 "recordCount": jp_payload["recordCount"],
-                "lastSuccessfulPriceUpdateAtUtc": None,
-                "lastUpdatedAtUtc": None,
+                "lastSuccessfulPriceUpdateAtUtc": jp_payload["lastSuccessfulPriceUpdateAtUtc"],
+                "lastUpdatedAtUtc": jp_payload["lastUpdatedAtUtc"],
                 "nextExpectedPriceUpdateAtUtc": None,
                 "staleness": jp_payload["staleness"],
                 "source": jp_payload["source"],

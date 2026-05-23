@@ -65,23 +65,24 @@
       }
     },
     "jp": {
-      "currentPriceFilesAvailable": false,
+      "currentPriceFilesAvailable": true,
       "currentPriceRecordCount": 2728,
       "currentPriceSetFileCount": 10,
       "game": "pokemon",
       "language": "jp",
-      "lastSuccessfulPriceUpdateAtUtc": null,
-      "lastUpdatedAtUtc": null,
+      "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T22:26:20Z",
+      "lastUpdatedAtUtc": "2026-05-23T22:26:20Z",
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
-        "Japanese catalogue support is partial.",
-        "Japanese current price cache is not available yet.",
+        "JP current prices are partial PokeWallet set-price imports.",
+        "Provider currency is stored as-is; no currency conversion is applied.",
+        "TCGPlayer USD and CardMarket EUR records remain separate.",
         "Timestamps are UTC. Apps should convert to the user's local timezone."
       ],
       "recordCount": 2728,
       "source": "pokewallet",
       "sourceSummary": {
-        "currency": null,
+        "currency": "mixed",
         "isLivePricing": false,
         "primarySource": "pokewallet",
         "sourceCounts": {
@@ -89,12 +90,12 @@
         }
       },
       "staleness": {
-        "ageSeconds": null,
+        "ageSeconds": 0,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 259200,
-        "status": "unavailable"
+        "status": "fresh"
       },
-      "status": "catalogue_only",
+      "status": "partial",
       "statusCounts": {
         "priced": 2728
       }

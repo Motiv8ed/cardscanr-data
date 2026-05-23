@@ -1,6 +1,6 @@
 {
-  "currency": null,
-  "currentPriceFilesAvailable": false,
+  "currency": "mixed",
+  "currentPriceFilesAvailable": true,
   "currentPriceRecordCount": 2728,
   "currentPriceSetFileCount": 10,
   "expectedUpdateIntervalMinutes": null,
@@ -9,25 +9,37 @@
   "generatedAtUtc": "2026-05-23T22:45:18Z",
   "isLivePricing": false,
   "language": "jp",
-  "lastBatchDurationSeconds": null,
-  "lastBatchFinishedAtUtc": null,
-  "lastBatchSetIds": [],
-  "lastBatchSize": 0,
-  "lastBatchStartedAtUtc": null,
-  "lastSuccessfulPriceUpdateAtUtc": null,
+  "lastBatchDurationSeconds": 0,
+  "lastBatchFinishedAtUtc": "2026-05-23T22:26:20Z",
+  "lastBatchSetIds": [
+    "23598",
+    "23599",
+    "23600",
+    "23601",
+    "23602",
+    "23603",
+    "23604",
+    "23605",
+    "23606",
+    "23607"
+  ],
+  "lastBatchSize": 10,
+  "lastBatchStartedAtUtc": "2026-05-23T22:26:20Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T22:26:20Z",
   "lastSuccessfulPushAtUtc": null,
-  "lastUpdatedAtUtc": null,
+  "lastUpdatedAtUtc": "2026-05-23T22:26:20Z",
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
-    "Japanese catalogue support is partial.",
-    "Japanese current price cache is not available yet.",
+    "JP current prices are partial PokeWallet set-price imports.",
+    "Provider currency is stored as-is; no currency conversion is applied.",
+    "TCGPlayer USD and CardMarket EUR records remain separate.",
     "Timestamps are UTC. Apps should convert to the user's local timezone."
   ],
   "recordCount": 2728,
   "schemaVersion": "1.0.0",
   "source": "pokewallet",
   "sourceSummary": {
-    "currency": null,
+    "currency": "mixed",
     "isLivePricing": false,
     "primarySource": "pokewallet",
     "sourceCounts": {
@@ -35,12 +47,12 @@
     }
   },
   "staleness": {
-    "ageSeconds": null,
+    "ageSeconds": 0,
     "freshForSeconds": 86400,
     "staleAfterSeconds": 259200,
-    "status": "unavailable"
+    "status": "fresh"
   },
-  "status": "not_available",
+  "status": "partial",
   "statusCounts": {
     "priced": 2728
   }
