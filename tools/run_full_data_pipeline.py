@@ -10,8 +10,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import queue
 import subprocess
 import sys
+import threading
+import time
 from typing import Any
 
 
@@ -22,7 +25,9 @@ DATA_DIR = ROOT / "data"
 REPORTS_DIR = ROOT / "reports"
 REPORT_JSON_PATH = REPORTS_DIR / "latest_full_data_pipeline.json"
 REPORT_MD_PATH = REPORTS_DIR / "latest_full_data_pipeline.md"
+PROVIDER_WORKER_STATUS_PATH = DATA_DIR / "pokewallet_catalog_worker_status.json"
 SCHEMA_VERSION = "1.0.0"
+DEFAULT_HEARTBEAT_SECONDS = 60
 
 GENERATED_PREFIXES = (
     "public/v1/",
@@ -43,8 +48,23 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def log(message: str) -> None:
+    print(f"{now_utc()} {message}", flush=True)
+
+
+def format_duration(seconds: float) -> str:
+    total = max(0, int(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
 def load_json(path: Path) -> Any:
-    with open(path, encoding="utf-8") as fh:
+    with open(path, encoding="utf-8-sig") as fh:
         return json.load(fh)
 
 
@@ -208,6 +228,66 @@ def powershell_executable() -> str:
     return "powershell"
 
 
+def command_for_display(command: list[str]) -> str:
+    return " ".join(command)
+
+
+def get_heartbeat_seconds() -> int:
+    raw = os.getenv("CARDSCANR_PIPELINE_HEARTBEAT_SECONDS", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+            if value > 0:
+                return value
+        except ValueError:
+            pass
+    return DEFAULT_HEARTBEAT_SECONDS
+
+
+def stream_reader(pipe: Any, output_queue: "queue.Queue[str]") -> None:
+    try:
+        for line in iter(pipe.readline, ""):
+            output_queue.put(line)
+    finally:
+        try:
+            pipe.close()
+        except OSError:
+            pass
+
+
+def provider_worker_status_summary(env: dict[str, str] | None) -> str:
+    status = try_load_json(PROVIDER_WORKER_STATUS_PATH)
+    if not isinstance(status, dict):
+        return f"worker status file not available: {PROVIDER_WORKER_STATUS_PATH.relative_to(ROOT).as_posix()}"
+
+    def value(key: str) -> str:
+        raw = status.get(key)
+        if raw is None or str(raw).strip() == "":
+            return "None"
+        return str(raw)
+
+    budget_parts = [
+        f"cycleMaxRequests={(env or {}).get('CARDSCANR_CURRENT_PRICE_REQUEST_CAP', 'None')}",
+        f"hourly={value('hourlyUsedEstimate')}/{value('hourlyTarget')} remaining={value('hourlyRemaining')}",
+        f"daily={value('dailyUsedEstimate')}/{value('dailyTarget')} remaining={value('dailyRemaining')}",
+        f"source={value('budgetSource')}",
+    ]
+    return (
+        f"currentPriorityLanguage={value('currentPriorityLanguage')} "
+        f"nextLanguageToProcess={value('nextLanguageToProcess')} "
+        f"lastCycleStartedAtUtc={value('lastCycleStartedAtUtc')} "
+        f"lastCycleFinishedAtUtc={value('lastCycleFinishedAtUtc')} "
+        f"lastStatus={value('lastStatus')} "
+        f"lastCommit={value('lastCommit')} "
+        f"requestBudget=({' ; '.join(budget_parts)})"
+    )
+
+
+def print_provider_heartbeat(stage: str, started_monotonic: float, env: dict[str, str] | None) -> None:
+    elapsed = format_duration(time.monotonic() - started_monotonic)
+    log(f"[{stage}] heartbeat elapsed={elapsed} {provider_worker_status_summary(env)}")
+
+
 def run_command(
     *,
     stage: str,
@@ -218,7 +298,9 @@ def run_command(
     snapshot: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     started = now_utc()
+    started_monotonic = time.monotonic()
     if dry_run:
+        log(f"[{stage}] DRY RUN {command_for_display(command)}")
         return {
             "name": stage,
             "status": "dry_run",
@@ -229,29 +311,71 @@ def run_command(
             "restoredTimestampOnlyFiles": [],
         }
 
-    print(f"[{stage}] {' '.join(command)}")
-    result = subprocess.run(
+    log(f"[{stage}] START {command_for_display(command)}")
+    if stage == "provider_catalogue":
+        if "-UntilComplete" in command:
+            log(
+                f"[{stage}] -UntilComplete runs provider cycles until complete or budget-limited; "
+                "later stages will not start until this provider stage exits."
+            )
+        else:
+            log(f"[{stage}] running one provider catalogue cycle; use -NoFetch for derived-only rebuilds.")
+        print_provider_heartbeat(stage, started_monotonic, env)
+
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
+    run_env.setdefault("PYTHONUNBUFFERED", "1")
+
+    process = subprocess.Popen(
         command,
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        env=env,
-        check=False,
+        env=run_env,
+        bufsize=1,
     )
-    if result.stdout:
-        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    output_queue: "queue.Queue[str]" = queue.Queue()
+    if process.stdout is not None:
+        reader = threading.Thread(target=stream_reader, args=(process.stdout, output_queue), daemon=True)
+        reader.start()
+
+    heartbeat_seconds = get_heartbeat_seconds()
+    next_heartbeat = time.monotonic() + heartbeat_seconds
+    while True:
+        try:
+            line = output_queue.get(timeout=1)
+            print(line, end="" if line.endswith("\n") else "\n", flush=True)
+        except queue.Empty:
+            pass
+
+        process_done = process.poll() is not None
+        if stage == "provider_catalogue" and not process_done and time.monotonic() >= next_heartbeat:
+            print_provider_heartbeat(stage, started_monotonic, env)
+            next_heartbeat = time.monotonic() + heartbeat_seconds
+
+        if process_done and output_queue.empty():
+            break
+
+    exit_code = process.wait()
+    while not output_queue.empty():
+        line = output_queue.get_nowait()
+        print(line, end="" if line.endswith("\n") else "\n", flush=True)
+
     restored = restore_timestamp_only_changes(snapshot or {}) if snapshot else []
-    status = "passed" if result.returncode == 0 else "failed"
-    if result.returncode != 0 and not allow_failure:
-        raise RuntimeError(f"Stage {stage} failed with exit code {result.returncode}")
+    status = "passed" if exit_code == 0 else "failed"
+    finished = now_utc()
+    log(f"[{stage}] FINISH status={status} exitCode={exit_code} elapsed={format_duration(time.monotonic() - started_monotonic)}")
+    if exit_code != 0 and not allow_failure:
+        raise RuntimeError(f"Stage {stage} failed with exit code {exit_code}")
     return {
         "name": stage,
         "status": status,
         "startedAtUtc": started,
-        "finishedAtUtc": now_utc(),
+        "finishedAtUtc": finished,
         "command": command,
-        "exitCode": result.returncode,
+        "exitCode": exit_code,
         "restoredTimestampOnlyFiles": restored,
     }
 

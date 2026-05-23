@@ -32,6 +32,18 @@ Defaults:
 - Write runtime reports under `reports/`.
 - Do not commit unless `-Commit` is passed, except for existing provider-worker commit conventions.
 
+The default provider step runs one safe provider catalogue cycle. Use `-NoFetch` when you only want to rebuild derived app data, images, prices, history, index files, and reports from the existing cache.
+
+`-UntilComplete` changes the provider step into the existing manual worker loop. That can run many provider cycles and can wait on hourly/daily request budgets. The full pipeline is intentionally sequential, so app catalogue, image, price, history, index, validation, and commit stages will not start until `provider_catalogue` finishes.
+
+The full pipeline runner streams child output live and prints provider heartbeats while `provider_catalogue` is running. In another PowerShell window, you can also monitor provider progress directly:
+
+```powershell
+.\scripts\watch_pokewallet_catalog_worker.ps1
+```
+
+The watcher displays current priority language, next language to process, last cycle times, last status, last commit, and request budget details from `data/pokewallet_catalog_worker_status.json`.
+
 ## Stage Notes
 
 - Provider catalogue: `scripts/run_pokewallet_catalog_cycle.ps1` or `scripts/run_pokewallet_catalog_worker_loop.ps1 -UntilComplete`.
