@@ -1,0 +1,175 @@
+{
+  "conclusion": {
+    "jpPricingUnavailableBecauseSourceDataMissing": true,
+    "localFilesHaveAnyJpPriceLikeValues": true,
+    "localFilesHaveJpyRecords": false,
+    "mainPriceBuilderSkipsJpBecauseMissingDataNotMissingCode": true,
+    "pokewalletJpHasUsablePriceFields": false,
+    "recommendedAction": "Keep JP as pricing unavailable in main pipeline. Do not fabricate prices. Use dedicated Pokewallet JP builder only when API-backed priced fields are actually returned.",
+    "tcgdexJpHasUsablePriceFields": false
+  },
+  "findings": {
+    "builderBehavior": {
+      "dedicatedBuilderExtractsCardmarket": true,
+      "dedicatedBuilderExtractsTcgplayer": true,
+      "dedicatedBuilderPartOfMainPipeline": false,
+      "dedicatedBuilderRequiresApiKey": true,
+      "hasDedicatedPokewalletJpBuilder": true,
+      "mainBuilderExplicitSkipStatus": true,
+      "mainBuilderMarksJpUnavailable": true,
+      "mainBuilderWritesJpStatusFile": true
+    },
+    "localJpPriceLikeValues": {
+      "currencyCounts": {
+        "AUD": 4
+      },
+      "filesWithRecords": [
+        "public/v1/history/daily/2026-05-12/pokemon/jp/tracked.json",
+        "public/v1/history/daily/2026-05-13/pokemon/jp/tracked.json",
+        "public/v1/history/daily/2026-05-14/pokemon/jp/tracked.json",
+        "public/v1/prices/pokemon/jp/sample.json"
+      ],
+      "jpPriceRecordCountAcrossLocalFiles": 4,
+      "jpyRecordCount": 0,
+      "sourceCounts": {
+        "manual_seed": 4
+      }
+    },
+    "pokewalletProviderEn": {
+      "cardCount": 31515,
+      "currencyCounts": {},
+      "hasCardmarketFieldsFlagCount": 26734,
+      "hasPriceFieldsFlagCount": 31515,
+      "hasTcgplayerFieldsFlagCount": 22317,
+      "numericPriceLikeValueCount": 0,
+      "setFileCount": 331,
+      "topPriceLikeKeys": {},
+      "usableNumericPriceFieldsPresent": false
+    },
+    "pokewalletProviderJp": {
+      "cardCount": 24032,
+      "currencyCounts": {},
+      "hasCardmarketFieldsFlagCount": 19365,
+      "hasPriceFieldsFlagCount": 24032,
+      "hasTcgplayerFieldsFlagCount": 22220,
+      "numericPriceLikeValueCount": 0,
+      "setFileCount": 451,
+      "topPriceLikeKeys": {},
+      "usableNumericPriceFieldsPresent": false
+    },
+    "statusSnapshot": {
+      "jpCurrentStatusFile": {
+        "currency": null,
+        "currentPriceFilesAvailable": false,
+        "currentPriceRecordCount": 0,
+        "currentPriceSetFileCount": 0,
+        "expectedUpdateIntervalMinutes": null,
+        "fullRotationEstimatedHours": null,
+        "game": "pokemon",
+        "generatedAtUtc": "2026-05-23T06:24:51Z",
+        "isLivePricing": false,
+        "language": "jp",
+        "lastBatchDurationSeconds": null,
+        "lastBatchFinishedAtUtc": null,
+        "lastBatchSetIds": [],
+        "lastBatchSize": 0,
+        "lastBatchStartedAtUtc": null,
+        "lastSuccessfulPriceUpdateAtUtc": null,
+        "lastSuccessfulPushAtUtc": null,
+        "nextExpectedPriceUpdateAtUtc": null,
+        "notes": [
+          "Japanese catalogue support is partial.",
+          "Japanese current price cache is not available yet.",
+          "Timestamps are UTC. Apps should convert to the user's local timezone."
+        ],
+        "schemaVersion": "1.0.0",
+        "staleness": {
+          "ageSeconds": null,
+          "freshForSeconds": 86400,
+          "staleAfterSeconds": 259200,
+          "status": "unavailable"
+        },
+        "status": "not_available"
+      },
+      "pricesStatusLanguagesJp": {
+        "currentPriceFilesAvailable": false,
+        "currentPriceRecordCount": 0,
+        "currentPriceSetFileCount": 0,
+        "game": "pokemon",
+        "language": "jp",
+        "lastSuccessfulPriceUpdateAtUtc": null,
+        "nextExpectedPriceUpdateAtUtc": null,
+        "notes": [
+          "Japanese catalogue support is partial.",
+          "Japanese current price cache is not available yet.",
+          "Timestamps are UTC. Apps should convert to the user's local timezone."
+        ],
+        "sourceSummary": {
+          "currency": null,
+          "isLivePricing": false,
+          "primarySource": "tcgdex"
+        },
+        "staleness": {
+          "ageSeconds": null,
+          "freshForSeconds": 86400,
+          "staleAfterSeconds": 259200,
+          "status": "unavailable"
+        },
+        "status": "catalogue_only"
+      }
+    },
+    "tcgdexJpCatalogue": {
+      "cardCount": 28043,
+      "currencyCounts": {},
+      "numericPriceLikeValueCount": 0,
+      "pricingReferencesCardmarketTrueCount": 18703,
+      "pricingReferencesTcgplayerTrueCount": 0,
+      "setFileCount": 472,
+      "topPriceLikeKeys": {
+        "pokewallet": 28043
+      },
+      "usableNumericPriceFieldsPresent": false
+    }
+  },
+  "generatedAtUtc": "2026-05-23T07:20:40Z",
+  "recordCounts": {
+    "jpCurrentPriceRecordCountAfter": 0,
+    "jpCurrentPriceRecordCountBefore": 0
+  },
+  "schemaVersion": "1.0.0",
+  "scope": {
+    "directoriesScanned": [
+      "public/v1/provider-catalog/pokewallet/cards/jp",
+      "public/v1/provider-catalog/pokewallet/cards/en",
+      "public/v1/catalog/pokemon/jp/cards",
+      "public/v1/prices/current/pokemon/jp",
+      "public/v1/prices/pokemon/jp",
+      "public/v1/history",
+      "data",
+      "tools/build_price_cache.py",
+      "tools/build_pokewallet_jp_prices.py"
+    ],
+    "excluded": [
+      "ebay",
+      "web_scraping"
+    ],
+    "keywords": [
+      "aud",
+      "avgprice",
+      "cardmarket",
+      "currency",
+      "highprice",
+      "jpy",
+      "lowprice",
+      "marketprice",
+      "pokewallet",
+      "price",
+      "prices",
+      "saleprice",
+      "tcgplayer",
+      "usd",
+      "value",
+      "yen"
+    ]
+  }
+}
