@@ -574,6 +574,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-requests-per-day", type=int, default=0, help="Provider daily request budget.")
     parser.add_argument("--languages", default="en,jp", help="Comma-separated app languages to process.")
     parser.add_argument("--include-zh", action="store_true", help="Include ZH where downstream stages can safely report/build it.")
+    parser.add_argument("--build-app-catalogue", dest="build_app_catalogue", action="store_true", default=True)
+    parser.add_argument("--skip-app-catalogue", dest="build_app_catalogue", action="store_false")
     parser.add_argument("--build-images", dest="build_images", action="store_true", default=True)
     parser.add_argument("--skip-images", dest="build_images", action="store_false")
     parser.add_argument("--download-images", action="store_true", help="Download a bounded local image cache batch.")
@@ -623,8 +625,11 @@ def main() -> int:
                 )
             )
 
-        if args.no_fetch:
-            stages_skipped.append({"name": "app_catalogue", "reason": "--no-fetch keeps existing app catalogue files"})
+        if not args.build_app_catalogue:
+            stages_skipped.append({"name": "app_catalogue", "reason": "--skip-app-catalogue"})
+            stages_skipped.append({"name": "app_catalogue_promotion", "reason": "--skip-app-catalogue"})
+        elif args.no_fetch:
+            stages_skipped.append({"name": "app_catalogue", "reason": "--no-fetch skips provider/API app catalogue fetching"})
         else:
             snapshot = take_snapshot()
             stages_run.append(
@@ -637,12 +642,31 @@ def main() -> int:
                 )
             )
 
+        if args.build_app_catalogue:
+            promotion_command = [
+                python_executable(),
+                "tools/promote_provider_catalog_to_app_catalog.py",
+                "--languages",
+                ",".join(languages),
+            ]
+            if args.include_zh:
+                promotion_command.append("--include-zh")
+            snapshot = take_snapshot()
+            stages_run.append(
+                run_command(
+                    stage="app_catalogue_promotion",
+                    command=promotion_command,
+                    dry_run=args.dry_run,
+                    snapshot=snapshot,
+                )
+            )
+
         if args.build_images:
             image_command = [
                 python_executable(),
                 "tools/build_image_cache.py",
                 "--languages",
-                ",".join([language for language in languages if language != "zh"]),
+                ",".join(languages),
             ]
             if args.include_zh:
                 image_command.append("--include-zh")
@@ -725,6 +749,7 @@ def main() -> int:
                 ("validate_cache", [python_executable(), "tools/validate_cache.py"]),
                 ("report_en_current_price_migration", [python_executable(), "tools/report_en_current_price_migration.py"]),
                 ("report_dataset_coverage", [python_executable(), "tools/report_dataset_coverage.py"]),
+                ("report_provider_to_app_gap", [python_executable(), "tools/report_provider_to_app_gap.py", "--summary-only"]),
                 ("report_last_worker_change", [python_executable(), "tools/report_last_worker_change.py"]),
             ]
             for name, command in validation_commands:

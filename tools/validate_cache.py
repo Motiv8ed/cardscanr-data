@@ -2551,15 +2551,15 @@ def check_catalogues() -> None:
             err(f"{rel} must be a JSON object")
             continue
 
-        is_pokemon_catalogue = data.get("game") == "pokemon" and data.get("language") in {"en", "jp"}
+        is_pokemon_catalogue = data.get("game") == "pokemon" and data.get("language") in {"en", "jp", "zh"}
         if is_pokemon_catalogue and data.get("language") == "en":
             if check_required(data, REQUIRED_EN_CATALOG_FIELDS, str(rel)):
                 ok(f"{rel} has required EN catalogue fields")
             if data.get("catalogueStatus") not in {"built", "partial_built", "not_built_yet"}:
                 err(f"{rel} catalogueStatus must be built, partial_built, or not_built_yet")
             if data.get("catalogueStatus") in {"built", "partial_built"}:
-                if data.get("source") != "pokemon_tcg_api":
-                    err(f"{rel} source must be pokemon_tcg_api when built")
+                if data.get("source") not in {"pokemon_tcg_api", "pokewallet"}:
+                    err(f"{rel} source must be pokemon_tcg_api or pokewallet when built")
                 if data.get("cardsAvailable") is not True:
                     err(f"{rel} cardsAvailable must be true when EN catalogue card files exist")
             if data.get("setCount") != len(data.get("sets", [])):
@@ -2575,10 +2575,34 @@ def check_catalogues() -> None:
             if data.get("catalogueStatus") in {"built", "partial_built"}:
                 if check_required(data, REQUIRED_JP_CATALOG_FIELDS, str(rel)):
                     ok(f"{rel} has required JP catalogue fields")
-                if data.get("source") != "tcgdex":
-                    err(f"{rel} source must be tcgdex when JP catalogue is built")
+                if data.get("source") not in {"tcgdex", "pokewallet"}:
+                    err(f"{rel} source must be tcgdex or pokewallet when JP catalogue is built")
                 if data.get("cardsAvailable") is not True:
                     err(f"{rel} cardsAvailable must be true when JP catalogue card files exist")
+                if data.get("setCount") != len(data.get("sets", [])):
+                    err(f"{rel} setCount must equal sets length")
+                failed_set_ids = data.get("failedSetIds", [])
+                if not isinstance(failed_set_ids, list):
+                    err(f"{rel} failedSetIds must be a list")
+                elif data.get("failedSetCount") != len(failed_set_ids):
+                    err(f"{rel} failedSetCount must equal failedSetIds length")
+                if data.get("catalogueStatus") == "built" and data.get("failedSetCount") != 0:
+                    err(f"{rel} built catalogue must not have failed sets")
+            else:
+                if check_required(data, REQUIRED_PLACEHOLDER_CATALOG_FIELDS, str(rel)):
+                    ok(f"{rel} has required placeholder fields")
+                if data.get("catalogueStatus") != "not_built_yet":
+                    err(f"{rel} catalogueStatus must be not_built_yet for the placeholder catalogue")
+                if data.get("cardsAvailable") is not False:
+                    err(f"{rel} cardsAvailable must be false for the placeholder catalogue")
+        elif is_pokemon_catalogue and data.get("language") == "zh":
+            if data.get("catalogueStatus") in {"built", "partial_built"}:
+                if check_required(data, REQUIRED_JP_CATALOG_FIELDS, str(rel)):
+                    ok(f"{rel} has required ZH catalogue fields")
+                if data.get("source") != "pokewallet":
+                    err(f"{rel} source must be pokewallet when ZH catalogue is built")
+                if data.get("cardsAvailable") is not True:
+                    err(f"{rel} cardsAvailable must be true when ZH catalogue card files exist")
                 if data.get("setCount") != len(data.get("sets", [])):
                     err(f"{rel} setCount must equal sets length")
                 failed_set_ids = data.get("failedSetIds", [])
@@ -2611,19 +2635,20 @@ def check_catalogues() -> None:
 
 
 def check_catalog_card_files() -> None:
-    for language, expected_source, expected_image_source in [
-        ("en", "pokemon_tcg_api", "pokemon_tcg_api"),
-        ("jp", "tcgdex", "tcgdex"),
+    for language, expected_sources, expected_image_sources in [
+        ("en", {"pokemon_tcg_api", "pokewallet"}, {"pokemon_tcg_api", "pokewallet"}),
+        ("jp", {"tcgdex", "pokewallet"}, {"tcgdex", "pokewallet"}),
+        ("zh", {"pokewallet"}, {"pokewallet"}),
     ]:
         cards_dir = V1_DIR / "catalog" / "pokemon" / language / "cards"
         card_files = sorted(cards_dir.glob("*.json")) if cards_dir.exists() else []
         if not card_files:
+            if language == "zh" and not cards_dir.exists():
+                continue
             warn(f"No {language.upper()} catalogue card files found under {cards_dir.relative_to(ROOT)}")
             continue
 
-        required_entry_fields = (
-            REQUIRED_EN_CATALOG_CARD_ENTRY_FIELDS if language == "en" else REQUIRED_JP_CATALOG_CARD_ENTRY_FIELDS
-        )
+        required_entry_fields = REQUIRED_EN_CATALOG_CARD_ENTRY_FIELDS if language == "en" else REQUIRED_JP_CATALOG_CARD_ENTRY_FIELDS
 
         for path in card_files:
             rel = path.relative_to(ROOT)
@@ -2637,8 +2662,8 @@ def check_catalog_card_files() -> None:
                 err(f"{rel} game must be pokemon")
             if data.get("language") != language:
                 err(f"{rel} language must be {language}")
-            if data.get("source") != expected_source:
-                err(f"{rel} source must be {expected_source}")
+            if data.get("source") not in expected_sources:
+                err(f"{rel} source must be one of {sorted(expected_sources)}")
             if data.get("catalogueStatus") != "built":
                 err(f"{rel} catalogueStatus must be built")
 
@@ -2674,8 +2699,8 @@ def check_catalog_card_files() -> None:
                 if "imageSmall" not in card or "imageLarge" not in card:
                     err(f"{label} imageSmall and imageLarge fields must exist")
                     entry_errors += 1
-                if card.get("imageSource") != expected_image_source:
-                    err(f"{label} imageSource must be {expected_image_source}")
+                if card.get("imageSource") not in expected_image_sources:
+                    err(f"{label} imageSource must be one of {sorted(expected_image_sources)}")
                     entry_errors += 1
                 external_ids = card.get("externalIds")
                 if not isinstance(external_ids, dict):
@@ -2686,7 +2711,14 @@ def check_catalog_card_files() -> None:
                     if missing_external:
                         err(f"{label} externalIds missing fields: {sorted(missing_external)}")
                         entry_errors += 1
-                    if language == "jp":
+                    provider_ids = card.get("providerIds")
+                    is_pokewallet_promoted = (
+                        isinstance(provider_ids, dict)
+                        and isinstance(provider_ids.get("pokewallet"), str)
+                        and bool(provider_ids.get("pokewallet"))
+                        and card.get("imageSource") == "pokewallet"
+                    )
+                    if language == "jp" and not is_pokewallet_promoted:
                         tcgdex_id = external_ids.get("tcgdexCardId")
                         if not isinstance(tcgdex_id, str) or not tcgdex_id:
                             err(f"{label} externalIds.tcgdexCardId must be a non-empty string for JP")

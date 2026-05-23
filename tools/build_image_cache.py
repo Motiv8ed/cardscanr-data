@@ -44,7 +44,7 @@ def utc_now_iso() -> str:
 
 
 def load_json(path: Path) -> Any:
-    with open(path, encoding="utf-8") as fh:
+    with open(path, encoding="utf-8-sig") as fh:
         return json.load(fh)
 
 
@@ -116,10 +116,15 @@ def provider_endpoint_url(value: object) -> str | None:
 
 
 def provider_ids_from_card(card: dict[str, Any]) -> dict[str, Any]:
+    provider_ids = card.get("providerIds")
+    if isinstance(provider_ids, dict):
+        merged = dict(provider_ids)
+    else:
+        merged = {}
     external_ids = card.get("externalIds")
     if isinstance(external_ids, dict):
-        return dict(external_ids)
-    return {}
+        merged.update({key: value for key, value in external_ids.items() if value is not None})
+    return merged
 
 
 def iter_catalog_cards(
@@ -213,7 +218,8 @@ def build_manifest_record(
         "providerSetId": card.get("setId"),
         "providerSetCode": card.get("setId"),
         "providerCardId": provider_ids_from_card(card).get("pokemonTcgApiId")
-        or provider_ids_from_card(card).get("tcgdexCardId"),
+        or provider_ids_from_card(card).get("tcgdexCardId")
+        or provider_ids_from_card(card).get("pokewallet"),
         "error": None if has_source_urls else "missing_source_image_url",
     }
 

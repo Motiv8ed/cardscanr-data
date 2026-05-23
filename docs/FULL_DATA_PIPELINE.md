@@ -15,6 +15,7 @@ The runner is local-worker first. It calls the existing Pokewallet catalogue wor
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -UntilComplete -MaxRequestsPerHour 90 -MaxRequestsPerDay 900
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -Languages en,jp
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -IncludeZh
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -BuildAppCatalogue
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -DownloadImages
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -Commit
 .\scripts\run_cardscanr_full_data_pipeline.ps1 -DryRun
@@ -34,6 +35,8 @@ Defaults:
 
 The default provider step runs one safe provider catalogue cycle. Use `-NoFetch` when you only want to rebuild derived app data, images, prices, history, index files, and reports from the existing cache.
 
+`-NoFetch` does not block provider-to-app catalogue promotion. The promotion stage reads already-downloaded Pokewallet provider records and safely adds only records with enough identity for the app. Use `-SkipAppCatalogue` to skip both app catalogue fetching and provider promotion.
+
 `-UntilComplete` changes the provider step into the existing manual worker loop. That can run many provider cycles and can wait on hourly/daily request budgets. The full pipeline is intentionally sequential, so app catalogue, image, price, history, index, validation, and commit stages will not start until `provider_catalogue` finishes.
 
 The full pipeline runner streams child output live and prints provider heartbeats while `provider_catalogue` is running. In another PowerShell window, you can also monitor provider progress directly:
@@ -48,6 +51,7 @@ The watcher displays current priority language, next language to process, last c
 
 - Provider catalogue: `scripts/run_pokewallet_catalog_cycle.ps1` or `scripts/run_pokewallet_catalog_worker_loop.ps1 -UntilComplete`.
 - App catalogue: `tools/build_price_cache.py app_catalogue`.
+- Provider-to-app promotion: `tools/promote_provider_catalog_to_app_catalog.py --languages en,jp`; every provider record is either represented, promoted, or blocked with a reason in `reports/provider_to_app_promotion_latest.json`.
 - Images: `tools/build_image_cache.py`; `-IncludeZh` adds ZH provider image references as skipped/auth-required references, not public app-ready images.
 - EN prices: `tools/build_price_cache.py current_prices`; Stage 1 schema is preserved.
 - JP prices: `tools/build_pokewallet_jp_prices.py`; this is non-eBay, controlled, and writes records only when source data matches confidently.

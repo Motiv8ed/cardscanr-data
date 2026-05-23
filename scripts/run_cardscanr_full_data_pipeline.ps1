@@ -5,6 +5,8 @@ param(
     [int]$MaxRequestsPerDay = 0,
     [string]$Languages = "en,jp",
     [switch]$IncludeZh,
+    [switch]$BuildAppCatalogue,
+    [switch]$SkipAppCatalogue,
     [switch]$BuildImages,
     [switch]$SkipImages,
     [switch]$DownloadImages,
@@ -35,6 +37,7 @@ if ($UntilComplete) { $argsList += '--until-complete' }
 if ($MaxRequestsPerHour -gt 0) { $argsList += @('--max-requests-per-hour', [string]$MaxRequestsPerHour) }
 if ($MaxRequestsPerDay -gt 0) { $argsList += @('--max-requests-per-day', [string]$MaxRequestsPerDay) }
 if ($IncludeZh) { $argsList += '--include-zh' }
+if ($SkipAppCatalogue -or ($PSBoundParameters.ContainsKey('BuildAppCatalogue') -and -not $BuildAppCatalogue)) { $argsList += '--skip-app-catalogue' }
 if ($SkipImages -or ($PSBoundParameters.ContainsKey('BuildImages') -and -not $BuildImages)) { $argsList += '--skip-images' }
 if ($DownloadImages) { $argsList += '--download-images' }
 if ($SkipPrices -or ($PSBoundParameters.ContainsKey('BuildPrices') -and -not $BuildPrices)) { $argsList += '--skip-prices' }
