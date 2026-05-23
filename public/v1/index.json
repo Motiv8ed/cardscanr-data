@@ -1,5 +1,5 @@
 {
-  "cacheVersion": "2026.05.23.0022",
+  "cacheVersion": "2026.05.23.0237",
   "datasets": [
     {
       "description": "CardScanR internal data API manifest",
@@ -25,6 +25,7 @@
       "description": "CardScanR remote app settings",
       "id": "app_config",
       "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
       "sha256": "a45db9a31acaeae6893529a41726809f7b87b42f82b10497140914569a5ff410",
       "type": "app_config",
       "updatedAtUtc": "2026-05-23T00:22:24Z",
@@ -2899,6 +2900,97 @@
       "url": "/v1/catalog/pokemon/jp/sets.json"
     },
     {
+      "date": "2026-05-12",
+      "description": "CardScanR tracked history snapshot for pokemon EN on 2026-05-12",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_en_2026-05-12",
+      "language": "en",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "4a2d307df2ded4ac9e73a8269deeac680673836d7261557eef6323cfc6d0e70e",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-12/pokemon/en/tracked.json"
+    },
+    {
+      "date": "2026-05-13",
+      "description": "CardScanR tracked history snapshot for pokemon EN on 2026-05-13",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_en_2026-05-13",
+      "language": "en",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "f319799b0dcbf06c4455e4c1b033777f4ce2efdf5b053093eb57ee4acf4810c9",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-13/pokemon/en/tracked.json"
+    },
+    {
+      "date": "2026-05-14",
+      "description": "CardScanR tracked history snapshot for pokemon EN on 2026-05-14",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_en_2026-05-14",
+      "language": "en",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "0c819ce01edea255fb747e2c34ae24573903bfe5c2544067f759a2e6bdf80f95",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-14/pokemon/en/tracked.json"
+    },
+    {
+      "date": "2026-05-23",
+      "description": "CardScanR tracked history snapshot for pokemon EN on 2026-05-23",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_en_2026-05-23",
+      "language": "en",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "227feb34823b52b3bbd93d45f19f3850ba0478fd3dcc3c8624fb5535cb4c9862",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-23/pokemon/en/tracked.json"
+    },
+    {
+      "date": "2026-05-12",
+      "description": "CardScanR tracked history snapshot for pokemon JP on 2026-05-12",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_jp_2026-05-12",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "6ce5ffd9b1d005033f117535646643b623e9e230a5f51c70a8b988d9e5bd66cb",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-12/pokemon/jp/tracked.json"
+    },
+    {
+      "date": "2026-05-13",
+      "description": "CardScanR tracked history snapshot for pokemon JP on 2026-05-13",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_jp_2026-05-13",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "cf1c1d0350b49fab9aa77500932b1ede768e32a0f086c6596a64bda3bdfa31d6",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-13/pokemon/jp/tracked.json"
+    },
+    {
+      "date": "2026-05-14",
+      "description": "CardScanR tracked history snapshot for pokemon JP on 2026-05-14",
+      "game": "pokemon",
+      "id": "daily_tracked_history_pokemon_jp_2026-05-14",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "494cb43707e38ae95bcb11f6bf0a2edf71bac71f7a45fbffbe683395449e193a",
+      "type": "daily_tracked_history",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/history/daily/2026-05-14/pokemon/jp/tracked.json"
+    },
+    {
       "description": "Latest CardScanR cache build diagnostics",
       "id": "diagnostics",
       "recommendedCacheTtlSeconds": 900,
@@ -2910,14 +3002,73 @@
     },
     {
       "description": "Pokewallet catalogue foundation build diagnostics",
-      "game": "pokemon",
       "id": "diagnostics_pokewallet_catalog_foundation",
       "recommendedCacheTtlSeconds": 900,
       "schemaVersion": "1.0.0",
-      "sha256": "1cf5da39a9fc2f4ba392edab9ceec24586e85b3883777ac2806e89b14176edf8",
+      "sha256": "44834870eb8b62eb5a7998aa0eebae069af75ba3ddcb435d4e47dce838d08b5c",
       "type": "diagnostics",
-      "updatedAtUtc": "2026-05-23T01:09:48Z",
+      "updatedAtUtc": "2026-05-23T02:11:41Z",
       "url": "/v1/diagnostics/pokewallet-catalog-foundation-latest.json"
+    },
+    {
+      "description": "CardScanR diagnostics: pokewallet-jp-price-build-latest",
+      "id": "diagnostics_pokewallet_jp_price_build",
+      "recommendedCacheTtlSeconds": 900,
+      "schemaVersion": "1.0.0",
+      "sha256": "b5356a876f8aef6ca4e5ceb2ef893096e3e19a2ce3b3d28077699435202aa39d",
+      "type": "diagnostics",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/diagnostics/pokewallet-jp-price-build-latest.json"
+    },
+    {
+      "description": "CardScanR diagnostics: pokewallet-pro-price-probe-latest",
+      "id": "diagnostics_pokewallet_pro_price_probe",
+      "recommendedCacheTtlSeconds": 900,
+      "schemaVersion": "1.0.0",
+      "sha256": "dd3289d6022523d90a70384ca575b4832fb5bbaefbeb4407df550884d175a765",
+      "type": "diagnostics",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/diagnostics/pokewallet-pro-price-probe-latest.json"
+    },
+    {
+      "description": "CardScanR diagnostics: pokewallet-pro-trial-discovery-latest",
+      "id": "diagnostics_pokewallet_pro_trial_discovery",
+      "recommendedCacheTtlSeconds": 900,
+      "schemaVersion": "1.0.0",
+      "sha256": "f8558398a7b62b74377ad4faf7e305f07f6ca62d5e00f0b413add82c2925ed8c",
+      "type": "diagnostics",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/diagnostics/pokewallet-pro-trial-discovery-latest.json"
+    },
+    {
+      "description": "CardScanR diagnostics: pokewallet-probe-latest",
+      "id": "diagnostics_pokewallet_probe",
+      "recommendedCacheTtlSeconds": 900,
+      "schemaVersion": "1.0.0",
+      "sha256": "8bab6fcebb4fe6c65e6b201f591b0e477ec4dbdaac65f4be829c797f85a0d7f3",
+      "type": "diagnostics",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/diagnostics/pokewallet-probe-latest.json"
+    },
+    {
+      "description": "CardScanR image cache policy metadata",
+      "id": "images_cache_policy",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "7645ff8d029d1434a3e3affc65c9a88af333624dfa35e88f605e944c8df2ec49",
+      "type": "image_cache_policy",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/images/cache-policy.json"
+    },
+    {
+      "description": "CardScanR card image URL/cache manifest",
+      "id": "images_cards_manifest",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "c21f521be160ea461473f2ee97f8fad747ec7614ce643eaa909df0bf72d1bfbd",
+      "type": "image_manifest",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/images/cards-manifest.json"
     },
     {
       "description": "Pokemon TCG EN latest-known current prices for Base",
@@ -14032,7 +14183,6 @@
     },
     {
       "description": "App-facing Pokewallet provider catalogue cards manifest",
-      "game": "pokemon",
       "id": "provider_catalog_pokewallet_cards_manifest",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
@@ -14040,17 +14190,6 @@
       "type": "provider_catalog_manifest",
       "updatedAtUtc": "2026-05-23T00:48:31Z",
       "url": "/v1/provider-catalog/pokewallet/cards-manifest.json"
-    },
-    {
-      "description": "Pokewallet provider catalogue card sample with safe metadata only",
-      "game": "pokemon",
-      "id": "provider_catalog_pokewallet_cards_sample",
-      "recommendedCacheTtlSeconds": 86400,
-      "schemaVersion": "1.0.0",
-      "sha256": "54a7eda435886e83261c8e04d26cb8860beb078d7192cb8b4030d2d22dc765b8",
-      "type": "provider_catalog",
-      "updatedAtUtc": "2026-05-23T00:48:31Z",
-      "url": "/v1/provider-catalog/pokewallet/cards-sample.json"
     },
     {
       "description": "Pokewallet provider catalogue cards for zh set -1",
@@ -14749,47 +14888,33 @@
       "url": "/v1/provider-catalog/pokewallet/cards/zh/-75.json"
     },
     {
-      "description": "Pokewallet provider catalogue image endpoint availability sample",
-      "game": "pokemon",
-      "id": "provider_catalog_pokewallet_image_availability_sample",
-      "recommendedCacheTtlSeconds": 86400,
-      "schemaVersion": "1.0.0",
-      "sha256": "c5e30e62dfd79119fd67003cea8e24aed788b0db07abdf39012687dff3ea988e",
-      "type": "provider_catalog",
-      "updatedAtUtc": "2026-05-23T00:48:31Z",
-      "url": "/v1/provider-catalog/pokewallet/image-availability-sample.json"
-    },
-    {
       "description": "Pokewallet provider catalogue language coverage summary",
-      "game": "pokemon",
       "id": "provider_catalog_pokewallet_languages_summary",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "2ad9b72d7f26f18177bf8915332c5c63ded7441755ea438f051cae34901187f4",
+      "sha256": "095b8659f83445a2413ea62faea81c09b68f5379cce4171a2cfc085e515f41b8",
       "type": "provider_catalog",
-      "updatedAtUtc": "2026-05-23T01:09:48Z",
+      "updatedAtUtc": "2026-05-23T02:11:41Z",
       "url": "/v1/provider-catalog/pokewallet/languages-summary.json"
     },
     {
       "description": "Pokewallet provider catalogue set summary for CardScanR matching research",
-      "game": "pokemon",
       "id": "provider_catalog_pokewallet_sets_summary",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "73c54b822db2b0a71ff9b1a5dbfa26abf5991b532abe832073fa208329a94b1a",
+      "sha256": "fca48245f75eb8e7d49191f04449a62c78d6d41053b957d8196373ee29764078",
       "type": "provider_catalog",
-      "updatedAtUtc": "2026-05-23T01:09:48Z",
+      "updatedAtUtc": "2026-05-23T02:11:41Z",
       "url": "/v1/provider-catalog/pokewallet/sets-summary.json"
     },
     {
       "description": "App-facing Pokewallet provider catalogue availability status",
-      "game": "pokemon",
       "id": "provider_catalog_pokewallet_status",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "12327025ff91210b85b5ca0f9f0c98b7f5365c01dc7f18c415e7a089fc0777af",
+      "sha256": "4e4bfd9f9896ba116822041dd1e6947ed51e4b434dcf43a5c5ba5dcd69bdf7f7",
       "type": "provider_catalog_status",
-      "updatedAtUtc": "2026-05-23T01:09:48Z",
+      "updatedAtUtc": "2026-05-23T02:11:41Z",
       "url": "/v1/provider-catalog/pokewallet/status.json"
     },
     {
@@ -14823,16 +14948,26 @@
       "url": "/v1/supported-markets.json"
     },
     {
+      "description": "CardScanR supported price/image source manifest",
+      "id": "supported_sources",
+      "recommendedCacheTtlSeconds": 86400,
+      "schemaVersion": "1.0.0",
+      "sha256": "2e5865ae2e778720f445ed3727e07fb73e1ab7f24991e1f83eebb9a47d3e011f",
+      "type": "supported_sources",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
+      "url": "/v1/supported-sources.json"
+    },
+    {
       "description": "CardScanR tracked price history summary",
       "id": "tracked_history",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "814c13a5c3acb75c4d0fd77f766870cdfd76ede0a711f9071ee9ab107ff21f5f",
+      "sha256": "554f0a5cc3d67c77a9a30fe1715d4550fe360bdd5979fc3a3dbb413c4f063547",
       "type": "tracked_history",
-      "updatedAtUtc": "2026-05-23T00:22:24Z",
+      "updatedAtUtc": "2026-05-23T02:37:23Z",
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-23T01:09:48Z",
+  "generatedAtUtc": "2026-05-23T02:37:23Z",
   "schemaVersion": "1.0.0"
 }
