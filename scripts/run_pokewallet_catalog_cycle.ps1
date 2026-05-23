@@ -309,10 +309,40 @@ function Get-GitStatusPath {
     return ($path -replace '/', '\')
 }
 
+function Test-ReportsRuntimeOnlyDirectory {
+    $reportsDir = Join-Path $RepoRoot 'reports'
+    if (-not (Test-Path $reportsDir)) {
+        return $true
+    }
+
+    $allowedReportFiles = @(
+        'latest_pokewallet_worker_cycle.json',
+        'latest_pokewallet_worker_cycle.md'
+    )
+
+    $unexpectedDirs = @(Get-ChildItem -Path $reportsDir -Recurse -Directory -ErrorAction SilentlyContinue)
+    if ($unexpectedDirs.Count -gt 0) {
+        return $false
+    }
+
+    $reportFiles = @(Get-ChildItem -Path $reportsDir -Recurse -File -ErrorAction SilentlyContinue)
+    foreach ($file in $reportFiles) {
+        $relativePath = $file.FullName.Substring($reportsDir.Length).TrimStart('\\')
+        if ($relativePath.Contains('\\')) {
+            return $false
+        }
+        if ($allowedReportFiles -notcontains $relativePath) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
 function Test-AllowedDirtyPath {
     param([string]$Path)
 
-    $normalized = $Path.Trim()
+    $normalized = $Path.Trim().TrimEnd('\\')
     if ([string]::IsNullOrWhiteSpace($normalized)) {
         return $true
     }
@@ -321,6 +351,7 @@ function Test-AllowedDirtyPath {
         'data\pokewallet_catalog_full_state.json',
         'data\scheduled_price_refresh_state.json.tmp',
         'reports\latest_pokewallet_worker_cycle.json',
+        'reports\latest_pokewallet_worker_cycle.md',
         'public\v1\diagnostics\pokewallet-catalog-foundation-latest.json',
         'public\v1\index.json',
         'public\v1\api-manifest.json',
@@ -329,6 +360,9 @@ function Test-AllowedDirtyPath {
     )
     if ($exact -contains $normalized) {
         return $true
+    }
+    if ($normalized -eq 'reports') {
+        return (Test-ReportsRuntimeOnlyDirectory)
     }
     return $normalized.StartsWith('public\v1\provider-catalog\pokewallet\')
 }
