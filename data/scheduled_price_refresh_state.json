@@ -1,78 +1,54 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 137,
-  "lastUpdatedAtUtc": "2026-05-23T07:25:54Z",
+  "enCurrentPriceCursor": 157,
+  "lastUpdatedAtUtc": "2026-05-23T09:27:17Z",
   "lastBatchSetIds": [
-    "2906",
-    "2948",
-    "3020",
-    "3040",
-    "3051",
-    "3064",
-    "3068",
-    "3087",
-    "3118",
-    "3150",
-    "3170",
-    "3172",
-    "3179",
-    "604",
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6"
+    "basep",
+    "best",
+    "bkppr",
+    "bkpr",
+    "bp",
+    "bw1",
+    "bw10",
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp",
+    "bxy",
+    "cel25",
+    "cel25c"
   ],
   "lastProcessedSetIds": [
-    "2906",
-    "2948",
-    "3020",
-    "3040",
-    "3051",
-    "3064",
-    "3068",
-    "3087",
-    "3118",
-    "3150",
-    "3170",
-    "3172",
-    "3179",
-    "604",
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6"
+    "basep",
+    "best",
+    "bkppr",
+    "bkpr",
+    "bp",
+    "bw1",
+    "bw10",
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp",
+    "bxy",
+    "cel25",
+    "cel25c"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
   "requestLedger": [
-    {
-      "requests": 20,
-      "source": "local_price_update",
-      "status": "built",
-      "timestampUtc": "2026-05-21T08:27:40Z"
-    },
-    {
-      "requests": 25,
-      "source": "local_price_update",
-      "status": "built",
-      "timestampUtc": "2026-05-21T08:32:35Z"
-    },
-    {
-      "requests": 22,
-      "source": "local_price_update",
-      "status": "built",
-      "timestampUtc": "2026-05-21T08:36:34Z"
-    },
-    {
-      "requests": 13,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-21T08:39:57Z"
-    },
     {
       "requests": 11,
       "source": "local_price_update",
@@ -579,7 +555,16 @@
       "timestampUtc": "2026-05-23T06:25:31Z"
     },
     {
-      "timestampUtc": "2026-05-23T07:26:58Z",
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 20
+      },
+      "requests": 20,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-23T07:26:58Z"
+    },
+    {
+      "timestampUtc": "2026-05-23T09:28:30Z",
       "requests": 20,
       "providerRequestCounts": {
         "pokemon_tcg_api": 20
