@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-23T05:28:13Z",
+  "generatedAtUtc": "2026-05-23T06:24:51Z",
   "notes": [
     "CardScanR tracked history starts from the first tracked build for each card.",
     "Images are referenced by URL and are not mirrored into this cache yet."
@@ -104,9 +104,7 @@
         "At least one of marketPrice, lowPrice, or highPrice should be numeric when present.",
         "Currency is stored per price record.",
         "Use fetchedAtUtc and staleness fields for app card-detail freshness messaging.",
-        "Japanese price files are only emitted when official/free source pricing is actually available.",
-        "Pokewallet JP CardMarket prices are EUR and TCGPlayer prices are USD.",
-        "Do not combine or convert EUR and USD into a single price."
+        "Japanese price files are only emitted when official/free source pricing is actually available."
       ],
       "requiredFields": [
         "canonicalId",
@@ -132,10 +130,7 @@
         "These files are latest-known current snapshots, not lifetime/all-time price history.",
         "App card detail freshness should combine set-level and record-level freshness timestamps.",
         "Manual refresh should check cache first and never overwrite valid values with no-result/error data.",
-        "Tracked historical movement remains limited to CardScanR-tracked cards.",
-        "JP Pokewallet set files may use top-level currency mixed when record currencies include both EUR and USD.",
-        "Record-level currency is authoritative for JP Pokewallet records.",
-        "JP nextExpectedPriceUpdateAtUtc may be null until a regular JP refresh cadence exists."
+        "Tracked historical movement remains limited to CardScanR-tracked cards."
       ],
       "requiredFields": [
         "schemaVersion",
@@ -208,59 +203,6 @@
         "type",
         "description",
         "updatedAtUtc"
-      ]
-    },
-    "pokewallet_jp_price_build_diagnostics": {
-      "notes": [
-        "Controlled Pokewallet JP price build diagnostics without secrets or raw payload dumps.",
-        "Includes set-map probing metrics, set-detail metrics, fallback search metrics, and confidence-gated write outcomes."
-      ],
-      "requiredFields": [
-        "schemaVersion",
-        "generatedAtUtc",
-        "provider",
-        "mode",
-        "apiKeyPresent",
-        "requestsAttempted",
-        "requestsSucceeded",
-        "requestsFailed",
-        "resultsFound",
-        "possibleJapaneseResults",
-        "confidentMatches",
-        "lowConfidenceMatches",
-        "unmappedResults",
-        "priceRecordsWritten",
-        "priceFilesWritten",
-        "catalogueCardsLoaded",
-        "cardscanrJpSetsLoaded",
-        "catalogueSampleTargetsBuilt",
-        "catalogueSearchQueriesBuilt",
-        "cataloguePreferredSetIdsUsed",
-        "pokewalletSetsFetched",
-        "pokewalletJapaneseLikeSets",
-        "pokewalletSetLanguagesSeen",
-        "samplePokewalletSets",
-        "setMatchCandidatesBuilt",
-        "pokewalletSetDetailsAttempted",
-        "pokewalletSetDetailsSucceeded",
-        "pokewalletCardsFetchedFromSetDetails",
-        "sampleSetDetailCards",
-        "searchFallbackRequestsAttempted",
-        "searchFallbackResultsFound",
-        "sampleSearchQueries",
-        "matchScoreDistribution",
-        "skippedNoPrice",
-        "skippedLowConfidence",
-        "skippedNoCanonicalMatch",
-        "skippedNoCurrency",
-        "sampleSetMatches",
-        "sampleUnmatchedCardScanRSets",
-        "sampleUnmatchedPokewalletSets",
-        "sampleSearchTargets",
-        "sampleMatches",
-        "sampleSkipped",
-        "blockerReason",
-        "recommendation"
       ]
     },
     "prices_status_file": {
