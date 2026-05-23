@@ -10,6 +10,7 @@ is explicitly provided.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from io import BytesIO
@@ -26,6 +27,8 @@ ROOT = Path(__file__).resolve().parent.parent
 V1_DIR = ROOT / "public" / "v1"
 MANIFEST_PATH = V1_DIR / "images" / "cards-manifest.json"
 DEFAULT_OUTPUT_ROOT = ROOT / ".cache" / "cardscanr-images"
+POKEWALLET_PROVIDER_ROOT = V1_DIR / "provider-catalog" / "pokewallet" / "cards"
+POKEWALLET_API_BASE = "https://api.pokewallet.io"
 STATE_FILENAME = "image-cache-state.json"
 SCHEMA_VERSION = "1.0.0"
 DEFAULT_LANGUAGES = ("en", "jp")
@@ -52,6 +55,21 @@ def write_json(path: Path, data: Any) -> None:
         fh.write("\n")
 
 
+def json_bytes(data: Any) -> bytes:
+    return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def write_json_if_changed(path: Path, data: Any) -> bool:
+    encoded = json_bytes(data)
+    if path.exists() and path.read_bytes() == encoded:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(f"{path.name}.tmp")
+    tmp_path.write_bytes(encoded)
+    os.replace(tmp_path, path)
+    return True
+
+
 def normalize_base_url(value: str | None) -> str | None:
     if not value:
         return None
@@ -74,6 +92,29 @@ def relative_or_absolute(path: Path, root: Path = ROOT) -> str:
         return resolved.as_posix()
 
 
+def normalize_languages(value: str | None, *, include_zh: bool = False) -> list[str]:
+    raw_items = [item.strip().lower() for item in str(value or "").split(",") if item.strip()]
+    languages = raw_items or list(DEFAULT_LANGUAGES)
+    if include_zh and "zh" not in languages:
+        languages.append("zh")
+    normalized: list[str] = []
+    for language in languages:
+        if language not in normalized:
+            normalized.append(language)
+    return normalized
+
+
+def provider_endpoint_url(value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    endpoint = value.strip()
+    if endpoint.startswith(("http://", "https://")):
+        return endpoint
+    if not endpoint.startswith("/"):
+        endpoint = f"/{endpoint}"
+    return f"{POKEWALLET_API_BASE}{endpoint}"
+
+
 def provider_ids_from_card(card: dict[str, Any]) -> dict[str, Any]:
     external_ids = card.get("externalIds")
     if isinstance(external_ids, dict):
@@ -85,11 +126,11 @@ def iter_catalog_cards(
     v1_dir: Path = V1_DIR,
     *,
     game: str = "pokemon",
-    language: str | None = None,
+    languages: list[str] | None = None,
     set_id: str | None = None,
 ) -> Iterable[dict[str, Any]]:
-    languages = [language] if language else list(DEFAULT_LANGUAGES)
-    for lang in languages:
+    selected_languages = languages or list(DEFAULT_LANGUAGES)
+    for lang in selected_languages:
         cards_dir = v1_dir / "catalog" / game / lang / "cards"
         if not cards_dir.exists():
             continue
@@ -167,8 +208,166 @@ def build_manifest_record(
         "cacheStatus": cache_status,
         "lastCheckedAtUtc": now_utc,
         "providerIds": provider_ids_from_card(card),
+        "sourceType": "app_catalogue",
+        "provider": card.get("imageSource"),
+        "providerSetId": card.get("setId"),
+        "providerSetCode": card.get("setId"),
+        "providerCardId": provider_ids_from_card(card).get("pokemonTcgApiId")
+        or provider_ids_from_card(card).get("tcgdexCardId"),
         "error": None if has_source_urls else "missing_source_image_url",
     }
+
+
+def iter_provider_catalog_cards(
+    v1_dir: Path = V1_DIR,
+    *,
+    game: str = "pokemon",
+    languages: list[str],
+    set_id: str | None = None,
+    provider: str = "pokewallet",
+) -> Iterable[dict[str, Any]]:
+    if game != "pokemon" or provider != "pokewallet":
+        return
+    provider_root = v1_dir / "provider-catalog" / "pokewallet" / "cards"
+    for language in languages:
+        cards_dir = provider_root / language
+        if not cards_dir.exists():
+            continue
+        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            if set_id and path.stem.lower() != set_id.lower():
+                continue
+            payload = load_json(path)
+            if not isinstance(payload, dict):
+                continue
+            cards = payload.get("cards")
+            if not isinstance(cards, list):
+                continue
+            for card in cards:
+                if isinstance(card, dict):
+                    yield card
+
+
+def build_provider_manifest_record(
+    card: dict[str, Any],
+    *,
+    now_utc: str,
+    image_format: str,
+) -> dict[str, Any] | None:
+    identity_basis = card.get("imageCacheIdentityBasis")
+    if not isinstance(identity_basis, dict):
+        identity_basis = {}
+
+    language = str(card.get("cardScanRLanguage") or identity_basis.get("language") or "").strip().lower()
+    set_id = str(identity_basis.get("setId") or card.get("providerSetCode") or card.get("providerSetId") or "").strip()
+    collector_number = str(identity_basis.get("collectorNumber") or card.get("cardNumber") or "").strip()
+    normalized_name = str(identity_basis.get("normalizedName") or card.get("cleanName") or card.get("name") or "").strip()
+    canonical_id = str(
+        card.get("providerCanonicalImageKey")
+        or card.get("cardScanRImageCacheCandidateKey")
+        or card.get("imageCacheKey")
+        or ""
+    ).strip()
+    if not canonical_id or not language or not set_id:
+        return None
+
+    source_small = provider_endpoint_url(card.get("imageEndpointLow") or card.get("imageEndpoint"))
+    source_large = provider_endpoint_url(card.get("imageEndpointHigh") or card.get("imageEndpoint"))
+    if not source_small or not source_large:
+        return None
+
+    return {
+        "canonicalCardId": canonical_id,
+        "game": "pokemon",
+        "language": language,
+        "setId": set_id,
+        "setName": card.get("providerSetName"),
+        "collectorNumber": collector_number,
+        "normalizedName": normalized_name,
+        "imageSmallUrl": source_small,
+        "imageLargeUrl": source_large,
+        "sourceImageSmallUrl": source_small,
+        "sourceImageLargeUrl": source_large,
+        "imageSource": "pokewallet",
+        "imageCached": False,
+        "localImageSmallPath": None,
+        "localImageLargePath": None,
+        "cacheStatus": "skipped",
+        "lastCheckedAtUtc": now_utc,
+        "providerIds": {
+            "pokewalletId": card.get("providerCardId"),
+            "pokewalletSetId": card.get("providerSetId"),
+            "pokewalletSetCode": card.get("providerSetCode"),
+            "providerLanguage": card.get("providerLanguage"),
+        },
+        "sourceType": "provider_catalogue",
+        "provider": "pokewallet",
+        "providerSetId": card.get("providerSetId"),
+        "providerSetCode": card.get("providerSetCode"),
+        "providerCardId": card.get("providerCardId"),
+        "providerImageEndpointLow": card.get("imageEndpointLow"),
+        "providerImageEndpointHigh": card.get("imageEndpointHigh"),
+        "imageFormatHint": image_format,
+        "error": "pokewallet_image_endpoint_requires_api_key_or_proxy",
+    }
+
+
+def add_manifest_counts(manifest: dict[str, Any]) -> dict[str, Any]:
+    records = [record for record in manifest.get("records", []) if isinstance(record, dict)]
+    manifest["recordCount"] = len(records)
+    manifest["languageCountMap"] = dict(
+        sorted(Counter(str(record.get("language") or "unknown") for record in records).items())
+    )
+    manifest["imageSourceCounts"] = dict(
+        sorted(Counter(str(record.get("imageSource") or "unknown") for record in records).items())
+    )
+    manifest["cacheStatusCounts"] = dict(
+        sorted(Counter(str(record.get("cacheStatus") or "missing") for record in records).items())
+    )
+    manifest["sourceTypeCounts"] = dict(
+        sorted(Counter(str(record.get("sourceType") or "unknown") for record in records).items())
+    )
+    return manifest
+
+
+def preserve_manifest_timestamps_if_materially_same(path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return manifest
+    try:
+        previous = load_json(path)
+    except (OSError, json.JSONDecodeError):
+        return manifest
+    if not isinstance(previous, dict):
+        return manifest
+
+    def without_volatile(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: without_volatile(item)
+                for key, item in value.items()
+                if key not in {"generatedAtUtc", "lastCheckedAtUtc", "downloadSummary"}
+            }
+        if isinstance(value, list):
+            return [without_volatile(item) for item in value]
+        return value
+
+    if without_volatile(previous) != without_volatile(manifest):
+        return manifest
+
+    previous_generated = previous.get("generatedAtUtc")
+    if isinstance(previous_generated, str) and previous_generated:
+        manifest["generatedAtUtc"] = previous_generated
+    previous_records = {
+        str(record.get("canonicalCardId")): record
+        for record in previous.get("records", [])
+        if isinstance(record, dict) and record.get("canonicalCardId")
+    }
+    for record in manifest.get("records", []):
+        if not isinstance(record, dict):
+            continue
+        previous_record = previous_records.get(str(record.get("canonicalCardId") or ""))
+        if isinstance(previous_record, dict) and isinstance(previous_record.get("lastCheckedAtUtc"), str):
+            record["lastCheckedAtUtc"] = previous_record["lastCheckedAtUtc"]
+    return manifest
 
 
 def build_manifest(
@@ -176,17 +375,37 @@ def build_manifest(
     v1_dir: Path = V1_DIR,
     game: str = "pokemon",
     language: str | None = None,
+    languages: list[str] | None = None,
     set_id: str | None = None,
     cdn_base_url: str | None = None,
     image_format: str = "webp",
     now_utc: str | None = None,
+    provider_languages: list[str] | None = None,
 ) -> dict[str, Any]:
     now = now_utc or utc_now_iso()
     normalized_cdn = normalize_base_url(cdn_base_url)
-    records = [
-        build_manifest_record(card, now_utc=now, cdn_base_url=normalized_cdn, image_format=image_format)
-        for card in iter_catalog_cards(v1_dir, game=game, language=language, set_id=set_id)
-    ]
+    selected_languages = languages or ([language] if language else list(DEFAULT_LANGUAGES))
+    records_by_id: dict[str, dict[str, Any]] = {}
+    for card in iter_catalog_cards(v1_dir, game=game, languages=selected_languages, set_id=set_id):
+        record = build_manifest_record(card, now_utc=now, cdn_base_url=normalized_cdn, image_format=image_format)
+        canonical_id = str(record.get("canonicalCardId") or "")
+        if canonical_id:
+            records_by_id[canonical_id] = record
+
+    for card in iter_provider_catalog_cards(
+        v1_dir,
+        game=game,
+        languages=provider_languages or [],
+        set_id=set_id,
+    ):
+        record = build_provider_manifest_record(card, now_utc=now, image_format=image_format)
+        if not record:
+            continue
+        canonical_id = str(record.get("canonicalCardId") or "")
+        if canonical_id and canonical_id not in records_by_id:
+            records_by_id[canonical_id] = record
+
+    records = list(records_by_id.values())
     records.sort(
         key=lambda item: (
             str(item.get("game") or ""),
@@ -196,7 +415,7 @@ def build_manifest(
             str(item.get("canonicalCardId") or ""),
         )
     )
-    return {
+    return add_manifest_counts({
         "schemaVersion": SCHEMA_VERSION,
         "generatedAtUtc": now,
         "mode": "manifest_only",
@@ -204,7 +423,7 @@ def build_manifest(
         "imageFormat": image_format,
         "recordCount": len(records),
         "records": records,
-    }
+    })
 
 
 def load_state(output_root: Path) -> dict[str, Any]:
@@ -385,7 +604,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=20, help="Maximum card records to attempt in one download run.")
     parser.add_argument("--max-images", type=int, default=None, help="Maximum individual image files to download in one run.")
     parser.add_argument("--set-id", default=None, help="Limit to one catalogue set id.")
-    parser.add_argument("--language", choices=DEFAULT_LANGUAGES, default=None, help="Limit to one language.")
+    parser.add_argument("--language", default=None, help="Limit to one language.")
+    parser.add_argument("--languages", default=None, help="Comma-separated languages to include. Defaults to en,jp.")
+    parser.add_argument("--include-zh", action="store_true", help="Include ZH provider image references when app support is not enabled.")
+    parser.add_argument(
+        "--include-provider-languages",
+        default=None,
+        help="Comma-separated provider-catalogue languages to include as image references.",
+    )
     parser.add_argument("--game", default="pokemon", help="Limit to one game. Currently pokemon is supported.")
     parser.add_argument("--output-root", default=str(DEFAULT_OUTPUT_ROOT), help="Local image output root for --download.")
     parser.add_argument("--format", choices=("jpg", "webp"), default="webp", help="Target cached/CDN image format.")
@@ -402,12 +628,32 @@ def main() -> None:
     if args.game != "pokemon":
         raise SystemExit("Only --game pokemon is currently supported")
 
+    languages_value = args.language or args.languages
+    languages = normalize_languages(languages_value, include_zh=False)
+    provider_languages = (
+        normalize_languages(args.include_provider_languages, include_zh=False)
+        if args.include_provider_languages
+        else []
+    )
+    if args.include_zh and "zh" not in provider_languages:
+        provider_languages.append("zh")
+
+    manifest_path = Path(args.manifest_path)
+    if not manifest_path.is_absolute():
+        manifest_path = ROOT / manifest_path
+    cdn_base_url = os.getenv("CARDSCANR_IMAGE_CDN_BASE_URL")
+    if not cdn_base_url and manifest_path.exists():
+        previous_manifest = load_json(manifest_path)
+        if isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("cdnBaseUrl"), str):
+            cdn_base_url = previous_manifest.get("cdnBaseUrl")
+
     manifest = build_manifest(
         game=args.game,
-        language=args.language,
+        languages=languages,
         set_id=args.set_id,
-        cdn_base_url=os.getenv("CARDSCANR_IMAGE_CDN_BASE_URL"),
+        cdn_base_url=cdn_base_url,
         image_format=args.format,
+        provider_languages=provider_languages,
     )
 
     if args.download:
@@ -422,12 +668,12 @@ def main() -> None:
             image_format=args.format,
         )
 
-    manifest_path = Path(args.manifest_path)
-    if not manifest_path.is_absolute():
-        manifest_path = ROOT / manifest_path
-    write_json(manifest_path, manifest)
-    print(f"Wrote {relative_or_absolute(manifest_path)}")
+    manifest = preserve_manifest_timestamps_if_materially_same(manifest_path, manifest)
+    changed = write_json_if_changed(manifest_path, manifest)
+    action = "Wrote" if changed else "Unchanged"
+    print(f"{action} {relative_or_absolute(manifest_path)}")
     print(f"Records: {manifest.get('recordCount', 0)}")
+    print(f"Languages: {manifest.get('languageCountMap', {})}")
     print(f"Mode: {manifest.get('mode')}")
     print(f"Downloads enabled: {'yes' if args.download else 'no'}")
 

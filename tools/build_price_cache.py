@@ -4204,7 +4204,14 @@ def resolve_build_mode(config: dict) -> str:
     mode, _set_id, _debug_provider_match = parse_build_cli_args()
     mode = mode or os.getenv("CACHE_BUILD_MODE") or config.get("buildMode") or "scheduled"
     mode = str(mode).strip().lower().replace("-", "_")
-    allowed_modes = {"scheduled", "current_prices", "full_catalogue", "tracked_history", "japanese_catalogue"}
+    allowed_modes = {
+        "scheduled",
+        "current_prices",
+        "full_catalogue",
+        "tracked_history",
+        "japanese_catalogue",
+        "app_catalogue",
+    }
     if mode not in allowed_modes:
         raise ValueError(f"Unsupported build mode '{mode}'. Expected one of {sorted(allowed_modes)}")
     return mode
@@ -4292,7 +4299,7 @@ def should_build_current_prices(mode: str, config: dict) -> bool:
 
 
 def should_build_full_catalogue(mode: str, config: dict) -> bool:
-    if mode == "full_catalogue":
+    if mode in {"full_catalogue", "app_catalogue"}:
         return True
     if mode == "scheduled" and config.get("rebuildFullCatalogueOnScheduled", False):
         return True
@@ -4302,7 +4309,7 @@ def should_build_full_catalogue(mode: str, config: dict) -> bool:
 def should_build_japanese_catalogue(mode: str, config: dict) -> bool:
     if mode == "japanese_catalogue":
         return bool(config.get("buildJapaneseFromTcgdex", True))
-    if mode == "full_catalogue":
+    if mode in {"full_catalogue", "app_catalogue"}:
         return bool(config.get("buildJapaneseFromTcgdex", True))
     if mode == "scheduled" and config.get("rebuildFullCatalogueOnScheduled", False):
         return bool(config.get("buildJapaneseFromTcgdex", True)) and bool(
