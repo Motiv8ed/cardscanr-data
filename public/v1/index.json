@@ -1,5 +1,5 @@
 {
-  "cacheVersion": "2026.05.23.2101",
+  "cacheVersion": "2026.05.23.2145",
   "datasets": [
     {
       "description": "CardScanR internal data API manifest",
@@ -11851,7 +11851,7 @@
       "schemaVersion": "1.0.0",
       "sha256": "e3b5494b4a337fe5a04205e59a221ac11e0c035ce94168d2ba979cb6768bcea2",
       "type": "price_current_status",
-      "updatedAtUtc": "2026-05-23T20:53:33Z",
+      "updatedAtUtc": "2026-05-23T21:45:19Z",
       "url": "/v1/prices/current/pokemon/en/status.json"
     },
     {
@@ -12467,15 +12467,51 @@
       "url": "/v1/prices/current/pokemon/en/zsv10pt5.json"
     },
     {
+      "description": "Pokemon TCG JP latest-known current prices for 23598",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_jp_23598",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 43200,
+      "schemaVersion": "1.0.0",
+      "sha256": "c26f81e206c7d563fe83d384c5715832f0e8df8cf12067a46b4cfb41fe5ee8f3",
+      "type": "price_current",
+      "updatedAtUtc": "2026-05-23T21:44:15Z",
+      "url": "/v1/prices/current/pokemon/jp/23598.json"
+    },
+    {
+      "description": "Pokemon TCG JP latest-known current prices for 23599",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_jp_23599",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 43200,
+      "schemaVersion": "1.0.0",
+      "sha256": "ad1571dd734b11e655e04a63be09674f7dc8cca1bd6a77de2675c0374235d862",
+      "type": "price_current",
+      "updatedAtUtc": "2026-05-23T21:44:15Z",
+      "url": "/v1/prices/current/pokemon/jp/23599.json"
+    },
+    {
+      "description": "Pokemon TCG JP latest-known current prices for 23600",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_jp_23600",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 43200,
+      "schemaVersion": "1.0.0",
+      "sha256": "3c4ace57639b20a6fcf504ae7d782587c32a64c323cff38fc6d7afa8423132c3",
+      "type": "price_current",
+      "updatedAtUtc": "2026-05-23T21:44:15Z",
+      "url": "/v1/prices/current/pokemon/jp/23600.json"
+    },
+    {
       "description": "CardScanR app-facing UTC price freshness/status for Pokemon JP",
       "game": "pokemon",
       "id": "prices_current_pokemon_jp_status",
       "language": "jp",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "69ffab7b3a57b9c315e3cd944620e06d35727908c1e63ee64c96147540cbe77f",
+      "sha256": "00b966a7c6ebafe7cbcc68fdaf53c08f431cd5d23e012a3305f7408b1ed2f024",
       "type": "price_current_status",
-      "updatedAtUtc": "2026-05-23T20:53:33Z",
+      "updatedAtUtc": "2026-05-23T21:44:15Z",
       "url": "/v1/prices/current/pokemon/jp/status.json"
     },
     {
@@ -12508,9 +12544,9 @@
       "id": "prices_status",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "afa5e90b11aeb86b134535ec147f5e11e704c0dd1f5c3d9052c96bbd253bccd4",
+      "sha256": "e6d951105944b550a5a25942b7a495cd3a7e355080fbe78022da4ffbcc052f37",
       "type": "price_status",
-      "updatedAtUtc": "2026-05-23T20:53:33Z",
+      "updatedAtUtc": "2026-05-23T21:44:15Z",
       "url": "/v1/prices/status.json"
     },
     {
@@ -22684,6 +22720,6 @@
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-23T21:01:35Z",
+  "generatedAtUtc": "2026-05-23T21:45:19Z",
   "schemaVersion": "1.0.0"
 }

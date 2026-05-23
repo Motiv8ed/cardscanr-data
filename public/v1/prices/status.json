@@ -1,6 +1,6 @@
 {
   "cacheVersion": "2026.05.23.2044",
-  "generatedAtUtc": "2026-05-23T20:44:24Z",
+  "generatedAtUtc": "2026-05-23T21:44:12Z",
   "intendedConsumer": "cardscanr_app",
   "languages": {
     "en": {
@@ -65,35 +65,42 @@
       }
     },
     "jp": {
-      "currentPriceFilesAvailable": false,
-      "currentPriceRecordCount": 0,
-      "currentPriceSetFileCount": 0,
+      "currentPriceFilesAvailable": true,
+      "currentPriceRecordCount": 810,
+      "currentPriceSetFileCount": 3,
       "game": "pokemon",
       "language": "jp",
-      "lastSuccessfulPriceUpdateAtUtc": null,
-      "lastUpdatedAtUtc": null,
+      "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T21:44:12Z",
+      "lastUpdatedAtUtc": "2026-05-23T21:44:12Z",
       "nextExpectedPriceUpdateAtUtc": null,
       "notes": [
         "Japanese catalogue support is partial.",
         "Japanese current price cache is not available yet.",
-        "Timestamps are UTC. Apps should convert to the user's local timezone."
+        "Timestamps are UTC. Apps should convert to the user's local timezone.",
+        "JP current prices are partial PokeWallet set-price imports.",
+        "Provider currency is stored as-is; no currency conversion is applied.",
+        "TCGPlayer USD and CardMarket EUR records remain separate."
       ],
-      "recordCount": 0,
-      "source": null,
+      "recordCount": 810,
+      "source": "pokewallet",
       "sourceSummary": {
-        "currency": null,
+        "currency": "mixed",
         "isLivePricing": false,
-        "primarySource": null,
-        "sourceCounts": {}
+        "primarySource": "pokewallet",
+        "sourceCounts": {
+          "pokewallet": 810
+        }
       },
       "staleness": {
-        "ageSeconds": null,
+        "ageSeconds": 0,
         "freshForSeconds": 86400,
         "staleAfterSeconds": 259200,
-        "status": "unavailable"
+        "status": "fresh"
       },
-      "status": "catalogue_only",
-      "statusCounts": {}
+      "status": "partial",
+      "statusCounts": {
+        "priced": 810
+      }
     }
   },
   "notes": [

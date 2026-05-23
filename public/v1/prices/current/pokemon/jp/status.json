@@ -1,43 +1,54 @@
 {
-  "currency": null,
-  "currentPriceFilesAvailable": false,
-  "currentPriceRecordCount": 0,
-  "currentPriceSetFileCount": 0,
+  "currency": "mixed",
+  "currentPriceFilesAvailable": true,
+  "currentPriceRecordCount": 810,
+  "currentPriceSetFileCount": 3,
   "expectedUpdateIntervalMinutes": null,
   "fullRotationEstimatedHours": null,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-23T20:44:24Z",
+  "generatedAtUtc": "2026-05-23T21:44:12Z",
   "isLivePricing": false,
   "language": "jp",
-  "lastBatchDurationSeconds": null,
-  "lastBatchFinishedAtUtc": null,
-  "lastBatchSetIds": [],
-  "lastBatchSize": 0,
-  "lastBatchStartedAtUtc": null,
-  "lastSuccessfulPriceUpdateAtUtc": null,
+  "lastBatchDurationSeconds": 0,
+  "lastBatchFinishedAtUtc": "2026-05-23T21:44:12Z",
+  "lastBatchSetIds": [
+    "23598",
+    "23599",
+    "23600"
+  ],
+  "lastBatchSize": 3,
+  "lastBatchStartedAtUtc": "2026-05-23T21:44:12Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T21:44:12Z",
   "lastSuccessfulPushAtUtc": null,
-  "lastUpdatedAtUtc": null,
+  "lastUpdatedAtUtc": "2026-05-23T21:44:12Z",
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
     "Japanese catalogue support is partial.",
     "Japanese current price cache is not available yet.",
-    "Timestamps are UTC. Apps should convert to the user's local timezone."
+    "Timestamps are UTC. Apps should convert to the user's local timezone.",
+    "JP current prices are partial PokeWallet set-price imports.",
+    "Provider currency is stored as-is; no currency conversion is applied.",
+    "TCGPlayer USD and CardMarket EUR records remain separate."
   ],
-  "recordCount": 0,
+  "recordCount": 810,
   "schemaVersion": "1.0.0",
-  "source": null,
+  "source": "pokewallet",
   "sourceSummary": {
-    "currency": null,
+    "currency": "mixed",
     "isLivePricing": false,
-    "primarySource": null,
-    "sourceCounts": {}
+    "primarySource": "pokewallet",
+    "sourceCounts": {
+      "pokewallet": 810
+    }
   },
   "staleness": {
-    "ageSeconds": null,
+    "ageSeconds": 0,
     "freshForSeconds": 86400,
     "staleAfterSeconds": 259200,
-    "status": "unavailable"
+    "status": "fresh"
   },
-  "status": "not_available",
-  "statusCounts": {}
+  "status": "partial",
+  "statusCounts": {
+    "priced": 810
+  }
 }
