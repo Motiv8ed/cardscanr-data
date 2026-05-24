@@ -1,16 +1,16 @@
 {
   "currency": "mixed",
   "currentPriceFilesAvailable": true,
-  "currentPriceRecordCount": 9655,
-  "currentPriceSetFileCount": 45,
+  "currentPriceRecordCount": 13295,
+  "currentPriceSetFileCount": 65,
   "expectedUpdateIntervalMinutes": null,
   "fullRotationEstimatedHours": null,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-24T05:53:30Z",
+  "generatedAtUtc": "2026-05-24T06:49:10Z",
   "isLivePricing": false,
   "language": "jp",
   "lastBatchDurationSeconds": 0,
-  "lastBatchFinishedAtUtc": "2026-05-24T01:49:11Z",
+  "lastBatchFinishedAtUtc": "2026-05-24T06:49:10Z",
   "lastBatchSetIds": [
     "23598",
     "23599",
@@ -56,13 +56,33 @@
     "23639",
     "23640",
     "23641",
-    "23642"
+    "23642",
+    "23643",
+    "23644",
+    "23645",
+    "23674",
+    "23675",
+    "23676",
+    "23677",
+    "23678",
+    "23679",
+    "23680",
+    "23681",
+    "23682",
+    "23683",
+    "23684",
+    "23685",
+    "23686",
+    "23687",
+    "23688",
+    "23689",
+    "23690"
   ],
-  "lastBatchSize": 45,
-  "lastBatchStartedAtUtc": "2026-05-24T01:49:11Z",
-  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T01:49:11Z",
+  "lastBatchSize": 65,
+  "lastBatchStartedAtUtc": "2026-05-24T06:49:10Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T06:49:10Z",
   "lastSuccessfulPushAtUtc": null,
-  "lastUpdatedAtUtc": "2026-05-24T01:49:11Z",
+  "lastUpdatedAtUtc": "2026-05-24T06:49:10Z",
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
     "JP current prices are partial PokeWallet set-price imports.",
@@ -70,7 +90,7 @@
     "TCGPlayer USD and CardMarket EUR records remain separate.",
     "Timestamps are UTC. Apps should convert to the user's local timezone."
   ],
-  "recordCount": 9655,
+  "recordCount": 13295,
   "schemaVersion": "1.0.0",
   "source": "pokewallet",
   "sourceSummary": {
@@ -78,7 +98,7 @@
     "isLivePricing": false,
     "primarySource": "pokewallet",
     "sourceCounts": {
-      "pokewallet": 9655
+      "pokewallet": 13295
     }
   },
   "staleness": {
@@ -89,6 +109,6 @@
   },
   "status": "partial",
   "statusCounts": {
-    "priced": 9655
+    "priced": 13295
   }
 }
