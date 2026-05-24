@@ -1,0 +1,1293 @@
+{
+  "currency": "mixed",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-24T09:25:57Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T09:25:57Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 27,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|23799|001/020|mewtwo_ex",
+      "canonicalId": "pokemon|jp|23799|001/020|mewtwo_ex|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "001/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mewtwo_ex",
+      "priceIdentityId": "pokemon|jp|23799|001/020|mewtwo_ex|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_e9fcdf282be35c536ea2329a1fb1a4302229373acb13e2ede9ac7a7d4132117460744cd03d7647a30339797998b5",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|001/020|mewtwo_ex",
+      "canonicalId": "pokemon|jp|23799|001/020|mewtwo_ex|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "001/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 5.0,
+      "lowPrice": 4.49,
+      "market": "tcgplayer",
+      "marketPrice": 4.03,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mewtwo_ex",
+      "priceIdentityId": "pokemon|jp|23799|001/020|mewtwo_ex|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_e9fcdf282be35c536ea2329a1fb1a4302229373acb13e2ede9ac7a7d4132117460744cd03d7647a30339797998b5",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|010/020|fog_crystal",
+      "canonicalId": "pokemon|jp|23799|010/020|fog_crystal|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "010/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "fog_crystal",
+      "priceIdentityId": "pokemon|jp|23799|010/020|fog_crystal|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_eb6d0c242e862c3f283f275eba09034fba3df3b908fcc8c85684fabf90904dda9b363021c1537736e01bb97aab6c2c",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|010/020|fog_crystal",
+      "canonicalId": "pokemon|jp|23799|010/020|fog_crystal|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "010/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "fog_crystal",
+      "priceIdentityId": "pokemon|jp|23799|010/020|fog_crystal|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_eb6d0c242e862c3f283f275eba09034fba3df3b908fcc8c85684fabf90904dda9b363021c1537736e01bb97aab6c2c",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|011/020|super_rod",
+      "canonicalId": "pokemon|jp|23799|011/020|super_rod|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "011/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "super_rod",
+      "priceIdentityId": "pokemon|jp|23799|011/020|super_rod|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_cb664e891b1a8322a7d2ce63531663dbe6467a74531e320a7a716455375a91886c52891140485cb13f97a0df8273fb",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|013/020|ultra_ball",
+      "canonicalId": "pokemon|jp|23799|013/020|ultra_ball|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "013/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": 0.09,
+      "market": "cardmarket",
+      "marketPrice": 0.16,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "ultra_ball",
+      "priceIdentityId": "pokemon|jp|23799|013/020|ultra_ball|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_38f1a7b4dc04a1eedca334964a306c89fb6f0bbea19296112a56112d143e3a849f653bb45bf29dc59dc295afa549dc",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|013/020|ultra_ball",
+      "canonicalId": "pokemon|jp|23799|013/020|ultra_ball|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "013/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "ultra_ball",
+      "priceIdentityId": "pokemon|jp|23799|013/020|ultra_ball|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_38f1a7b4dc04a1eedca334964a306c89fb6f0bbea19296112a56112d143e3a849f653bb45bf29dc59dc295afa549dc",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|016/020|bravery_charm",
+      "canonicalId": "pokemon|jp|23799|016/020|bravery_charm|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "016/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": 0.2,
+      "market": "cardmarket",
+      "marketPrice": 0.14,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "bravery_charm",
+      "priceIdentityId": "pokemon|jp|23799|016/020|bravery_charm|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_182c2e908c90dd6a5681893d8b7a9231c22fe3ee6ae3472451030f41efa2c11899fa69f33acc47f62ffc48215321ce",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|016/020|bravery_charm",
+      "canonicalId": "pokemon|jp|23799|016/020|bravery_charm|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "016/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "bravery_charm",
+      "priceIdentityId": "pokemon|jp|23799|016/020|bravery_charm|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_182c2e908c90dd6a5681893d8b7a9231c22fe3ee6ae3472451030f41efa2c11899fa69f33acc47f62ffc48215321ce",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|017/020|iono",
+      "canonicalId": "pokemon|jp|23799|017/020|iono|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "017/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "iono",
+      "priceIdentityId": "pokemon|jp|23799|017/020|iono|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_716ad5ff3a774858374e7118408f993ea9b3452a077080fae1f6424ca446eca5ac74ecbceb5e8bc4028ec0f2bf64b4",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|017/020|iono",
+      "canonicalId": "pokemon|jp|23799|017/020|iono|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "017/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "iono",
+      "priceIdentityId": "pokemon|jp|23799|017/020|iono|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_716ad5ff3a774858374e7118408f993ea9b3452a077080fae1f6424ca446eca5ac74ecbceb5e8bc4028ec0f2bf64b4",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|018/020|nemona",
+      "canonicalId": "pokemon|jp|23799|018/020|nemona|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "018/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": 0.08,
+      "market": "cardmarket",
+      "marketPrice": 0.09,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "nemona",
+      "priceIdentityId": "pokemon|jp|23799|018/020|nemona|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_fd3356838eb2974957bd31179727f8f280de01e2ae53c08b16092b3b83a9d6e6016afafd47e70abe662d3c53f8063e",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|018/020|nemona",
+      "canonicalId": "pokemon|jp|23799|018/020|nemona|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "018/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 1.19,
+      "market": "tcgplayer",
+      "marketPrice": 3.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "nemona",
+      "priceIdentityId": "pokemon|jp|23799|018/020|nemona|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fd3356838eb2974957bd31179727f8f280de01e2ae53c08b16092b3b83a9d6e6016afafd47e70abe662d3c53f8063e",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|019/020|professors_research",
+      "canonicalId": "pokemon|jp|23799|019/020|professors_research|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "019/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": 0.07,
+      "market": "cardmarket",
+      "marketPrice": 0.3,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "professors_research",
+      "priceIdentityId": "pokemon|jp|23799|019/020|professors_research|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_908378ce45464552cbfdbeedc468e1472faf00b35c5dead1286ddc0e2e38844600a8a76c24f713fa33b781f38ae57a",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|019/020|professors_research",
+      "canonicalId": "pokemon|jp|23799|019/020|professors_research|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "019/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 2.99,
+      "market": "tcgplayer",
+      "marketPrice": 3.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "professors_research",
+      "priceIdentityId": "pokemon|jp|23799|019/020|professors_research|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_908378ce45464552cbfdbeedc468e1472faf00b35c5dead1286ddc0e2e38844600a8a76c24f713fa33b781f38ae57a",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|002/020|exeggcute",
+      "canonicalId": "pokemon|jp|23799|002/020|exeggcute|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "002/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "exeggcute",
+      "priceIdentityId": "pokemon|jp|23799|002/020|exeggcute|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_cc6c933a33f2c8281d29f0e7333ea0f0e0c1243ebf2fa1a22d3e65c84c6ff999e4ce3228cbba4616a10aedf655b3",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|002/020|exeggcute",
+      "canonicalId": "pokemon|jp|23799|002/020|exeggcute|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "002/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 4.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "exeggcute",
+      "priceIdentityId": "pokemon|jp|23799|002/020|exeggcute|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_cc6c933a33f2c8281d29f0e7333ea0f0e0c1243ebf2fa1a22d3e65c84c6ff999e4ce3228cbba4616a10aedf655b3",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|003/020|exeggutor",
+      "canonicalId": "pokemon|jp|23799|003/020|exeggutor|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "003/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": 0.25,
+      "market": "cardmarket",
+      "marketPrice": 0.3,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "exeggutor",
+      "priceIdentityId": "pokemon|jp|23799|003/020|exeggutor|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_e699845e3e4284875006af874b84e1fba6983407fea16c664cd45574129f2830baaf36bdce3428db2b8840b15620",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|003/020|exeggutor",
+      "canonicalId": "pokemon|jp|23799|003/020|exeggutor|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "003/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 4.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "exeggutor",
+      "priceIdentityId": "pokemon|jp|23799|003/020|exeggutor|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_e699845e3e4284875006af874b84e1fba6983407fea16c664cd45574129f2830baaf36bdce3428db2b8840b15620",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|004/020|natu",
+      "canonicalId": "pokemon|jp|23799|004/020|natu|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "004/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "natu",
+      "priceIdentityId": "pokemon|jp|23799|004/020|natu|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_515c786835e90897b005d08a594c96e11fa4d7a66ea75dcf1e6d3f15debc71bce553a288bde446a67418348e6e55",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|004/020|natu",
+      "canonicalId": "pokemon|jp|23799|004/020|natu|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "004/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 3.99,
+      "lowPrice": 2.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.25,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "natu",
+      "priceIdentityId": "pokemon|jp|23799|004/020|natu|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_515c786835e90897b005d08a594c96e11fa4d7a66ea75dcf1e6d3f15debc71bce553a288bde446a67418348e6e55",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|005/020|xatu",
+      "canonicalId": "pokemon|jp|23799|005/020|xatu|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "005/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "xatu",
+      "priceIdentityId": "pokemon|jp|23799|005/020|xatu|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_d828f1a606ee3800e3b2bc71ee2438ccdb23d36d6a1ec6175fb81c31b3e3d64079c83f805f0777635ef0a0289e16",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|005/020|xatu",
+      "canonicalId": "pokemon|jp|23799|005/020|xatu|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "005/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 5.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "xatu",
+      "priceIdentityId": "pokemon|jp|23799|005/020|xatu|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_d828f1a606ee3800e3b2bc71ee2438ccdb23d36d6a1ec6175fb81c31b3e3d64079c83f805f0777635ef0a0289e16",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|007/020|cottonee",
+      "canonicalId": "pokemon|jp|23799|007/020|cottonee|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "007/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "cottonee",
+      "priceIdentityId": "pokemon|jp|23799|007/020|cottonee|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_fd43599eb5cb26a30cbf98fcf890706434c67ab82170cd560fbe672bf6191342aaf9f02e99b6573786dc2ecbbded",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|007/020|cottonee",
+      "canonicalId": "pokemon|jp|23799|007/020|cottonee|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "007/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 4.99,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "cottonee",
+      "priceIdentityId": "pokemon|jp|23799|007/020|cottonee|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fd43599eb5cb26a30cbf98fcf890706434c67ab82170cd560fbe672bf6191342aaf9f02e99b6573786dc2ecbbded",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|009/020|dedenne",
+      "canonicalId": "pokemon|jp|23799|009/020|dedenne|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "009/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:37.84853",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "dedenne",
+      "priceIdentityId": "pokemon|jp|23799|009/020|dedenne|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_90076108309c22e142a8b2317a1a75e65a7a7f8c1c42a0952c3d8e738795b430c9be14a92a6aaef4c836989ad5f9",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23799|009/020|dedenne",
+      "canonicalId": "pokemon|jp|23799|009/020|dedenne|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "009/020",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:03.995663",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T09:25:57Z",
+      "highPrice": 4.79,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.79,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "dedenne",
+      "priceIdentityId": "pokemon|jp|23799|009/020|dedenne|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_90076108309c22e142a8b2317a1a75e65a7a7f8c1c42a0952c3d8e738795b430c9be14a92a6aaef4c836989ad5f9",
+        "pokewalletSetId": "23799"
+      },
+      "setId": "23799",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "23799",
+  "setName": "SV: Mewtwo ex Terastal Starter Set",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
