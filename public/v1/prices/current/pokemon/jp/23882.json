@@ -1,0 +1,306 @@
+{
+  "currency": "mixed",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-24T20:51:31Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T20:51:31Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 6,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|23882|017/021|ilima",
+      "canonicalId": "pokemon|jp|23882|017/021|ilima|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "017/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": 0.35,
+      "market": "cardmarket",
+      "marketPrice": null,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "ilima",
+      "priceIdentityId": "pokemon|jp|23882|017/021|ilima|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_4b68ee29775bf813f6ac607b8157708b2ecc6c04e7789741c1a657c250de0b1884b5b467d672cc1c3a3dc2e54b7323",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23882|017/021|ilima",
+      "canonicalId": "pokemon|jp|23882|017/021|ilima|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "017/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 5.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "ilima",
+      "priceIdentityId": "pokemon|jp|23882|017/021|ilima|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_4b68ee29775bf813f6ac607b8157708b2ecc6c04e7789741c1a657c250de0b1884b5b467d672cc1c3a3dc2e54b7323",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23882|021/021|lillie",
+      "canonicalId": "pokemon|jp|23882|021/021|lillie|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "021/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "lillie",
+      "priceIdentityId": "pokemon|jp|23882|021/021|lillie|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_908a479d6e2dc3ef023d496efa1a2d524d55add06d5c7298757d16e4c91aa78de6fc0593e8002a704e0afc30794963",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23882|021/021|lillie",
+      "canonicalId": "pokemon|jp|23882|021/021|lillie|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "021/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 5.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "lillie",
+      "priceIdentityId": "pokemon|jp|23882|021/021|lillie|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_908a479d6e2dc3ef023d496efa1a2d524d55add06d5c7298757d16e4c91aa78de6fc0593e8002a704e0afc30794963",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23882|005/021|tapu_bulu_gx",
+      "canonicalId": "pokemon|jp|23882|005/021|tapu_bulu_gx|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "005/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "tapu_bulu_gx",
+      "priceIdentityId": "pokemon|jp|23882|005/021|tapu_bulu_gx|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b9c65f361826ce3d09a8fa400e628bd98e951e76fcea014f6f3482c2eb24f5e731d1d11d0904b4505e2d772594df",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23882|005/021|tapu_bulu_gx",
+      "canonicalId": "pokemon|jp|23882|005/021|tapu_bulu_gx|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "005/021",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 6.66,
+      "lowPrice": 1.5,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "tapu_bulu_gx",
+      "priceIdentityId": "pokemon|jp|23882|005/021|tapu_bulu_gx|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b9c65f361826ce3d09a8fa400e628bd98e951e76fcea014f6f3482c2eb24f5e731d1d11d0904b4505e2d772594df",
+        "pokewalletSetId": "23882"
+      },
+      "setId": "23882",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "23882",
+  "setName": "smC: Tapu Bulu-GX Enhanced Starter Set",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}

@@ -1,0 +1,165 @@
+{
+  "currency": "mixed",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-24T20:51:31Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T20:51:31Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 3,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|23886|036/041|wally",
+      "canonicalId": "pokemon|jp|23886|036/041|wally|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "036/041",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "wally",
+      "priceIdentityId": "pokemon|jp|23886|036/041|wally|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_9edd041a80b700af8e9ce8a403624ac85e52cbb50182b4cc014de77c8fd71540c5317671fdf62a2dc942ee60b3f715",
+        "pokewalletSetId": "23886"
+      },
+      "setId": "23886",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23886|036/041|wally",
+      "canonicalId": "pokemon|jp|23886|036/041|wally|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "036/041",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-16T07:22:26.801968",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 0.5,
+      "lowPrice": 0.5,
+      "market": "tcgplayer",
+      "marketPrice": 0.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "wally",
+      "priceIdentityId": "pokemon|jp|23886|036/041|wally|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_9edd041a80b700af8e9ce8a403624ac85e52cbb50182b4cc014de77c8fd71540c5317671fdf62a2dc942ee60b3f715",
+        "pokewalletSetId": "23886"
+      },
+      "setId": "23886",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23886|009/041|guzma",
+      "canonicalId": "pokemon|jp|23886|009/041|guzma|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "009/041",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:05.919844",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "guzma",
+      "priceIdentityId": "pokemon|jp|23886|009/041|guzma|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_0ab3f2ac9b13e5d92909979d3bba15ba5b48cb153a44d209525740fd3ee08c1eb577ee34333792f63994841bd99e",
+        "pokewalletSetId": "23886"
+      },
+      "setId": "23886",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "23886",
+  "setName": "smG: Ultra Sun & Ultra Moon Deck Build Boxes",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}

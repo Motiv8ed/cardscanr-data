@@ -1,0 +1,1340 @@
+{
+  "currency": "mixed",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-24T20:51:31Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T20:51:31Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 28,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|23877|001/013|litten",
+      "canonicalId": "pokemon|jp|23877|001/013|litten|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "001/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "litten",
+      "priceIdentityId": "pokemon|jp|23877|001/013|litten|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_e7acf573758e95d62b95b49b65fd45d2c2ce555bd76aebc34c8f72aab839032e4b22c05d6ba16f9ba0aec10cfe69",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|001/013|litten",
+      "canonicalId": "pokemon|jp|23877|001/013|litten|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "001/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 2.49,
+      "lowPrice": 0.95,
+      "market": "tcgplayer",
+      "marketPrice": 4.29,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "litten",
+      "priceIdentityId": "pokemon|jp|23877|001/013|litten|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_e7acf573758e95d62b95b49b65fd45d2c2ce555bd76aebc34c8f72aab839032e4b22c05d6ba16f9ba0aec10cfe69",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|010/013|rayquaza",
+      "canonicalId": "pokemon|jp|23877|010/013|rayquaza|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "010/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "rayquaza",
+      "priceIdentityId": "pokemon|jp|23877|010/013|rayquaza|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_21533f381157c09cef50e56581ff9b1a9b3ce7dcc1c0cabbafc571fc1ba504388a335aa52e84ebfe9d6ab9bcc3f9d1",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|010/013|rayquaza",
+      "canonicalId": "pokemon|jp|23877|010/013|rayquaza|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "010/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 3.99,
+      "lowPrice": 3.99,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "rayquaza",
+      "priceIdentityId": "pokemon|jp|23877|010/013|rayquaza|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_21533f381157c09cef50e56581ff9b1a9b3ce7dcc1c0cabbafc571fc1ba504388a335aa52e84ebfe9d6ab9bcc3f9d1",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|011/013|pikipek",
+      "canonicalId": "pokemon|jp|23877|011/013|pikipek|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "011/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pikipek",
+      "priceIdentityId": "pokemon|jp|23877|011/013|pikipek|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_24558ade8b448d360bff3a56886c38ef8ef2f2123657aab7999f5c292f8db640cf4cbc4b5187ab2c89bbfb6e7d943c",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|011/013|pikipek",
+      "canonicalId": "pokemon|jp|23877|011/013|pikipek|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "011/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 5.69,
+      "lowPrice": 4.29,
+      "market": "tcgplayer",
+      "marketPrice": 4.39,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pikipek",
+      "priceIdentityId": "pokemon|jp|23877|011/013|pikipek|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_24558ade8b448d360bff3a56886c38ef8ef2f2123657aab7999f5c292f8db640cf4cbc4b5187ab2c89bbfb6e7d943c",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|012/013|stufful",
+      "canonicalId": "pokemon|jp|23877|012/013|stufful|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "012/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "stufful",
+      "priceIdentityId": "pokemon|jp|23877|012/013|stufful|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_451440247f41844ea40ad598b080cf28321986553be335aaaf0e1cdae0fb4640879d753591d7cea0b2d1afd9aa4a16",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|012/013|stufful",
+      "canonicalId": "pokemon|jp|23877|012/013|stufful|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "012/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 2.99,
+      "lowPrice": 1.75,
+      "market": "tcgplayer",
+      "marketPrice": 2.59,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "stufful",
+      "priceIdentityId": "pokemon|jp|23877|012/013|stufful|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_451440247f41844ea40ad598b080cf28321986553be335aaaf0e1cdae0fb4640879d753591d7cea0b2d1afd9aa4a16",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|013/013|bewear",
+      "canonicalId": "pokemon|jp|23877|013/013|bewear|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "013/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": 0.15,
+      "market": "cardmarket",
+      "marketPrice": 0.68,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "bewear",
+      "priceIdentityId": "pokemon|jp|23877|013/013|bewear|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_3c9b63fd63faa5c1dbf2dcec53bfda6a552c901d229436cf41e4c05025c67e21d241ad87df6b0cd7f07eb1c6bd0665",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|013/013|bewear",
+      "canonicalId": "pokemon|jp|23877|013/013|bewear|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "013/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 2.79,
+      "lowPrice": 2.79,
+      "market": "tcgplayer",
+      "marketPrice": 2.79,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "bewear",
+      "priceIdentityId": "pokemon|jp|23877|013/013|bewear|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_3c9b63fd63faa5c1dbf2dcec53bfda6a552c901d229436cf41e4c05025c67e21d241ad87df6b0cd7f07eb1c6bd0665",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|002/013|turtonator",
+      "canonicalId": "pokemon|jp|23877|002/013|turtonator|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "002/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "turtonator",
+      "priceIdentityId": "pokemon|jp|23877|002/013|turtonator|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_457ca85ea1f53c2b1683ac7d41c0571634a18e732c5162a97d0033b5f394488db03cb272361f0af28e78113352d9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|002/013|turtonator",
+      "canonicalId": "pokemon|jp|23877|002/013|turtonator|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "002/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 3.29,
+      "lowPrice": 2.5,
+      "market": "tcgplayer",
+      "marketPrice": 1.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "turtonator",
+      "priceIdentityId": "pokemon|jp|23877|002/013|turtonator|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_457ca85ea1f53c2b1683ac7d41c0571634a18e732c5162a97d0033b5f394488db03cb272361f0af28e78113352d9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|003/013|carvanha",
+      "canonicalId": "pokemon|jp|23877|003/013|carvanha|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "003/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "carvanha",
+      "priceIdentityId": "pokemon|jp|23877|003/013|carvanha|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_4939df7b60d8d2be804b4577e03442957d8cdec30066c6893b390dcf17f3a669174f12d86bde498c99732341080e",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|003/013|carvanha",
+      "canonicalId": "pokemon|jp|23877|003/013|carvanha|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "003/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 0.99,
+      "lowPrice": 0.75,
+      "market": "tcgplayer",
+      "marketPrice": 0.87,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "carvanha",
+      "priceIdentityId": "pokemon|jp|23877|003/013|carvanha|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_4939df7b60d8d2be804b4577e03442957d8cdec30066c6893b390dcf17f3a669174f12d86bde498c99732341080e",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|004/013|sharpedo",
+      "canonicalId": "pokemon|jp|23877|004/013|sharpedo|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "004/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": 0.2,
+      "market": "cardmarket",
+      "marketPrice": 0.8,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "sharpedo",
+      "priceIdentityId": "pokemon|jp|23877|004/013|sharpedo|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_4ae607e703f4f099c13c2e94b35f2d26d1fe9b80c61c6018dc35720b4042cc19d9b4437c22d0d30818420caca7e3",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|004/013|sharpedo",
+      "canonicalId": "pokemon|jp|23877|004/013|sharpedo|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "004/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 4.0,
+      "lowPrice": 1.99,
+      "market": "tcgplayer",
+      "marketPrice": 2.39,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "sharpedo",
+      "priceIdentityId": "pokemon|jp|23877|004/013|sharpedo|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_4ae607e703f4f099c13c2e94b35f2d26d1fe9b80c61c6018dc35720b4042cc19d9b4437c22d0d30818420caca7e3",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|005/013|mareanie",
+      "canonicalId": "pokemon|jp|23877|005/013|mareanie|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "005/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mareanie",
+      "priceIdentityId": "pokemon|jp|23877|005/013|mareanie|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_fd9bc89cd5f1660c0d5bb34d26b0cf2f87dc60d646072277950819518d4779303e9cde976dfffaecb2bac6c2ec8f",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|005/013|mareanie",
+      "canonicalId": "pokemon|jp|23877|005/013|mareanie|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "005/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 3.79,
+      "lowPrice": 3.79,
+      "market": "tcgplayer",
+      "marketPrice": 3.79,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mareanie",
+      "priceIdentityId": "pokemon|jp|23877|005/013|mareanie|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fd9bc89cd5f1660c0d5bb34d26b0cf2f87dc60d646072277950819518d4779303e9cde976dfffaecb2bac6c2ec8f",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|006/013|machop",
+      "canonicalId": "pokemon|jp|23877|006/013|machop|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "006/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "machop",
+      "priceIdentityId": "pokemon|jp|23877|006/013|machop|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b2139b9f36524bb256b4ed362b1c48a46d1568024a1579ab85bb58fbf5ebf6f3bdd743c3ec31c5a2e9134c4c32e9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|006/013|machop",
+      "canonicalId": "pokemon|jp|23877|006/013|machop|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "006/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-16T07:22:26.562361",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 3.89,
+      "lowPrice": 1.95,
+      "market": "tcgplayer",
+      "marketPrice": 2.92,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "machop",
+      "priceIdentityId": "pokemon|jp|23877|006/013|machop|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b2139b9f36524bb256b4ed362b1c48a46d1568024a1579ab85bb58fbf5ebf6f3bdd743c3ec31c5a2e9134c4c32e9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|006/013|machop",
+      "canonicalId": "pokemon|jp|23877|006/013|machop|pokewallet|cardmarket|eur|normal|near_mint",
+      "collectorNumber": "006/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "machop",
+      "priceIdentityId": "pokemon|jp|23877|006/013|machop|normal|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b2139b9f36524bb256b4ed362b1c48a46d1568024a1579ab85bb58fbf5ebf6f3bdd743c3ec31c5a2e9134c4c32e9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|006/013|machop",
+      "canonicalId": "pokemon|jp|23877|006/013|machop|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "006/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 2.0,
+      "lowPrice": 1.25,
+      "market": "tcgplayer",
+      "marketPrice": 1.63,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "machop",
+      "priceIdentityId": "pokemon|jp|23877|006/013|machop|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b2139b9f36524bb256b4ed362b1c48a46d1568024a1579ab85bb58fbf5ebf6f3bdd743c3ec31c5a2e9134c4c32e9",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|007/013|zygarde",
+      "canonicalId": "pokemon|jp|23877|007/013|zygarde|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "007/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "zygarde",
+      "priceIdentityId": "pokemon|jp|23877|007/013|zygarde|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_2efe93e303d5026dee7bf8fa546ece0bcaa4413b594583468112a1b771415064e447e15e4cb07084d5486e07228c",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|007/013|zygarde",
+      "canonicalId": "pokemon|jp|23877|007/013|zygarde|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "007/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 5.25,
+      "lowPrice": 5.25,
+      "market": "tcgplayer",
+      "marketPrice": 4.89,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "zygarde",
+      "priceIdentityId": "pokemon|jp|23877|007/013|zygarde|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_2efe93e303d5026dee7bf8fa546ece0bcaa4413b594583468112a1b771415064e447e15e4cb07084d5486e07228c",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|008/013|rockruff",
+      "canonicalId": "pokemon|jp|23877|008/013|rockruff|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "008/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": 0.09,
+      "market": "cardmarket",
+      "marketPrice": 0.53,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "rockruff",
+      "priceIdentityId": "pokemon|jp|23877|008/013|rockruff|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_c742925dd800ed5827c79956c3330a3d997e6d76711f4cc715a0735971221ed6792d29523dd7ff605860162ab88b",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|008/013|rockruff",
+      "canonicalId": "pokemon|jp|23877|008/013|rockruff|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "008/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 2.49,
+      "lowPrice": 1.49,
+      "market": "tcgplayer",
+      "marketPrice": 1.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "rockruff",
+      "priceIdentityId": "pokemon|jp|23877|008/013|rockruff|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_c742925dd800ed5827c79956c3330a3d997e6d76711f4cc715a0735971221ed6792d29523dd7ff605860162ab88b",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|009/013|lycanroc_gx",
+      "canonicalId": "pokemon|jp|23877|009/013|lycanroc_gx|pokewallet|cardmarket|eur|holo|near_mint",
+      "collectorNumber": "009/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:26:33.070197",
+        "rawSource": "cardmarket",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "lycanroc_gx",
+      "priceIdentityId": "pokemon|jp|23877|009/013|lycanroc_gx|holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_c642d359e111d770664b1400231ce9dbb970efb3005c05793aaa4bff40ed3135bb66f5f939cdd82e820071f19c32",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|23877|009/013|lycanroc_gx",
+      "canonicalId": "pokemon|jp|23877|009/013|lycanroc_gx|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "009/013",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-24T07:46:07.903022",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T20:51:31Z",
+      "highPrice": 5.69,
+      "lowPrice": 1.25,
+      "market": "tcgplayer",
+      "marketPrice": 1.8,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "lycanroc_gx",
+      "priceIdentityId": "pokemon|jp|23877|009/013|lycanroc_gx|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_c642d359e111d770664b1400231ce9dbb970efb3005c05793aaa4bff40ed3135bb66f5f939cdd82e820071f19c32",
+        "pokewalletSetId": "23877"
+      },
+      "setId": "23877",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "23877",
+  "setName": "smP1: Rockruff Full Power Deck",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
