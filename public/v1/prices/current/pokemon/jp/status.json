@@ -1,16 +1,16 @@
 {
   "currency": "mixed",
   "currentPriceFilesAvailable": true,
-  "currentPriceRecordCount": 5850,
-  "currentPriceSetFileCount": 25,
+  "currentPriceRecordCount": 7684,
+  "currentPriceSetFileCount": 34,
   "expectedUpdateIntervalMinutes": null,
   "fullRotationEstimatedHours": null,
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-23T23:46:40Z",
+  "generatedAtUtc": "2026-05-24T00:29:06Z",
   "isLivePricing": false,
   "language": "jp",
   "lastBatchDurationSeconds": 0,
-  "lastBatchFinishedAtUtc": "2026-05-23T23:41:33Z",
+  "lastBatchFinishedAtUtc": "2026-05-24T00:29:06Z",
   "lastBatchSetIds": [
     "23598",
     "23599",
@@ -36,13 +36,22 @@
     "23619",
     "23620",
     "23621",
-    "23622"
+    "23622",
+    "23623",
+    "23624",
+    "23625",
+    "23626",
+    "23627",
+    "23628",
+    "23629",
+    "23630",
+    "23631"
   ],
-  "lastBatchSize": 25,
-  "lastBatchStartedAtUtc": "2026-05-23T23:41:33Z",
-  "lastSuccessfulPriceUpdateAtUtc": "2026-05-23T23:41:33Z",
+  "lastBatchSize": 34,
+  "lastBatchStartedAtUtc": "2026-05-24T00:29:06Z",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T00:29:06Z",
   "lastSuccessfulPushAtUtc": null,
-  "lastUpdatedAtUtc": "2026-05-23T23:41:33Z",
+  "lastUpdatedAtUtc": "2026-05-24T00:29:06Z",
   "nextExpectedPriceUpdateAtUtc": null,
   "notes": [
     "JP current prices are partial PokeWallet set-price imports.",
@@ -50,7 +59,7 @@
     "TCGPlayer USD and CardMarket EUR records remain separate.",
     "Timestamps are UTC. Apps should convert to the user's local timezone."
   ],
-  "recordCount": 5850,
+  "recordCount": 7684,
   "schemaVersion": "1.0.0",
   "source": "pokewallet",
   "sourceSummary": {
@@ -58,7 +67,7 @@
     "isLivePricing": false,
     "primarySource": "pokewallet",
     "sourceCounts": {
-      "pokewallet": 5850
+      "pokewallet": 7684
     }
   },
   "staleness": {
@@ -69,6 +78,6 @@
   },
   "status": "partial",
   "statusCounts": {
-    "priced": 5850
+    "priced": 7684
   }
 }
