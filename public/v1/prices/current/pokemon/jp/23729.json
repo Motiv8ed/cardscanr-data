@@ -1,0 +1,71 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-24T07:06:13Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-24T07:06:13Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 1,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|23729|229.0|dark_houndoom",
+      "canonicalId": "pokemon|jp|23729|229.0|dark_houndoom|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "229.0",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-23T07:39:41.239741",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-24T07:06:13Z",
+      "highPrice": 9999.0,
+      "lowPrice": 9999.0,
+      "market": "tcgplayer",
+      "marketPrice": 41.22,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "dark_houndoom",
+      "priceIdentityId": "pokemon|jp|23729|229.0|dark_houndoom|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_500156fc65e6156e3657c7185c784476a2df7dfdad661132e106e01f1ce9578428b9309dd3df2f70cf77a74c14e3",
+        "pokewalletSetId": "23729"
+      },
+      "setId": "23729",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "23729",
+  "setName": "Darkness, and to Light...",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
