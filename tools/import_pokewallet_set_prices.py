@@ -1552,6 +1552,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         "estimatedNewCoverage": selection_meta.get("estimatedNewCoverage") if isinstance(selection_meta.get("estimatedNewCoverage"), dict) else {},
         "plannedRequests": len(targets),
         "requestsAllowedByBudget": snapshot["requestsAllowedByBudget"],
+        "requestsRemainingAfterExecution": snapshot["requestsAllowedByBudget"],
         "requestsSkippedDueToBudget": 0,
         "hourlyUsed": snapshot["hourlyUsed"],
         "hourlyRemaining": snapshot["hourlyRemaining"],
@@ -1656,6 +1657,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
                 if allowed <= 0:
                     report["status"] = "blocked"
                     report["budgetDecision"] = "blocked_no_budget_remaining"
+                    report["requestsSkippedDueToBudget"] = max(0, planned)
                     report["nextRecommendedAction"] = (
                         "No safe request budget remains right now. Wait for quota reset or pass --ignore-budget "
                         "only for explicit manual override. "
@@ -1685,6 +1687,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
                 if int(report.get("dailyRemaining") or 0) <= 0:
                     report["status"] = "blocked"
                     report["budgetDecision"] = "blocked_daily_budget_exhausted"
+                    report["requestsSkippedDueToBudget"] = max(0, planned)
                     report["nextRecommendedAction"] = (
                         "Daily safe budget is exhausted. Wait for daily reset or lower request volume. "
                         f"Daily reset estimate: {report.get('dailyResetAtUtc') or 'unknown'}."
@@ -1757,7 +1760,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             report["recordsByVariant"][variant] = int(report["recordsByVariant"].get(variant, 0)) + int(count)
 
     post_snapshot = budget_snapshot(ledger, budget_settings, datetime.now(timezone.utc))
-    report["requestsAllowedByBudget"] = post_snapshot["requestsAllowedByBudget"]
+    report["requestsRemainingAfterExecution"] = post_snapshot["requestsAllowedByBudget"]
     report["hourlyUsed"] = post_snapshot["hourlyUsed"]
     report["hourlyRemaining"] = post_snapshot["hourlyRemaining"]
     report["dailyUsed"] = post_snapshot["dailyUsed"]

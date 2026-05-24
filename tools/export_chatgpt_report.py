@@ -43,6 +43,8 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/pokewallet_api_capability_audit_latest.md",
     "reports/pokewallet_price_import_latest.json",
     "reports/pokewallet_price_import_latest.md",
+    "reports/pokewallet_missing_price_worker_latest.json",
+    "reports/pokewallet_missing_price_worker_latest.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -544,6 +546,33 @@ def _collect_pokewallet_price_budget_ledger() -> dict[str, Any]:
     }
 
 
+def _collect_pokewallet_missing_price_worker_report() -> dict[str, Any]:
+    data = _load_json("reports/pokewallet_missing_price_worker_latest.json")
+    if data is None:
+        return {"available": False}
+    return {
+        "available": True,
+        "startedAtUtc": data.get("startedAtUtc"),
+        "finishedAtUtc": data.get("finishedAtUtc"),
+        "status": data.get("status"),
+        "stopReason": data.get("stopReason"),
+        "cyclesAttempted": data.get("cyclesAttempted", 0),
+        "cyclesCompleted": data.get("cyclesCompleted", 0),
+        "cyclesBlockedByBudget": data.get("cyclesBlockedByBudget", 0),
+        "totalApiRequests": data.get("totalApiRequests", 0),
+        "totalImportedRecords": data.get("totalImportedRecords", 0),
+        "beforeJpPriceCount": data.get("beforeJpPriceCount", 0),
+        "afterJpPriceCount": data.get("afterJpPriceCount", 0),
+        "beforeJpPriceFileCount": data.get("beforeJpPriceFileCount", 0),
+        "afterJpPriceFileCount": data.get("afterJpPriceFileCount", 0),
+        "lastSelectedSetIds": data.get("lastSelectedSetIds", []),
+        "lastImporterStatus": data.get("lastImporterStatus"),
+        "validationResults": data.get("validationResults", []),
+        "commitHashesPushed": data.get("commitHashesPushed", []),
+        "nextRecommendedCommand": data.get("nextRecommendedCommand", ""),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -578,9 +607,15 @@ def _recommend_next_action(
     git: dict[str, Any],
     pokewallet_api_audit: dict[str, Any] | None = None,
     pokewallet_price_import: dict[str, Any] | None = None,
+    pokewallet_missing_price_worker: dict[str, Any] | None = None,
     v1: dict[str, Any] | None = None,
 ) -> str:
     issues: list[str] = []
+    worker_cmd = ".\\scripts\\run_pokewallet_missing_price_worker.ps1 -Language jp -MaxNewSetsPerCycle 20 -UntilComplete"
+    if pokewallet_missing_price_worker and pokewallet_missing_price_worker.get("available"):
+        preferred = str(pokewallet_missing_price_worker.get("nextRecommendedCommand") or "").strip()
+        if preferred and "-DryRunOnly" not in preferred:
+            worker_cmd = preferred
 
     if pokewallet_price_import and pokewallet_price_import.get("available"):
         if pokewallet_price_import.get("rateLimitDetected") and pokewallet_price_import.get("allEndpointsFailed"):
@@ -589,15 +624,21 @@ def _recommend_next_action(
                 hourly_reset_hint = (
                     f" Remaining hourly safe budget: {pokewallet_price_import.get('hourlyRemaining', 0)}."
                 )
+            worker_sleep_cmd = (
+                " .\\scripts\\run_pokewallet_missing_price_worker.ps1 -Language jp -MaxNewSetsPerCycle 20 "
+                "-UntilComplete -SleepWhenBudgetBlocked -PollSeconds 300"
+            )
             return (
                 "PokeWallet price import was fully rate-limited (all endpoints failed with HTTP 429). "
-                "Wait for hourly budget reset before another write; use missing-set expansion with a smaller --max-new-sets value and --fit-budget."
+                "Wait for hourly budget reset before another write; prefer the automated worker with sleep mode."
+                f" Command:{worker_sleep_cmd}"
                 + hourly_reset_hint
             )
         if pokewallet_price_import.get("status") in {"failed", "rate_limited"}:
             return (
                 "Latest PokeWallet price import failed. Review status codes/error snippets in "
-                "reports/pokewallet_price_import_latest.json and rerun a smaller dry-run before writing."
+                "reports/pokewallet_price_import_latest.json, then continue via the worker command: "
+                f"{worker_cmd}"
             )
 
     if pipeline.get("failedStages"):
@@ -630,8 +671,8 @@ def _recommend_next_action(
         if jp_count > 0:
             return (
                 "All checks passing. JP prices are partially imported from PokeWallet and currently partially covered. "
-                "Next bounded expansion: run missing-set dry-run mode so already-priced sets are skipped, then review budget and diagnostics "
-                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 20 --dry-run --fit-budget --respect-budget"
+                "Next step: continue automated missing-set worker cycles until complete. "
+                f"Command: {worker_cmd}"
             )
 
         if (
@@ -965,6 +1006,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
 
     # PokeWallet price import report
     price_import = report.get("pokewalletPriceImport", {})
+    missing_price_worker = report.get("pokewalletMissingPriceWorker", {})
     if price_import.get("available"):
         a("## PokeWallet Price Import")
         a("")
@@ -999,6 +1041,24 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a(f"- **Recommended next action:** {price_import.get('nextRecommendedAction')}")
         if price_import.get("nextRecommendedSafeCommand"):
             a(f"- **Recommended safe command:** {price_import.get('nextRecommendedSafeCommand')}")
+        a("")
+
+    if missing_price_worker.get("available"):
+        a("## PokeWallet Missing Price Worker")
+        a("")
+        a(f"- **Status:** {missing_price_worker.get('status', 'n/a')}")
+        a(f"- **Stop reason:** {missing_price_worker.get('stopReason', 'n/a')}")
+        a(f"- **Cycles attempted/completed:** {missing_price_worker.get('cyclesAttempted', 0)} / {missing_price_worker.get('cyclesCompleted', 0)}")
+        a(f"- **Cycles blocked by budget:** {missing_price_worker.get('cyclesBlockedByBudget', 0)}")
+        a(f"- **Total API requests:** {missing_price_worker.get('totalApiRequests', 0)}")
+        a(f"- **Total imported records:** {missing_price_worker.get('totalImportedRecords', 0)}")
+        a(f"- **JP records before/after:** {missing_price_worker.get('beforeJpPriceCount', 0)} / {missing_price_worker.get('afterJpPriceCount', 0)}")
+        a(f"- **JP set files before/after:** {missing_price_worker.get('beforeJpPriceFileCount', 0)} / {missing_price_worker.get('afterJpPriceFileCount', 0)}")
+        a(f"- **Last importer status:** {missing_price_worker.get('lastImporterStatus', 'n/a')}")
+        a(f"- **Last selected set ids:** {missing_price_worker.get('lastSelectedSetIds', [])}")
+        a(f"- **Commit hashes pushed:** {missing_price_worker.get('commitHashesPushed', [])}")
+        if missing_price_worker.get("nextRecommendedCommand"):
+            a(f"- **Recommended worker command:** {missing_price_worker.get('nextRecommendedCommand')}")
         a("")
 
     budget_ledger = report.get("pokewalletPriceBudgetLedger", {})
@@ -1094,6 +1154,7 @@ def main() -> None:
     pokewallet_api_audit_info = _collect_pokewallet_api_capability_audit()
     pokewallet_price_import_info = _collect_pokewallet_price_import_report()
     pokewallet_price_budget_ledger_info = _collect_pokewallet_price_budget_ledger()
+    pokewallet_missing_price_worker_info = _collect_pokewallet_missing_price_worker_report()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -1106,6 +1167,7 @@ def main() -> None:
         git_info,
         pokewallet_api_audit_info,
         pokewallet_price_import_info,
+        pokewallet_missing_price_worker_info,
         v1_info,
     )
 
@@ -1121,6 +1183,7 @@ def main() -> None:
         "pokewalletApiCapabilityAudit": pokewallet_api_audit_info,
         "pokewalletPriceImport": pokewallet_price_import_info,
         "pokewalletPriceBudgetLedger": pokewallet_price_budget_ledger_info,
+        "pokewalletMissingPriceWorker": pokewallet_missing_price_worker_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }
