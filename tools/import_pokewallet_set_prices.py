@@ -93,6 +93,15 @@ class PriceVariant:
     updated_at: str | None
 
 
+@dataclass(frozen=True)
+class SelectionOptions:
+    only_missing_set_prices: bool
+    skip_existing_price_files: bool
+    refresh_existing_price_files: bool
+    max_new_sets: int
+    start_after_set: str
+
+
 def now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -507,6 +516,24 @@ def provider_cards_path(language: str, provider_set_id: str) -> Path:
     return PUBLIC_DIR / "provider-catalog" / "pokewallet" / "cards" / language / f"{provider_set_id}.json"
 
 
+def price_set_file_path(language: str, app_set_id: str) -> Path:
+    return CURRENT_PRICE_ROOT / language / f"{app_set_id}.json"
+
+
+def has_existing_price_file(language: str, app_set_id: str) -> bool:
+    return price_set_file_path(language, app_set_id).exists()
+
+
+def is_after_anchor(value: str, anchor: str) -> bool:
+    value_text = str(value or "").strip()
+    anchor_text = str(anchor or "").strip()
+    if not anchor_text:
+        return True
+    if value_text.isdigit() and anchor_text.isdigit():
+        return int(value_text) > int(anchor_text)
+    return normalize_set_key(value_text) > normalize_set_key(anchor_text)
+
+
 def load_app_cards(language: str, set_id: str) -> tuple[str, list[AppCard]]:
     path = app_cards_path(language, set_id)
     payload = try_load_json(path)
@@ -563,7 +590,12 @@ def build_card_indexes(cards: list[AppCard]) -> dict[str, Any]:
     }
 
 
-def choose_target_sets(languages: list[str], requested_sets: list[str], max_sets: int) -> list[TargetSet]:
+def choose_target_sets(
+    languages: list[str],
+    requested_sets: list[str],
+    max_sets: int,
+    selection_options: SelectionOptions,
+) -> tuple[list[TargetSet], dict[str, Any]]:
     set_rows = load_sets_summary()
     targets: list[TargetSet] = []
     seen: set[tuple[str, str]] = set()
@@ -597,6 +629,14 @@ def choose_target_sets(languages: list[str], requested_sets: list[str], max_sets
             )
         )
 
+    expansion_mode_enabled = (
+        selection_options.only_missing_set_prices
+        or selection_options.skip_existing_price_files
+        or selection_options.refresh_existing_price_files
+        or selection_options.max_new_sets > 0
+        or bool(str(selection_options.start_after_set or "").strip())
+    )
+
     if requested_sets:
         lookup_values = {normalize_set_key(item) for item in requested_sets if item}
         for language in languages:
@@ -614,42 +654,115 @@ def choose_target_sets(languages: list[str], requested_sets: list[str], max_sets
                 add_row(language, row)
     else:
         for language in languages:
+            language_rows = [
+                item
+                for item in set_rows
+                if str(item.get("cardScanRLanguage") or "").lower() == language
+                and str(item.get("providerSetId") or "").strip().isdigit()
+            ]
+            rows_by_id = {str(row.get("providerSetId") or ""): row for row in language_rows}
+            if expansion_mode_enabled:
+                for row in sorted(language_rows, key=lambda item: int(str(item.get("providerSetId") or 0))):
+                    add_row(language, row)
+                continue
+
             preferred = DEFAULT_SET_PREFERENCES.get(language, [])
-            rows_by_id = {
-                str(row.get("providerSetId") or ""): row
-                for row in set_rows
-                if str(row.get("cardScanRLanguage") or "").lower() == language
-            }
             for provider_id in preferred:
                 row = rows_by_id.get(provider_id)
                 if row:
                     add_row(language, row)
             if len([item for item in targets if item.language == language]) < max(1, max_sets):
-                for row in sorted(
-                    [
-                        item
-                        for item in set_rows
-                        if str(item.get("cardScanRLanguage") or "").lower() == language
-                        and str(item.get("providerSetId") or "").strip().isdigit()
-                    ],
-                    key=lambda item: int(str(item.get("providerSetId") or 0)),
-                ):
+                for row in sorted(language_rows, key=lambda item: int(str(item.get("providerSetId") or 0))):
                     add_row(language, row)
                     if len([item for item in targets if item.language == language]) >= max(1, max_sets):
                         break
 
-    if max_sets > 0:
-        by_language_count: Counter[str] = Counter()
-        limited: list[TargetSet] = []
-        for target in targets:
-            if by_language_count[target.language] >= max_sets:
-                continue
-            by_language_count[target.language] += 1
-            limited.append(target)
-        return limited
-    if requested_sets:
-        return targets
-    return targets[:1]
+    if not requested_sets and max_sets <= 0 and not expansion_mode_enabled:
+        targets = targets[:1]
+
+    start_after = str(selection_options.start_after_set or "").strip()
+    start_filtered: list[TargetSet] = []
+    for target in targets:
+        if start_after and not (
+            is_after_anchor(target.provider_set_id, start_after)
+            or is_after_anchor(target.provider_set_code, start_after)
+            or is_after_anchor(target.app_set_id, start_after)
+        ):
+            continue
+        start_filtered.append(target)
+
+    existing_by_key: dict[tuple[str, str], bool] = {}
+    for target in start_filtered:
+        existing_by_key[(target.language, target.app_set_id)] = has_existing_price_file(target.language, target.app_set_id)
+
+    filter_missing = bool(selection_options.only_missing_set_prices)
+    filter_skip_existing = bool(selection_options.skip_existing_price_files)
+    refresh_existing = bool(selection_options.refresh_existing_price_files)
+
+    filtered: list[TargetSet] = []
+    existing_price_files_skipped = 0
+    for target in start_filtered:
+        has_existing = existing_by_key[(target.language, target.app_set_id)]
+        if has_existing and not refresh_existing and (filter_missing or filter_skip_existing):
+            existing_price_files_skipped += 1
+            continue
+        filtered.append(target)
+
+    by_language_count: Counter[str] = Counter()
+    by_language_new_count: Counter[str] = Counter()
+    selected: list[TargetSet] = []
+    for target in filtered:
+        language = target.language
+        has_existing = existing_by_key[(target.language, target.app_set_id)]
+        if max_sets > 0 and by_language_count[language] >= max_sets:
+            continue
+        if selection_options.max_new_sets > 0 and (not has_existing) and by_language_new_count[language] >= selection_options.max_new_sets:
+            continue
+        by_language_count[language] += 1
+        if not has_existing:
+            by_language_new_count[language] += 1
+        selected.append(target)
+
+    selected_set_ids = [item.provider_set_id for item in selected]
+    missing_price_sets_selected = sum(
+        1 for item in selected if not existing_by_key[(item.language, item.app_set_id)]
+    )
+    selected_missing_by_language: dict[str, int] = {}
+    existing_file_counts_by_language: dict[str, int] = {}
+    for language in languages:
+        existing_count = len(
+            [
+                path
+                for path in (CURRENT_PRICE_ROOT / language).glob("*.json")
+                if path.name != "status.json"
+            ]
+        ) if (CURRENT_PRICE_ROOT / language).exists() else 0
+        existing_file_counts_by_language[language] = existing_count
+        selected_missing_by_language[language] = sum(
+            1
+            for item in selected
+            if item.language == language and not existing_by_key[(item.language, item.app_set_id)]
+        )
+
+    estimated_new_coverage = {
+        "byLanguage": {
+            language: {
+                "currentPriceSetFiles": existing_file_counts_by_language.get(language, 0),
+                "selectedMissingSetFiles": selected_missing_by_language.get(language, 0),
+                "estimatedSetFilesAfterWrite": existing_file_counts_by_language.get(language, 0)
+                + selected_missing_by_language.get(language, 0),
+            }
+            for language in languages
+        }
+    }
+
+    selection_meta = {
+        "existingPriceFilesSkipped": existing_price_files_skipped,
+        "missingPriceSetsSelected": missing_price_sets_selected,
+        "selectedSetIds": selected_set_ids,
+        "estimatedNewCoverage": estimated_new_coverage,
+    }
+    return selected, selection_meta
 
 
 def price_variants_from_row(row: dict[str, Any], source_mode: str) -> list[PriceVariant]:
@@ -1283,6 +1396,15 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- mode: {report.get('mode')}")
     a(f"- languages: {', '.join(report.get('languages', []))}")
     a(f"- source: {report.get('sourceMode')}")
+    a(f"- only missing set prices: {'yes' if report.get('onlyMissingSetPrices') else 'no'}")
+    a(f"- skip existing price files: {'yes' if report.get('skipExistingPriceFiles') else 'no'}")
+    a(f"- refresh existing price files: {'yes' if report.get('refreshExistingPriceFiles') else 'no'}")
+    a(f"- max new sets: {report.get('maxNewSets', 0)}")
+    a(f"- start after set: {report.get('startAfterSet') or 'n/a'}")
+    a(f"- existing price files skipped: {report.get('existingPriceFilesSkipped', 0)}")
+    a(f"- missing price sets selected: {report.get('missingPriceSetsSelected', 0)}")
+    a(f"- selected set ids: {report.get('selectedSetIds', [])}")
+    a(f"- estimated new coverage: {report.get('estimatedNewCoverage', {})}")
     a(f"- status: {report.get('status')}")
     a(f"- planned requests: {report.get('plannedRequests', 0)}")
     a(f"- requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
@@ -1370,8 +1492,22 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     languages = parse_languages(args)
     requested_sets = [item.strip() for item in str(args.sets or "").split(",") if item.strip()]
     max_sets = max(0, int(args.max_sets or 0))
+    max_new_sets = max(0, int(args.max_new_sets or 0))
     write = bool(args.write)
-    targets = choose_target_sets(languages, requested_sets, max_sets)
+    only_missing_set_prices = bool(args.only_missing_set_prices)
+    refresh_existing_price_files = bool(args.refresh_existing_price_files)
+    skip_existing_price_files = bool(args.skip_existing_price_files) or only_missing_set_prices
+    if refresh_existing_price_files:
+        skip_existing_price_files = False
+        only_missing_set_prices = False
+    selection_options = SelectionOptions(
+        only_missing_set_prices=only_missing_set_prices,
+        skip_existing_price_files=skip_existing_price_files,
+        refresh_existing_price_files=refresh_existing_price_files,
+        max_new_sets=max_new_sets,
+        start_after_set=str(args.start_after_set or "").strip(),
+    )
+    targets, selection_meta = choose_target_sets(languages, requested_sets, max_sets, selection_options)
     budget_settings = resolve_budget_settings(args)
     respect_budget = bool(getattr(args, "respect_budget", True)) and not bool(getattr(args, "ignore_budget", False))
     fit_budget = bool(getattr(args, "fit_budget", False))
@@ -1405,6 +1541,15 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             for item in targets
         ],
         "sourceMode": args.source,
+        "onlyMissingSetPrices": selection_options.only_missing_set_prices,
+        "skipExistingPriceFiles": selection_options.skip_existing_price_files,
+        "refreshExistingPriceFiles": selection_options.refresh_existing_price_files,
+        "maxNewSets": selection_options.max_new_sets,
+        "startAfterSet": selection_options.start_after_set,
+        "existingPriceFilesSkipped": int(selection_meta.get("existingPriceFilesSkipped") or 0),
+        "missingPriceSetsSelected": int(selection_meta.get("missingPriceSetsSelected") or 0),
+        "selectedSetIds": selection_meta.get("selectedSetIds") if isinstance(selection_meta.get("selectedSetIds"), list) else [],
+        "estimatedNewCoverage": selection_meta.get("estimatedNewCoverage") if isinstance(selection_meta.get("estimatedNewCoverage"), dict) else {},
         "plannedRequests": len(targets),
         "requestsAllowedByBudget": snapshot["requestsAllowedByBudget"],
         "requestsSkippedDueToBudget": 0,
@@ -1452,6 +1597,36 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     }
     outputs_by_language_set: dict[str, list[dict[str, Any]]] = {}
 
+    def update_selected_set_summary() -> None:
+        selected_set_ids = [item.provider_set_id for item in targets]
+        missing_price_sets_selected = sum(
+            1 for item in targets if not has_existing_price_file(item.language, item.app_set_id)
+        )
+        by_language: dict[str, dict[str, int]] = {}
+        for language in languages:
+            current_files = len(
+                [
+                    path
+                    for path in (CURRENT_PRICE_ROOT / language).glob("*.json")
+                    if path.name != "status.json"
+                ]
+            ) if (CURRENT_PRICE_ROOT / language).exists() else 0
+            selected_missing = sum(
+                1
+                for item in targets
+                if item.language == language and not has_existing_price_file(item.language, item.app_set_id)
+            )
+            by_language[language] = {
+                "currentPriceSetFiles": current_files,
+                "selectedMissingSetFiles": selected_missing,
+                "estimatedSetFilesAfterWrite": current_files + selected_missing,
+            }
+        report["selectedSetIds"] = selected_set_ids
+        report["missingPriceSetsSelected"] = missing_price_sets_selected
+        report["estimatedNewCoverage"] = {"byLanguage": by_language}
+
+    update_selected_set_summary()
+
     def budget_summary_text() -> str:
         return (
             f"hourly {report.get('hourlyUsed', 0)}/{budget_settings['safeRequestsPerHour']} used, "
@@ -1459,7 +1634,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         )
 
     report["nextRecommendedSafeCommand"] = (
-        "python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --dry-run --fit-budget"
+        "python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 20 --dry-run --fit-budget --respect-budget"
     )
 
     if not api_key:
@@ -1502,6 +1677,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
                     for item in targets
                 ]
                 report["plannedRequests"] = len(targets)
+                update_selected_set_summary()
                 break
 
             if wait_for_budget:
@@ -1623,7 +1799,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         report["rateLimitDetected"] = True
         report["status"] = "rate_limited"
         report["nextRecommendedAction"] = (
-            "All attempted endpoints were rate-limited (HTTP 429). Wait for the hourly budget reset or rerun with a smaller --max-sets and --fit-budget."
+            "All attempted endpoints were rate-limited (HTTP 429). Wait for the hourly budget reset or rerun with missing-set mode and a smaller --max-new-sets value."
         )
     elif all_endpoints_failed:
         report["status"] = "failed"
@@ -1633,7 +1809,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     elif write and report["importedRecords"] > 0:
         report["status"] = "ok"
         report["nextRecommendedAction"] = (
-            "Run a bounded expansion dry-run (for example: --languages jp --source both --max-sets 25 --dry-run), "
+            "Run a bounded missing-set expansion dry-run (for example: --languages jp --source both --only-missing-set-prices --max-new-sets 20 --dry-run), "
             "then review diagnostics before the next write pass."
         )
     elif not write and report["wouldImportRecords"] > 0:
@@ -1655,6 +1831,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--languages", default="jp", help="Comma-separated languages to process: en,jp")
     parser.add_argument("--sets", default="", help="Comma-separated provider set ids/codes to process.")
     parser.add_argument("--max-sets", type=int, default=0, help="Maximum sets per language.")
+    parser.add_argument("--max-new-sets", type=int, default=0, help="Maximum number of missing-set targets per language.")
+    parser.add_argument("--start-after-set", default="", help="Select sets after this provider/app set id (useful for paged expansion).")
     parser.add_argument("--source", choices=["both", "tcg", "cm"], default="both")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="Do not write current price files. Default.")
@@ -1670,6 +1848,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--skip-existing-better-prices", action="store_true", default=True)
     parser.add_argument("--only-missing", action="store_true", help="Skip records whose current identity already exists.")
+    parser.add_argument(
+        "--only-missing-set-prices",
+        action="store_true",
+        help="Select only sets without an existing current price file.",
+    )
+    parser.add_argument(
+        "--skip-existing-price-files",
+        action="store_true",
+        help="Skip set targets that already have current price files.",
+    )
+    parser.add_argument(
+        "--refresh-existing-price-files",
+        action="store_true",
+        help="Allow selecting sets that already have current price files.",
+    )
     parser.add_argument("--include-en", action="store_true", help="Ensure EN is included.")
     parser.add_argument("--include-jp", action="store_true", help="Ensure JP is included.")
     parser.add_argument("--max-requests-per-hour", type=int, default=None, help="Absolute hourly API limit before safety buffer.")
@@ -1704,6 +1897,9 @@ def main() -> int:
     safe_print(f"  status: {report.get('status', 'unknown')}")
     safe_print(f"  languages: {', '.join(report['languages'])}")
     safe_print(f"  sets attempted: {len(report['setsAttempted'])}")
+    safe_print(f"  existing price files skipped: {report.get('existingPriceFilesSkipped', 0)}")
+    safe_print(f"  missing price sets selected: {report.get('missingPriceSetsSelected', 0)}")
+    safe_print(f"  selected set ids: {report.get('selectedSetIds', [])}")
     safe_print(f"  planned requests: {report.get('plannedRequests', 0)}")
     safe_print(f"  requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
     safe_print(f"  requests skipped due to budget: {report.get('requestsSkippedDueToBudget', 0)}")

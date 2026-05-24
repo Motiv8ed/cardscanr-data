@@ -451,6 +451,15 @@ def _collect_pokewallet_price_import_report() -> dict[str, Any]:
         "mode": data.get("mode"),
         "languages": data.get("languages", []),
         "sourceMode": data.get("sourceMode"),
+        "onlyMissingSetPrices": data.get("onlyMissingSetPrices", False),
+        "skipExistingPriceFiles": data.get("skipExistingPriceFiles", False),
+        "refreshExistingPriceFiles": data.get("refreshExistingPriceFiles", False),
+        "maxNewSets": data.get("maxNewSets", 0),
+        "startAfterSet": data.get("startAfterSet"),
+        "existingPriceFilesSkipped": data.get("existingPriceFilesSkipped", 0),
+        "missingPriceSetsSelected": data.get("missingPriceSetsSelected", 0),
+        "selectedSetIds": data.get("selectedSetIds", []),
+        "estimatedNewCoverage": data.get("estimatedNewCoverage", {}),
         "plannedRequests": data.get("plannedRequests", 0),
         "requestsAllowedByBudget": data.get("requestsAllowedByBudget", 0),
         "requestsSkippedDueToBudget": data.get("requestsSkippedDueToBudget", 0),
@@ -582,7 +591,7 @@ def _recommend_next_action(
                 )
             return (
                 "PokeWallet price import was fully rate-limited (all endpoints failed with HTTP 429). "
-                "Wait for hourly budget reset before another write; use a smaller bounded run such as max 20 sets and --fit-budget."
+                "Wait for hourly budget reset before another write; use missing-set expansion with a smaller --max-new-sets value and --fit-budget."
                 + hourly_reset_hint
             )
         if pokewallet_price_import.get("status") in {"failed", "rate_limited"}:
@@ -621,8 +630,8 @@ def _recommend_next_action(
         if jp_count > 0:
             return (
                 "All checks passing. JP prices are partially imported from PokeWallet and currently partially covered. "
-                "Next bounded expansion: run a dry-run over a larger sample (max 20 sets), then review budget and diagnostics "
-                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --dry-run --fit-budget"
+                "Next bounded expansion: run missing-set dry-run mode so already-priced sets are skipped, then review budget and diagnostics "
+                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 20 --dry-run --fit-budget --respect-budget"
             )
 
         if (
@@ -963,6 +972,11 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Mode:** {price_import.get('mode', 'n/a')}")
         a(f"- **Languages:** {', '.join(price_import.get('languages', []))}")
         a(f"- **Source mode:** {price_import.get('sourceMode', 'n/a')}")
+        a(f"- **Only missing set prices:** {'yes' if price_import.get('onlyMissingSetPrices') else 'no'}")
+        a(f"- **Existing price files skipped:** {price_import.get('existingPriceFilesSkipped', 0)}")
+        a(f"- **Missing price sets selected:** {price_import.get('missingPriceSetsSelected', 0)}")
+        a(f"- **Selected set ids:** {price_import.get('selectedSetIds', [])}")
+        a(f"- **Estimated new coverage:** {price_import.get('estimatedNewCoverage', {})}")
         a(f"- **Planned requests:** {price_import.get('plannedRequests', 0)}")
         a(f"- **Requests allowed by budget:** {price_import.get('requestsAllowedByBudget', 0)}")
         a(f"- **Requests skipped due to budget:** {price_import.get('requestsSkippedDueToBudget', 0)}")
