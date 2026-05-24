@@ -486,6 +486,55 @@ def _collect_pokewallet_price_import_report() -> dict[str, Any]:
     }
 
 
+def _collect_pokewallet_price_budget_ledger() -> dict[str, Any]:
+    data = _load_json("data/pokewallet_price_request_ledger.json")
+    if data is None:
+        return {"available": False}
+
+    rows = data.get("requests") if isinstance(data.get("requests"), list) else []
+    parsed_rows: list[tuple[datetime, dict[str, Any]]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ts = str(row.get("timestampUtc") or "").strip()
+        if not ts:
+            continue
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+            parsed_rows.append((dt, row))
+        except ValueError:
+            continue
+
+    now = datetime.now(timezone.utc)
+    hourly_cutoff = now.timestamp() - 3600
+    daily_cutoff = now.timestamp() - 86400
+    hourly_used = 0
+    daily_used = 0
+    rate_limited_last_day = 0
+    last_timestamp: str | None = None
+    for dt, row in parsed_rows:
+        epoch = dt.timestamp()
+        if epoch >= daily_cutoff:
+            daily_used += 1
+            if int(row.get("statusCode") or 0) == 429:
+                rate_limited_last_day += 1
+            if epoch >= hourly_cutoff:
+                hourly_used += 1
+        if last_timestamp is None or dt.isoformat() > last_timestamp:
+            last_timestamp = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return {
+        "available": True,
+        "schemaVersion": data.get("schemaVersion"),
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "requestCount": len(parsed_rows),
+        "hourlyUsed": hourly_used,
+        "dailyUsed": daily_used,
+        "rateLimitedResponsesLast24h": rate_limited_last_day,
+        "lastRequestAtUtc": last_timestamp,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -938,6 +987,18 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a(f"- **Recommended safe command:** {price_import.get('nextRecommendedSafeCommand')}")
         a("")
 
+    budget_ledger = report.get("pokewalletPriceBudgetLedger", {})
+    if budget_ledger.get("available"):
+        a("## PokeWallet Price Budget Ledger")
+        a("")
+        a(f"- **Ledger generated at:** {budget_ledger.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Total request rows:** {budget_ledger.get('requestCount', 0)}")
+        a(f"- **Hourly used (rolling):** {budget_ledger.get('hourlyUsed', 0)}")
+        a(f"- **Daily used (rolling):** {budget_ledger.get('dailyUsed', 0)}")
+        a(f"- **HTTP 429 responses (last 24h):** {budget_ledger.get('rateLimitedResponsesLast24h', 0)}")
+        a(f"- **Last request:** {budget_ledger.get('lastRequestAtUtc') or 'n/a'}")
+        a("")
+
     # Next action
     a("## Next Recommended Action")
     a("")
@@ -1018,6 +1079,7 @@ def main() -> None:
     price_updater_info = _collect_price_updater_info()
     pokewallet_api_audit_info = _collect_pokewallet_api_capability_audit()
     pokewallet_price_import_info = _collect_pokewallet_price_import_report()
+    pokewallet_price_budget_ledger_info = _collect_pokewallet_price_budget_ledger()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -1044,6 +1106,7 @@ def main() -> None:
         "priceUpdater": price_updater_info,
         "pokewalletApiCapabilityAudit": pokewallet_api_audit_info,
         "pokewalletPriceImport": pokewallet_price_import_info,
+        "pokewalletPriceBudgetLedger": pokewallet_price_budget_ledger_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }
