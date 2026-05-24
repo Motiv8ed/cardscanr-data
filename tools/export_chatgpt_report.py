@@ -447,9 +447,21 @@ def _collect_pokewallet_price_import_report() -> dict[str, Any]:
         "available": True,
         "startedAtUtc": data.get("startedAtUtc"),
         "finishedAtUtc": data.get("finishedAtUtc"),
+        "status": data.get("status"),
         "mode": data.get("mode"),
         "languages": data.get("languages", []),
         "sourceMode": data.get("sourceMode"),
+        "plannedRequests": data.get("plannedRequests", 0),
+        "requestsAllowedByBudget": data.get("requestsAllowedByBudget", 0),
+        "requestsSkippedDueToBudget": data.get("requestsSkippedDueToBudget", 0),
+        "hourlyUsed": data.get("hourlyUsed", 0),
+        "hourlyRemaining": data.get("hourlyRemaining", 0),
+        "dailyUsed": data.get("dailyUsed", 0),
+        "dailyRemaining": data.get("dailyRemaining", 0),
+        "budgetSource": data.get("budgetSource"),
+        "budgetDecision": data.get("budgetDecision"),
+        "rateLimitDetected": data.get("rateLimitDetected", False),
+        "allEndpointsFailed": data.get("allEndpointsFailed", False),
         "setsSelected": data.get("setsSelected", []),
         "apiRequestsUsed": data.get("apiRequestsUsed", 0),
         "endpointSuccesses": data.get("endpointSuccesses", 0),
@@ -470,6 +482,7 @@ def _collect_pokewallet_price_import_report() -> dict[str, Any]:
         "afterCurrentPriceCounts": data.get("afterCurrentPriceCounts", {}),
         "validationResult": data.get("validationResult"),
         "nextRecommendedAction": data.get("nextRecommendedAction", ""),
+        "nextRecommendedSafeCommand": data.get("nextRecommendedSafeCommand", ""),
     }
 
 
@@ -511,6 +524,24 @@ def _recommend_next_action(
 ) -> str:
     issues: list[str] = []
 
+    if pokewallet_price_import and pokewallet_price_import.get("available"):
+        if pokewallet_price_import.get("rateLimitDetected") and pokewallet_price_import.get("allEndpointsFailed"):
+            hourly_reset_hint = ""
+            if isinstance(pokewallet_price_import.get("hourlyRemaining"), int):
+                hourly_reset_hint = (
+                    f" Remaining hourly safe budget: {pokewallet_price_import.get('hourlyRemaining', 0)}."
+                )
+            return (
+                "PokeWallet price import was fully rate-limited (all endpoints failed with HTTP 429). "
+                "Wait for hourly budget reset before another write; use a smaller bounded run such as max 20 sets and --fit-budget."
+                + hourly_reset_hint
+            )
+        if pokewallet_price_import.get("status") in {"failed", "rate_limited"}:
+            return (
+                "Latest PokeWallet price import failed. Review status codes/error snippets in "
+                "reports/pokewallet_price_import_latest.json and rerun a smaller dry-run before writing."
+            )
+
     if pipeline.get("failedStages"):
         issues.append(
             f"Pipeline has failed stages: {', '.join(pipeline['failedStages'])}. "
@@ -541,8 +572,8 @@ def _recommend_next_action(
         if jp_count > 0:
             return (
                 "All checks passing. JP prices are partially imported from PokeWallet and currently partially covered. "
-                "Next bounded expansion: run a dry-run over a larger sample (max 25 sets), then review the import report "
-                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 25 --dry-run"
+                "Next bounded expansion: run a dry-run over a larger sample (max 20 sets), then review budget and diagnostics "
+                "before writing. Command: python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --dry-run --fit-budget"
             )
 
         if (
@@ -879,9 +910,17 @@ def _render_markdown(report: dict[str, Any]) -> str:
     if price_import.get("available"):
         a("## PokeWallet Price Import")
         a("")
+        a(f"- **Status:** {price_import.get('status', 'n/a')}")
         a(f"- **Mode:** {price_import.get('mode', 'n/a')}")
         a(f"- **Languages:** {', '.join(price_import.get('languages', []))}")
         a(f"- **Source mode:** {price_import.get('sourceMode', 'n/a')}")
+        a(f"- **Planned requests:** {price_import.get('plannedRequests', 0)}")
+        a(f"- **Requests allowed by budget:** {price_import.get('requestsAllowedByBudget', 0)}")
+        a(f"- **Requests skipped due to budget:** {price_import.get('requestsSkippedDueToBudget', 0)}")
+        a(f"- **Budget source/decision:** {price_import.get('budgetSource', 'n/a')} / {price_import.get('budgetDecision', 'n/a')}")
+        a(f"- **Hourly used/remaining:** {price_import.get('hourlyUsed', 0)} / {price_import.get('hourlyRemaining', 0)}")
+        a(f"- **Daily used/remaining:** {price_import.get('dailyUsed', 0)} / {price_import.get('dailyRemaining', 0)}")
+        a(f"- **Rate limit detected:** {'yes' if price_import.get('rateLimitDetected') else 'no'}")
         a(f"- **API requests:** {price_import.get('apiRequestsUsed', 0)}")
         a(f"- **Endpoint success/failure:** {price_import.get('endpointSuccesses', 0)} / {price_import.get('endpointFailures', 0)}")
         a(f"- **Price records received:** {price_import.get('priceRecordsReceived', 0):,}")
@@ -895,6 +934,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Validation result:** {price_import.get('validationResult', 'n/a')}")
         if price_import.get("nextRecommendedAction"):
             a(f"- **Recommended next action:** {price_import.get('nextRecommendedAction')}")
+        if price_import.get("nextRecommendedSafeCommand"):
+            a(f"- **Recommended safe command:** {price_import.get('nextRecommendedSafeCommand')}")
         a("")
 
     # Next action

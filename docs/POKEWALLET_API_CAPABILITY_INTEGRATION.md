@@ -46,9 +46,51 @@ If `/prices/:numericSetId` is available, add a staged importer before writing pu
 Implemented staged importer:
 
 ```powershell
-python tools/import_pokewallet_set_prices.py --languages jp --max-sets 3 --dry-run
-python tools/import_pokewallet_set_prices.py --languages jp --max-sets 3 --write
+python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --dry-run --fit-budget
+python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --write --fit-budget
 ```
+
+## Request budget guardrails
+
+PokeWallet API request limits currently used by this importer:
+
+- Hourly hard limit: 100 requests/hour
+- Daily hard limit: 1000 requests/day
+
+The importer now uses safe request limits by default (90/hour and 900/day) and tracks usage in:
+
+- `data/pokewallet_price_request_ledger.json`
+
+Important behavior:
+
+- Dry-runs consume real API requests and are counted in the ledger.
+- Write runs also consume real API requests.
+- A `50` set dry-run followed by `50` set write can exhaust the hourly budget.
+- By default, runs fail safely when planned requests exceed remaining safe budget.
+- `--fit-budget` trims selected sets to stay inside remaining safe budget.
+- `--wait-for-budget` waits for hourly budget to recover and prints reset estimates.
+
+Budget overrides:
+
+- Env:
+	- `POKEWALLET_PRICE_MAX_REQUESTS_PER_HOUR`
+	- `POKEWALLET_PRICE_MAX_REQUESTS_PER_DAY`
+	- `POKEWALLET_PRICE_REQUEST_SAFETY_BUFFER`
+- CLI:
+	- `--max-requests-per-hour`
+	- `--max-requests-per-day`
+	- `--request-safety-buffer`
+	- `--budget-ledger-path`
+	- `--fit-budget`
+	- `--wait-for-budget`
+	- `--respect-budget` (default)
+	- `--ignore-budget` (manual override only)
+
+Recommended safe patterns:
+
+- `20` set dry-run + `20` set write
+- Or always use `--fit-budget` so request counts are auto-trimmed
+- Avoid `50` dry-run + `50` write on a `100/hour` limit
 
 Full pipeline entrypoint:
 

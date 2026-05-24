@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -31,11 +31,16 @@ SETS_SUMMARY_PATH = PUBLIC_DIR / "provider-catalog" / "pokewallet" / "sets-summa
 CURRENT_PRICE_ROOT = PUBLIC_DIR / "prices" / "current" / "pokemon"
 PRICES_STATUS_PATH = PUBLIC_DIR / "prices" / "status.json"
 INDEX_PATH = PUBLIC_DIR / "index.json"
+REQUEST_LEDGER_PATH = ROOT / "data" / "pokewallet_price_request_ledger.json"
 
 BASE_URL = "https://api.pokewallet.io"
 SCHEMA_VERSION = "1.0.0"
 USER_AGENT = "CardScanR-PokeWallet-Set-Price-Importer/1.0"
 DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_MAX_REQUESTS_PER_HOUR = 100
+DEFAULT_MAX_REQUESTS_PER_DAY = 1000
+DEFAULT_REQUEST_SAFETY_BUFFER = 0.1
+DEFAULT_REQUEST_DELAY_SECONDS = 0.25
 DEFAULT_STALENESS = {
     "status": "fresh",
     "ageSeconds": 0,
@@ -116,6 +121,216 @@ def write_json(path: Path, payload: Any) -> None:
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(payload, fh, indent=2, sort_keys=True, ensure_ascii=False)
         fh.write("\n")
+
+
+def parse_utc(ts: Any) -> datetime | None:
+    text = str(ts or "").strip()
+    if not text:
+        return None
+    try:
+        if text.endswith("Z"):
+            text = f"{text[:-1]}+00:00"
+        dt = datetime.fromisoformat(text)
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def as_utc_iso(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def parse_positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(str(value).strip())
+        if parsed > 0:
+            return parsed
+    except (TypeError, ValueError):
+        pass
+    return default
+
+
+def parse_non_negative_float(value: Any, default: float) -> float:
+    try:
+        parsed = float(str(value).strip())
+        if parsed >= 0:
+            return parsed
+    except (TypeError, ValueError):
+        pass
+    return default
+
+
+def resolve_budget_settings(args: argparse.Namespace) -> dict[str, Any]:
+    env_hour = os.environ.get("POKEWALLET_PRICE_MAX_REQUESTS_PER_HOUR")
+    env_day = os.environ.get("POKEWALLET_PRICE_MAX_REQUESTS_PER_DAY")
+    env_buffer = os.environ.get("POKEWALLET_PRICE_REQUEST_SAFETY_BUFFER")
+
+    cli_hour = getattr(args, "max_requests_per_hour", None)
+    cli_day = getattr(args, "max_requests_per_day", None)
+    cli_buffer = getattr(args, "request_safety_buffer", None)
+
+    max_hour = parse_positive_int(
+        cli_hour if cli_hour is not None else (env_hour if env_hour else DEFAULT_MAX_REQUESTS_PER_HOUR),
+        DEFAULT_MAX_REQUESTS_PER_HOUR,
+    )
+    max_day = parse_positive_int(
+        cli_day if cli_day is not None else (env_day if env_day else DEFAULT_MAX_REQUESTS_PER_DAY),
+        DEFAULT_MAX_REQUESTS_PER_DAY,
+    )
+
+    buffer_ratio = parse_non_negative_float(
+        cli_buffer if cli_buffer is not None else (env_buffer if env_buffer else DEFAULT_REQUEST_SAFETY_BUFFER),
+        DEFAULT_REQUEST_SAFETY_BUFFER,
+    )
+    # Treat values > 1 as percentage, for example 10 => 10%.
+    if buffer_ratio > 1:
+        buffer_ratio = buffer_ratio / 100.0
+    if buffer_ratio >= 1:
+        buffer_ratio = 0.99
+
+    safe_hour = max(1, int(max_hour * (1.0 - buffer_ratio)))
+    safe_day = max(1, int(max_day * (1.0 - buffer_ratio)))
+
+    if cli_hour is not None or cli_day is not None or cli_buffer is not None:
+        budget_source = "cli"
+    elif env_hour or env_day or env_buffer:
+        budget_source = "env"
+    else:
+        budget_source = "default_safe"
+
+    return {
+        "maxRequestsPerHour": max_hour,
+        "maxRequestsPerDay": max_day,
+        "safetyBuffer": buffer_ratio,
+        "safeRequestsPerHour": safe_hour,
+        "safeRequestsPerDay": safe_day,
+        "budgetSource": budget_source,
+    }
+
+
+def load_request_ledger(path: Path) -> dict[str, Any]:
+    payload = try_load_json(path)
+    if not isinstance(payload, dict):
+        payload = {}
+    rows = payload.get("requests")
+    requests = [item for item in rows if isinstance(item, dict)] if isinstance(rows, list) else []
+    # Keep one week of request rows; window checks only need 24h.
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    pruned: list[dict[str, Any]] = []
+    for row in requests:
+        parsed = parse_utc(row.get("timestampUtc"))
+        if parsed is None:
+            continue
+        if parsed >= cutoff:
+            pruned.append(row)
+    return {
+        "schemaVersion": str(payload.get("schemaVersion") or SCHEMA_VERSION),
+        "generatedAtUtc": str(payload.get("generatedAtUtc") or now_utc()),
+        "requests": pruned,
+    }
+
+
+def save_request_ledger(path: Path, ledger: dict[str, Any]) -> None:
+    ledger["generatedAtUtc"] = now_utc()
+    write_json(path, ledger)
+
+
+def append_request_ledger(
+    *,
+    ledger: dict[str, Any],
+    ledger_path: Path,
+    timestamp_utc: str,
+    language: str,
+    provider_set_id: str,
+    source_mode: str,
+    dry_run: bool,
+    status_code: int | None,
+    endpoint_success: bool,
+    error: str | None,
+) -> None:
+    rows = ledger.get("requests")
+    if not isinstance(rows, list):
+        rows = []
+        ledger["requests"] = rows
+    rows.append(
+        {
+            "timestampUtc": timestamp_utc,
+            "language": language,
+            "providerSetId": provider_set_id,
+            "sourceMode": source_mode,
+            "dryRun": dry_run,
+            "statusCode": status_code,
+            "endpointSuccess": endpoint_success,
+            "error": error,
+        }
+    )
+    save_request_ledger(ledger_path, ledger)
+
+
+def budget_window_usage(ledger: dict[str, Any], now_dt: datetime) -> tuple[int, int]:
+    rows = ledger.get("requests")
+    if not isinstance(rows, list):
+        return 0, 0
+    hour_cutoff = now_dt - timedelta(hours=1)
+    day_cutoff = now_dt - timedelta(hours=24)
+    hourly = 0
+    daily = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        ts = parse_utc(row.get("timestampUtc"))
+        if ts is None:
+            continue
+        if ts >= day_cutoff:
+            daily += 1
+            if ts >= hour_cutoff:
+                hourly += 1
+    return hourly, daily
+
+
+def estimate_next_budget_reset(ledger: dict[str, Any], now_dt: datetime) -> dict[str, str | None]:
+    rows = ledger.get("requests")
+    if not isinstance(rows, list):
+        return {"hourlyResetAtUtc": None, "dailyResetAtUtc": None}
+    timestamps: list[datetime] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        parsed = parse_utc(row.get("timestampUtc"))
+        if parsed is not None:
+            timestamps.append(parsed)
+    if not timestamps:
+        return {"hourlyResetAtUtc": None, "dailyResetAtUtc": None}
+    earliest_hour = min(ts for ts in timestamps if ts >= now_dt - timedelta(hours=1)) if any(
+        ts >= now_dt - timedelta(hours=1) for ts in timestamps
+    ) else None
+    earliest_day = min(ts for ts in timestamps if ts >= now_dt - timedelta(hours=24)) if any(
+        ts >= now_dt - timedelta(hours=24) for ts in timestamps
+    ) else None
+    return {
+        "hourlyResetAtUtc": as_utc_iso(earliest_hour + timedelta(hours=1)) if earliest_hour else None,
+        "dailyResetAtUtc": as_utc_iso(earliest_day + timedelta(hours=24)) if earliest_day else None,
+    }
+
+
+def budget_snapshot(ledger: dict[str, Any], settings: dict[str, Any], now_dt: datetime) -> dict[str, Any]:
+    hourly_used, daily_used = budget_window_usage(ledger, now_dt)
+    hour_cap = int(settings.get("safeRequestsPerHour") or DEFAULT_MAX_REQUESTS_PER_HOUR)
+    day_cap = int(settings.get("safeRequestsPerDay") or DEFAULT_MAX_REQUESTS_PER_DAY)
+    hourly_remaining = max(0, hour_cap - hourly_used)
+    daily_remaining = max(0, day_cap - daily_used)
+    reset = estimate_next_budget_reset(ledger, now_dt)
+    return {
+        "hourlyUsed": hourly_used,
+        "dailyUsed": daily_used,
+        "hourlyRemaining": hourly_remaining,
+        "dailyRemaining": daily_remaining,
+        "requestsAllowedByBudget": min(hourly_remaining, daily_remaining),
+        "hourlyResetAtUtc": reset["hourlyResetAtUtc"],
+        "dailyResetAtUtc": reset["dailyResetAtUtc"],
+    }
 
 
 def normalize_text(value: Any) -> str:
@@ -886,7 +1101,10 @@ def process_set(
     write: bool,
     only_missing: bool,
     skip_existing_better: bool,
-    rate_limit_delay: float,
+    request_delay_seconds: float,
+    ledger: dict[str, Any],
+    ledger_path: Path,
+    dry_run: bool,
     report: dict[str, Any],
 ) -> list[dict[str, Any]]:
     set_report = {
@@ -897,6 +1115,7 @@ def process_set(
         "providerSetCode": target.provider_set_code,
         "endpoint": f"/prices/{target.provider_set_id}",
         "statusCode": None,
+        "errorSnippet": None,
         "endpointSuccess": False,
         "providerRowsReceived": 0,
         "priceRecordsReceived": 0,
@@ -912,6 +1131,7 @@ def process_set(
         "currencyCounts": {},
         "variantCounts": {},
         "error": None,
+        "rateLimited": False,
         "samples": [],
     }
     report["setsAttempted"].append(set_report)
@@ -927,10 +1147,27 @@ def process_set(
     payload, status_code, error = fetch_prices(api_key=api_key, set_id=target.provider_set_id, source=source_mode)
     report["apiRequestsUsed"] += 1
     set_report["statusCode"] = status_code
-    if rate_limit_delay > 0:
-        time.sleep(rate_limit_delay)
+    append_request_ledger(
+        ledger=ledger,
+        ledger_path=ledger_path,
+        timestamp_utc=now_utc(),
+        language=target.language,
+        provider_set_id=target.provider_set_id,
+        source_mode=source_mode,
+        dry_run=dry_run,
+        status_code=status_code,
+        endpoint_success=payload is not None,
+        error=error,
+    )
+    if request_delay_seconds > 0:
+        time.sleep(request_delay_seconds)
     if payload is None:
         set_report["error"] = error or "request_failed"
+        if error:
+            set_report["errorSnippet"] = error
+        if status_code == 429:
+            set_report["rateLimited"] = True
+            report["rateLimitDetected"] = True
         report["endpointFailures"] += 1
         return []
     report["endpointSuccesses"] += 1
@@ -1046,6 +1283,17 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- mode: {report.get('mode')}")
     a(f"- languages: {', '.join(report.get('languages', []))}")
     a(f"- source: {report.get('sourceMode')}")
+    a(f"- status: {report.get('status')}")
+    a(f"- planned requests: {report.get('plannedRequests', 0)}")
+    a(f"- requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
+    a(f"- requests skipped due to budget: {report.get('requestsSkippedDueToBudget', 0)}")
+    a(f"- budget source: {report.get('budgetSource')}")
+    a(f"- budget decision: {report.get('budgetDecision')}")
+    a(f"- hourly used/remaining: {report.get('hourlyUsed', 0)} / {report.get('hourlyRemaining', 0)}")
+    a(f"- daily used/remaining: {report.get('dailyUsed', 0)} / {report.get('dailyRemaining', 0)}")
+    a(f"- next hourly reset estimate: {report.get('hourlyResetAtUtc') or 'n/a'}")
+    a(f"- next daily reset estimate: {report.get('dailyResetAtUtc') or 'n/a'}")
+    a(f"- rate limit detected: {'yes' if report.get('rateLimitDetected') else 'no'}")
     a(f"- API requests used: {report.get('apiRequestsUsed', 0)}")
     a(f"- endpoint success/failure: {report.get('endpointSuccesses', 0)} / {report.get('endpointFailures', 0)}")
     a(f"- price records received: {report.get('priceRecordsReceived', 0)}")
@@ -1058,6 +1306,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- unusable records: {report.get('unusableRecords', 0)}")
     a(f"- validation result: {report.get('validationResult')}")
     a(f"- next recommended action: {report.get('nextRecommendedAction')}")
+    a(f"- next recommended safe command: {report.get('nextRecommendedSafeCommand')}")
     a("")
     a("## Counts")
     a("")
@@ -1082,16 +1331,18 @@ def render_markdown(report: dict[str, Any]) -> str:
     a("")
     a("## Sets")
     a("")
-    a("| Language | Set | HTTP | Rows | Price records | Matched | Imported | Skipped existing | Ambiguous | Unmatched | Unusable |")
-    a("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+    a("| Language | Set | HTTP | Rate limited | Rows | Price records | Matched | Imported | Skipped existing | Ambiguous | Unmatched | Unusable | Error |")
+    a("|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---|")
     for item in report.get("setsAttempted", []):
+        error_text = str(item.get("errorSnippet") or item.get("error") or "").replace("|", "/")
         a(
             f"| {item.get('language')} | {item.get('appSetId')} / {item.get('providerSetId')} | "
-            f"{item.get('statusCode') or 'n/a'} | {item.get('providerRowsReceived', 0)} | "
+            f"{item.get('statusCode') or 'n/a'} | {'yes' if item.get('rateLimited') else 'no'} | "
+            f"{item.get('providerRowsReceived', 0)} | "
             f"{item.get('priceRecordsReceived', 0)} | {item.get('matchedRecords', 0)} | "
             f"{item.get('importedRecords', 0)} | {item.get('skippedExistingBetterRecords', 0)} | "
             f"{item.get('ambiguousRecords', 0)} | {item.get('unmatchedRecords', 0)} | "
-            f"{item.get('unusableRecords', 0)} |"
+            f"{item.get('unusableRecords', 0)} | {error_text} |"
         )
     a("")
     return "\n".join(lines)
@@ -1114,18 +1365,29 @@ def parse_languages(args: argparse.Namespace) -> list[str]:
 
 def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     started = now_utc()
+    started_dt = parse_utc(started) or datetime.now(timezone.utc)
     api_key, api_key_env_used, api_key_env_names_checked = resolve_api_key()
     languages = parse_languages(args)
     requested_sets = [item.strip() for item in str(args.sets or "").split(",") if item.strip()]
     max_sets = max(0, int(args.max_sets or 0))
     write = bool(args.write)
     targets = choose_target_sets(languages, requested_sets, max_sets)
+    budget_settings = resolve_budget_settings(args)
+    respect_budget = bool(getattr(args, "respect_budget", True)) and not bool(getattr(args, "ignore_budget", False))
+    fit_budget = bool(getattr(args, "fit_budget", False))
+    wait_for_budget = bool(getattr(args, "wait_for_budget", False))
+    ledger_path = Path(str(getattr(args, "budget_ledger_path", "") or REQUEST_LEDGER_PATH))
+    if not ledger_path.is_absolute():
+        ledger_path = (ROOT / ledger_path).resolve()
+    ledger = load_request_ledger(ledger_path)
+    snapshot = budget_snapshot(ledger, budget_settings, started_dt)
     before_counts = summarize_current_counts()
     report: dict[str, Any] = {
         "schemaVersion": SCHEMA_VERSION,
         "startedAtUtc": started,
         "finishedAtUtc": None,
         "provider": "pokewallet",
+        "status": "pending",
         "mode": "write" if write else "dry-run",
         "dryRun": not write,
         "write": write,
@@ -1143,6 +1405,18 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             for item in targets
         ],
         "sourceMode": args.source,
+        "plannedRequests": len(targets),
+        "requestsAllowedByBudget": snapshot["requestsAllowedByBudget"],
+        "requestsSkippedDueToBudget": 0,
+        "hourlyUsed": snapshot["hourlyUsed"],
+        "hourlyRemaining": snapshot["hourlyRemaining"],
+        "dailyUsed": snapshot["dailyUsed"],
+        "dailyRemaining": snapshot["dailyRemaining"],
+        "hourlyResetAtUtc": snapshot["hourlyResetAtUtc"],
+        "dailyResetAtUtc": snapshot["dailyResetAtUtc"],
+        "budgetSource": budget_settings["budgetSource"],
+        "budgetDecision": "pending" if respect_budget else "ignored_manual_override",
+        "rateLimitDetected": False,
         "apiKeyPresent": bool(api_key),
         "apiKeyEnvUsed": api_key_env_used,
         "apiKeyEnvNamesChecked": api_key_env_names_checked,
@@ -1174,13 +1448,99 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             "ZH is intentionally not processed.",
         ],
         "nextRecommendedAction": "",
+        "nextRecommendedSafeCommand": "",
     }
     outputs_by_language_set: dict[str, list[dict[str, Any]]] = {}
 
+    def budget_summary_text() -> str:
+        return (
+            f"hourly {report.get('hourlyUsed', 0)}/{budget_settings['safeRequestsPerHour']} used, "
+            f"daily {report.get('dailyUsed', 0)}/{budget_settings['safeRequestsPerDay']} used"
+        )
+
+    report["nextRecommendedSafeCommand"] = (
+        "python tools/import_pokewallet_set_prices.py --languages jp --source both --max-sets 20 --dry-run --fit-budget"
+    )
+
     if not api_key:
+        report["status"] = "blocked"
         report["nextRecommendedAction"] = "Set POKEWALLET_API_KEY or CARDSCANR_POKEWALLET_API_KEY before importing prices."
+        report["budgetDecision"] = "skipped_no_api_key"
         report["finishedAtUtc"] = now_utc()
         return report, outputs_by_language_set
+
+    if respect_budget:
+        while True:
+            allowed = int(report.get("requestsAllowedByBudget") or 0)
+            planned = int(report.get("plannedRequests") or 0)
+            if planned <= allowed:
+                report["budgetDecision"] = "allowed_full_run"
+                break
+
+            if fit_budget:
+                if allowed <= 0:
+                    report["status"] = "blocked"
+                    report["budgetDecision"] = "blocked_no_budget_remaining"
+                    report["nextRecommendedAction"] = (
+                        "No safe request budget remains right now. Wait for quota reset or pass --ignore-budget "
+                        "only for explicit manual override. "
+                        f"Current budget: {budget_summary_text()}."
+                    )
+                    report["finishedAtUtc"] = now_utc()
+                    return report, outputs_by_language_set
+                report["budgetDecision"] = "trimmed_to_fit_budget"
+                report["requestsSkippedDueToBudget"] = max(0, planned - allowed)
+                targets = targets[:allowed]
+                report["setsSelected"] = [
+                    {
+                        "language": item.language,
+                        "appSetId": item.app_set_id,
+                        "providerSetId": item.provider_set_id,
+                        "providerSetCode": item.provider_set_code,
+                        "providerSetName": item.provider_set_name,
+                    }
+                    for item in targets
+                ]
+                report["plannedRequests"] = len(targets)
+                break
+
+            if wait_for_budget:
+                # Waiting only meaningfully expands hourly budget; daily shortage should fail safely.
+                if int(report.get("dailyRemaining") or 0) <= 0:
+                    report["status"] = "blocked"
+                    report["budgetDecision"] = "blocked_daily_budget_exhausted"
+                    report["nextRecommendedAction"] = (
+                        "Daily safe budget is exhausted. Wait for daily reset or lower request volume. "
+                        f"Daily reset estimate: {report.get('dailyResetAtUtc') or 'unknown'}."
+                    )
+                    report["finishedAtUtc"] = now_utc()
+                    return report, outputs_by_language_set
+                safe_print(
+                    "[budget] Waiting for hourly safe budget. "
+                    f"Need {planned}, allowed {allowed}. Next hourly reset: {report.get('hourlyResetAtUtc') or 'unknown'}."
+                )
+                time.sleep(30)
+                ledger = load_request_ledger(ledger_path)
+                snapshot = budget_snapshot(ledger, budget_settings, datetime.now(timezone.utc))
+                report["requestsAllowedByBudget"] = snapshot["requestsAllowedByBudget"]
+                report["hourlyUsed"] = snapshot["hourlyUsed"]
+                report["hourlyRemaining"] = snapshot["hourlyRemaining"]
+                report["dailyUsed"] = snapshot["dailyUsed"]
+                report["dailyRemaining"] = snapshot["dailyRemaining"]
+                report["hourlyResetAtUtc"] = snapshot["hourlyResetAtUtc"]
+                report["dailyResetAtUtc"] = snapshot["dailyResetAtUtc"]
+                continue
+
+            report["budgetDecision"] = "blocked_planned_exceeds_budget"
+            report["status"] = "blocked"
+            report["requestsSkippedDueToBudget"] = max(0, planned - allowed)
+            report["nextRecommendedAction"] = (
+                "Planned requests exceed remaining safe budget; import not started. "
+                f"Planned={planned}, allowed={allowed}, {budget_summary_text()}. "
+                "Use --fit-budget to auto-trim or --wait-for-budget to pause until hourly budget is available."
+            )
+            report["finishedAtUtc"] = now_utc()
+            return report, outputs_by_language_set
 
     for target in targets:
         records = process_set(
@@ -1191,7 +1551,10 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             write=write,
             only_missing=bool(args.only_missing),
             skip_existing_better=bool(args.skip_existing_better_prices),
-            rate_limit_delay=max(0.0, float(args.rate_limit_delay or 0.0)),
+            request_delay_seconds=max(0.0, float(args.request_delay_seconds or 0.0)),
+            ledger=ledger,
+            ledger_path=ledger_path,
+            dry_run=not write,
             report=report,
         )
         key = f"{target.language}:{target.app_set_id}"
@@ -1217,6 +1580,21 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         for variant, count in set_report.get("variantCounts", {}).items():
             report["recordsByVariant"][variant] = int(report["recordsByVariant"].get(variant, 0)) + int(count)
 
+    post_snapshot = budget_snapshot(ledger, budget_settings, datetime.now(timezone.utc))
+    report["requestsAllowedByBudget"] = post_snapshot["requestsAllowedByBudget"]
+    report["hourlyUsed"] = post_snapshot["hourlyUsed"]
+    report["hourlyRemaining"] = post_snapshot["hourlyRemaining"]
+    report["dailyUsed"] = post_snapshot["dailyUsed"]
+    report["dailyRemaining"] = post_snapshot["dailyRemaining"]
+    report["hourlyResetAtUtc"] = post_snapshot["hourlyResetAtUtc"]
+    report["dailyResetAtUtc"] = post_snapshot["dailyResetAtUtc"]
+
+    all_endpoints_failed = bool(report["setsAttempted"]) and report["endpointSuccesses"] == 0
+    all_fail_rate_limited = all_endpoints_failed and all(
+        int(item.get("statusCode") or 0) == 429 for item in report.get("setsAttempted", [])
+    )
+    report["allEndpointsFailed"] = all_endpoints_failed
+
     if write:
         written_languages: set[str] = set()
         for target in targets:
@@ -1226,25 +1604,45 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             payload = build_set_payload(target, records, started)
             write_json(CURRENT_PRICE_ROOT / target.language / f"{target.app_set_id}.json", payload)
             written_languages.add(target.language)
-        update_price_status_files(started, written_languages)
-        report["afterCurrentPriceCounts"] = summarize_current_counts()
-        report["derivedRefresh"] = refresh_after_write(languages)
-        validation = report["derivedRefresh"].get("validation", {})
-        report["validationResult"] = "passed" if validation.get("returnCode") == 0 else "failed"
-        report["validationDetails"] = validation
+        if written_languages:
+            update_price_status_files(started, written_languages)
+            report["afterCurrentPriceCounts"] = summarize_current_counts()
+            report["derivedRefresh"] = refresh_after_write(languages)
+            validation = report["derivedRefresh"].get("validation", {})
+            report["validationResult"] = "passed" if validation.get("returnCode") == 0 else "failed"
+            report["validationDetails"] = validation
+        else:
+            report["afterCurrentPriceCounts"] = before_counts
+            report["derivedRefresh"] = {}
+            report["validationResult"] = "not_run"
+            report["validationDetails"] = {}
     else:
         report["afterCurrentPriceCounts"] = summarize_current_counts()
 
-    if write and report["importedRecords"] > 0:
+    if all_fail_rate_limited:
+        report["rateLimitDetected"] = True
+        report["status"] = "rate_limited"
+        report["nextRecommendedAction"] = (
+            "All attempted endpoints were rate-limited (HTTP 429). Wait for the hourly budget reset or rerun with a smaller --max-sets and --fit-budget."
+        )
+    elif all_endpoints_failed:
+        report["status"] = "failed"
+        report["nextRecommendedAction"] = (
+            "All attempted endpoints failed. Inspect per-set status codes and error snippets before retrying."
+        )
+    elif write and report["importedRecords"] > 0:
+        report["status"] = "ok"
         report["nextRecommendedAction"] = (
             "Run a bounded expansion dry-run (for example: --languages jp --source both --max-sets 25 --dry-run), "
             "then review diagnostics before the next write pass."
         )
     elif not write and report["wouldImportRecords"] > 0:
+        report["status"] = "ok"
         report["nextRecommendedAction"] = (
             "Dry-run found usable mapped records. Re-run with --write for the same bounded set sample."
         )
     else:
+        report["status"] = "blocked"
         report["nextRecommendedAction"] = (
             "Do not write prices yet; inspect unmatched, ambiguous, and unusable records in this report."
         )
@@ -1262,11 +1660,36 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--dry-run", action="store_true", help="Do not write current price files. Default.")
     mode.add_argument("--write", action="store_true", help="Write validated mapped current price files.")
     parser.add_argument("--commit-safe-report", action="store_true", help="Write only commit-safe diagnostics.")
-    parser.add_argument("--rate-limit-delay", type=float, default=0.25, help="Delay between API requests in seconds.")
+    parser.add_argument(
+        "--request-delay-seconds",
+        "--rate-limit-delay",
+        dest="request_delay_seconds",
+        type=float,
+        default=DEFAULT_REQUEST_DELAY_SECONDS,
+        help="Delay between API requests in seconds.",
+    )
     parser.add_argument("--skip-existing-better-prices", action="store_true", default=True)
     parser.add_argument("--only-missing", action="store_true", help="Skip records whose current identity already exists.")
     parser.add_argument("--include-en", action="store_true", help="Ensure EN is included.")
     parser.add_argument("--include-jp", action="store_true", help="Ensure JP is included.")
+    parser.add_argument("--max-requests-per-hour", type=int, default=None, help="Absolute hourly API limit before safety buffer.")
+    parser.add_argument("--max-requests-per-day", type=int, default=None, help="Absolute daily API limit before safety buffer.")
+    parser.add_argument(
+        "--request-safety-buffer",
+        type=float,
+        default=None,
+        help="Safety buffer ratio (0.1 = 10%%) or percent (10 = 10%%).",
+    )
+    parser.add_argument(
+        "--budget-ledger-path",
+        default=str(REQUEST_LEDGER_PATH.relative_to(ROOT)),
+        help="Path to shared request ledger JSON file.",
+    )
+    parser.add_argument("--fit-budget", action="store_true", help="Trim selected sets to fit remaining safe budget.")
+    parser.add_argument("--wait-for-budget", action="store_true", help="Wait for hourly budget when planned requests exceed remaining safe budget.")
+    budget_mode = parser.add_mutually_exclusive_group()
+    budget_mode.add_argument("--respect-budget", action="store_true", default=True, help="Enforce request budget limits (default).")
+    budget_mode.add_argument("--ignore-budget", action="store_true", help="Ignore request budget limits (manual override).")
     return parser.parse_args()
 
 
@@ -1278,8 +1701,17 @@ def main() -> int:
 
     safe_print("PokeWallet set price import")
     safe_print(f"  mode: {report['mode']}")
+    safe_print(f"  status: {report.get('status', 'unknown')}")
     safe_print(f"  languages: {', '.join(report['languages'])}")
     safe_print(f"  sets attempted: {len(report['setsAttempted'])}")
+    safe_print(f"  planned requests: {report.get('plannedRequests', 0)}")
+    safe_print(f"  requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
+    safe_print(f"  requests skipped due to budget: {report.get('requestsSkippedDueToBudget', 0)}")
+    safe_print(
+        f"  budget usage (hour/day): {report.get('hourlyUsed', 0)}/{report.get('hourlyUsed', 0) + report.get('hourlyRemaining', 0)} "
+        f"and {report.get('dailyUsed', 0)}/{report.get('dailyUsed', 0) + report.get('dailyRemaining', 0)}"
+    )
+    safe_print(f"  budget source: {report.get('budgetSource')}, decision: {report.get('budgetDecision')}")
     safe_print(f"  API requests: {report['apiRequestsUsed']}")
     safe_print(f"  price records received: {report['priceRecordsReceived']}")
     safe_print(f"  matched records: {report['matchedRecords']}")
@@ -1290,7 +1722,11 @@ def main() -> int:
     safe_print(f"  validation result: {report['validationResult']}")
     safe_print(f"  wrote: {REPORT_JSON_PATH.relative_to(ROOT)}")
     safe_print(f"  wrote: {REPORT_MD_PATH.relative_to(ROOT)}")
-    return 0 if report["validationResult"] != "failed" else 1
+    if report["validationResult"] == "failed":
+        return 1
+    if report.get("mode") == "write" and report.get("status") in {"failed", "rate_limited"}:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
