@@ -76,6 +76,9 @@ function Get-PathBlockReason {
     if ($lower.StartsWith("reports/") -and ($lower -like "reports/latest_full_data_pipeline.*" -or $lower -like "reports/latest_pokewallet_worker_cycle.*")) {
         return "runtime_report"
     }
+    if ($lower -like "reports/pokewallet_missing_price_worker_latest.*" -or $lower -eq "reports/pokewallet_missing_price_worker_runs.jsonl") {
+        return "runtime_report"
+    }
     if ($lower -eq "data/pokewallet_price_request_ledger.json") {
         return "runtime_budget_ledger"
     }

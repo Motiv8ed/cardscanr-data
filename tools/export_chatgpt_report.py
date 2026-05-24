@@ -570,6 +570,7 @@ def _collect_pokewallet_missing_price_worker_report() -> dict[str, Any]:
         "validationResults": data.get("validationResults", []),
         "commitHashesPushed": data.get("commitHashesPushed", []),
         "nextRecommendedCommand": data.get("nextRecommendedCommand", ""),
+        "gitSync": data.get("gitSync", {}),
     }
 
 
@@ -1057,6 +1058,9 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Last importer status:** {missing_price_worker.get('lastImporterStatus', 'n/a')}")
         a(f"- **Last selected set ids:** {missing_price_worker.get('lastSelectedSetIds', [])}")
         a(f"- **Commit hashes pushed:** {missing_price_worker.get('commitHashesPushed', [])}")
+        git_sync = missing_price_worker.get("gitSync", {}) if isinstance(missing_price_worker.get("gitSync"), dict) else {}
+        if git_sync:
+            a(f"- **Git sync status:** {git_sync.get('status', 'n/a')} ({git_sync.get('commandStyle', 'n/a')})")
         if missing_price_worker.get("nextRecommendedCommand"):
             a(f"- **Recommended worker command:** {missing_price_worker.get('nextRecommendedCommand')}")
         a("")

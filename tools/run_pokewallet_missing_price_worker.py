@@ -34,6 +34,11 @@ FORBIDDEN_COMMIT_PATHS = {
     "reports/pokewallet_price_import_latest.json",
     "reports/pokewallet_price_import_latest.md",
 }
+WORKER_RUNTIME_REPORT_PATHS = {
+    "reports/pokewallet_missing_price_worker_latest.json",
+    "reports/pokewallet_missing_price_worker_latest.md",
+    "reports/pokewallet_missing_price_worker_runs.jsonl",
+}
 
 
 def utc_now() -> datetime:
@@ -99,6 +104,52 @@ def run_command(command: list[str], *, allow_failure: bool = False) -> dict[str,
     return result
 
 
+def run_git_sync(*, skip: bool) -> dict[str, Any]:
+    if skip:
+        return {
+            "skipped": True,
+            "status": "skipped",
+            "steps": [],
+            "commandStyle": "manual_skip",
+        }
+
+    steps: list[dict[str, Any]] = []
+    for command in (
+        ["git", "fetch", "origin"],
+        ["git", "rebase", "origin/main"],
+    ):
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        step = {
+            "command": " ".join(command),
+            "returnCode": completed.returncode,
+            "stdout": completed.stdout.rstrip("\r\n"),
+            "stderr": completed.stderr.rstrip("\r\n"),
+            "stdoutTail": completed.stdout.splitlines()[-40:],
+            "stderrTail": completed.stderr.splitlines()[-40:],
+        }
+        steps.append(step)
+        if completed.returncode != 0:
+            return {
+                "skipped": False,
+                "status": "failed",
+                "steps": steps,
+                "commandStyle": "fetch_then_rebase",
+            }
+
+    return {
+        "skipped": False,
+        "status": "ok",
+        "steps": steps,
+        "commandStyle": "fetch_then_rebase",
+    }
+
+
 def normalize_git_path(path: str) -> str:
     value = path.replace("\\", "/").strip()
     if " -> " in value:
@@ -127,6 +178,8 @@ def git_changed_paths() -> list[str]:
 
 def is_expected_generated_path(path: str) -> bool:
     normalized = normalize_git_path(path).lower()
+    if normalized in WORKER_RUNTIME_REPORT_PATHS:
+        return True
     if normalized in FORBIDDEN_COMMIT_PATHS:
         return False
     if normalized in EXPECTED_GENERATED_FILES:
@@ -199,6 +252,8 @@ def build_worker_command(args: argparse.Namespace, *, sleep_mode: bool = False) 
         pieces.append("-DryRunOnly")
     if args.no_push:
         pieces.append("-NoPush")
+    if args.skip_git_sync:
+        pieces.append("-SkipGitSync")
     return " ".join(pieces)
 
 
@@ -341,6 +396,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stop-after-daily-budget", action="store_true")
     parser.add_argument("--dry-run-only", action="store_true")
     parser.add_argument("--no-push", action="store_true")
+    parser.add_argument("--skip-git-sync", action="store_true")
     return parser.parse_args()
 
 
@@ -370,6 +426,12 @@ def main() -> int:
         "commitHashesPushed": [],
         "nextRecommendedCommand": build_worker_command(args, sleep_mode=True),
         "cycleNotes": [],
+        "gitSync": {
+            "skipped": False,
+            "status": "not_run",
+            "steps": [],
+            "commandStyle": "fetch_then_rebase",
+        },
     }
 
     keep_running = True
@@ -396,11 +458,12 @@ def main() -> int:
             break
 
         if not changed_paths:
-            pull_result = run_command(["git", "pull", "--rebase", "origin", "main"], allow_failure=True)
-            if int(pull_result.get("returnCode") or 1) != 0:
+            git_sync = run_git_sync(skip=bool(args.skip_git_sync))
+            summary["gitSync"] = git_sync
+            if git_sync.get("status") == "failed":
                 summary["status"] = "git_rebase_failed"
                 summary["stopReason"] = "git_rebase_failed"
-                summary["cycleNotes"].append("git pull --rebase origin main failed.")
+                summary["cycleNotes"].append("Git sync failed before importer start.")
                 break
         else:
             summary["cycleNotes"].append("Continuing with expected generated changes already in working tree.")

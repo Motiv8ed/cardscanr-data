@@ -11,7 +11,8 @@ param(
     [int]$MaxCycles = 0,
     [switch]$StopAfterDailyBudget,
     [switch]$DryRunOnly,
-    [switch]$NoPush
+    [switch]$NoPush,
+    [switch]$SkipGitSync
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,6 +42,7 @@ if ($MaxCycles -gt 0) { $argsList += @("--max-cycles", [string]$MaxCycles) }
 if ($StopAfterDailyBudget) { $argsList += "--stop-after-daily-budget" }
 if ($DryRunOnly) { $argsList += "--dry-run-only" }
 if ($NoPush) { $argsList += "--no-push" }
+if ($SkipGitSync) { $argsList += "--skip-git-sync" }
 
 Write-Host "[worker] Running PokeWallet missing-price worker..."
 & $pythonPath @argsList
