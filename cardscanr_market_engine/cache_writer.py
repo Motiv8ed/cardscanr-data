@@ -21,6 +21,8 @@ def build_cache_payload(
 ) -> dict[str, Any]:
     stale_after_iso = utc_iso(pricing_stats.stale_after)
     refreshed_at_iso = utc_iso(refreshed_at)
+    raw_market_country = provider_result.raw_metadata.get("marketCountry")
+    raw_currency = provider_result.raw_metadata.get("currency")
     return {
         "price_key_id": price_key.id,
         "current_market_price": pricing_stats.recommended_price,
@@ -33,8 +35,8 @@ def build_cache_payload(
         "confidence": pricing_stats.confidence,
         "provider": provider_result.provider_name,
         "marketplace": provider_result.marketplace,
-        "market_country": price_key.market_country,
-        "currency": price_key.currency,
+        "market_country": str(raw_market_country or price_key.market_country or "").upper() or None,
+        "currency": str(raw_currency or price_key.currency or "").upper() or None,
         "last_updated_at": refreshed_at_iso,
         "stale_after": stale_after_iso,
         "next_refresh_due_at": stale_after_iso,

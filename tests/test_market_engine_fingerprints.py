@@ -56,6 +56,25 @@ class FingerprintTests(unittest.TestCase):
         )
         self.assertEqual(left, right)
 
+    def test_fingerprint_differs_by_market_country_and_currency(self) -> None:
+        common = {
+            "game": "pokemon",
+            "language": "en",
+            "set_code": "base1",
+            "set_name": "Base Set",
+            "collector_number": "4",
+            "card_name": "Charizard",
+            "variant": "raw",
+            "condition": "near_mint",
+        }
+        fingerprints = {
+            "AU/AUD": build_market_price_fingerprint(**common, market_country="au", currency="aud"),
+            "US/USD": build_market_price_fingerprint(**common, market_country="us", currency="usd"),
+            "GB/GBP": build_market_price_fingerprint(**common, market_country="gb", currency="gbp"),
+            "CA/CAD": build_market_price_fingerprint(**common, market_country="ca", currency="cad"),
+        }
+        self.assertEqual(len(set(fingerprints.values())), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,20 +4,25 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import random
 
-from ..models import MarketPriceKey, ProviderResult, SoldComp
+from ..models import ProviderRequest, ProviderResult, SoldComp
 
 
 class MockMarketCompsProvider:
     provider_name = "mock"
-    marketplace = "mock_ebay_sold"
+    marketplace_name = "ebay"
 
-    def fetch_comps(self, price_key: MarketPriceKey) -> ProviderResult:
-        seed = int(hashlib.sha256(price_key.fingerprint.encode("utf-8")).hexdigest()[:16], 16)
+    def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+        price_key = request.price_key
+        seed_source = (
+            f"{price_key.fingerprint}|{request.provider_marketplace_id}|"
+            f"{request.market_country}|{request.currency}|{request.marketplace}"
+        )
+        seed = int(hashlib.sha256(seed_source.encode("utf-8")).hexdigest()[:16], 16)
         rng = random.Random(seed)
         base_price = round(15 + (seed % 5000) / 100, 2)
-        currency = (price_key.currency or "usd").upper()
+        currency = (request.currency or price_key.currency or "usd").upper()
         sold_date_base = datetime(2026, 5, 20, tzinfo=timezone.utc)
-        listing_prefix = f"https://mock.cardscanr.local/{price_key.fingerprint}"
+        listing_prefix = f"https://www.{request.provider_domain}/itm/mock-{price_key.fingerprint}"
         common_title = f"{price_key.card_name} {price_key.set_name} {price_key.collector_number}"
         raw_condition = "Raw" if price_key.variant == "raw" else price_key.variant.upper()
         comps: list[SoldComp] = []
@@ -34,9 +39,16 @@ class MockMarketCompsProvider:
                     total_price=round(sold_price + shipping_price, 2),
                     currency=currency,
                     sold_date=sold_date_base - timedelta(days=index),
-                    listing_url=f"{listing_prefix}/good/{index}",
+                    listing_url=f"{listing_prefix}-good-{index}",
                     condition_text=raw_condition,
-                    raw_metadata={"bucket": "good", "seed": seed, "index": index},
+                    raw_metadata={
+                        "bucket": "good",
+                        "seed": seed,
+                        "index": index,
+                        "providerDomain": request.provider_domain,
+                        "searchLocale": request.search_locale,
+                        "marketDisplayName": request.display_name,
+                    },
                 )
             )
 
@@ -50,9 +62,15 @@ class MockMarketCompsProvider:
                 total_price=outlier_price,
                 currency=currency,
                 sold_date=sold_date_base - timedelta(days=10),
-                listing_url=f"{listing_prefix}/outlier",
+                listing_url=f"{listing_prefix}-outlier",
                 condition_text=raw_condition,
-                raw_metadata={"bucket": "outlier", "seed": seed},
+                raw_metadata={
+                    "bucket": "outlier",
+                    "seed": seed,
+                    "providerDomain": request.provider_domain,
+                    "searchLocale": request.search_locale,
+                    "marketDisplayName": request.display_name,
+                },
             )
         )
 
@@ -75,17 +93,33 @@ class MockMarketCompsProvider:
                     total_price=round(sold_price + shipping_price, 2),
                     currency=currency,
                     sold_date=sold_date_base - timedelta(days=11 + index),
-                    listing_url=f"{listing_prefix}/{bucket}",
+                    listing_url=f"{listing_prefix}-{bucket}",
                     condition_text="Mixed",
-                    raw_metadata={"bucket": bucket, "seed": seed},
+                    raw_metadata={
+                        "bucket": bucket,
+                        "seed": seed,
+                        "providerDomain": request.provider_domain,
+                        "searchLocale": request.search_locale,
+                        "marketDisplayName": request.display_name,
+                    },
                 )
             )
 
         return ProviderResult(
             provider_name=self.provider_name,
-            marketplace=self.marketplace,
-            provider_fingerprint=f"mock:{seed:x}",
+            marketplace=request.provider_marketplace_id,
+            provider_fingerprint=f"mock:{request.provider_marketplace_id}:{seed:x}",
             query_used=f"{price_key.card_name} {price_key.set_name} {price_key.collector_number}",
             comps=comps,
-            raw_metadata={"seed": seed, "basePrice": base_price, "currency": currency},
+            raw_metadata={
+                "seed": seed,
+                "basePrice": base_price,
+                "currency": currency,
+                "marketCountry": request.market_country,
+                "marketplace": request.marketplace,
+                "providerMarketplaceId": request.provider_marketplace_id,
+                "providerDomain": request.provider_domain,
+                "searchLocale": request.search_locale,
+                "displayName": request.display_name,
+            },
         )

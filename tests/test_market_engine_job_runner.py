@@ -10,7 +10,13 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
-from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob, ProviderResult, SoldComp
+from cardscanr_market_engine.models import (
+    MarketPriceKey,
+    MarketPriceRefreshJob,
+    ProviderRequest,
+    ProviderResult,
+    SoldComp,
+)
 
 
 def fixed_config() -> MarketEngineConfig:
@@ -37,13 +43,14 @@ def sample_key() -> MarketPriceKey:
 
 class FakeProvider:
     def __init__(self) -> None:
-        self.price_key: MarketPriceKey | None = None
+        self.request: ProviderRequest | None = None
+        self.marketplace_name = "ebay"
 
-    def fetch_comps(self, price_key: MarketPriceKey) -> ProviderResult:
-        self.price_key = price_key
+    def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+        self.request = request
         return ProviderResult(
             provider_name="mock",
-            marketplace="mock_ebay_sold",
+            marketplace=request.provider_marketplace_id,
             provider_fingerprint="mock:123",
             query_used="charizard base set 4",
             comps=[
@@ -81,6 +88,15 @@ class FakeProvider:
                     condition_text="PSA 10",
                 ),
             ],
+            raw_metadata={
+                "marketCountry": request.market_country,
+                "currency": request.currency,
+                "marketplace": request.marketplace,
+                "providerMarketplaceId": request.provider_marketplace_id,
+                "providerDomain": request.provider_domain,
+                "searchLocale": request.search_locale,
+                "displayName": request.display_name,
+            },
         )
 
 
@@ -141,19 +157,27 @@ class JobRunnerTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(provider.price_key, sample_key())
+        self.assertEqual(provider.request.price_key, sample_key())
         self.assertEqual(result["status"], "completed")
         self.assertEqual(client.snapshot_payload["diagnostics_json"]["providerFingerprint"], "mock:123")
+        self.assertEqual(client.snapshot_payload["diagnostics_json"]["providerMarketplaceId"], "EBAY_US")
+        self.assertEqual(client.snapshot_payload["diagnostics_json"]["providerDomain"], "ebay.com")
         self.assertEqual(client.cache_payload["latest_snapshot_id"], "snapshot-1")
+        self.assertEqual(client.cache_payload["currency"], "USD")
+        self.assertEqual(client.cache_payload["market_country"], "US")
+        self.assertEqual(client.cache_payload["marketplace"], "EBAY_US")
         self.assertEqual(client.cache_payload["current_market_price"], 21.0)
         self.assertEqual(len(client.evidence_rows or []), 3)
         self.assertEqual(client.evidence_rows[2]["rejection_reason"], "graded_for_raw_request")
+        self.assertEqual(client.evidence_rows[0]["raw_json"]["providerDomain"], "ebay.com")
         self.assertIsNotNone(client.completed)
         self.assertIsNone(client.failed)
 
     def test_job_runner_calls_fail_rpc_on_provider_error(self) -> None:
         class BrokenProvider:
-            def fetch_comps(self, price_key: MarketPriceKey) -> ProviderResult:
+            marketplace_name = "ebay"
+
+            def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
                 raise RuntimeError("boom")
 
         client = FakeClient()
@@ -180,7 +204,9 @@ class JobRunnerTests(unittest.TestCase):
 
     def test_job_runner_includes_fail_job_error_if_fail_rpc_fails(self) -> None:
         class BrokenProvider:
-            def fetch_comps(self, price_key: MarketPriceKey) -> ProviderResult:
+            marketplace_name = "ebay"
+
+            def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
                 raise RuntimeError("provider boom")
 
         class FailingFailClient(FakeClient):
@@ -208,6 +234,44 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertEqual(result["error"], "provider boom")
         self.assertEqual(result["failJobError"], "fail rpc boom")
+
+    def test_job_runner_fails_cleanly_for_unsupported_market(self) -> None:
+        class UnsupportedMarketProvider(FakeProvider):
+            marketplace_name = "ebay"
+
+        class UnsupportedMarketClient(FakeClient):
+            def get_price_key(self, price_key_id: str) -> MarketPriceKey:
+                key = sample_key()
+                return MarketPriceKey(
+                    **{
+                        **key.__dict__,
+                        "market_country": "nz",
+                        "currency": "nzd",
+                        "fingerprint": "pokemon|en|base1|4|charizard|raw|near_mint|nz|nzd",
+                    }
+                )
+
+        client = UnsupportedMarketClient()
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=UnsupportedMarketProvider(),
+            config=fixed_config(),
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-unsupported",
+                price_key_id="key-1",
+                reason="scheduler_refresh",
+                priority=90,
+                status="running",
+                attempt_count=1,
+            )
+        )
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("Unsupported ebay market route", result["error"])
+        self.assertEqual(client.failed, {"job_id": "job-unsupported", "error_message": result["error"]})
 
     def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:
         runner = MarketPriceJobRunner(

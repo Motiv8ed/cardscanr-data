@@ -63,6 +63,19 @@ def _float_or_zero(value: Any) -> float:
         return 0.0
 
 
+def _extract_cache_marketplace(value: Any) -> Any:
+    if isinstance(value, list):
+        if not value:
+            return None
+        first = value[0]
+        if isinstance(first, dict):
+            return first.get("marketplace")
+        return None
+    if isinstance(value, dict):
+        return value.get("marketplace")
+    return None
+
+
 @dataclass(frozen=True)
 class MarketSchedulerConfig:
     supabase_url: str
@@ -244,6 +257,9 @@ class MarketPriceRefreshScheduler:
                 rows[key_id] = {
                     "id": key_id,
                     "fingerprint": row.get("fingerprint"),
+                    "market_country": row.get("market_country"),
+                    "currency": row.get("currency"),
+                    "marketplace": _extract_cache_marketplace(row.get("market_price_cache")),
                     "popularity_score": row.get("popularity_score") or 0,
                     "inventory_count": row.get("inventory_count") or 0,
                     "last_seen_at": row.get("last_seen_at"),
@@ -266,6 +282,9 @@ class MarketPriceRefreshScheduler:
                 rows[key_id] = {
                     "id": key_id,
                     "fingerprint": row.get("fingerprint"),
+                    "market_country": row.get("market_country"),
+                    "currency": row.get("currency"),
+                    "marketplace": row.get("marketplace"),
                     "popularity_score": row.get("popularity_score") or 0,
                     "inventory_count": row.get("inventory_count") or 0,
                     "last_seen_at": row.get("last_seen_at"),
@@ -295,6 +314,9 @@ class MarketPriceRefreshScheduler:
                 {
                     "price_key_id": candidate_id,
                     "fingerprint": candidate.get("fingerprint"),
+                    "market_country": candidate.get("market_country"),
+                    "currency": candidate.get("currency"),
+                    "marketplace": candidate.get("marketplace"),
                     "candidate_type": candidate.get("candidate_type"),
                     "decision": decision,
                     "active_job": active_job,
@@ -339,6 +361,9 @@ class MarketPriceRefreshScheduler:
                     {
                         "price_key_id": item["price_key_id"],
                         "fingerprint": item["fingerprint"],
+                        "market_country": item.get("market_country"),
+                        "currency": item.get("currency"),
+                        "marketplace": item.get("marketplace"),
                         "priority": decision.priority,
                         "reason": decision.reason,
                         "status": "dry_run_only",
@@ -358,6 +383,9 @@ class MarketPriceRefreshScheduler:
                 {
                     "price_key_id": item["price_key_id"],
                     "fingerprint": item["fingerprint"],
+                    "market_country": item.get("market_country"),
+                    "currency": item.get("currency"),
+                    "marketplace": item.get("marketplace"),
                     "priority": decision.priority,
                     "reason": decision.reason,
                     "status": str(job_row.get("status", "unknown")),
@@ -396,6 +424,9 @@ class MarketPriceRefreshScheduler:
                 {
                     "price_key_id": item["price_key_id"],
                     "fingerprint": item["fingerprint"],
+                    "market_country": item.get("market_country"),
+                    "currency": item.get("currency"),
+                    "marketplace": item.get("marketplace"),
                     "candidate_type": item["candidate_type"],
                     "has_active_job": item["active_job"] is not None,
                     "decision": {
