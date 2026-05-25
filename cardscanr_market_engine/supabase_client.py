@@ -171,6 +171,91 @@ class SupabaseMarketEngineClient:
             raise ValueError("get_market_price_bundle returned unexpected payload shape")
         return bundle
 
+    def list_missing_cache_keys(
+        self,
+        *,
+        limit: int,
+        min_popularity_score: int = 0,
+        min_inventory_count: int = 0,
+    ) -> list[dict[str, Any]]:
+        return self._table_get(
+            "market_price_keys",
+            params={
+                "select": "id,fingerprint,popularity_score,inventory_count,last_seen_at,market_price_cache!left(price_key_id)",
+                "market_price_cache.price_key_id": "is.null",
+                "popularity_score": f"gte.{max(0, min_popularity_score)}",
+                "inventory_count": f"gte.{max(0, min_inventory_count)}",
+                "order": "last_seen_at.desc.nullslast,updated_at.desc",
+                "limit": max(1, min(limit, 1000)),
+            },
+        )
+
+    def list_stale_cache_keys(
+        self,
+        *,
+        stale_before_iso: str,
+        limit: int,
+        min_popularity_score: int = 0,
+        min_inventory_count: int = 0,
+    ) -> list[dict[str, Any]]:
+        rows = self._table_get(
+            "market_price_cache",
+            params={
+                "select": (
+                    "price_key_id,stale_after,current_market_price,recommended_price,last_updated_at,"
+                    "market_price_keys!inner(id,fingerprint,popularity_score,inventory_count,last_seen_at)"
+                ),
+                "stale_after": f"lt.{stale_before_iso}",
+                "market_price_keys.popularity_score": f"gte.{max(0, min_popularity_score)}",
+                "market_price_keys.inventory_count": f"gte.{max(0, min_inventory_count)}",
+                "order": "stale_after.asc",
+                "limit": max(1, min(limit, 1000)),
+            },
+        )
+        normalized: list[dict[str, Any]] = []
+        for row in rows:
+            key = row.get("market_price_keys")
+            if isinstance(key, list):
+                key = key[0] if key else None
+            if not isinstance(key, dict):
+                continue
+            normalized.append(
+                {
+                    "id": key.get("id"),
+                    "fingerprint": key.get("fingerprint"),
+                    "popularity_score": key.get("popularity_score"),
+                    "inventory_count": key.get("inventory_count"),
+                    "last_seen_at": key.get("last_seen_at"),
+                    "stale_after": row.get("stale_after"),
+                    "current_market_price": row.get("current_market_price"),
+                    "recommended_price": row.get("recommended_price"),
+                    "last_updated_at": row.get("last_updated_at"),
+                }
+            )
+        return normalized
+
+    def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict[str, Any]]:
+        clean_ids = [value.strip() for value in price_key_ids if str(value).strip()]
+        if not clean_ids:
+            return {}
+        in_filter = "(" + ",".join(clean_ids) + ")"
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={
+                "select": "id,price_key_id,status,priority,requested_at,reason",
+                "status": "in.(queued,running)",
+                "price_key_id": f"in.{in_filter}",
+                "order": "requested_at.asc",
+                "limit": min(len(clean_ids), 1000),
+            },
+        )
+        active: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            key_id = str(row.get("price_key_id", "")).strip()
+            if key_id and key_id not in active:
+                active[key_id] = row
+        return active
+
     def insert_snapshot(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._table_post("market_price_snapshots", payload)[0]
 
