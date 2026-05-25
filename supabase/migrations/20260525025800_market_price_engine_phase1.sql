@@ -172,7 +172,7 @@ create unique index if not exists idx_market_sold_listing_evidence_provider_mark
   where listing_url is not null and length(trim(listing_url)) > 0;
 
 create index if not exists idx_market_price_refresh_jobs_status_priority_requested
-  on public.market_price_refresh_jobs (status, priority desc, requested_at asc);
+  on public.market_price_refresh_jobs (status, priority asc, requested_at asc);
 create index if not exists idx_market_price_refresh_jobs_price_key_status
   on public.market_price_refresh_jobs (price_key_id, status);
 create index if not exists idx_market_price_refresh_jobs_requested_by_requested_at
@@ -391,7 +391,7 @@ begin
       and status in ('queued', 'running')
     order by
       case status when 'running' then 0 else 1 end,
-      priority desc,
+      priority asc,
       requested_at asc
     limit 1;
   end;
@@ -419,7 +419,7 @@ begin
     select id
     from public.market_price_refresh_jobs
     where status = 'queued'
-    order by priority desc, requested_at asc
+    order by priority asc, requested_at asc
     for update skip locked
     limit greatest(1, least(coalesce(p_max_jobs, 1), 100))
   ),
@@ -427,6 +427,7 @@ begin
     update public.market_price_refresh_jobs as j
     set
       status = 'running',
+      attempt_count = j.attempt_count + 1,
       started_at = coalesce(j.started_at, now()),
       worker_id = coalesce(nullif(trim(p_worker_id), ''), 'market-worker'),
       locked_at = now(),
@@ -445,7 +446,7 @@ begin
     returning c.id
   )
   select * from claimed
-  order by priority desc, requested_at asc;
+  order by priority asc, requested_at asc;
 end;
 $$;
 
@@ -510,19 +511,11 @@ set search_path = public
 as $$
 declare
   v_job public.market_price_refresh_jobs;
-  v_next_status text;
 begin
   update public.market_price_refresh_jobs
   set
-    attempt_count = attempt_count + 1,
-    status = case
-      when p_retryable and (attempt_count + 1) < greatest(1, p_max_attempts) then 'queued'
-      else 'failed'
-    end,
-    completed_at = case
-      when p_retryable and (attempt_count + 1) < greatest(1, p_max_attempts) then null
-      else now()
-    end,
+    status = 'failed',
+    completed_at = now(),
     error_message = p_error_message,
     worker_id = null,
     locked_at = null,
@@ -535,16 +528,10 @@ begin
     raise exception 'running refresh job not found for id %', p_job_id;
   end if;
 
-  v_next_status := v_job.status;
-
   update public.market_price_cache
   set
-    refresh_status = case when v_next_status = 'queued' then 'queued' else 'failed' end,
+    refresh_status = 'failed',
     last_error_message = p_error_message,
-    next_refresh_due_at = case
-      when v_next_status = 'queued' then now() + make_interval(mins => greatest(1, p_retry_delay_minutes))
-      else next_refresh_due_at
-    end,
     updated_at = now()
   where price_key_id = v_job.price_key_id;
 
@@ -566,6 +553,7 @@ declare
   v_key public.market_price_keys;
   v_cache public.market_price_cache;
   v_snapshot public.market_price_snapshots;
+  v_active_job public.market_price_refresh_jobs;
   v_evidence jsonb := '[]'::jsonb;
 begin
   select * into v_key
@@ -594,6 +582,16 @@ begin
     order by created_at desc
     limit 1;
   end if;
+
+  select * into v_active_job
+  from public.market_price_refresh_jobs
+  where price_key_id = v_key.id
+    and status in ('queued', 'running')
+  order by
+    case status when 'running' then 0 else 1 end,
+    priority asc,
+    requested_at asc
+  limit 1;
 
   select coalesce(
     jsonb_agg(
@@ -631,6 +629,7 @@ begin
     'price_key', to_jsonb(v_key),
     'cache', to_jsonb(v_cache),
     'latest_snapshot', to_jsonb(v_snapshot),
+    'active_refresh_job', to_jsonb(v_active_job),
     'sold_listing_evidence', v_evidence
   );
 end;

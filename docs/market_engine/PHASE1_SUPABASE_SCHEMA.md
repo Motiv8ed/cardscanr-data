@@ -60,6 +60,11 @@ Sold-listing evidence rows for explainability.
 Queue for refresh requests.
 
 - Status lifecycle: `queued`, `running`, `completed`, `failed`, `cancelled`.
+- Priority model: **lower number = higher priority**.
+  - `5` = force refresh
+  - `10` = user refresh
+  - `50` = newly scanned missing cache
+  - `100` = background/stale refresh
 - Partial unique index enforces one active (`queued` or `running`) job per `price_key_id`.
 - Includes user origin (`requested_by_user_id`), worker lock metadata, attempts, and error details.
 
@@ -74,12 +79,15 @@ Queue for refresh requests.
 
 - Enqueues a queued job with priority.
 - Handles active-job dedupe by returning existing active job on unique violation.
+- If a prior job is already `completed`/`failed`/`cancelled`, a new queued job can be created for the same key.
 
 ### `public.claim_market_price_refresh_jobs(worker_id, max_jobs)`
 
 - Claims queued jobs with `FOR UPDATE SKIP LOCKED`.
 - Marks claimed jobs as `running`.
+- Increments `attempt_count` at claim-time to represent a started worker attempt.
 - Updates `market_price_cache.refresh_status` to `running` for claimed keys.
+- Claim ordering is `priority asc, requested_at asc`.
 
 ### `public.complete_market_price_refresh_job(...)`
 
@@ -88,13 +96,13 @@ Queue for refresh requests.
 
 ### `public.fail_market_price_refresh_job(...)`
 
-- Marks running job failed or re-queued depending on retry settings.
-- Increments `attempt_count`.
-- Updates cache status/error while preserving old price values.
+- Marks running job `failed`.
+- Sets `error_message` and `completed_at`.
+- Updates cache status/error while preserving old cached price values.
 
 ### `public.get_market_price_bundle(fingerprint, evidence_limit)`
 
-- Read helper returning key + cache + latest snapshot + sold evidence list.
+- Read helper returning key + cache + latest snapshot + sold evidence list + active refresh job.
 - Intended for read-side integration and diagnostics.
 
 ## RLS design
@@ -122,7 +130,7 @@ Queue for refresh requests.
 ## Index and constraint highlights
 
 - Active dedupe: `idx_market_price_refresh_jobs_one_active_per_key` partial unique index.
-- Queue pickup: `(status, priority desc, requested_at asc)`.
+- Queue pickup: `(status, priority asc, requested_at asc)`.
 - Snapshot/history queries: `(price_key_id, created_at desc)`.
 - Evidence reads: `(price_key_id, sold_date desc)` and snapshot index.
 - Soft dedupe for listing URLs per provider/marketplace via partial unique index.
@@ -143,6 +151,30 @@ Queue for refresh requests.
 - Price/confidence calculation.
 - Snapshot and evidence writes.
 - Cache update payload composition.
+- Queue lifecycle usage:
+  1. claim queued jobs with `claim_market_price_refresh_jobs`
+  2. write snapshot/evidence data
+  3. call `complete_market_price_refresh_job` on success
+  4. call `fail_market_price_refresh_job` on failure
+
+### App responsibilities
+
+- Read shared market pricing state through `get_market_price_bundle(...)`.
+- Request refreshes through `enqueue_market_price_refresh(...)`.
+- Treat queue processing as asynchronous (poll/read cache + active job status).
+- Never directly call claim/complete/fail RPCs from client credentials.
+
+## Expected app read flow (Flutter-facing)
+
+1. Resolve or create a key with `get_or_create_market_price_key(...)`.
+2. Call `get_market_price_bundle(fingerprint)` to read:
+   - `price_key`
+   - `cache`
+   - `latest_snapshot`
+   - `sold_listing_evidence` for the latest snapshot only
+   - `active_refresh_job` when queued/running work exists
+3. If app decides a refresh is needed, call `enqueue_market_price_refresh(...)`.
+4. App does not directly claim/complete/fail jobs.
 
 ## Local SQL validation checklist
 
@@ -166,9 +198,12 @@ Run these checks in a Supabase SQL environment after applying migration:
    - `get_market_price_bundle`
 5. Smoke test key + queue path:
    - Call `get_or_create_market_price_key` with a test fingerprint.
-   - Enqueue twice for same `price_key_id`; verify second call returns existing active job.
-   - Claim with `claim_market_price_refresh_jobs`; verify status changes to `running`.
-   - Call fail/complete RPC and verify queue/cache status transitions.
+   - Enqueue a user refresh (`priority = 10`) and then enqueue again for same `price_key_id`; verify second call returns the same active queued/running job.
+   - Enqueue a background refresh (`priority = 100`) for a different key.
+   - Claim with `claim_market_price_refresh_jobs`; verify user refresh is claimed before background refresh (`priority asc, requested_at asc`).
+   - Call `complete_market_price_refresh_job` and verify job becomes `completed`, `completed_at` is set, and `created_snapshot_id` is attached.
+   - Call `fail_market_price_refresh_job` and verify job becomes `failed`, `completed_at` is set, and previous cached price values remain available.
+   - Call `get_market_price_bundle`; verify returned bundle includes key/cache/latest snapshot/latest-snapshot evidence and active queued/running job when present.
 6. Confirm direct app user read restrictions on `market_price_refresh_jobs` (own rows only).
 
 ## Open decisions carried forward
