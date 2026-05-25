@@ -330,10 +330,11 @@ begin
     condition = excluded.condition,
     market_country = excluded.market_country,
     currency = excluded.currency,
-    last_seen_at = greatest(
-      coalesce(public.market_price_keys.last_seen_at, '-infinity'::timestamptz),
-      coalesce(excluded.last_seen_at, '-infinity'::timestamptz)
-    ),
+    last_seen_at = case
+      when public.market_price_keys.last_seen_at is null then excluded.last_seen_at
+      when excluded.last_seen_at is null then public.market_price_keys.last_seen_at
+      else greatest(public.market_price_keys.last_seen_at, excluded.last_seen_at)
+    end,
     updated_at = now()
   returning id into v_id;
 
