@@ -104,6 +104,26 @@ def run_command(command: list[str], *, allow_failure: bool = False) -> dict[str,
     return result
 
 
+def command_return_code(result: dict[str, Any]) -> int:
+    raw_code = result.get("returnCode")
+    try:
+        return int(raw_code)
+    except (TypeError, ValueError):
+        return 1
+
+
+def first_failed_command(results: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for item in results:
+        if command_return_code(item) != 0:
+            return {
+                "command": item.get("command"),
+                "returnCode": command_return_code(item),
+                "stdoutTail": item.get("stdoutTail") if isinstance(item.get("stdoutTail"), list) else [],
+                "stderrTail": item.get("stderrTail") if isinstance(item.get("stderrTail"), list) else [],
+            }
+    return None
+
+
 def run_git_sync(*, skip: bool) -> dict[str, Any]:
     if skip:
         return {
@@ -312,7 +332,7 @@ def run_validations() -> list[dict[str, Any]]:
     for command in checks:
         result = run_command(command, allow_failure=True)
         results.append(result)
-        if int(result.get("returnCode") or 1) != 0:
+        if command_return_code(result) != 0:
             break
     return results
 
@@ -331,7 +351,7 @@ def run_release(push_enabled: bool) -> dict[str, Any]:
 
     committed = bool(after_hash and before_hash and after_hash != before_hash)
     pushed_hashes: list[str] = []
-    if committed and push_enabled and int(release_result.get("returnCode") or 1) == 0:
+    if committed and push_enabled and command_return_code(release_result) == 0:
         pushed_hashes.append(after_hash)
 
     return {
@@ -378,6 +398,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
     add("## Validation Results")
     for item in summary.get("validationResults", []):
         add(f"- {item.get('command')}: rc={item.get('returnCode')}")
+    validation_failure = summary.get("validationFailure")
+    if isinstance(validation_failure, dict):
+        add("")
+        add("## Validation Failure")
+        add(f"- command: {validation_failure.get('command')}")
+        add(f"- returnCode: {validation_failure.get('returnCode')}")
+        add(f"- stdoutTail: {validation_failure.get('stdoutTail', [])}")
+        add(f"- stderrTail: {validation_failure.get('stderrTail', [])}")
     add("")
     add("## Cycle Notes")
     for note in summary.get("cycleNotes", []):
@@ -433,6 +461,7 @@ def main() -> int:
         "lastSelectedSetIds": [],
         "lastImporterStatus": "not_run",
         "validationResults": [],
+        "validationFailure": None,
         "commitHashesPushed": [],
         "nextRecommendedCommand": build_worker_command(args, sleep_mode=True),
         "cycleNotes": [],
@@ -552,10 +581,17 @@ def main() -> int:
         if imported_this_cycle > 0 or bool(args.validate):
             validation_results = run_validations()
             summary["validationResults"] = validation_results
-            failed_validation = any(int(item.get("returnCode") or 1) != 0 for item in validation_results)
+            validation_failure = first_failed_command(validation_results)
+            summary["validationFailure"] = validation_failure
+            failed_validation = validation_failure is not None
             if failed_validation:
                 summary["status"] = "validation_failed"
                 summary["stopReason"] = "validation_failed"
+                summary["cycleNotes"].append(
+                    "Validation failed for command "
+                    f"{validation_failure.get('command')} "
+                    f"(rc={validation_failure.get('returnCode')})."
+                )
                 break
 
         if imported_this_cycle > 0 and bool(args.commit) and not bool(args.dry_run_only):
@@ -564,7 +600,7 @@ def main() -> int:
                 "command": release["result"]["command"],
                 "returnCode": release["result"]["returnCode"],
             })
-            if int(release["result"].get("returnCode") or 1) != 0:
+            if command_return_code(release["result"]) != 0:
                 summary["status"] = "release_failed"
                 summary["stopReason"] = "release_failed"
                 break
@@ -580,7 +616,7 @@ def main() -> int:
                     "returnCode": export_result["returnCode"],
                 }
             )
-            if int(export_result.get("returnCode") or 1) != 0:
+            if command_return_code(export_result) != 0:
                 summary["status"] = "export_failed"
                 summary["stopReason"] = "export_failed"
                 break
