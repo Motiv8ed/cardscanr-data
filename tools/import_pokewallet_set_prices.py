@@ -142,6 +142,13 @@ def write_json(path: Path, payload: Any) -> None:
         fh.write("\n")
 
 
+def to_root_relative_or_abs(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT)).replace("\\", "/")
+    except ValueError:
+        return str(path.resolve())
+
+
 def parse_utc(ts: Any) -> datetime | None:
     text = str(ts or "").strip()
     if not text:
@@ -229,10 +236,19 @@ def resolve_budget_settings(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def empty_request_ledger(*, api_key_fingerprint: str = "") -> dict[str, Any]:
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAtUtc": now_utc(),
+        "apiKeyFingerprint": api_key_fingerprint or None,
+        "requests": [],
+    }
+
+
 def load_request_ledger(path: Path) -> dict[str, Any]:
     payload = try_load_json(path)
     if not isinstance(payload, dict):
-        payload = {}
+        payload = empty_request_ledger()
     rows = payload.get("requests")
     requests = [item for item in rows if isinstance(item, dict)] if isinstance(rows, list) else []
     # Keep one week of request rows; window checks only need 24h.
@@ -247,6 +263,7 @@ def load_request_ledger(path: Path) -> dict[str, Any]:
     return {
         "schemaVersion": str(payload.get("schemaVersion") or SCHEMA_VERSION),
         "generatedAtUtc": str(payload.get("generatedAtUtc") or now_utc()),
+        "apiKeyFingerprint": str(payload.get("apiKeyFingerprint") or "") or None,
         "requests": pruned,
     }
 
@@ -254,6 +271,69 @@ def load_request_ledger(path: Path) -> dict[str, Any]:
 def save_request_ledger(path: Path, ledger: dict[str, Any]) -> None:
     ledger["generatedAtUtc"] = now_utc()
     write_json(path, ledger)
+
+
+def archive_request_ledger(path: Path, *, reason: str) -> Path | None:
+    if not path.exists():
+        return None
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe_reason = re.sub(r"[^a-z0-9_-]+", "_", reason.lower()).strip("_") or "archive"
+    base_name = f"{path.stem}.archive.{timestamp}.{safe_reason}"
+    candidate = path.with_name(f"{base_name}{path.suffix}")
+    counter = 2
+    while candidate.exists():
+        candidate = path.with_name(f"{base_name}.{counter}{path.suffix}")
+        counter += 1
+    path.replace(candidate)
+    return candidate
+
+
+def reconcile_request_ledger(
+    *,
+    ledger_path: Path,
+    current_api_key_fingerprint: str,
+    reset_budget_ledger: bool,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    existing = load_request_ledger(ledger_path)
+    existing_fingerprint = str(existing.get("apiKeyFingerprint") or "")
+    actions: dict[str, Any] = {
+        "budgetLedgerPath": to_root_relative_or_abs(ledger_path),
+        "budgetLedgerArchivedPath": None,
+        "budgetLedgerResetApplied": False,
+        "budgetLedgerResetReason": None,
+        "budgetLedgerStoredApiKeyFingerprint": existing_fingerprint or None,
+        "budgetLedgerCurrentApiKeyFingerprint": current_api_key_fingerprint or None,
+        "budgetLedgerFingerprintMatch": None,
+    }
+
+    if reset_budget_ledger:
+        archived = archive_request_ledger(ledger_path, reason="manual_reset")
+        ledger = empty_request_ledger(api_key_fingerprint=current_api_key_fingerprint)
+        save_request_ledger(ledger_path, ledger)
+        actions["budgetLedgerArchivedPath"] = to_root_relative_or_abs(archived) if archived else None
+        actions["budgetLedgerResetApplied"] = True
+        actions["budgetLedgerResetReason"] = "manual_reset"
+        actions["budgetLedgerStoredApiKeyFingerprint"] = None
+        actions["budgetLedgerFingerprintMatch"] = True if current_api_key_fingerprint else None
+        return ledger, actions
+
+    if current_api_key_fingerprint and existing_fingerprint and current_api_key_fingerprint != existing_fingerprint:
+        archived = archive_request_ledger(ledger_path, reason="key_fingerprint_mismatch")
+        ledger = empty_request_ledger(api_key_fingerprint=current_api_key_fingerprint)
+        save_request_ledger(ledger_path, ledger)
+        actions["budgetLedgerArchivedPath"] = to_root_relative_or_abs(archived) if archived else None
+        actions["budgetLedgerResetApplied"] = True
+        actions["budgetLedgerResetReason"] = "key_fingerprint_mismatch"
+        actions["budgetLedgerFingerprintMatch"] = True
+        return ledger, actions
+
+    existing["apiKeyFingerprint"] = current_api_key_fingerprint or existing_fingerprint or None
+    if current_api_key_fingerprint and existing_fingerprint != current_api_key_fingerprint:
+        save_request_ledger(ledger_path, existing)
+    actions["budgetLedgerFingerprintMatch"] = (
+        (current_api_key_fingerprint == existing_fingerprint) if current_api_key_fingerprint and existing_fingerprint else None
+    )
+    return existing, actions
 
 
 def append_request_ledger(
@@ -269,6 +349,8 @@ def append_request_ledger(
     endpoint_success: bool,
     error: str | None,
 ) -> None:
+    if "apiKeyFingerprint" not in ledger:
+        ledger["apiKeyFingerprint"] = None
     rows = ledger.get("requests")
     if not isinstance(rows, list):
         rows = []
@@ -1546,6 +1628,11 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- planned requests: {report.get('plannedRequests', 0)}")
     a(f"- requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
     a(f"- requests skipped due to budget: {report.get('requestsSkippedDueToBudget', 0)}")
+    a(f"- budget ledger path: {report.get('budgetLedgerPath')}")
+    a(f"- budget ledger reset applied: {report.get('budgetLedgerResetApplied')}")
+    a(f"- budget ledger reset reason: {report.get('budgetLedgerResetReason')}")
+    a(f"- budget ledger archived path: {report.get('budgetLedgerArchivedPath')}")
+    a(f"- budget ledger fingerprint match: {report.get('budgetLedgerFingerprintMatch')}")
     a(f"- budget source: {report.get('budgetSource')}")
     a(f"- budget decision: {report.get('budgetDecision')}")
     a(f"- hourly used/remaining: {report.get('hourlyUsed', 0)} / {report.get('hourlyRemaining', 0)}")
@@ -1659,10 +1746,16 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     respect_budget = bool(getattr(args, "respect_budget", True)) and not bool(getattr(args, "ignore_budget", False))
     fit_budget = bool(getattr(args, "fit_budget", False))
     wait_for_budget = bool(getattr(args, "wait_for_budget", False))
+    reset_budget_ledger = bool(getattr(args, "reset_budget_ledger", False))
     ledger_path = Path(str(getattr(args, "budget_ledger_path", "") or REQUEST_LEDGER_PATH))
     if not ledger_path.is_absolute():
         ledger_path = (ROOT / ledger_path).resolve()
-    ledger = load_request_ledger(ledger_path)
+    current_key_fingerprint = str(key_resolution.get("apiKeyFingerprint") or "")
+    ledger, ledger_actions = reconcile_request_ledger(
+        ledger_path=ledger_path,
+        current_api_key_fingerprint=current_key_fingerprint,
+        reset_budget_ledger=reset_budget_ledger,
+    )
     snapshot = budget_snapshot(ledger, budget_settings, started_dt)
     before_counts = summarize_current_counts()
     report: dict[str, Any] = {
@@ -1701,6 +1794,13 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         "requestsAllowedByBudget": snapshot["requestsAllowedByBudget"],
         "requestsRemainingAfterExecution": snapshot["requestsAllowedByBudget"],
         "requestsSkippedDueToBudget": 0,
+        "budgetLedgerPath": ledger_actions.get("budgetLedgerPath"),
+        "budgetLedgerArchivedPath": ledger_actions.get("budgetLedgerArchivedPath"),
+        "budgetLedgerResetApplied": bool(ledger_actions.get("budgetLedgerResetApplied")),
+        "budgetLedgerResetReason": ledger_actions.get("budgetLedgerResetReason"),
+        "budgetLedgerStoredApiKeyFingerprint": ledger_actions.get("budgetLedgerStoredApiKeyFingerprint"),
+        "budgetLedgerCurrentApiKeyFingerprint": ledger_actions.get("budgetLedgerCurrentApiKeyFingerprint"),
+        "budgetLedgerFingerprintMatch": ledger_actions.get("budgetLedgerFingerprintMatch"),
         "hourlyUsed": snapshot["hourlyUsed"],
         "hourlyRemaining": snapshot["hourlyRemaining"],
         "dailyUsed": snapshot["dailyUsed"],
@@ -1785,6 +1885,13 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
             f"daily {report.get('dailyUsed', 0)}/{budget_settings['safeRequestsPerDay']} used"
         )
 
+    def print_budget_block_guidance() -> None:
+        safe_print(f"[budget] ledger path: {report.get('budgetLedgerPath')}")
+        safe_print(f"[budget] api key fingerprint: {report.get('apiKeyFingerprint') or 'n/a'}")
+        safe_print(
+            "[budget] If dashboard shows available quota, run with --reset-budget-ledger / -ResetBudgetLedger."
+        )
+
     report["nextRecommendedSafeCommand"] = (
         "python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 1 --dry-run --fit-budget --respect-budget --commit-safe-report"
     )
@@ -1814,6 +1921,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
                         "only for explicit manual override. "
                         f"Current budget: {budget_summary_text()}."
                     )
+                    print_budget_block_guidance()
                     report["finishedAtUtc"] = now_utc()
                     return report, outputs_by_language_set
                 report["budgetDecision"] = "trimmed_to_fit_budget"
@@ -1869,6 +1977,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
                 f"Planned={planned}, allowed={allowed}, {budget_summary_text()}. "
                 "Use --fit-budget to auto-trim or --wait-for-budget to pause until hourly budget is available."
             )
+            print_budget_block_guidance()
             report["finishedAtUtc"] = now_utc()
             return report, outputs_by_language_set
 
@@ -2060,6 +2169,11 @@ def parse_args() -> argparse.Namespace:
         default=str(REQUEST_LEDGER_PATH.relative_to(ROOT)),
         help="Path to shared request ledger JSON file.",
     )
+    parser.add_argument(
+        "--reset-budget-ledger",
+        action="store_true",
+        help="Archive and reset the local budget ledger before processing requests.",
+    )
     parser.add_argument("--fit-budget", action="store_true", help="Trim selected sets to fit remaining safe budget.")
     parser.add_argument("--wait-for-budget", action="store_true", help="Wait for hourly budget when planned requests exceed remaining safe budget.")
     budget_mode = parser.add_mutually_exclusive_group()
@@ -2085,6 +2199,15 @@ def main() -> int:
     safe_print(f"  planned requests: {report.get('plannedRequests', 0)}")
     safe_print(f"  requests allowed by budget: {report.get('requestsAllowedByBudget', 0)}")
     safe_print(f"  requests skipped due to budget: {report.get('requestsSkippedDueToBudget', 0)}")
+    safe_print(f"  budget ledger path: {report.get('budgetLedgerPath')}")
+    safe_print(f"  budget ledger reset applied: {report.get('budgetLedgerResetApplied')}")
+    if report.get("budgetLedgerResetReason"):
+        safe_print(f"  budget ledger reset reason: {report.get('budgetLedgerResetReason')}")
+    if report.get("budgetLedgerArchivedPath"):
+        safe_print(f"  budget ledger archived path: {report.get('budgetLedgerArchivedPath')}")
+    if report.get("budgetLedgerStoredApiKeyFingerprint"):
+        safe_print(f"  budget ledger stored API fingerprint: {report.get('budgetLedgerStoredApiKeyFingerprint')}")
+    safe_print(f"  budget ledger fingerprint match: {report.get('budgetLedgerFingerprintMatch')}")
     safe_print(
         f"  budget usage (hour/day): {report.get('hourlyUsed', 0)}/{report.get('hourlyUsed', 0) + report.get('hourlyRemaining', 0)} "
         f"and {report.get('dailyUsed', 0)}/{report.get('dailyUsed', 0) + report.get('dailyRemaining', 0)}"

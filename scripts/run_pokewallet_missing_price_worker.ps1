@@ -12,7 +12,8 @@ param(
     [switch]$StopAfterDailyBudget,
     [switch]$DryRunOnly,
     [switch]$NoPush,
-    [switch]$SkipGitSync
+    [switch]$SkipGitSync,
+    [switch]$ResetBudgetLedger
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +44,7 @@ if ($StopAfterDailyBudget) { $argsList += "--stop-after-daily-budget" }
 if ($DryRunOnly) { $argsList += "--dry-run-only" }
 if ($NoPush) { $argsList += "--no-push" }
 if ($SkipGitSync) { $argsList += "--skip-git-sync" }
+if ($ResetBudgetLedger) { $argsList += "--reset-budget-ledger" }
 
 Write-Host "[worker] Running PokeWallet missing-price worker..."
 Write-Host "[worker] Settings:"
@@ -55,6 +57,7 @@ Write-Host ("  validate={0}" -f ($(if ($Validate) { 'yes' } else { 'no' })))
 Write-Host ("  sleepWhenBudgetBlocked={0}" -f ($(if ($SleepWhenBudgetBlocked) { 'yes' } else { 'no' })))
 Write-Host ("  pollSeconds={0}" -f $PollSeconds)
 Write-Host ("  skipGitSync={0}" -f ($(if ($SkipGitSync) { 'yes' } else { 'no' })))
+Write-Host ("  resetBudgetLedger={0}" -f ($(if ($ResetBudgetLedger) { 'yes' } else { 'no' })))
 
 & $pythonPath "-u" @argsList
 $exitCode = $LASTEXITCODE

@@ -374,6 +374,8 @@ def build_importer_command(args: argparse.Namespace) -> list[str]:
         command.append("--dry-run")
     else:
         command.append("--write")
+    if args.reset_budget_ledger:
+        command.append("--reset-budget-ledger")
     return command
 
 
@@ -403,6 +405,8 @@ def build_worker_command(args: argparse.Namespace, *, sleep_mode: bool = False) 
         pieces.append("-NoPush")
     if args.skip_git_sync:
         pieces.append("-SkipGitSync")
+    if args.reset_budget_ledger:
+        pieces.append("-ResetBudgetLedger")
     return " ".join(pieces)
 
 
@@ -569,6 +573,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run-only", action="store_true")
     parser.add_argument("--no-push", action="store_true")
     parser.add_argument("--skip-git-sync", action="store_true")
+    parser.add_argument("--reset-budget-ledger", action="store_true")
     return parser.parse_args()
 
 
@@ -587,7 +592,8 @@ def main() -> int:
         f"validate={'yes' if args.validate else 'no'} "
         f"sleepWhenBudgetBlocked={'yes' if args.sleep_when_budget_blocked else 'no'} "
         f"pollSeconds={args.poll_seconds} "
-        f"skipGitSync={'yes' if args.skip_git_sync else 'no'}"
+        f"skipGitSync={'yes' if args.skip_git_sync else 'no'} "
+        f"resetBudgetLedger={'yes' if args.reset_budget_ledger else 'no'}"
     )
 
     summary: dict[str, Any] = {
@@ -717,6 +723,9 @@ def main() -> int:
                 f"dailyUsed={int(import_report.get('dailyUsed') or 0)} "
                 f"dailyRemaining={int(import_report.get('dailyRemaining') or 0)}"
             )
+            worker_log(f"ledger path: {import_report.get('budgetLedgerPath') or 'n/a'}")
+            worker_log(f"api key fingerprint: {import_report.get('apiKeyFingerprint') or 'n/a'}")
+            worker_log("If dashboard shows available quota, run with --reset-budget-ledger / -ResetBudgetLedger.")
             if args.sleep_when_budget_blocked:
                 wait_seconds = estimate_budget_wait_seconds(import_report, max(1, int(args.poll_seconds or 300)))
                 summary["cycleNotes"].append(f"Rate-limited. Sleeping for {wait_seconds}s before retry.")
@@ -757,6 +766,9 @@ def main() -> int:
                 f"dailyRemaining={int(import_report.get('dailyRemaining') or 0)} "
                 f"waitEstimate={wait_seconds}s pollSeconds={int(args.poll_seconds or 300)}"
             )
+            worker_log(f"ledger path: {import_report.get('budgetLedgerPath') or 'n/a'}")
+            worker_log(f"api key fingerprint: {import_report.get('apiKeyFingerprint') or 'n/a'}")
+            worker_log("If dashboard shows available quota, run with --reset-budget-ledger / -ResetBudgetLedger.")
             if args.stop_after_daily_budget and int(import_report.get("dailyRemaining") or 0) <= 0:
                 summary["status"] = "budget_exhausted"
                 summary["stopReason"] = "daily_budget_exhausted"
