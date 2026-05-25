@@ -669,6 +669,22 @@ def _recommend_next_action(
         if jp_count == 0:
             jp_count = int((pipeline.get("pricesByLanguage", {}).get("jp") or {}).get("recordCount") or 0)
 
+        worker_complete = (
+            bool(pokewallet_missing_price_worker)
+            and pokewallet_missing_price_worker.get("available")
+            and pokewallet_missing_price_worker.get("status") == "complete"
+        )
+        import_missing_sets_selected = None
+        if pokewallet_price_import and pokewallet_price_import.get("available"):
+            import_missing_sets_selected = int(pokewallet_price_import.get("missingPriceSetsSelected") or 0)
+
+        if worker_complete and import_missing_sets_selected == 0:
+            return (
+                "All checks passing. JP missing-set price import is complete. "
+                "Next audits: unmatched/unusable price records audit, JP card price coverage by app card, "
+                "and app integration validation."
+            )
+
         if jp_count > 0:
             return (
                 "All checks passing. JP prices are partially imported from PokeWallet and currently partially covered. "
