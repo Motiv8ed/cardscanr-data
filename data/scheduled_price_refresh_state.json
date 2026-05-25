@@ -1,63 +1,54 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 141,
-  "lastUpdatedAtUtc": "2026-05-25T06:33:50Z",
+  "enCurrentPriceCursor": 161,
+  "lastUpdatedAtUtc": "2026-05-25T07:34:54Z",
   "lastBatchSetIds": [
-    "3051",
-    "3064",
-    "3068",
-    "3087",
-    "3118",
-    "3150",
-    "3170",
-    "3172",
-    "3179",
-    "604",
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6",
-    "basep",
-    "best",
-    "bkppr",
-    "bkpr"
+    "bp",
+    "bw1",
+    "bw10",
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp",
+    "bxy",
+    "cel25",
+    "cel25c",
+    "clc",
+    "clk",
+    "col1",
+    "cs0l"
   ],
   "lastProcessedSetIds": [
-    "3051",
-    "3064",
-    "3068",
-    "3087",
-    "3118",
-    "3150",
-    "3170",
-    "3172",
-    "3179",
-    "604",
-    "base1",
-    "base2",
-    "base3",
-    "base4",
-    "base5",
-    "base6",
-    "basep",
-    "best",
-    "bkppr",
-    "bkpr"
+    "bp",
+    "bw1",
+    "bw10",
+    "bw11",
+    "bw2",
+    "bw3",
+    "bw4",
+    "bw5",
+    "bw6",
+    "bw7",
+    "bw8",
+    "bw9",
+    "bwp",
+    "bxy",
+    "cel25",
+    "cel25c",
+    "clc",
+    "clk",
+    "col1",
+    "cs0l"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
   "requestLedger": [
-    {
-      "providerRequestCounts": {
-        "pokemon_tcg_api": 20
-      },
-      "requests": 20,
-      "source": "local_price_update",
-      "status": "built",
-      "timestampUtc": "2026-05-23T07:26:58Z"
-    },
     {
       "providerRequestCounts": {
         "pokemon_tcg_api": 20
@@ -401,7 +392,16 @@
       "timestampUtc": "2026-05-25T02:33:23Z"
     },
     {
-      "timestampUtc": "2026-05-25T06:34:36Z",
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 20
+      },
+      "requests": 20,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-25T06:34:36Z"
+    },
+    {
+      "timestampUtc": "2026-05-25T07:36:03Z",
       "requests": 20,
       "providerRequestCounts": {
         "pokemon_tcg_api": 20
