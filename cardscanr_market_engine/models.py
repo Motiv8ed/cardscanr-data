@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
+from .marketplaces import LocalMarketConfig
+
 Confidence = Literal["high", "medium", "low", "unknown"]
 
 
@@ -89,6 +91,19 @@ class ProviderResult:
     query_used: str
     comps: list[SoldComp]
     raw_metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ProviderRequest:
+    price_key: MarketPriceKey
+    market_country: str
+    currency: str
+    marketplace: str
+    provider_marketplace_id: str
+    provider_domain: str
+    search_locale: str
+    display_name: str
+    market_config: LocalMarketConfig
 
 
 @dataclass(frozen=True)

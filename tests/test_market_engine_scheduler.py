@@ -167,6 +167,9 @@ class MarketEngineSchedulerTests(unittest.TestCase):
                 {
                     "id": key_id,
                     "fingerprint": "f-active",
+                    "market_country": "us",
+                    "currency": "usd",
+                    "marketplace": "EBAY_US",
                     "popularity_score": 20,
                     "inventory_count": 2,
                     "last_seen_at": iso(self.now),
@@ -180,6 +183,9 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         report = self.scheduler_for(client).run_once()
         self.assertEqual(report["summary"]["jobsSkippedAlreadyActive"], 1)
         self.assertEqual(report["summary"]["jobsEnqueued"], 0)
+        self.assertEqual(report["candidateDecisions"][0]["market_country"], "us")
+        self.assertEqual(report["candidateDecisions"][0]["currency"], "usd")
+        self.assertEqual(report["candidateDecisions"][0]["marketplace"], "EBAY_US")
 
     def test_dry_run_does_not_enqueue(self) -> None:
         client = FakeSchedulerClient(
@@ -187,6 +193,9 @@ class MarketEngineSchedulerTests(unittest.TestCase):
                 {
                     "id": "k1",
                     "fingerprint": "f1",
+                    "market_country": "us",
+                    "currency": "usd",
+                    "marketplace": "EBAY_US",
                     "popularity_score": 10,
                     "inventory_count": 1,
                     "last_seen_at": iso(self.now),
@@ -208,6 +217,9 @@ class MarketEngineSchedulerTests(unittest.TestCase):
                 {
                     "id": f"k{idx}",
                     "fingerprint": f"f{idx}",
+                    "market_country": "us",
+                    "currency": "usd",
+                    "marketplace": "EBAY_US",
                     "popularity_score": 0,
                     "inventory_count": 0,
                     "last_seen_at": iso(self.now),
@@ -221,6 +233,42 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         self.assertEqual(report["summary"]["jobsEnqueued"], 1)
         self.assertEqual(report["summary"]["jobsSkippedByLimit"], 2)
         self.assertEqual(len(client.enqueued), 1)
+
+    def test_scheduler_enqueues_same_card_in_different_markets(self) -> None:
+        shared_fingerprint = "pokemon|en|base1|4|charizard|raw|near_mint"
+        client = FakeSchedulerClient(
+            stale_rows=[
+                {
+                    "id": "key-au",
+                    "fingerprint": f"{shared_fingerprint}|au|aud",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "marketplace": "EBAY_AU",
+                    "popularity_score": 20,
+                    "inventory_count": 2,
+                    "last_seen_at": iso(self.now),
+                    "stale_after": iso(self.now - timedelta(hours=1)),
+                    "current_market_price": 40,
+                    "recommended_price": 38,
+                },
+                {
+                    "id": "key-us",
+                    "fingerprint": f"{shared_fingerprint}|us|usd",
+                    "market_country": "us",
+                    "currency": "usd",
+                    "marketplace": "EBAY_US",
+                    "popularity_score": 20,
+                    "inventory_count": 2,
+                    "last_seen_at": iso(self.now),
+                    "stale_after": iso(self.now - timedelta(hours=1)),
+                    "current_market_price": 40,
+                    "recommended_price": 38,
+                },
+            ]
+        )
+        report = self.scheduler_for(client, max_enqueues=2).run_once()
+        self.assertEqual(report["summary"]["jobsEnqueued"], 2)
+        self.assertEqual({row["price_key_id"] for row in report["enqueuedJobs"]}, {"key-au", "key-us"})
 
     def test_report_redacts_secrets(self) -> None:
         clean = sanitize_scheduler_report(

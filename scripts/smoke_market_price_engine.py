@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 from typing import Any
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -72,6 +73,10 @@ def _as_int(value: Any, field_name: str) -> int:
         return int(value)
     except Exception as exc:
         raise AssertionError(f"{field_name} must be numeric: {value}") from exc
+
+
+def _domain(value: Any) -> str:
+    return urlparse(str(value or "")).netloc.lower()
 
 
 def run_smoke() -> dict[str, Any]:
@@ -155,6 +160,8 @@ def run_smoke() -> dict[str, Any]:
 
     _assert(bool(cache.get("last_updated_at")), "cache.last_updated_at missing")
     _assert(bool(cache.get("stale_after")), "cache.stale_after missing")
+    _assert(str(cache.get("currency") or "").upper() == "AUD", "cache.currency must be AUD")
+    _assert(str(cache.get("market_country") or "").upper() == "AU", "cache.market_country must be AU")
     cache_sample_size = _as_int(cache.get("sample_size", 0), "cache.sample_size")
     snapshot_included = _as_int(snapshot.get("included_count", 0), "latest_snapshot.included_count")
     snapshot_rejected = _as_int(snapshot.get("rejected_count", 0), "latest_snapshot.rejected_count")
@@ -164,6 +171,18 @@ def run_smoke() -> dict[str, Any]:
     _assert(cache_sample_size == snapshot_included, "cache.sample_size should equal latest_snapshot.included_count")
     confidence = str(cache.get("confidence") or snapshot.get("confidence") or "").lower()
     _assert(confidence in {"low", "medium", "high"}, "confidence must be low/medium/high")
+    diagnostics = snapshot.get("diagnostics_json") or {}
+    _assert(
+        "EBAY_AU" in str(snapshot.get("marketplace") or "")
+        or "EBAY_AU" in str(diagnostics.get("providerMarketplaceId") or "")
+        or "ebay.com.au" in str(diagnostics.get("providerDomain") or ""),
+        "snapshot diagnostics must include AU marketplace/domain context",
+    )
+    _assert(all(str(item.get("currency") or "").upper() == "AUD" for item in evidence), "evidence currency must be AUD")
+    _assert(
+        all(_domain(item.get("listing_url")) == "www.ebay.com.au" for item in evidence),
+        "evidence listing_url must use ebay.com.au",
+    )
     report_steps.append(
         {
             "step": "bundle_validation",
@@ -172,6 +191,9 @@ def run_smoke() -> dict[str, Any]:
             "rejected_count": snapshot_rejected,
             "confidence": confidence,
             "evidence_count": len(evidence),
+            "cache_currency": cache.get("currency"),
+            "cache_marketplace": cache.get("marketplace"),
+            "snapshot_marketplace": snapshot.get("marketplace"),
         }
     )
 

@@ -6,7 +6,15 @@ from typing import Any
 from .cache_writer import build_cache_payload
 from .config import MarketEngineConfig
 from .filters import filter_comps
-from .models import EvaluatedComp, MarketPriceKey, MarketPriceRefreshJob, PricingStats, ProviderResult
+from .marketplaces import resolve_marketplace_config
+from .models import (
+    EvaluatedComp,
+    MarketPriceKey,
+    MarketPriceRefreshJob,
+    PricingStats,
+    ProviderRequest,
+    ProviderResult,
+)
 from .pricing_stats import calculate_pricing_stats
 
 
@@ -42,6 +50,7 @@ class MarketPriceJobRunner:
         self,
         *,
         price_key: MarketPriceKey,
+        provider_request: ProviderRequest,
         provider_result: ProviderResult,
         evaluated_comps: list[EvaluatedComp],
         pricing_stats: PricingStats,
@@ -66,6 +75,13 @@ class MarketPriceJobRunner:
                 "pricingAsOf": utc_iso(now),
                 "staleAfter": utc_iso(pricing_stats.stale_after),
                 "fetchedCount": len(provider_result.comps),
+                "marketCountry": provider_request.market_country,
+                "currency": provider_request.currency,
+                "marketplace": provider_request.marketplace,
+                "providerMarketplaceId": provider_request.provider_marketplace_id,
+                "providerDomain": provider_request.provider_domain,
+                "searchLocale": provider_request.search_locale,
+                "marketDisplayName": provider_request.display_name,
                 "includedListingIds": [
                     item.comp.source_listing_id for item in evaluated_comps if item.included_in_estimate
                 ],
@@ -82,6 +98,7 @@ class MarketPriceJobRunner:
         *,
         price_key: MarketPriceKey,
         snapshot_id: str,
+        provider_request: ProviderRequest,
         provider_result: ProviderResult,
         evaluated_comps: list[EvaluatedComp],
     ) -> list[dict[str, Any]]:
@@ -107,6 +124,13 @@ class MarketPriceJobRunner:
                     "raw_json": {
                         "sourceListingId": item.comp.source_listing_id,
                         "providerFingerprint": provider_result.provider_fingerprint,
+                        "marketCountry": provider_request.market_country,
+                        "currency": provider_request.currency,
+                        "marketplace": provider_request.marketplace,
+                        "providerMarketplaceId": provider_request.provider_marketplace_id,
+                        "providerDomain": provider_request.provider_domain,
+                        "searchLocale": provider_request.search_locale,
+                        "marketDisplayName": provider_request.display_name,
                         **item.comp.raw_metadata,
                     },
                 }
@@ -126,11 +150,29 @@ class MarketPriceJobRunner:
             if not price_key.fingerprint:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
-            provider_result = self.provider.fetch_comps(price_key)
+            provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
+            market_config = resolve_marketplace_config(
+                market_country=price_key.market_country,
+                currency=price_key.currency,
+                marketplace=provider_marketplace,
+            )
+            provider_request = ProviderRequest(
+                price_key=price_key,
+                market_country=market_config.market_country,
+                currency=market_config.currency,
+                marketplace=market_config.marketplace,
+                provider_marketplace_id=market_config.provider_marketplace_id,
+                provider_domain=market_config.provider_domain,
+                search_locale=market_config.search_locale,
+                display_name=market_config.display_name,
+                market_config=market_config,
+            )
+            provider_result = self.provider.fetch_comps(provider_request)
             evaluated_comps = filter_comps(price_key, provider_result.comps)
             pricing_stats = calculate_pricing_stats(evaluated_comps, now=now, config=self.config)
             snapshot_payload = self.build_snapshot_payload(
                 price_key=price_key,
+                provider_request=provider_request,
                 provider_result=provider_result,
                 evaluated_comps=evaluated_comps,
                 pricing_stats=pricing_stats,
@@ -140,6 +182,7 @@ class MarketPriceJobRunner:
             evidence_rows = self.build_evidence_rows(
                 price_key=price_key,
                 snapshot_id=str(snapshot["id"]),
+                provider_request=provider_request,
                 provider_result=provider_result,
                 evaluated_comps=evaluated_comps,
             )
@@ -167,6 +210,9 @@ class MarketPriceJobRunner:
                 "rejectedCount": pricing_stats.rejected_count,
                 "confidence": pricing_stats.confidence,
                 "recommendedPrice": pricing_stats.recommended_price,
+                "marketCountry": provider_request.market_country,
+                "currency": provider_request.currency,
+                "marketplace": provider_request.provider_marketplace_id,
                 "status": "completed",
             }
         except Exception as exc:

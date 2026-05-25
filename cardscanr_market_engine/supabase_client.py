@@ -184,7 +184,10 @@ class SupabaseMarketEngineClient:
         return self._table_get(
             "market_price_keys",
             params={
-                "select": "id,fingerprint,popularity_score,inventory_count,last_seen_at,market_price_cache!left(price_key_id)",
+                "select": (
+                    "id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at,"
+                    "market_price_cache!left(price_key_id,marketplace)"
+                ),
                 "market_price_cache.price_key_id": "is.null",
                 "popularity_score": f"gte.{max(0, min_popularity_score)}",
                 "inventory_count": f"gte.{max(0, min_inventory_count)}",
@@ -205,8 +208,8 @@ class SupabaseMarketEngineClient:
             "market_price_cache",
             params={
                 "select": (
-                    "price_key_id,stale_after,current_market_price,recommended_price,last_updated_at,"
-                    "market_price_keys!inner(id,fingerprint,popularity_score,inventory_count,last_seen_at)"
+                    "price_key_id,stale_after,current_market_price,recommended_price,last_updated_at,marketplace,"
+                    "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at)"
                 ),
                 "stale_after": f"lt.{stale_before_iso}",
                 "market_price_keys.popularity_score": f"gte.{max(0, min_popularity_score)}",
@@ -229,6 +232,9 @@ class SupabaseMarketEngineClient:
                     "popularity_score": key.get("popularity_score"),
                     "inventory_count": key.get("inventory_count"),
                     "last_seen_at": key.get("last_seen_at"),
+                    "market_country": key.get("market_country"),
+                    "currency": key.get("currency"),
+                    "marketplace": row.get("marketplace"),
                     "stale_after": row.get("stale_after"),
                     "current_market_price": row.get("current_market_price"),
                     "recommended_price": row.get("recommended_price"),
