@@ -1,0 +1,165 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T20:24:37Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T20:24:37Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 3,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24154|004/009|pokeparks_pikachu",
+      "canonicalId": "pokemon|jp|24154|004/009|pokeparks_pikachu|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "004/009",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-17T07:30:34.698666",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T20:24:37Z",
+      "highPrice": 540.0,
+      "lowPrice": 540.0,
+      "market": "tcgplayer",
+      "marketPrice": 540.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pokeparks_pikachu",
+      "priceIdentityId": "pokemon|jp|24154|004/009|pokeparks_pikachu|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_ec28ba1fd5d84248cb15eff4edf9746c7a63b2a6bf74dd16bf2b53fbd5db1a1cdff2a3315c3b3177a1088a3ba6da",
+        "pokewalletSetId": "24154"
+      },
+      "setId": "24154",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24154|006/009|pokeparks_latios",
+      "canonicalId": "pokemon|jp|24154|006/009|pokeparks_latios|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "006/009",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T20:24:37Z",
+      "highPrice": 100.0,
+      "lowPrice": 100.0,
+      "market": "tcgplayer",
+      "marketPrice": 69.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pokeparks_latios",
+      "priceIdentityId": "pokemon|jp|24154|006/009|pokeparks_latios|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fdcc5f88d24339a49d032a712795be4121ea9f3f0191337876d528db2ace9d891fa6379b6a972649992433ba34b0",
+        "pokewalletSetId": "24154"
+      },
+      "setId": "24154",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24154|007/009|pokeparks_whismur",
+      "canonicalId": "pokemon|jp|24154|007/009|pokeparks_whismur|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "007/009",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:49.706341",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T20:24:37Z",
+      "highPrice": 16.0,
+      "lowPrice": 16.0,
+      "market": "tcgplayer",
+      "marketPrice": 18.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pokeparks_whismur",
+      "priceIdentityId": "pokemon|jp|24154|007/009|pokeparks_whismur|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_4f34b8c53cc08b00d5b807a15cd4245582e7c5872d3c2ca364b5e279fbc8fa50d1b84f8f1081ed944b7082c2fb5f",
+        "pokewalletSetId": "24154"
+      },
+      "setId": "24154",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24154",
+  "setName": "PokePark Forest",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}

@@ -1,0 +1,118 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T20:24:37Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T20:24:37Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 2,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24161|18.0|mareep_18",
+      "canonicalId": "pokemon|jp|24161|18.0|mareep_18|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "18.0",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:08.205549",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T20:24:37Z",
+      "highPrice": 60.0,
+      "lowPrice": 60.0,
+      "market": "tcgplayer",
+      "marketPrice": 17.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mareep_18",
+      "priceIdentityId": "pokemon|jp|24161|18.0|mareep_18|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_289dc62437c6074893e13a705a8311714b95cc8fe22aee88c22910e0be27fd61d26a5d1957ce9f9dcf979bdf00",
+        "pokewalletSetId": "24161"
+      },
+      "setId": "24161",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24161|4.0|croconaw",
+      "canonicalId": "pokemon|jp|24161|4.0|croconaw|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "4.0",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:45.057942",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T20:24:37Z",
+      "highPrice": 39.99,
+      "lowPrice": 39.99,
+      "market": "tcgplayer",
+      "marketPrice": 40.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "croconaw",
+      "priceIdentityId": "pokemon|jp|24161|4.0|croconaw|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_a4479caf831d6779dbfeaba2f9d7491aa9dee768d402adefdc0f5897389157cfbe87385a47d14f0fd66aeab8",
+        "pokewalletSetId": "24161"
+      },
+      "setId": "24161",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24161",
+  "setName": "Intro Pack Neo (Totodile)",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
