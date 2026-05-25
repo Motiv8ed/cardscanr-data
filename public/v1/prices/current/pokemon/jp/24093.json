@@ -1,0 +1,165 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T10:48:22Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T10:48:22Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 3,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24093|010/015|basic_lightning_energy_010_015",
+      "canonicalId": "pokemon|jp|24093|010/015|basic_lightning_energy_010_015|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "010/015",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:48:22Z",
+      "highPrice": 1.99,
+      "lowPrice": 1.99,
+      "market": "tcgplayer",
+      "marketPrice": 1.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "basic_lightning_energy_010_015",
+      "priceIdentityId": "pokemon|jp|24093|010/015|basic_lightning_energy_010_015|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_29056f72db369eaf3f519418d3ed1fcdfb2307d6d1a0f4fcb013c6ad27250767560514712810471cae690579d75611",
+        "pokewalletSetId": "24093"
+      },
+      "setId": "24093",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24093|003/015|mew_ex",
+      "canonicalId": "pokemon|jp|24093|003/015|mew_ex|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "003/015",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:43.788427",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:48:22Z",
+      "highPrice": 100.0,
+      "lowPrice": 100.0,
+      "market": "tcgplayer",
+      "marketPrice": 65.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mew_ex",
+      "priceIdentityId": "pokemon|jp|24093|003/015|mew_ex|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_392ed7f63b8da83a93ee13b44e89ed0018db2c5b1d09299615423163e6007cfd24dae7ccae11a6c61288fcaf44d3",
+        "pokewalletSetId": "24093"
+      },
+      "setId": "24093",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24093|004/015|baltoy",
+      "canonicalId": "pokemon|jp|24093|004/015|baltoy|pokewallet|tcgplayer|usd|normal|near_mint",
+      "collectorNumber": "004/015",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Normal",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:48:22Z",
+      "highPrice": 9.99,
+      "lowPrice": 1.5,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "baltoy",
+      "priceIdentityId": "pokemon|jp|24093|004/015|baltoy|normal|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_9871bdac48b64bbf933671c9e4482432ffba2d08d066c83a3c65c3e75aa482bf2c93f8c60ca4a5ed0e4cbd1bedc9",
+        "pokewalletSetId": "24093"
+      },
+      "setId": "24093",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "normal"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24093",
+  "setName": "Gift Box Mew - Lucario (Mew Quarter Deck)",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}

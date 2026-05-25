@@ -1,0 +1,118 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T10:48:22Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T10:48:22Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 2,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24098|001/002|pikachu_star",
+      "canonicalId": "pokemon|jp|24098|001/002|pikachu_star|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "001/002",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-16T07:22:26.562361",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:48:22Z",
+      "highPrice": 995.95,
+      "lowPrice": 995.95,
+      "market": "tcgplayer",
+      "marketPrice": 995.95,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "pikachu_star",
+      "priceIdentityId": "pokemon|jp|24098|001/002|pikachu_star|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_55e2c3b9d41c660dd1576bdc69eb8b9e935ddcbc6137d15de0f73c713cf92a9961f9d4a9fef5d18da037e669a666",
+        "pokewalletSetId": "24098"
+      },
+      "setId": "24098",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24098|002/002|mewtwo_star",
+      "canonicalId": "pokemon|jp|24098|002/002|mewtwo_star|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "002/002",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-15T07:22:17.676912",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:48:22Z",
+      "highPrice": 999.99,
+      "lowPrice": 999.99,
+      "market": "tcgplayer",
+      "marketPrice": 999.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "mewtwo_star",
+      "priceIdentityId": "pokemon|jp|24098|002/002|mewtwo_star|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_9d1f226a21bd185eede641dfb0f703b5052e2712bf547696e971cdcec1da4a31b03f90dba46b1c569580c17649f9",
+        "pokewalletSetId": "24098"
+      },
+      "setId": "24098",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24098",
+  "setName": "Gift Box Mew - Lucario (Pokemon Star)",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
