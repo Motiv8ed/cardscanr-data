@@ -1,0 +1,4818 @@
+{
+  "currency": "mixed",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T10:51:25Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T10:51:25Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 102,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033",
+      "canonicalId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "001/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.35,
+      "market": "cardmarket",
+      "marketPrice": 2.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_carvanha_001_033",
+      "priceIdentityId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_7431371a26128a06c72438495669811806a49778e86902b61194e7501d2ade1a141a6f643a44c73c54878afb75bb",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033",
+      "canonicalId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "001/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 0.1,
+      "lowPrice": 0.1,
+      "market": "tcgplayer",
+      "marketPrice": 0.1,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_carvanha_001_033",
+      "priceIdentityId": "pokemon|jp|24122|001/033|team_aquas_carvanha_001_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_7431371a26128a06c72438495669811806a49778e86902b61194e7501d2ade1a141a6f643a44c73c54878afb75bb",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033",
+      "canonicalId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "010/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_010_033",
+      "priceIdentityId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b56c478a1504ea021aa3f7ce11f98142b1908ba43064adfd27545477d96a454f843a3830b315312814c7523b57b5d7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033",
+      "canonicalId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "010/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.0,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_010_033",
+      "priceIdentityId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b56c478a1504ea021aa3f7ce11f98142b1908ba43064adfd27545477d96a454f843a3830b315312814c7523b57b5d7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033",
+      "canonicalId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "010/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_010_033",
+      "priceIdentityId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b56c478a1504ea021aa3f7ce11f98142b1908ba43064adfd27545477d96a454f843a3830b315312814c7523b57b5d7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033",
+      "canonicalId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "010/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 2.0,
+      "lowPrice": 1.5,
+      "market": "tcgplayer",
+      "marketPrice": 1.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_010_033",
+      "priceIdentityId": "pokemon|jp|24122|010/033|team_aquas_sealeo_010_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b56c478a1504ea021aa3f7ce11f98142b1908ba43064adfd27545477d96a454f843a3830b315312814c7523b57b5d7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033",
+      "canonicalId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "011/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_011_033",
+      "priceIdentityId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_903add1510d7725666d8c3df26d8895a669f00686c82d2e2bb885703a6e32fcbf186376f2569b8b8cb6b3c582df355",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033",
+      "canonicalId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "011/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 9.0,
+      "lowPrice": 4.5,
+      "market": "tcgplayer",
+      "marketPrice": 6.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_011_033",
+      "priceIdentityId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_903add1510d7725666d8c3df26d8895a669f00686c82d2e2bb885703a6e32fcbf186376f2569b8b8cb6b3c582df355",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033",
+      "canonicalId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "011/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_011_033",
+      "priceIdentityId": "pokemon|jp|24122|011/033|team_aquas_walrein_011_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_903add1510d7725666d8c3df26d8895a669f00686c82d2e2bb885703a6e32fcbf186376f2569b8b8cb6b3c582df355",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033",
+      "canonicalId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|pokewallet|cardmarket|eur|first_edition_holo|near_mint",
+      "collectorNumber": "012/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_012_033",
+      "priceIdentityId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|first_edition_holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_46726990a3ffc4abc5953a462b1894fc168a07685a607b581c4979a0f836511fb61504730b4d0572bff6444629765f",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition_holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033",
+      "canonicalId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|pokewallet|tcgplayer|usd|first_edition_holo|near_mint",
+      "collectorNumber": "012/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 9.99,
+      "lowPrice": 8.53,
+      "market": "tcgplayer",
+      "marketPrice": 8.54,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_012_033",
+      "priceIdentityId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|first_edition_holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_46726990a3ffc4abc5953a462b1894fc168a07685a607b581c4979a0f836511fb61504730b4d0572bff6444629765f",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition_holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033",
+      "canonicalId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|pokewallet|cardmarket|eur|unlimited_holofoil|near_mint",
+      "collectorNumber": "012/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_012_033",
+      "priceIdentityId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|unlimited_holofoil|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_46726990a3ffc4abc5953a462b1894fc168a07685a607b581c4979a0f836511fb61504730b4d0572bff6444629765f",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited_holofoil"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033",
+      "canonicalId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|pokewallet|tcgplayer|usd|unlimited_holofoil|near_mint",
+      "collectorNumber": "012/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.9,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_walrein_012_033",
+      "priceIdentityId": "pokemon|jp|24122|012/033|team_aquas_walrein_012_033|unlimited_holofoil|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_46726990a3ffc4abc5953a462b1894fc168a07685a607b581c4979a0f836511fb61504730b4d0572bff6444629765f",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited_holofoil"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|013/033|team_aquas_kyogre",
+      "canonicalId": "pokemon|jp|24122|013/033|team_aquas_kyogre|pokewallet|cardmarket|eur|first_edition_holo|near_mint",
+      "collectorNumber": "013/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_kyogre",
+      "priceIdentityId": "pokemon|jp|24122|013/033|team_aquas_kyogre|first_edition_holo|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_6f11b356038c156ce090046d825bbf73fc5e1d64ed5f0c9f874edf859bd84f288e0658ea02463d30b1162f8f09805e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition_holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|013/033|team_aquas_kyogre",
+      "canonicalId": "pokemon|jp|24122|013/033|team_aquas_kyogre|pokewallet|tcgplayer|usd|first_edition_holo|near_mint",
+      "collectorNumber": "013/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-16T07:22:26.801968",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_kyogre",
+      "priceIdentityId": "pokemon|jp|24122|013/033|team_aquas_kyogre|first_edition_holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_6f11b356038c156ce090046d825bbf73fc5e1d64ed5f0c9f874edf859bd84f288e0658ea02463d30b1162f8f09805e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition_holo"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|013/033|team_aquas_kyogre",
+      "canonicalId": "pokemon|jp|24122|013/033|team_aquas_kyogre|pokewallet|cardmarket|eur|unlimited_holofoil|near_mint",
+      "collectorNumber": "013/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_kyogre",
+      "priceIdentityId": "pokemon|jp|24122|013/033|team_aquas_kyogre|unlimited_holofoil|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_6f11b356038c156ce090046d825bbf73fc5e1d64ed5f0c9f874edf859bd84f288e0658ea02463d30b1162f8f09805e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited_holofoil"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|013/033|team_aquas_kyogre",
+      "canonicalId": "pokemon|jp|24122|013/033|team_aquas_kyogre|pokewallet|tcgplayer|usd|unlimited_holofoil|near_mint",
+      "collectorNumber": "013/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:49.436892",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 8.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_kyogre",
+      "priceIdentityId": "pokemon|jp|24122|013/033|team_aquas_kyogre|unlimited_holofoil|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_6f11b356038c156ce090046d825bbf73fc5e1d64ed5f0c9f874edf859bd84f288e0658ea02463d30b1162f8f09805e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited_holofoil"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|014/033|raikou_ex",
+      "canonicalId": "pokemon|jp|24122|014/033|raikou_ex|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "014/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "raikou_ex",
+      "priceIdentityId": "pokemon|jp|24122|014/033|raikou_ex|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_03089f1aa02d606f643748c85a3099ea04aaa50f4c3f13ec8c5b3787c3de444d09e9bf6988e920d23129da1bcc1a4c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|014/033|raikou_ex",
+      "canonicalId": "pokemon|jp|24122|014/033|raikou_ex|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "014/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 20.0,
+      "lowPrice": 20.0,
+      "market": "tcgplayer",
+      "marketPrice": 24.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "raikou_ex",
+      "priceIdentityId": "pokemon|jp|24122|014/033|raikou_ex|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_03089f1aa02d606f643748c85a3099ea04aaa50f4c3f13ec8c5b3787c3de444d09e9bf6988e920d23129da1bcc1a4c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|014/033|raikou_ex",
+      "canonicalId": "pokemon|jp|24122|014/033|raikou_ex|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "014/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "raikou_ex",
+      "priceIdentityId": "pokemon|jp|24122|014/033|raikou_ex|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_03089f1aa02d606f643748c85a3099ea04aaa50f4c3f13ec8c5b3787c3de444d09e9bf6988e920d23129da1bcc1a4c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|014/033|raikou_ex",
+      "canonicalId": "pokemon|jp|24122|014/033|raikou_ex|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "014/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 20.0,
+      "lowPrice": 19.99,
+      "market": "tcgplayer",
+      "marketPrice": 29.95,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "raikou_ex",
+      "priceIdentityId": "pokemon|jp|24122|014/033|raikou_ex|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_03089f1aa02d606f643748c85a3099ea04aaa50f4c3f13ec8c5b3787c3de444d09e9bf6988e920d23129da1bcc1a4c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|015/033|team_aquas_chinchou",
+      "canonicalId": "pokemon|jp|24122|015/033|team_aquas_chinchou|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "015/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_chinchou",
+      "priceIdentityId": "pokemon|jp|24122|015/033|team_aquas_chinchou|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_fe9a2fe5927c1791f6248c09c3a7c5c70547345eba870275fd9c06efdd8f93d63aa953257f3ee94aea5b80d8974ee9",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|015/033|team_aquas_chinchou",
+      "canonicalId": "pokemon|jp|24122|015/033|team_aquas_chinchou|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "015/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.0,
+      "lowPrice": 1.99,
+      "market": "tcgplayer",
+      "marketPrice": 1.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_chinchou",
+      "priceIdentityId": "pokemon|jp|24122|015/033|team_aquas_chinchou|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fe9a2fe5927c1791f6248c09c3a7c5c70547345eba870275fd9c06efdd8f93d63aa953257f3ee94aea5b80d8974ee9",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|015/033|team_aquas_chinchou",
+      "canonicalId": "pokemon|jp|24122|015/033|team_aquas_chinchou|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "015/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_chinchou",
+      "priceIdentityId": "pokemon|jp|24122|015/033|team_aquas_chinchou|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_fe9a2fe5927c1791f6248c09c3a7c5c70547345eba870275fd9c06efdd8f93d63aa953257f3ee94aea5b80d8974ee9",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|015/033|team_aquas_chinchou",
+      "canonicalId": "pokemon|jp|24122|015/033|team_aquas_chinchou|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "015/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.0,
+      "lowPrice": 1.25,
+      "market": "tcgplayer",
+      "marketPrice": 2.63,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_chinchou",
+      "priceIdentityId": "pokemon|jp|24122|015/033|team_aquas_chinchou|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_fe9a2fe5927c1791f6248c09c3a7c5c70547345eba870275fd9c06efdd8f93d63aa953257f3ee94aea5b80d8974ee9",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|016/033|team_aquas_lanturn",
+      "canonicalId": "pokemon|jp|24122|016/033|team_aquas_lanturn|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "016/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_lanturn",
+      "priceIdentityId": "pokemon|jp|24122|016/033|team_aquas_lanturn|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_7ec1584a16a39936860819d455e63b2ef14040114c3316308b29f366734c95d436a13b820bd44a5ecb595cd8f0f6b7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|016/033|team_aquas_lanturn",
+      "canonicalId": "pokemon|jp|24122|016/033|team_aquas_lanturn|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "016/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_lanturn",
+      "priceIdentityId": "pokemon|jp|24122|016/033|team_aquas_lanturn|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_7ec1584a16a39936860819d455e63b2ef14040114c3316308b29f366734c95d436a13b820bd44a5ecb595cd8f0f6b7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|016/033|team_aquas_lanturn",
+      "canonicalId": "pokemon|jp|24122|016/033|team_aquas_lanturn|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "016/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_lanturn",
+      "priceIdentityId": "pokemon|jp|24122|016/033|team_aquas_lanturn|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_7ec1584a16a39936860819d455e63b2ef14040114c3316308b29f366734c95d436a13b820bd44a5ecb595cd8f0f6b7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|016/033|team_aquas_lanturn",
+      "canonicalId": "pokemon|jp|24122|016/033|team_aquas_lanturn|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "016/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-04-25T06:16:27.543623",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 1.79,
+      "lowPrice": 1.79,
+      "market": "tcgplayer",
+      "marketPrice": 1.79,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_lanturn",
+      "priceIdentityId": "pokemon|jp|24122|016/033|team_aquas_lanturn|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_7ec1584a16a39936860819d455e63b2ef14040114c3316308b29f366734c95d436a13b820bd44a5ecb595cd8f0f6b7",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033",
+      "canonicalId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "018/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_electrike_018_033",
+      "priceIdentityId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_be2b8db75087345b130597a8f38f6a2a77792dc61284f87a1dfea568c0e427f4306542439bbb3af7be3a7277d4e085",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033",
+      "canonicalId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "018/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.0,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 1.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_electrike_018_033",
+      "priceIdentityId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_be2b8db75087345b130597a8f38f6a2a77792dc61284f87a1dfea568c0e427f4306542439bbb3af7be3a7277d4e085",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033",
+      "canonicalId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "018/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_electrike_018_033",
+      "priceIdentityId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_be2b8db75087345b130597a8f38f6a2a77792dc61284f87a1dfea568c0e427f4306542439bbb3af7be3a7277d4e085",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033",
+      "canonicalId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "018/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.99,
+      "lowPrice": 4.95,
+      "market": "tcgplayer",
+      "marketPrice": 1.29,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_electrike_018_033",
+      "priceIdentityId": "pokemon|jp|24122|018/033|team_aquas_electrike_018_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_be2b8db75087345b130597a8f38f6a2a77792dc61284f87a1dfea568c0e427f4306542439bbb3af7be3a7277d4e085",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|019/033|team_aquas_manectric",
+      "canonicalId": "pokemon|jp|24122|019/033|team_aquas_manectric|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "019/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.39,
+      "market": "cardmarket",
+      "marketPrice": 1.29,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_manectric",
+      "priceIdentityId": "pokemon|jp|24122|019/033|team_aquas_manectric|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b2d425ac6abbd8573faf82b70f8679c1f3364068f62c5310a781bcb373ee0d32b041a921cd9c993d48cfdb8cc488a8",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|019/033|team_aquas_manectric",
+      "canonicalId": "pokemon|jp|24122|019/033|team_aquas_manectric|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "019/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 10.0,
+      "lowPrice": 9.0,
+      "market": "tcgplayer",
+      "marketPrice": 9.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_manectric",
+      "priceIdentityId": "pokemon|jp|24122|019/033|team_aquas_manectric|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b2d425ac6abbd8573faf82b70f8679c1f3364068f62c5310a781bcb373ee0d32b041a921cd9c993d48cfdb8cc488a8",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|019/033|team_aquas_manectric",
+      "canonicalId": "pokemon|jp|24122|019/033|team_aquas_manectric|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "019/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.39,
+      "market": "cardmarket",
+      "marketPrice": 1.29,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_manectric",
+      "priceIdentityId": "pokemon|jp|24122|019/033|team_aquas_manectric|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b2d425ac6abbd8573faf82b70f8679c1f3364068f62c5310a781bcb373ee0d32b041a921cd9c993d48cfdb8cc488a8",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|019/033|team_aquas_manectric",
+      "canonicalId": "pokemon|jp|24122|019/033|team_aquas_manectric|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "019/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 8.0,
+      "lowPrice": 3.59,
+      "market": "tcgplayer",
+      "marketPrice": 4.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_manectric",
+      "priceIdentityId": "pokemon|jp|24122|019/033|team_aquas_manectric|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b2d425ac6abbd8573faf82b70f8679c1f3364068f62c5310a781bcb373ee0d32b041a921cd9c993d48cfdb8cc488a8",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033",
+      "canonicalId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "002/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.35,
+      "market": "cardmarket",
+      "marketPrice": 0.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_carvanha_002_033",
+      "priceIdentityId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_312c618397b44cd6bf18d8a182ff44af37bc811a50b441839a424998756dedb189af5a7bdd1664eb82e73b93ff4e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033",
+      "canonicalId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "002/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_carvanha_002_033",
+      "priceIdentityId": "pokemon|jp|24122|002/033|team_aquas_carvanha_002_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_312c618397b44cd6bf18d8a182ff44af37bc811a50b441839a424998756dedb189af5a7bdd1664eb82e73b93ff4e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033",
+      "canonicalId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "020/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_poochyena_020_033",
+      "priceIdentityId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_0f613a19601205a06230b749ce5fa7132b3fe20f0b9925062a67976762d7b0852f1f4699ca9e221dfeca874a0ef381",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033",
+      "canonicalId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "020/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:48.815977",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 1.0,
+      "lowPrice": 1.0,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_poochyena_020_033",
+      "priceIdentityId": "pokemon|jp|24122|020/033|team_aquas_poochyena_020_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_0f613a19601205a06230b749ce5fa7132b3fe20f0b9925062a67976762d7b0852f1f4699ca9e221dfeca874a0ef381",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033",
+      "canonicalId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "021/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_poochyena_021_033",
+      "priceIdentityId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_2902e8d3f57823527cda3448dac34c051a23f1cb6ec1fe4d4fa9df3d99bd0892514d703fb89d9e500042cfc08ed3ca",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033",
+      "canonicalId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "021/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.99,
+      "lowPrice": 4.99,
+      "market": "tcgplayer",
+      "marketPrice": 6.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_poochyena_021_033",
+      "priceIdentityId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_2902e8d3f57823527cda3448dac34c051a23f1cb6ec1fe4d4fa9df3d99bd0892514d703fb89d9e500042cfc08ed3ca",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033",
+      "canonicalId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "021/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_poochyena_021_033",
+      "priceIdentityId": "pokemon|jp|24122|021/033|team_aquas_poochyena_021_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_2902e8d3f57823527cda3448dac34c051a23f1cb6ec1fe4d4fa9df3d99bd0892514d703fb89d9e500042cfc08ed3ca",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033",
+      "canonicalId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "023/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.5,
+      "market": "cardmarket",
+      "marketPrice": 0.8,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_mightyena_023_033",
+      "priceIdentityId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_024650a4043e7e6e7e36884d1fa3c503af0ff3118d6d85b6358e23497568fa022bbaa321ca609de2da126ee610d3f4",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033",
+      "canonicalId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "023/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 19.88,
+      "lowPrice": 19.88,
+      "market": "tcgplayer",
+      "marketPrice": 19.88,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_mightyena_023_033",
+      "priceIdentityId": "pokemon|jp|24122|023/033|team_aquas_mightyena_023_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_024650a4043e7e6e7e36884d1fa3c503af0ff3118d6d85b6358e23497568fa022bbaa321ca609de2da126ee610d3f4",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|024/033|potion",
+      "canonicalId": "pokemon|jp|24122|024/033|potion|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "024/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.15,
+      "market": "cardmarket",
+      "marketPrice": 1.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "potion",
+      "priceIdentityId": "pokemon|jp|24122|024/033|potion|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_1f52c1fa4faa76b6040ad66d6149cfaaee261c6306643a02325d42b6dbdf1575bc259ae219cc4ca3873a542b386091",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|024/033|potion",
+      "canonicalId": "pokemon|jp|24122|024/033|potion|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "024/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "potion",
+      "priceIdentityId": "pokemon|jp|24122|024/033|potion|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_1f52c1fa4faa76b6040ad66d6149cfaaee261c6306643a02325d42b6dbdf1575bc259ae219cc4ca3873a542b386091",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|024/033|potion",
+      "canonicalId": "pokemon|jp|24122|024/033|potion|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "024/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.15,
+      "market": "cardmarket",
+      "marketPrice": 1.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "potion",
+      "priceIdentityId": "pokemon|jp|24122|024/033|potion|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_1f52c1fa4faa76b6040ad66d6149cfaaee261c6306643a02325d42b6dbdf1575bc259ae219cc4ca3873a542b386091",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|024/033|potion",
+      "canonicalId": "pokemon|jp|24122|024/033|potion|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "024/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.0,
+      "lowPrice": 7.0,
+      "market": "tcgplayer",
+      "marketPrice": 7.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "potion",
+      "priceIdentityId": "pokemon|jp|24122|024/033|potion|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_1f52c1fa4faa76b6040ad66d6149cfaaee261c6306643a02325d42b6dbdf1575bc259ae219cc4ca3873a542b386091",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|025/033|double_full_heal",
+      "canonicalId": "pokemon|jp|24122|025/033|double_full_heal|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "025/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "double_full_heal",
+      "priceIdentityId": "pokemon|jp|24122|025/033|double_full_heal|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_ea91e558c6ac70fbc5fd7d0880de1ad272def34f69d46f24c727674a54131a9b10fdb50fca008dd51c0290a35137d0",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|025/033|double_full_heal",
+      "canonicalId": "pokemon|jp|24122|025/033|double_full_heal|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "025/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 8.0,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "double_full_heal",
+      "priceIdentityId": "pokemon|jp|24122|025/033|double_full_heal|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_ea91e558c6ac70fbc5fd7d0880de1ad272def34f69d46f24c727674a54131a9b10fdb50fca008dd51c0290a35137d0",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|025/033|double_full_heal",
+      "canonicalId": "pokemon|jp|24122|025/033|double_full_heal|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "025/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "double_full_heal",
+      "priceIdentityId": "pokemon|jp|24122|025/033|double_full_heal|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_ea91e558c6ac70fbc5fd7d0880de1ad272def34f69d46f24c727674a54131a9b10fdb50fca008dd51c0290a35137d0",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|025/033|double_full_heal",
+      "canonicalId": "pokemon|jp|24122|025/033|double_full_heal|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "025/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 2.0,
+      "lowPrice": 1.5,
+      "market": "tcgplayer",
+      "marketPrice": 1.75,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "double_full_heal",
+      "priceIdentityId": "pokemon|jp|24122|025/033|double_full_heal|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_ea91e558c6ac70fbc5fd7d0880de1ad272def34f69d46f24c727674a54131a9b10fdb50fca008dd51c0290a35137d0",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|026/033|team_aqua_ball",
+      "canonicalId": "pokemon|jp|24122|026/033|team_aqua_ball|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "026/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 1.1,
+      "market": "cardmarket",
+      "marketPrice": 1.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_ball",
+      "priceIdentityId": "pokemon|jp|24122|026/033|team_aqua_ball|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_773da106ca1e6b30c6f0874b99450d61b8dc20ff081086d100d1f16be38adc3e6fa736eda4fb8722f85c2991cf1720",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|026/033|team_aqua_ball",
+      "canonicalId": "pokemon|jp|24122|026/033|team_aqua_ball|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "026/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.95,
+      "lowPrice": 5.95,
+      "market": "tcgplayer",
+      "marketPrice": 5.95,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_ball",
+      "priceIdentityId": "pokemon|jp|24122|026/033|team_aqua_ball|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_773da106ca1e6b30c6f0874b99450d61b8dc20ff081086d100d1f16be38adc3e6fa736eda4fb8722f85c2991cf1720",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|026/033|team_aqua_ball",
+      "canonicalId": "pokemon|jp|24122|026/033|team_aqua_ball|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "026/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 1.1,
+      "market": "cardmarket",
+      "marketPrice": 1.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_ball",
+      "priceIdentityId": "pokemon|jp|24122|026/033|team_aqua_ball|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_773da106ca1e6b30c6f0874b99450d61b8dc20ff081086d100d1f16be38adc3e6fa736eda4fb8722f85c2991cf1720",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|026/033|team_aqua_ball",
+      "canonicalId": "pokemon|jp|24122|026/033|team_aqua_ball|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "026/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 10.0,
+      "lowPrice": 10.0,
+      "market": "tcgplayer",
+      "marketPrice": 10.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_ball",
+      "priceIdentityId": "pokemon|jp|24122|026/033|team_aqua_ball|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_773da106ca1e6b30c6f0874b99450d61b8dc20ff081086d100d1f16be38adc3e6fa736eda4fb8722f85c2991cf1720",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|027/033|team_aqua_schemer",
+      "canonicalId": "pokemon|jp|24122|027/033|team_aqua_schemer|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "027/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.75,
+      "market": "cardmarket",
+      "marketPrice": 0.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_schemer",
+      "priceIdentityId": "pokemon|jp|24122|027/033|team_aqua_schemer|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_233c7804c4583a117041813d1979c7e5002df2e3517bef2004de4279f42420aee96fb4f8ea76806e273d460b035bea",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|027/033|team_aqua_schemer",
+      "canonicalId": "pokemon|jp|24122|027/033|team_aqua_schemer|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "027/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.95,
+      "lowPrice": 7.94,
+      "market": "tcgplayer",
+      "marketPrice": 1.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_schemer",
+      "priceIdentityId": "pokemon|jp|24122|027/033|team_aqua_schemer|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_233c7804c4583a117041813d1979c7e5002df2e3517bef2004de4279f42420aee96fb4f8ea76806e273d460b035bea",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|027/033|team_aqua_schemer",
+      "canonicalId": "pokemon|jp|24122|027/033|team_aqua_schemer|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "027/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.75,
+      "market": "cardmarket",
+      "marketPrice": 0.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_schemer",
+      "priceIdentityId": "pokemon|jp|24122|027/033|team_aqua_schemer|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_233c7804c4583a117041813d1979c7e5002df2e3517bef2004de4279f42420aee96fb4f8ea76806e273d460b035bea",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|027/033|team_aqua_schemer",
+      "canonicalId": "pokemon|jp|24122|027/033|team_aqua_schemer|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "027/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.95,
+      "lowPrice": 4.99,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_schemer",
+      "priceIdentityId": "pokemon|jp|24122|027/033|team_aqua_schemer|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_233c7804c4583a117041813d1979c7e5002df2e3517bef2004de4279f42420aee96fb4f8ea76806e273d460b035bea",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|028/033|team_aqua_conspirator",
+      "canonicalId": "pokemon|jp|24122|028/033|team_aqua_conspirator|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "028/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.45,
+      "market": "cardmarket",
+      "marketPrice": 2.94,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_conspirator",
+      "priceIdentityId": "pokemon|jp|24122|028/033|team_aqua_conspirator|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_01de69e933cf79064c3d0a91b686903290a2b39b509725c360e28dfe501edd90b7f361341d6e2ddbdbec3069ead5e1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|028/033|team_aqua_conspirator",
+      "canonicalId": "pokemon|jp|24122|028/033|team_aqua_conspirator|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "028/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.0,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_conspirator",
+      "priceIdentityId": "pokemon|jp|24122|028/033|team_aqua_conspirator|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_01de69e933cf79064c3d0a91b686903290a2b39b509725c360e28dfe501edd90b7f361341d6e2ddbdbec3069ead5e1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|028/033|team_aqua_conspirator",
+      "canonicalId": "pokemon|jp|24122|028/033|team_aqua_conspirator|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "028/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.45,
+      "market": "cardmarket",
+      "marketPrice": 2.94,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_conspirator",
+      "priceIdentityId": "pokemon|jp|24122|028/033|team_aqua_conspirator|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_01de69e933cf79064c3d0a91b686903290a2b39b509725c360e28dfe501edd90b7f361341d6e2ddbdbec3069ead5e1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|028/033|team_aqua_conspirator",
+      "canonicalId": "pokemon|jp|24122|028/033|team_aqua_conspirator|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "028/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.89,
+      "lowPrice": 1.48,
+      "market": "tcgplayer",
+      "marketPrice": 7.89,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_conspirator",
+      "priceIdentityId": "pokemon|jp|24122|028/033|team_aqua_conspirator|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_01de69e933cf79064c3d0a91b686903290a2b39b509725c360e28dfe501edd90b7f361341d6e2ddbdbec3069ead5e1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|029/033|archie",
+      "canonicalId": "pokemon|jp|24122|029/033|archie|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "029/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "archie",
+      "priceIdentityId": "pokemon|jp|24122|029/033|archie|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b1c3d53c53e46c39d7f782fac26293adae24fd16b85f82c315a028ec47e895ec4fd75b66e388e1a796f2ba4d231e3c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|029/033|archie",
+      "canonicalId": "pokemon|jp|24122|029/033|archie|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "029/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.0,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "archie",
+      "priceIdentityId": "pokemon|jp|24122|029/033|archie|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b1c3d53c53e46c39d7f782fac26293adae24fd16b85f82c315a028ec47e895ec4fd75b66e388e1a796f2ba4d231e3c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|029/033|archie",
+      "canonicalId": "pokemon|jp|24122|029/033|archie|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "029/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "archie",
+      "priceIdentityId": "pokemon|jp|24122|029/033|archie|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b1c3d53c53e46c39d7f782fac26293adae24fd16b85f82c315a028ec47e895ec4fd75b66e388e1a796f2ba4d231e3c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|003/033|team_aquas_sharpedo",
+      "canonicalId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "003/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sharpedo",
+      "priceIdentityId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b86ba3160825fa8d40ca90af22ceb8ebd0ebc4a4d915e31d37f0d1df135633fff155e4f203a1514b4048aac6a620",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|003/033|team_aquas_sharpedo",
+      "canonicalId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "003/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-03-29T06:56:33.688279",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 12.0,
+      "lowPrice": 12.0,
+      "market": "tcgplayer",
+      "marketPrice": 12.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sharpedo",
+      "priceIdentityId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b86ba3160825fa8d40ca90af22ceb8ebd0ebc4a4d915e31d37f0d1df135633fff155e4f203a1514b4048aac6a620",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|003/033|team_aquas_sharpedo",
+      "canonicalId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "003/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sharpedo",
+      "priceIdentityId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b86ba3160825fa8d40ca90af22ceb8ebd0ebc4a4d915e31d37f0d1df135633fff155e4f203a1514b4048aac6a620",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|003/033|team_aquas_sharpedo",
+      "canonicalId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "003/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 11.0,
+      "lowPrice": 4.99,
+      "market": "tcgplayer",
+      "marketPrice": 1.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sharpedo",
+      "priceIdentityId": "pokemon|jp|24122|003/033|team_aquas_sharpedo|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b86ba3160825fa8d40ca90af22ceb8ebd0ebc4a4d915e31d37f0d1df135633fff155e4f203a1514b4048aac6a620",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|030/033|team_aqua_belt",
+      "canonicalId": "pokemon|jp|24122|030/033|team_aqua_belt|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "030/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_belt",
+      "priceIdentityId": "pokemon|jp|24122|030/033|team_aqua_belt|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_d9cadb743d8166907edfb5c60b3fd31622b59690a769cb8894f2f35b9f29afb3821c855f922c8493d8224867557cc1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|030/033|team_aqua_belt",
+      "canonicalId": "pokemon|jp|24122|030/033|team_aqua_belt|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "030/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_belt",
+      "priceIdentityId": "pokemon|jp|24122|030/033|team_aqua_belt|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_d9cadb743d8166907edfb5c60b3fd31622b59690a769cb8894f2f35b9f29afb3821c855f922c8493d8224867557cc1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|030/033|team_aqua_belt",
+      "canonicalId": "pokemon|jp|24122|030/033|team_aqua_belt|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "030/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_belt",
+      "priceIdentityId": "pokemon|jp|24122|030/033|team_aqua_belt|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_d9cadb743d8166907edfb5c60b3fd31622b59690a769cb8894f2f35b9f29afb3821c855f922c8493d8224867557cc1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|030/033|team_aqua_belt",
+      "canonicalId": "pokemon|jp|24122|030/033|team_aqua_belt|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "030/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 4.99,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 4.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_belt",
+      "priceIdentityId": "pokemon|jp|24122|030/033|team_aqua_belt|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_d9cadb743d8166907edfb5c60b3fd31622b59690a769cb8894f2f35b9f29afb3821c855f922c8493d8224867557cc1",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01",
+      "canonicalId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "031/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_technical_machine_01",
+      "priceIdentityId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_7f7537c5aaaa85c942c1de6ed5922398a33753b1517082eb0e1ea83a7abd2ff45843225d27e7f39a122c4fded0af0d",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01",
+      "canonicalId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "031/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 2.0,
+      "lowPrice": 2.0,
+      "market": "tcgplayer",
+      "marketPrice": 2.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_technical_machine_01",
+      "priceIdentityId": "pokemon|jp|24122|031/033|team_aqua_technical_machine_01|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_7f7537c5aaaa85c942c1de6ed5922398a33753b1517082eb0e1ea83a7abd2ff45843225d27e7f39a122c4fded0af0d",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|032/033|team_aqua_hideout",
+      "canonicalId": "pokemon|jp|24122|032/033|team_aqua_hideout|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "032/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_hideout",
+      "priceIdentityId": "pokemon|jp|24122|032/033|team_aqua_hideout|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_a9eda31c4686b66807ae3876021a7266ee5be1daf31ac21f729be8cba4f96e9af8756038460bbb8c05ab127a8f853e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|032/033|team_aqua_hideout",
+      "canonicalId": "pokemon|jp|24122|032/033|team_aqua_hideout|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "032/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 5.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 5.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aqua_hideout",
+      "priceIdentityId": "pokemon|jp|24122|032/033|team_aqua_hideout|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_a9eda31c4686b66807ae3876021a7266ee5be1daf31ac21f729be8cba4f96e9af8756038460bbb8c05ab127a8f853e",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|033/033|aqua_energy",
+      "canonicalId": "pokemon|jp|24122|033/033|aqua_energy|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "033/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "aqua_energy",
+      "priceIdentityId": "pokemon|jp|24122|033/033|aqua_energy|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_bfc15e3b88286b4ab98167b8ab9d234c87f3906cb5ca4f97b9b08dbd8d5ad949183ed5b4070d3374883b566fa12e9c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|033/033|aqua_energy",
+      "canonicalId": "pokemon|jp|24122|033/033|aqua_energy|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "033/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 10.0,
+      "lowPrice": 5.0,
+      "market": "tcgplayer",
+      "marketPrice": 7.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "aqua_energy",
+      "priceIdentityId": "pokemon|jp|24122|033/033|aqua_energy|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_bfc15e3b88286b4ab98167b8ab9d234c87f3906cb5ca4f97b9b08dbd8d5ad949183ed5b4070d3374883b566fa12e9c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|033/033|aqua_energy",
+      "canonicalId": "pokemon|jp|24122|033/033|aqua_energy|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "033/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "aqua_energy",
+      "priceIdentityId": "pokemon|jp|24122|033/033|aqua_energy|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_bfc15e3b88286b4ab98167b8ab9d234c87f3906cb5ca4f97b9b08dbd8d5ad949183ed5b4070d3374883b566fa12e9c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|033/033|aqua_energy",
+      "canonicalId": "pokemon|jp|24122|033/033|aqua_energy|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "033/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-15T07:48:55.0017",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 1.29,
+      "lowPrice": 1.29,
+      "market": "tcgplayer",
+      "marketPrice": 1.29,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "aqua_energy",
+      "priceIdentityId": "pokemon|jp|24122|033/033|aqua_energy|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_bfc15e3b88286b4ab98167b8ab9d234c87f3906cb5ca4f97b9b08dbd8d5ad949183ed5b4070d3374883b566fa12e9c",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033",
+      "canonicalId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "004/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_corphish_004_033",
+      "priceIdentityId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_3cc1b1d7d6eeb10be92d91d89a9fb16496a67becbd28ff05986ea21777754fb6c7acfe322b1e2ea1614231261067",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033",
+      "canonicalId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "004/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.0,
+      "lowPrice": 2.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.25,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_corphish_004_033",
+      "priceIdentityId": "pokemon|jp|24122|004/033|team_aquas_corphish_004_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_3cc1b1d7d6eeb10be92d91d89a9fb16496a67becbd28ff05986ea21777754fb6c7acfe322b1e2ea1614231261067",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033",
+      "canonicalId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "005/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_corphish_005_033",
+      "priceIdentityId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_87e5beef57a297e1a931829c94fd1ad53118df3aa4f3772d0e95c3732e3e38ae40cd03269713c14ed406de69f4c3",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033",
+      "canonicalId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "005/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 2.0,
+      "lowPrice": 2.0,
+      "market": "tcgplayer",
+      "marketPrice": 2.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_corphish_005_033",
+      "priceIdentityId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_87e5beef57a297e1a931829c94fd1ad53118df3aa4f3772d0e95c3732e3e38ae40cd03269713c14ed406de69f4c3",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033",
+      "canonicalId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "005/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_corphish_005_033",
+      "priceIdentityId": "pokemon|jp|24122|005/033|team_aquas_corphish_005_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_87e5beef57a297e1a931829c94fd1ad53118df3aa4f3772d0e95c3732e3e38ae40cd03269713c14ed406de69f4c3",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt",
+      "canonicalId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "006/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_crawdaunt",
+      "priceIdentityId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_ef559ab02717617a20ab3b3e0eefc57c8a52dd8609cf70cfbaa3f4d24ee7a50721b4fb1fa52fc4ea41085a3e3513",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt",
+      "canonicalId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "006/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 10.25,
+      "lowPrice": 6.72,
+      "market": "tcgplayer",
+      "marketPrice": 7.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_crawdaunt",
+      "priceIdentityId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_ef559ab02717617a20ab3b3e0eefc57c8a52dd8609cf70cfbaa3f4d24ee7a50721b4fb1fa52fc4ea41085a3e3513",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt",
+      "canonicalId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "006/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_crawdaunt",
+      "priceIdentityId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_ef559ab02717617a20ab3b3e0eefc57c8a52dd8609cf70cfbaa3f4d24ee7a50721b4fb1fa52fc4ea41085a3e3513",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt",
+      "canonicalId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "006/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 49.98,
+      "lowPrice": 49.98,
+      "market": "tcgplayer",
+      "marketPrice": 49.98,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_crawdaunt",
+      "priceIdentityId": "pokemon|jp|24122|006/033|team_aquas_crawdaunt|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_ef559ab02717617a20ab3b3e0eefc57c8a52dd8609cf70cfbaa3f4d24ee7a50721b4fb1fa52fc4ea41085a3e3513",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033",
+      "canonicalId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "007/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.25,
+      "market": "cardmarket",
+      "marketPrice": 2.37,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_spheal_007_033",
+      "priceIdentityId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_d44eb4d66bef98007435edc9b25062eb85adb0ec2ccee4aaaa5855472ebd39ce8fdcf2f421c23d0e4989002105ef",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033",
+      "canonicalId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "007/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 2.0,
+      "lowPrice": 1.59,
+      "market": "tcgplayer",
+      "marketPrice": 1.59,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_spheal_007_033",
+      "priceIdentityId": "pokemon|jp|24122|007/033|team_aquas_spheal_007_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_d44eb4d66bef98007435edc9b25062eb85adb0ec2ccee4aaaa5855472ebd39ce8fdcf2f421c23d0e4989002105ef",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033",
+      "canonicalId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "008/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": 0.45,
+      "market": "cardmarket",
+      "marketPrice": 3.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_spheal_008_033",
+      "priceIdentityId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_b4932b2adec3ac264e0960ba851ae7bc2be73f00df3085c135f31f201f78d9291d399b669a4c490f68165206c38b",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033",
+      "canonicalId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "008/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-21T08:27:06.184212",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 3.0,
+      "lowPrice": 3.0,
+      "market": "tcgplayer",
+      "marketPrice": 1.55,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_spheal_008_033",
+      "priceIdentityId": "pokemon|jp|24122|008/033|team_aquas_spheal_008_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_b4932b2adec3ac264e0960ba851ae7bc2be73f00df3085c135f31f201f78d9291d399b669a4c490f68165206c38b",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033",
+      "canonicalId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|pokewallet|cardmarket|eur|first_edition|near_mint",
+      "collectorNumber": "009/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_009_033",
+      "priceIdentityId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|first_edition|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_1dec8754944cca5b32f081422458ba2a763c6ecfbf64f99fa2fc43686117f7a04dc449932ebf17ddf2b5844b99f5",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033",
+      "canonicalId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|pokewallet|tcgplayer|usd|first_edition|near_mint",
+      "collectorNumber": "009/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "1st Edition",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 7.95,
+      "lowPrice": 2.0,
+      "market": "tcgplayer",
+      "marketPrice": 3.99,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_009_033",
+      "priceIdentityId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|first_edition|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_1dec8754944cca5b32f081422458ba2a763c6ecfbf64f99fa2fc43686117f7a04dc449932ebf17ddf2b5844b99f5",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "first_edition"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033",
+      "canonicalId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|pokewallet|cardmarket|eur|unlimited|near_mint",
+      "collectorNumber": "009/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "EU",
+      "currency": "EUR",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:26:12.662323",
+        "rawSource": "cardmarket",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": null,
+      "lowPrice": null,
+      "market": "cardmarket",
+      "marketPrice": 0.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_009_033",
+      "priceIdentityId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|unlimited|near_mint|cardmarket|eur",
+      "providerIds": {
+        "pokewalletId": "pk_1dec8754944cca5b32f081422458ba2a763c6ecfbf64f99fa2fc43686117f7a04dc449932ebf17ddf2b5844b99f5",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "EUR",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "EUR",
+      "variant": "unlimited"
+    },
+    {
+      "canonicalCardId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033",
+      "canonicalId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|pokewallet|tcgplayer|usd|unlimited|near_mint",
+      "collectorNumber": "009/033",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-25T08:51:07.549839",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Unlimited",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 8.99,
+      "lowPrice": 4.0,
+      "market": "tcgplayer",
+      "marketPrice": 6.5,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "team_aquas_sealeo_009_033",
+      "priceIdentityId": "pokemon|jp|24122|009/033|team_aquas_sealeo_009_033|unlimited|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_1dec8754944cca5b32f081422458ba2a763c6ecfbf64f99fa2fc43686117f7a04dc449932ebf17ddf2b5844b99f5",
+        "pokewalletSetId": "24122"
+      },
+      "setId": "24122",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "unlimited"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24122",
+  "setName": "Aqua Deck Kit",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}

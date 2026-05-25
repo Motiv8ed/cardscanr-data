@@ -1,0 +1,71 @@
+{
+  "currency": "USD",
+  "expectedUpdateIntervalMinutes": null,
+  "game": "pokemon",
+  "generatedAtUtc": "2026-05-25T10:51:25Z",
+  "isLivePricing": false,
+  "language": "jp",
+  "lastSuccessfulPriceUpdateAtUtc": "2026-05-25T10:51:25Z",
+  "nextExpectedPriceUpdateAtUtc": null,
+  "priceCount": 1,
+  "prices": [
+    {
+      "canonicalCardId": "pokemon|jp|24120|011/018|latias_ex",
+      "canonicalId": "pokemon|jp|24120|011/018|latias_ex|pokewallet|tcgplayer|usd|holo|near_mint",
+      "collectorNumber": "011/018",
+      "condition": "near_mint",
+      "confidence": "high",
+      "conversionPolicy": "none",
+      "country": "US",
+      "currency": "USD",
+      "diagnostics": {
+        "matchSignals": [
+          "provider_set_collector_name_exact"
+        ],
+        "providerPriceUpdatedAt": "2026-05-20T08:39:48.211456",
+        "rawSource": "tcgplayer",
+        "rawVariant": "Holofoil",
+        "sourceRecordStatus": "priced"
+      },
+      "fetchedAtUtc": "2026-05-25T10:51:25Z",
+      "highPrice": 149.0,
+      "lowPrice": 149.0,
+      "market": "tcgplayer",
+      "marketPrice": 100.0,
+      "matchConfidence": 1.0,
+      "matchSignals": [
+        "provider_set_collector_name_exact"
+      ],
+      "nextExpectedPriceUpdateAtUtc": null,
+      "normalizedName": "latias_ex",
+      "priceIdentityId": "pokemon|jp|24120|011/018|latias_ex|holo|near_mint|tcgplayer|usd",
+      "providerIds": {
+        "pokewalletId": "pk_c71184feec0d1e94f92f92b8ef208914a45955489d140b2586cacf20c129cc09bd4d624e8e09adaffd8166211bb7db",
+        "pokewalletSetId": "24120"
+      },
+      "setId": "24120",
+      "source": "pokewallet",
+      "sourceCurrency": "USD",
+      "staleness": {
+        "ageSeconds": 0,
+        "freshForSeconds": 86400,
+        "staleAfterSeconds": 172800,
+        "status": "fresh"
+      },
+      "status": "priced",
+      "targetCurrency": "USD",
+      "variant": "holo"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "setId": "24120",
+  "setName": "Gift Box (Latias)",
+  "source": "pokewallet",
+  "staleness": {
+    "ageSeconds": 0,
+    "freshForSeconds": 86400,
+    "staleAfterSeconds": 172800,
+    "status": "fresh"
+  },
+  "status": "partial"
+}
