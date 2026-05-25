@@ -361,6 +361,11 @@ def render_markdown(summary: dict[str, Any]) -> str:
     add(f"- cyclesBlockedByBudget: {summary.get('cyclesBlockedByBudget', 0)}")
     add(f"- totalApiRequests: {summary.get('totalApiRequests', 0)}")
     add(f"- totalImportedRecords: {summary.get('totalImportedRecords', 0)}")
+    add(f"- apiKeyPresent: {summary.get('apiKeyPresent')}")
+    add(f"- apiKeySource: {summary.get('apiKeySource')}")
+    add(f"- apiKeyFingerprint: {summary.get('apiKeyFingerprint')}")
+    add(f"- multipleApiKeysDetected: {summary.get('multipleApiKeysDetected')}")
+    add(f"- keySourceWarning: {summary.get('keySourceWarning')}")
     add(f"- beforeJpPriceCount: {summary.get('beforeJpPriceCount', 0)}")
     add(f"- afterJpPriceCount: {summary.get('afterJpPriceCount', 0)}")
     add(f"- beforeJpPriceFileCount: {summary.get('beforeJpPriceFileCount', 0)}")
@@ -416,6 +421,11 @@ def main() -> int:
         "cyclesBlockedByBudget": 0,
         "totalApiRequests": 0,
         "totalImportedRecords": 0,
+        "apiKeyPresent": False,
+        "apiKeySource": "unknown",
+        "apiKeyFingerprint": None,
+        "multipleApiKeysDetected": False,
+        "keySourceWarning": None,
         "beforeJpPriceCount": int(before_counts.get("recordCount") or 0),
         "afterJpPriceCount": int(before_counts.get("recordCount") or 0),
         "beforeJpPriceFileCount": int(before_counts.get("fileCount") or 0),
@@ -474,6 +484,11 @@ def main() -> int:
         importer_result = run_command(build_importer_command(args), allow_failure=True)
         import_report = read_json(IMPORTER_REPORT_JSON) or {}
         summary["lastImporterStatus"] = str(import_report.get("status") or "unknown")
+        summary["apiKeyPresent"] = bool(import_report.get("apiKeyPresent"))
+        summary["apiKeySource"] = str(import_report.get("apiKeySource") or "unknown")
+        summary["apiKeyFingerprint"] = import_report.get("apiKeyFingerprint")
+        summary["multipleApiKeysDetected"] = bool(import_report.get("multipleApiKeysDetected"))
+        summary["keySourceWarning"] = import_report.get("keySourceWarning")
         summary["lastSelectedSetIds"] = (
             import_report.get("selectedSetIds") if isinstance(import_report.get("selectedSetIds"), list) else []
         )
@@ -503,6 +518,12 @@ def main() -> int:
         if bool(import_report.get("allEndpointsFailed")):
             summary["status"] = "all_endpoints_failed"
             summary["stopReason"] = "all_endpoints_failed"
+            break
+
+        if str(import_report.get("status") or "") == "auth_or_plan_failure":
+            summary["status"] = "auth_or_plan_failure"
+            summary["stopReason"] = "auth_or_plan_failure"
+            summary["cycleNotes"].append("Importer stopped on first 401/403 auth-or-plan failure to protect request budget.")
             break
 
         if is_budget_blocked(import_report):

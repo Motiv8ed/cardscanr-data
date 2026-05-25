@@ -7,6 +7,7 @@ import argparse
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -54,6 +55,15 @@ DEFAULT_SET_PREFERENCES = {
     "jp": ["23599", "23598", "23600", "23601", "23602", "23603"],
     "en": ["604", "609", "610", "1400", "1538", "1401"],
 }
+STANDARD_API_KEY_ENV_NAMES = ("POKEWALLET_API_KEY", "CARDSCANR_POKEWALLET_API_KEY")
+AUTH_OR_PLAN_STATUS_CODES = {401, 403}
+AUTH_OR_PLAN_HINTS = (
+    "pro plan required",
+    "trial has expired",
+    "upgrade to pro",
+    "forbidden",
+    "unauthorized",
+)
 
 
 @dataclass(frozen=True)
@@ -420,6 +430,147 @@ def normalize_variant(raw_value: Any) -> str | None:
     return aliases.get(raw, raw)
 
 
+def secret_fingerprint(value: str) -> str:
+    cleaned = str(value or "")
+    if not cleaned:
+        return ""
+    prefix = cleaned[:4]
+    suffix = cleaned[-4:] if len(cleaned) > 4 else cleaned
+    sha12 = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:12]
+    return f"len:{len(cleaned)} {prefix}...{suffix} sha12:{sha12}"
+
+
+def read_windows_env(name: str, scope: str) -> str:
+    if os.name != "nt":
+        return ""
+    try:
+        import winreg  # type: ignore
+    except Exception:
+        return ""
+
+    if scope == "user":
+        root = winreg.HKEY_CURRENT_USER
+        path = r"Environment"
+    elif scope == "machine":
+        root = winreg.HKEY_LOCAL_MACHINE
+        path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+    else:
+        return ""
+
+    try:
+        with winreg.OpenKey(root, path) as key:  # type: ignore[arg-type]
+            value, _typ = winreg.QueryValueEx(key, name)
+            return str(value or "").strip()
+    except OSError:
+        return ""
+
+
+def read_configured_api_env_name() -> str:
+    config = try_load_json(CONFIG_PATH)
+    if not isinstance(config, dict):
+        return ""
+    return str(config.get("apiKeyEnv") or "").strip()
+
+
+def read_key_from_file(path: str) -> str:
+    try:
+        raw = Path(path).read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    return raw.strip()
+
+
+def build_key_resolution(args: argparse.Namespace) -> dict[str, Any]:
+    warnings: list[str] = []
+    names_checked: list[str] = list(STANDARD_API_KEY_ENV_NAMES)
+    configured_env_name = read_configured_api_env_name()
+
+    resolved_key = ""
+    api_key_source = "unknown"
+    api_key_env_used: str | None = None
+
+    key_file = str(getattr(args, "api_key_file", "") or "").strip()
+    if key_file:
+        file_value = read_key_from_file(key_file)
+        if file_value:
+            resolved_key = file_value
+            api_key_source = "cli_option"
+            api_key_env_used = "--api-key-file"
+
+    explicit_env_name = str(getattr(args, "api_key_env_name", "") or "").strip()
+    if not resolved_key and explicit_env_name:
+        explicit_value = os.environ.get(explicit_env_name, "").strip()
+        names_checked.insert(0, explicit_env_name)
+        if explicit_value:
+            resolved_key = explicit_value
+            api_key_source = "process_env"
+            api_key_env_used = explicit_env_name
+
+    if not resolved_key:
+        for name in STANDARD_API_KEY_ENV_NAMES:
+            value = os.environ.get(name, "").strip()
+            if not value:
+                continue
+            resolved_key = value
+            api_key_env_used = name
+            user_value = read_windows_env(name, "user")
+            machine_value = read_windows_env(name, "machine")
+            if user_value and value == user_value:
+                api_key_source = "user_env"
+            elif machine_value and value == machine_value:
+                api_key_source = "machine_env"
+            else:
+                api_key_source = "process_env"
+            break
+
+    allow_local_config_env = bool(getattr(args, "allow_local_config_api_key_env", False))
+    if configured_env_name and configured_env_name not in names_checked:
+        names_checked.append(configured_env_name)
+    if not resolved_key and allow_local_config_env and configured_env_name:
+        configured_value = os.environ.get(configured_env_name, "").strip()
+        if configured_value:
+            resolved_key = configured_value
+            api_key_source = "local_config"
+            api_key_env_used = configured_env_name
+
+    process_primary = os.environ.get("POKEWALLET_API_KEY", "").strip()
+    user_primary = read_windows_env("POKEWALLET_API_KEY", "user")
+    if process_primary and user_primary and process_primary != user_primary:
+        warnings.append("Current process POKEWALLET_API_KEY differs from Windows User POKEWALLET_API_KEY.")
+
+    unique_values: dict[str, str] = {}
+    for env_name in names_checked:
+        process_value = os.environ.get(env_name, "").strip()
+        user_value = read_windows_env(env_name, "user")
+        machine_value = read_windows_env(env_name, "machine")
+        for value in (process_value, user_value, machine_value):
+            if value:
+                unique_values.setdefault(secret_fingerprint(value), value)
+
+    multiple_detected = len(unique_values) > 1
+    if multiple_detected:
+        warnings.append("Multiple different API keys were detected across environment sources.")
+
+    if (
+        allow_local_config_env
+        and configured_env_name
+        and configured_env_name != "POKEWALLET_API_KEY"
+        and api_key_env_used == configured_env_name
+    ):
+        warnings.append("Configured local apiKeyEnv overrode POKEWALLET_API_KEY.")
+
+    return {
+        "apiKey": resolved_key,
+        "apiKeySource": api_key_source,
+        "apiKeyEnvUsed": api_key_env_used,
+        "apiKeyEnvNamesChecked": names_checked,
+        "apiKeyFingerprint": secret_fingerprint(resolved_key),
+        "multipleApiKeysDetected": multiple_detected,
+        "keySourceWarning": " | ".join(warnings) if warnings else None,
+        "configuredApiKeyEnvName": configured_env_name or None,
+    }
+
+
 def to_float(value: Any) -> float | None:
     if value is None or isinstance(value, bool):
         return None
@@ -431,29 +582,6 @@ def to_float(value: Any) -> float | None:
 
 def is_positive_price(*values: float | None) -> bool:
     return any(isinstance(value, (int, float)) and not isinstance(value, bool) for value in values)
-
-
-def read_configured_api_env_names() -> list[str]:
-    names = ["CARDSCANR_POKEWALLET_API_KEY", "POKEWALLET_API_KEY"]
-    config = try_load_json(CONFIG_PATH)
-    if isinstance(config, dict):
-        configured = str(config.get("apiKeyEnv") or "").strip()
-        if configured:
-            names.insert(0, configured)
-    result: list[str] = []
-    for name in names:
-        if name and name not in result:
-            result.append(name)
-    return result
-
-
-def resolve_api_key() -> tuple[str, str | None, list[str]]:
-    checked = read_configured_api_env_names()
-    for name in checked:
-        value = os.environ.get(name, "").strip()
-        if value:
-            return value, name, checked
-    return "", None, checked
 
 
 def fetch_prices(
@@ -487,6 +615,15 @@ def fetch_prices(
         return None, None, str(exc)[:180]
     except Exception as exc:  # noqa: BLE001 - import reports diagnostics instead of crashing.
         return None, None, exc.__class__.__name__
+
+
+def is_auth_or_plan_failure(status_code: int | None, error_text: str | None) -> bool:
+    if status_code not in AUTH_OR_PLAN_STATUS_CODES:
+        return False
+    text = str(error_text or "").lower()
+    if not text:
+        return True
+    return any(hint in text for hint in AUTH_OR_PLAN_HINTS)
 
 
 def list_price_rows(payload: Any) -> list[dict[str, Any]]:
@@ -1416,6 +1553,12 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- next hourly reset estimate: {report.get('hourlyResetAtUtc') or 'n/a'}")
     a(f"- next daily reset estimate: {report.get('dailyResetAtUtc') or 'n/a'}")
     a(f"- rate limit detected: {'yes' if report.get('rateLimitDetected') else 'no'}")
+    a(f"- API key present: {'yes' if report.get('apiKeyPresent') else 'no'}")
+    a(f"- API key source: {report.get('apiKeySource')}")
+    a(f"- API key fingerprint: {report.get('apiKeyFingerprint') or 'n/a'}")
+    a(f"- multiple API keys detected: {'yes' if report.get('multipleApiKeysDetected') else 'no'}")
+    if report.get("keySourceWarning"):
+        a(f"- key source warning: {report.get('keySourceWarning')}")
     a(f"- API requests used: {report.get('apiRequestsUsed', 0)}")
     a(f"- endpoint success/failure: {report.get('endpointSuccesses', 0)} / {report.get('endpointFailures', 0)}")
     a(f"- price records received: {report.get('priceRecordsReceived', 0)}")
@@ -1488,7 +1631,11 @@ def parse_languages(args: argparse.Namespace) -> list[str]:
 def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     started = now_utc()
     started_dt = parse_utc(started) or datetime.now(timezone.utc)
-    api_key, api_key_env_used, api_key_env_names_checked = resolve_api_key()
+    key_resolution = build_key_resolution(args)
+    api_key = str(key_resolution.get("apiKey") or "")
+    api_key_source = str(key_resolution.get("apiKeySource") or "unknown")
+    api_key_env_used = key_resolution.get("apiKeyEnvUsed")
+    api_key_env_names_checked = key_resolution.get("apiKeyEnvNamesChecked") or []
     languages = parse_languages(args)
     requested_sets = [item.strip() for item in str(args.sets or "").split(",") if item.strip()]
     max_sets = max(0, int(args.max_sets or 0))
@@ -1564,6 +1711,10 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         "budgetDecision": "pending" if respect_budget else "ignored_manual_override",
         "rateLimitDetected": False,
         "apiKeyPresent": bool(api_key),
+        "apiKeySource": api_key_source,
+        "apiKeyFingerprint": key_resolution.get("apiKeyFingerprint") or None,
+        "multipleApiKeysDetected": bool(key_resolution.get("multipleApiKeysDetected")),
+        "keySourceWarning": key_resolution.get("keySourceWarning"),
         "apiKeyEnvUsed": api_key_env_used,
         "apiKeyEnvNamesChecked": api_key_env_names_checked,
         "apiRequestsUsed": 0,
@@ -1588,7 +1739,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         "derivedRefresh": {},
         "setsAttempted": [],
         "notes": [
-            "API keys are read from environment variables only and are not written to this report.",
+            "API keys are resolved from explicit CLI options first, then process environment defaults; full secrets are never written to this report.",
             "No prices are fabricated; rows without usable provider price fields are skipped.",
             "TCGPlayer USD and CardMarket EUR are preserved as separate records where the schema allows it.",
             "ZH is intentionally not processed.",
@@ -1635,7 +1786,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         )
 
     report["nextRecommendedSafeCommand"] = (
-        "python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 20 --dry-run --fit-budget --respect-budget"
+        "python tools/import_pokewallet_set_prices.py --languages jp --source both --only-missing-set-prices --max-new-sets 1 --dry-run --fit-budget --respect-budget --commit-safe-report"
     )
 
     if not api_key:
@@ -1738,6 +1889,17 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
         )
         key = f"{target.language}:{target.app_set_id}"
         outputs_by_language_set[key] = records
+        latest_set = report["setsAttempted"][-1] if report.get("setsAttempted") else {}
+        if int(report.get("apiRequestsUsed") or 0) == 1 and is_auth_or_plan_failure(
+            latest_set.get("statusCode") if isinstance(latest_set, dict) else None,
+            latest_set.get("errorSnippet") if isinstance(latest_set, dict) else None,
+        ):
+            report["status"] = "auth_or_plan_failure"
+            report["budgetDecision"] = "stopped_auth_or_plan_failure"
+            report["nextRecommendedAction"] = (
+                "First API request returned 401/403 auth-or-plan failure. Stopped immediately to avoid burning request budget."
+            )
+            break
 
     for set_report in report["setsAttempted"]:
         report["priceRecordsReceived"] += int(set_report.get("priceRecordsReceived") or 0)
@@ -1774,7 +1936,7 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     )
     report["allEndpointsFailed"] = all_endpoints_failed
 
-    if write:
+    if write and report.get("status") != "auth_or_plan_failure":
         written_languages: set[str] = set()
         for target in targets:
             records = outputs_by_language_set.get(f"{target.language}:{target.app_set_id}", [])
@@ -1798,7 +1960,9 @@ def build_report(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, li
     else:
         report["afterCurrentPriceCounts"] = summarize_current_counts()
 
-    if all_fail_rate_limited:
+    if report.get("status") == "auth_or_plan_failure":
+        report["allEndpointsFailed"] = True
+    elif all_fail_rate_limited:
         report["rateLimitDetected"] = True
         report["status"] = "rate_limited"
         report["nextRecommendedAction"] = (
@@ -1835,6 +1999,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sets", default="", help="Comma-separated provider set ids/codes to process.")
     parser.add_argument("--max-sets", type=int, default=0, help="Maximum sets per language.")
     parser.add_argument("--max-new-sets", type=int, default=0, help="Maximum number of missing-set targets per language.")
+    parser.add_argument(
+        "--api-key-file",
+        default="",
+        help="Explicit path to a file containing only the API key (highest precedence).",
+    )
+    parser.add_argument(
+        "--api-key-env-name",
+        default="",
+        help="Explicit process environment variable name to read for API key before defaults.",
+    )
+    parser.add_argument(
+        "--allow-local-config-api-key-env",
+        action="store_true",
+        help="Allow data/pokewallet_catalog_config.json apiKeyEnv fallback only when explicitly enabled.",
+    )
     parser.add_argument("--start-after-set", default="", help="Select sets after this provider/app set id (useful for paged expansion).")
     parser.add_argument("--source", choices=["both", "tcg", "cm"], default="both")
     mode = parser.add_mutually_exclusive_group()
@@ -1911,6 +2090,11 @@ def main() -> int:
         f"and {report.get('dailyUsed', 0)}/{report.get('dailyUsed', 0) + report.get('dailyRemaining', 0)}"
     )
     safe_print(f"  budget source: {report.get('budgetSource')}, decision: {report.get('budgetDecision')}")
+    safe_print(f"  API key present/source: {report.get('apiKeyPresent')} / {report.get('apiKeySource')}")
+    safe_print(f"  API key fingerprint: {report.get('apiKeyFingerprint') or 'n/a'}")
+    safe_print(f"  multiple API keys detected: {report.get('multipleApiKeysDetected')}")
+    if report.get("keySourceWarning"):
+        safe_print(f"  key source warning: {report.get('keySourceWarning')}")
     safe_print(f"  API requests: {report['apiRequestsUsed']}")
     safe_print(f"  price records received: {report['priceRecordsReceived']}")
     safe_print(f"  matched records: {report['matchedRecords']}")
@@ -1923,7 +2107,7 @@ def main() -> int:
     safe_print(f"  wrote: {REPORT_MD_PATH.relative_to(ROOT)}")
     if report["validationResult"] == "failed":
         return 1
-    if report.get("mode") == "write" and report.get("status") in {"failed", "rate_limited"}:
+    if report.get("mode") == "write" and report.get("status") in {"failed", "rate_limited", "auth_or_plan_failure"}:
         return 1
     return 0
 

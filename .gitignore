@@ -149,6 +149,7 @@ activemq-data/
 
 # Environments
 .env
+.env.local
 .envrc
 .venv
 env/
@@ -257,3 +258,8 @@ reports/market_price_worker_runs.jsonl
 
 # ChatGPT export bundles (runtime, not committed)
 reports/chatgpt_exports/
+
+# Local secret config files
+*.secrets.json
+pokewallet_env.json
+pokewallet_env.local.json
