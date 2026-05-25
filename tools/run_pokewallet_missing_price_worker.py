@@ -4,11 +4,15 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import queue
+import re
 import subprocess
 import sys
+import threading
 import time
 from typing import Any
 
@@ -39,6 +43,7 @@ WORKER_RUNTIME_REPORT_PATHS = {
     "reports/pokewallet_missing_price_worker_latest.md",
     "reports/pokewallet_missing_price_worker_runs.jsonl",
 }
+HEARTBEAT_SECONDS = 60
 
 
 def utc_now() -> datetime:
@@ -85,22 +90,153 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
         fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
-def run_command(command: list[str], *, allow_failure: bool = False) -> dict[str, Any]:
-    completed = subprocess.run(
+def redact_text(text: str) -> str:
+    value = text
+    value = re.sub(r"(?i)(authorization\s*:\s*bearer\s+)([^\s]+)", r"\1[REDACTED]", value)
+    value = re.sub(r"(?i)(x-api-key\s*[:=]\s*)([^\s]+)", r"\1[REDACTED]", value)
+    value = re.sub(r"(?i)(api[_-]?key\s*[:=]\s*)([^\s]+)", r"\1[REDACTED]", value)
+    value = re.sub(r"(?i)(POKEWALLET_API_KEY\s*[:=]\s*)([^\s]+)", r"\1[REDACTED]", value)
+    value = re.sub(r"(?i)(CARDSCANR_POKEWALLET_API_KEY\s*[:=]\s*)([^\s]+)", r"\1[REDACTED]", value)
+    return value
+
+
+def worker_log(message: str) -> None:
+    print(f"[{utc_iso()}] {redact_text(message)}", flush=True)
+
+
+def child_log(stage: str, line: str) -> None:
+    cleaned = line.rstrip("\r\n")
+    if not cleaned:
+        return
+    print(f"[{stage}] {redact_text(cleaned)}", flush=True)
+
+
+def stage_name_for_command(command: list[str], fallback: str) -> str:
+    for token in command:
+        lower = token.lower()
+        if lower.endswith("validate_cache.py"):
+            return "validate_cache"
+        if lower.endswith("report_dataset_coverage.py"):
+            return "report_dataset_coverage"
+        if lower.endswith("report_data_health.py"):
+            return "report_data_health"
+        if lower.endswith("export_chatgpt_report.py"):
+            return "export"
+        if lower.endswith("import_pokewallet_set_prices.py"):
+            return "importer"
+        if lower.endswith("release_cardscanr_data.ps1"):
+            return "release"
+        if lower.endswith("git"):
+            continue
+    return fallback
+
+
+def heartbeat_message(stage: str, elapsed_seconds: int) -> str:
+    import_report = read_json(IMPORTER_REPORT_JSON) or {}
+    parts = [f"heartbeat stage={stage} elapsed={elapsed_seconds}s"]
+    if "importedRecords" in import_report:
+        parts.append(f"latestImported={int(import_report.get('importedRecords') or 0)}")
+    if "hourlyUsed" in import_report or "hourlyRemaining" in import_report:
+        parts.append(
+            f"hourlyUsed={int(import_report.get('hourlyUsed') or 0)} hourlyRemaining={int(import_report.get('hourlyRemaining') or 0)}"
+        )
+    if "dailyUsed" in import_report or "dailyRemaining" in import_report:
+        parts.append(
+            f"dailyUsed={int(import_report.get('dailyUsed') or 0)} dailyRemaining={int(import_report.get('dailyRemaining') or 0)}"
+        )
+    selected_set_ids = import_report.get("selectedSetIds") if isinstance(import_report.get("selectedSetIds"), list) else []
+    if selected_set_ids:
+        preview = ",".join(str(item) for item in selected_set_ids[:5])
+        if len(selected_set_ids) > 5:
+            preview = f"{preview},..."
+        parts.append(f"selectedSetIds={preview}")
+    return " ".join(parts)
+
+
+def sleep_with_progress(wait_seconds: int, poll_seconds: int, reason: str) -> None:
+    remaining = max(0, int(wait_seconds))
+    step_seconds = max(1, int(poll_seconds or 1))
+    while remaining > 0:
+        this_sleep = min(step_seconds, remaining)
+        worker_log(f"{reason}; sleeping {this_sleep} seconds before retry")
+        time.sleep(this_sleep)
+        remaining -= this_sleep
+
+
+def run_command(
+    command: list[str],
+    *,
+    allow_failure: bool = False,
+    stage: str = "command",
+    heartbeat_stage: str | None = None,
+    heartbeat_seconds: int = HEARTBEAT_SECONDS,
+    stream_output: bool = True,
+) -> dict[str, Any]:
+    process = subprocess.Popen(
         command,
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        bufsize=1,
     )
+
+    stream_queue: queue.Queue[tuple[str, str | None]] = queue.Queue()
+    stdout_tail: deque[str] = deque(maxlen=40)
+    stderr_tail: deque[str] = deque(maxlen=40)
+
+    def pump_output(label: str, stream: Any) -> None:
+        try:
+            for raw in iter(stream.readline, ""):
+                stream_queue.put((label, raw))
+        finally:
+            stream.close()
+            stream_queue.put((label, None))
+
+    stdout_thread = threading.Thread(target=pump_output, args=("stdout", process.stdout), daemon=True)
+    stderr_thread = threading.Thread(target=pump_output, args=("stderr", process.stderr), daemon=True)
+    stdout_thread.start()
+    stderr_thread.start()
+
+    closed_streams = 0
+    started = time.monotonic()
+    last_heartbeat = started
+    effective_heartbeat_stage = heartbeat_stage or stage
+
+    while closed_streams < 2:
+        try:
+            label, raw_line = stream_queue.get(timeout=0.25)
+            if raw_line is None:
+                closed_streams += 1
+                continue
+            line = raw_line.rstrip("\r\n")
+            if label == "stdout":
+                stdout_tail.append(line)
+            else:
+                stderr_tail.append(line)
+            if stream_output:
+                child_log(stage, line)
+        except queue.Empty:
+            pass
+
+        now = time.monotonic()
+        if process.poll() is None and (now - last_heartbeat) >= max(1, int(heartbeat_seconds)):
+            elapsed = int(now - started)
+            worker_log(heartbeat_message(effective_heartbeat_stage, elapsed))
+            last_heartbeat = now
+
+    stdout_thread.join(timeout=1)
+    stderr_thread.join(timeout=1)
+    return_code = process.wait()
+
     result = {
         "command": " ".join(command),
-        "returnCode": completed.returncode,
-        "stdoutTail": completed.stdout.splitlines()[-40:],
-        "stderrTail": completed.stderr.splitlines()[-40:],
+        "returnCode": return_code,
+        "stdoutTail": list(stdout_tail),
+        "stderrTail": list(stderr_tail),
     }
-    if completed.returncode != 0 and not allow_failure:
-        raise RuntimeError(f"Command failed ({completed.returncode}): {' '.join(command)}")
+    if return_code != 0 and not allow_failure:
+        raise RuntimeError(f"Command failed ({return_code}): {' '.join(command)}")
     return result
 
 
@@ -134,27 +270,20 @@ def run_git_sync(*, skip: bool) -> dict[str, Any]:
         }
 
     steps: list[dict[str, Any]] = []
-    for command in (
-        ["git", "fetch", "origin"],
-        ["git", "rebase", "origin/main"],
+    for command, stage in (
+        (["git", "fetch", "origin"], "git_fetch"),
+        (["git", "rebase", "origin/main"], "git_rebase"),
     ):
-        completed = subprocess.run(
+        step = run_command(
             command,
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            allow_failure=True,
+            stage=stage,
+            heartbeat_stage=stage,
         )
-        step = {
-            "command": " ".join(command),
-            "returnCode": completed.returncode,
-            "stdout": completed.stdout.rstrip("\r\n"),
-            "stderr": completed.stderr.rstrip("\r\n"),
-            "stdoutTail": completed.stdout.splitlines()[-40:],
-            "stderrTail": completed.stderr.splitlines()[-40:],
-        }
+        step["stdout"] = "\n".join(step.get("stdoutTail") or [])
+        step["stderr"] = "\n".join(step.get("stderrTail") or [])
         steps.append(step)
-        if completed.returncode != 0:
+        if command_return_code(step) != 0:
             return {
                 "skipped": False,
                 "status": "failed",
@@ -330,7 +459,12 @@ def run_validations() -> list[dict[str, Any]]:
     ]
     results: list[dict[str, Any]] = []
     for command in checks:
-        result = run_command(command, allow_failure=True)
+        result = run_command(
+            command,
+            allow_failure=True,
+            stage=stage_name_for_command(command, "validation"),
+            heartbeat_stage="validation",
+        )
         results.append(result)
         if command_return_code(result) != 0:
             break
@@ -338,15 +472,15 @@ def run_validations() -> list[dict[str, Any]]:
 
 
 def run_release(push_enabled: bool) -> dict[str, Any]:
-    before = run_command(["git", "rev-parse", "HEAD"], allow_failure=False)
+    before = run_command(["git", "rev-parse", "HEAD"], allow_failure=False, stage="git", stream_output=False)
     before_hash = before["stdoutTail"][-1].strip() if before["stdoutTail"] else ""
 
     command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/release_cardscanr_data.ps1"]
     if push_enabled:
         command.append("-Push")
-    release_result = run_command(command, allow_failure=True)
+    release_result = run_command(command, allow_failure=True, stage="release", heartbeat_stage="release")
 
-    after = run_command(["git", "rev-parse", "HEAD"], allow_failure=False)
+    after = run_command(["git", "rev-parse", "HEAD"], allow_failure=False, stage="git", stream_output=False)
     after_hash = after["stdoutTail"][-1].strip() if after["stdoutTail"] else ""
 
     committed = bool(after_hash and before_hash and after_hash != before_hash)
@@ -364,7 +498,12 @@ def run_release(push_enabled: bool) -> dict[str, Any]:
 
 
 def run_export_chatgpt() -> dict[str, Any]:
-    return run_command([sys.executable, "tools/export_chatgpt_report.py"], allow_failure=True)
+    return run_command(
+        [sys.executable, "tools/export_chatgpt_report.py"],
+        allow_failure=True,
+        stage="export",
+        heartbeat_stage="export",
+    )
 
 
 def render_markdown(summary: dict[str, Any]) -> str:
@@ -437,6 +576,19 @@ def main() -> int:
     args = parse_args()
     started_at = utc_now()
     before_counts = count_jp_price_state()
+    worker_log("worker started")
+    worker_log(
+        "settings "
+        f"language={args.language} "
+        f"maxNewSetsPerCycle={args.max_new_sets_per_cycle} "
+        f"untilComplete={'yes' if args.until_complete else 'no'} "
+        f"commit={'yes' if args.commit else 'no'} "
+        f"push={'yes' if (args.push and not args.no_push) else 'no'} "
+        f"validate={'yes' if args.validate else 'no'} "
+        f"sleepWhenBudgetBlocked={'yes' if args.sleep_when_budget_blocked else 'no'} "
+        f"pollSeconds={args.poll_seconds} "
+        f"skipGitSync={'yes' if args.skip_git_sync else 'no'}"
+    )
 
     summary: dict[str, Any] = {
         "schemaVersion": "1.0.0",
@@ -482,11 +634,15 @@ def main() -> int:
         if max_cycles > 0 and cycle_index >= max_cycles:
             summary["status"] = "max_cycles_reached"
             summary["stopReason"] = "max_cycles"
+            worker_log("max cycles reached; stopping")
             break
         if not args.until_complete and cycle_index >= 1:
             summary["status"] = "single_cycle_complete"
             summary["stopReason"] = "single_cycle"
+            worker_log("single-cycle mode complete; stopping")
             break
+
+        worker_log(f"cycle {cycle_index + 1} starting")
 
         changed_paths = git_changed_paths()
         stop_for_dirty, dirty_reason = should_stop_for_dirty_tree(changed_paths, bool(args.commit))
@@ -494,23 +650,34 @@ def main() -> int:
             summary["status"] = "git_dirty"
             summary["stopReason"] = dirty_reason
             summary["cycleNotes"].append("Worker stopped because repository has unexpected local changes.")
+            worker_log("git status dirty; stopping before importer")
             break
 
         if not changed_paths:
+            worker_log("git status clean")
             git_sync = run_git_sync(skip=bool(args.skip_git_sync))
             summary["gitSync"] = git_sync
             if git_sync.get("status") == "failed":
                 summary["status"] = "git_rebase_failed"
                 summary["stopReason"] = "git_rebase_failed"
                 summary["cycleNotes"].append("Git sync failed before importer start.")
+                worker_log("git sync failed before importer")
                 break
         else:
             summary["cycleNotes"].append("Continuing with expected generated changes already in working tree.")
+            worker_log("git status has expected generated paths; continuing")
 
         cycle_index += 1
         summary["cyclesAttempted"] = cycle_index
 
-        importer_result = run_command(build_importer_command(args), allow_failure=True)
+        worker_log(f"selecting missing {args.language} price sets")
+        worker_log(f"running importer: maxNewSets={args.max_new_sets_per_cycle}")
+        importer_result = run_command(
+            build_importer_command(args),
+            allow_failure=True,
+            stage="importer",
+            heartbeat_stage="importer",
+        )
         import_report = read_json(IMPORTER_REPORT_JSON) or {}
         summary["lastImporterStatus"] = str(import_report.get("status") or "unknown")
         summary["apiKeyPresent"] = bool(import_report.get("apiKeyPresent"))
@@ -523,36 +690,57 @@ def main() -> int:
         )
         summary["totalApiRequests"] += int(import_report.get("apiRequestsUsed") or 0)
         summary["totalImportedRecords"] += int(import_report.get("importedRecords") or 0)
+        worker_log(
+            "importer finished: "
+            f"status={summary['lastImporterStatus']} "
+            f"apiRequests={int(import_report.get('apiRequestsUsed') or 0)} "
+            f"importedRecords={int(import_report.get('importedRecords') or 0)} "
+            f"endpointFailures={int(import_report.get('endpointFailures') or 0)}"
+        )
+        if summary.get("apiKeyFingerprint"):
+            worker_log(f"api key fingerprint: {summary.get('apiKeyFingerprint')}")
 
         if should_mark_complete(import_report):
             summary["status"] = "complete"
             summary["stopReason"] = "complete"
+            worker_log("no missing JP price sets remain")
             break
 
         if bool(import_report.get("rateLimitDetected")):
             summary["status"] = "rate_limited"
             summary["stopReason"] = "rate_limited"
             summary["cyclesBlockedByBudget"] += 1
+            worker_log(
+                "rate limited: "
+                f"hourlyUsed={int(import_report.get('hourlyUsed') or 0)} "
+                f"hourlyRemaining={int(import_report.get('hourlyRemaining') or 0)} "
+                f"dailyUsed={int(import_report.get('dailyUsed') or 0)} "
+                f"dailyRemaining={int(import_report.get('dailyRemaining') or 0)}"
+            )
             if args.sleep_when_budget_blocked:
                 wait_seconds = estimate_budget_wait_seconds(import_report, max(1, int(args.poll_seconds or 300)))
                 summary["cycleNotes"].append(f"Rate-limited. Sleeping for {wait_seconds}s before retry.")
+                worker_log(f"rate-limited wait estimate: {wait_seconds}s pollSeconds={int(args.poll_seconds or 300)}")
                 if args.stop_after_daily_budget and int(import_report.get("dailyRemaining") or 0) <= 0:
                     summary["status"] = "budget_exhausted"
                     summary["stopReason"] = "daily_budget_exhausted"
+                    worker_log("daily budget exhausted; stopping")
                     break
-                time.sleep(wait_seconds)
+                sleep_with_progress(wait_seconds, int(args.poll_seconds or 300), "[worker] rate-limited")
                 continue
             break
 
         if bool(import_report.get("allEndpointsFailed")):
             summary["status"] = "all_endpoints_failed"
             summary["stopReason"] = "all_endpoints_failed"
+            worker_log("all importer endpoints failed; stopping")
             break
 
         if str(import_report.get("status") or "") == "auth_or_plan_failure":
             summary["status"] = "auth_or_plan_failure"
             summary["stopReason"] = "auth_or_plan_failure"
             summary["cycleNotes"].append("Importer stopped on first 401/403 auth-or-plan failure to protect request budget.")
+            worker_log("auth-or-plan failure detected; stopping to protect budget")
             break
 
         if is_budget_blocked(import_report):
@@ -561,12 +749,21 @@ def main() -> int:
             summary["stopReason"] = "budget_blocked"
             wait_seconds = estimate_budget_wait_seconds(import_report, max(1, int(args.poll_seconds or 300)))
             summary["cycleNotes"].append(f"Budget blocked with zero API calls. Next wait estimate: {wait_seconds}s.")
+            worker_log(
+                "budget blocked: "
+                f"hourlyUsed={int(import_report.get('hourlyUsed') or 0)} "
+                f"hourlyRemaining={int(import_report.get('hourlyRemaining') or 0)} "
+                f"dailyUsed={int(import_report.get('dailyUsed') or 0)} "
+                f"dailyRemaining={int(import_report.get('dailyRemaining') or 0)} "
+                f"waitEstimate={wait_seconds}s pollSeconds={int(args.poll_seconds or 300)}"
+            )
             if args.stop_after_daily_budget and int(import_report.get("dailyRemaining") or 0) <= 0:
                 summary["status"] = "budget_exhausted"
                 summary["stopReason"] = "daily_budget_exhausted"
+                worker_log("daily budget exhausted; stopping")
                 break
             if args.sleep_when_budget_blocked:
-                time.sleep(wait_seconds)
+                sleep_with_progress(wait_seconds, int(args.poll_seconds or 300), "[worker] budget blocked")
                 continue
             break
 
@@ -575,10 +772,12 @@ def main() -> int:
         if int(importer_result.get("returnCode") or 0) != 0 and imported_this_cycle == 0 and api_used_this_cycle == 0:
             summary["status"] = "importer_failed"
             summary["stopReason"] = "importer_failed"
+            worker_log("importer failed with zero imported records and zero API usage")
             break
 
         validation_results: list[dict[str, Any]] = []
         if imported_this_cycle > 0 or bool(args.validate):
+            worker_log("validation starting")
             validation_results = run_validations()
             summary["validationResults"] = validation_results
             validation_failure = first_failed_command(validation_results)
@@ -592,9 +791,18 @@ def main() -> int:
                     f"{validation_failure.get('command')} "
                     f"(rc={validation_failure.get('returnCode')})."
                 )
+                worker_log(
+                    "validation failed: "
+                    f"command={validation_failure.get('command')} "
+                    f"rc={validation_failure.get('returnCode')} "
+                    f"stdoutTail={validation_failure.get('stdoutTail')} "
+                    f"stderrTail={validation_failure.get('stderrTail')}"
+                )
                 break
+            worker_log("validation passed")
 
         if imported_this_cycle > 0 and bool(args.commit) and not bool(args.dry_run_only):
+            worker_log("release/commit/push starting")
             release = run_release(push_enabled)
             summary["validationResults"].append({
                 "command": release["result"]["command"],
@@ -603,12 +811,18 @@ def main() -> int:
             if command_return_code(release["result"]) != 0:
                 summary["status"] = "release_failed"
                 summary["stopReason"] = "release_failed"
+                worker_log("release/commit/push failed")
                 break
             for commit_hash in release.get("pushedCommitHashes", []):
                 if commit_hash not in summary["commitHashesPushed"]:
                     summary["commitHashesPushed"].append(commit_hash)
+            worker_log(
+                "release/commit/push passed "
+                f"commit={release.get('afterHead') or 'none'}"
+            )
 
         if bool(args.export_chatgpt_report):
+            worker_log("exporting ChatGPT report")
             export_result = run_export_chatgpt()
             summary["validationResults"].append(
                 {
@@ -619,23 +833,29 @@ def main() -> int:
             if command_return_code(export_result) != 0:
                 summary["status"] = "export_failed"
                 summary["stopReason"] = "export_failed"
+                worker_log("export ChatGPT report failed")
                 break
+            worker_log("export ChatGPT report passed")
 
         summary["cyclesCompleted"] = int(summary.get("cyclesCompleted") or 0) + 1
+        worker_log(f"cycle {cycle_index} complete")
 
         if not args.until_complete:
             summary["status"] = "single_cycle_complete"
             summary["stopReason"] = "single_cycle"
+            worker_log("single-cycle mode complete; stopping")
             break
 
         if args.stop_after_daily_budget and int(import_report.get("dailyRemaining") or 0) <= 0:
             summary["status"] = "budget_exhausted"
             summary["stopReason"] = "daily_budget_exhausted"
+            worker_log("daily budget exhausted; stopping")
             break
 
         if imported_this_cycle == 0 and api_used_this_cycle > 0:
             summary["status"] = "no_imported_records"
             summary["stopReason"] = "no_imported_records"
+            worker_log("no records imported this cycle despite API usage; stopping")
             break
 
     if summary.get("status") == "running":
@@ -646,6 +866,12 @@ def main() -> int:
     summary["afterJpPriceCount"] = int(after_counts.get("recordCount") or 0)
     summary["afterJpPriceFileCount"] = int(after_counts.get("fileCount") or 0)
     summary["finishedAtUtc"] = utc_iso()
+
+    if summary.get("status") == "complete":
+        worker_log(
+            "no missing JP price sets remain "
+            f"finalJpPriceCount={summary['afterJpPriceCount']} finalJpPriceFileCount={summary['afterJpPriceFileCount']}"
+        )
 
     if summary.get("status") in {"budget_blocked", "budget_exhausted", "rate_limited"}:
         summary["nextRecommendedCommand"] = build_worker_command(args, sleep_mode=True)

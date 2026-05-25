@@ -45,7 +45,19 @@ if ($NoPush) { $argsList += "--no-push" }
 if ($SkipGitSync) { $argsList += "--skip-git-sync" }
 
 Write-Host "[worker] Running PokeWallet missing-price worker..."
-& $pythonPath @argsList
-if ($LASTEXITCODE -ne 0) {
-    throw "run_pokewallet_missing_price_worker.py failed with exit code $LASTEXITCODE"
+Write-Host "[worker] Settings:"
+Write-Host ("  language={0}" -f $Language)
+Write-Host ("  maxNewSetsPerCycle={0}" -f $MaxNewSetsPerCycle)
+Write-Host ("  untilComplete={0}" -f ($(if ($UntilComplete) { 'yes' } else { 'no' })))
+Write-Host ("  commit={0}" -f ($(if ($Commit) { 'yes' } else { 'no' })))
+Write-Host ("  push={0}" -f ($(if ($Push -and -not $NoPush) { 'yes' } else { 'no' })))
+Write-Host ("  validate={0}" -f ($(if ($Validate) { 'yes' } else { 'no' })))
+Write-Host ("  sleepWhenBudgetBlocked={0}" -f ($(if ($SleepWhenBudgetBlocked) { 'yes' } else { 'no' })))
+Write-Host ("  pollSeconds={0}" -f $PollSeconds)
+Write-Host ("  skipGitSync={0}" -f ($(if ($SkipGitSync) { 'yes' } else { 'no' })))
+
+& $pythonPath "-u" @argsList
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0) {
+    throw "run_pokewallet_missing_price_worker.py failed with exit code $exitCode"
 }
