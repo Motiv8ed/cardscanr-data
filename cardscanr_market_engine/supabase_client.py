@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Any
 
 import requests
 
 from .models import MarketPriceKey, MarketPriceRefreshJob
+
+UUID_PATTERN = re.compile(r"^[0-9a-fA-F-]{1,64}$")
 
 
 def _iso_or_none(value: datetime | None) -> str | None:
@@ -235,7 +238,11 @@ class SupabaseMarketEngineClient:
         return normalized
 
     def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict[str, Any]]:
-        clean_ids = [value.strip() for value in price_key_ids if str(value).strip()]
+        clean_ids = [
+            value.strip()
+            for value in price_key_ids
+            if str(value).strip() and UUID_PATTERN.fullmatch(value.strip()) is not None
+        ]
         if not clean_ids:
             return {}
         in_filter = "(" + ",".join(clean_ids) + ")"

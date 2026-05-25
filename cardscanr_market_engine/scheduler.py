@@ -137,6 +137,11 @@ class MarketPriceRefreshScheduler:
     def _is_old(self, last_seen_at: datetime | None, *, now: datetime) -> bool:
         return bool(last_seen_at and last_seen_at <= (now - timedelta(days=60)))
 
+    def _candidate_sort_key(self, item: dict[str, Any]) -> tuple[int, float, str]:
+        seen = _parse_utc(item.get("last_seen_at"))
+        seen_ts = seen.timestamp() if seen else float("-inf")
+        return (0 if item.get("candidate_type") == "missing_cache" else 1, -seen_ts, str(item.get("id")))
+
     def evaluate_candidate(self, candidate: dict[str, Any], *, now: datetime) -> SchedulerDecision:
         has_cache = bool(candidate.get("has_cache"))
         stale_after = _parse_utc(candidate.get("stale_after"))
@@ -271,13 +276,8 @@ class MarketPriceRefreshScheduler:
                     "candidate_type": "stale_cache",
                 }
         candidates = list(rows.values())
-        def _sort_key(item: dict[str, Any]) -> tuple[int, float, str]:
-            seen = _parse_utc(item.get("last_seen_at"))
-            seen_ts = seen.timestamp() if seen else float("-inf")
-            return (0 if item.get("candidate_type") == "missing_cache" else 1, -seen_ts, str(item.get("id")))
-
         candidates.sort(
-            key=_sort_key,
+            key=self._candidate_sort_key,
         )
         return candidates[: self.config.max_keys_per_run]
 
