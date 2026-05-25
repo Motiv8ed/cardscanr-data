@@ -114,9 +114,17 @@ class MarketPriceJobRunner:
         return rows
 
     def run_job(self, job: MarketPriceRefreshJob) -> dict[str, Any]:
+        if not job.id:
+            raise ValueError("Market refresh job is missing id")
+        if not job.price_key_id:
+            raise ValueError(f"Market refresh job {job.id} is missing price_key_id")
         now = self.now_func()
         try:
             price_key = self.client.get_price_key(job.price_key_id)
+            if not price_key.id:
+                raise ValueError(f"Market price key row missing id for job {job.id}")
+            if not price_key.fingerprint:
+                raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_result = self.provider.fetch_comps(price_key)
             evaluated_comps = filter_comps(price_key, provider_result.comps)
@@ -163,13 +171,21 @@ class MarketPriceJobRunner:
             }
         except Exception as exc:
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
-            self.client.fail_job(job_id=job.id, error_message=str(exc))
-            return {
+            fail_job_error: str | None = None
+            try:
+                self.client.fail_job(job_id=job.id, error_message=str(exc))
+            except Exception as fail_exc:
+                fail_job_error = str(fail_exc)
+                self.logger(f"[market-engine] fail_job rpc failed job={job.id}: {fail_job_error}")
+            result = {
                 "jobId": job.id,
                 "priceKeyId": job.price_key_id,
                 "status": "failed",
                 "error": str(exc),
             }
+            if fail_job_error:
+                result["failJobError"] = fail_job_error
+            return result
 
     def run_once(self, *, max_jobs: int | None = None) -> list[dict[str, Any]]:
         jobs = self.claim_jobs(max_jobs=max_jobs)

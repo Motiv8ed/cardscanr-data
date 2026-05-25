@@ -178,6 +178,57 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertEqual(client.failed, {"job_id": "job-2", "error_message": "boom"})
 
+    def test_job_runner_includes_fail_job_error_if_fail_rpc_fails(self) -> None:
+        class BrokenProvider:
+            def fetch_comps(self, price_key: MarketPriceKey) -> ProviderResult:
+                raise RuntimeError("provider boom")
+
+        class FailingFailClient(FakeClient):
+            def fail_job(self, **kwargs) -> dict:
+                raise RuntimeError("fail rpc boom")
+
+        runner = MarketPriceJobRunner(
+            client=FailingFailClient(),
+            provider=BrokenProvider(),
+            config=fixed_config(),
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-3",
+                price_key_id="key-1",
+                reason="user_refresh",
+                priority=10,
+                status="running",
+                attempt_count=1,
+            )
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["error"], "provider boom")
+        self.assertEqual(result["failJobError"], "fail rpc boom")
+
+    def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:
+        runner = MarketPriceJobRunner(
+            client=FakeClient(),
+            provider=FakeProvider(),
+            config=fixed_config(),
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+        with self.assertRaisesRegex(ValueError, "missing price_key_id"):
+            runner.run_job(
+                MarketPriceRefreshJob(
+                    id="job-4",
+                    price_key_id="",
+                    reason="user_refresh",
+                    priority=10,
+                    status="running",
+                    attempt_count=1,
+                )
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
