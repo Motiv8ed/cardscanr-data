@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import sys
 from typing import Any
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -72,6 +73,10 @@ def _as_int(value: Any, field_name: str) -> int:
         return int(value)
     except Exception as exc:
         raise AssertionError(f"{field_name} must be numeric: {value}") from exc
+
+
+def _domain(value: Any) -> str:
+    return urlparse(str(value or "")).netloc.lower()
 
 
 def run_smoke() -> dict[str, Any]:
@@ -175,7 +180,7 @@ def run_smoke() -> dict[str, Any]:
     )
     _assert(all(str(item.get("currency") or "").upper() == "AUD" for item in evidence), "evidence currency must be AUD")
     _assert(
-        all("https://www.ebay.com.au/itm/mock-" in str(item.get("listing_url") or "") for item in evidence),
+        all(_domain(item.get("listing_url")) == "www.ebay.com.au" for item in evidence),
         "evidence listing_url must use ebay.com.au",
     )
     report_steps.append(

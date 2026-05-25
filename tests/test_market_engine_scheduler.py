@@ -234,7 +234,7 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         self.assertEqual(report["summary"]["jobsSkippedByLimit"], 2)
         self.assertEqual(len(client.enqueued), 1)
 
-    def test_scheduler_does_not_dedupe_across_market_candidates_when_price_key_ids_differ(self) -> None:
+    def test_scheduler_enqueues_same_card_in_different_markets(self) -> None:
         shared_fingerprint = "pokemon|en|base1|4|charizard|raw|near_mint"
         client = FakeSchedulerClient(
             stale_rows=[

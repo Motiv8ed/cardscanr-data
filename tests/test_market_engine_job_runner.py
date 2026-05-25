@@ -270,7 +270,7 @@ class JobRunnerTests(unittest.TestCase):
             )
         )
         self.assertEqual(result["status"], "failed")
-        self.assertIn("Unsupported ebay market route", result["error"])
+        self.assertIn("Unsupported eBay market route", result["error"])
         self.assertEqual(client.failed, {"job_id": "job-unsupported", "error_message": result["error"]})
 
     def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:

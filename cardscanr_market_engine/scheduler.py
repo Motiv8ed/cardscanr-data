@@ -63,7 +63,7 @@ def _float_or_zero(value: Any) -> float:
         return 0.0
 
 
-def _extract_cache_marketplace(value: Any) -> Any:
+def _extract_cache_marketplace(value: Any) -> str | None:
     if isinstance(value, list):
         if not value:
             return None

@@ -11,6 +11,11 @@ def utc_iso(value: datetime | None = None) -> str:
     return current.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _normalized_market_field(raw_value: Any, fallback_value: Any) -> str | None:
+    text = str(raw_value or fallback_value or "").strip().upper()
+    return text or None
+
+
 def build_cache_payload(
     *,
     price_key: MarketPriceKey,
@@ -35,8 +40,8 @@ def build_cache_payload(
         "confidence": pricing_stats.confidence,
         "provider": provider_result.provider_name,
         "marketplace": provider_result.marketplace,
-        "market_country": str(raw_market_country or price_key.market_country or "").upper() or None,
-        "currency": str(raw_currency or price_key.currency or "").upper() or None,
+        "market_country": _normalized_market_field(raw_market_country, price_key.market_country),
+        "currency": _normalized_market_field(raw_currency, price_key.currency),
         "last_updated_at": refreshed_at_iso,
         "stale_after": stale_after_iso,
         "next_refresh_due_at": stale_after_iso,

@@ -120,7 +120,7 @@ def resolve_marketplace_config(
     normalized_marketplace = normalize_marketplace(marketplace)
     if normalized_marketplace != "ebay":
         raise UnsupportedMarketError(
-            f"Unsupported marketplace '{normalized_marketplace or marketplace}'. Supported marketplaces: ebay."
+            f"Unsupported marketplace '{normalized_marketplace or marketplace}'. Supported marketplaces: eBay."
         )
     normalized_country = normalize_market_country(market_country)
     normalized_currency = normalize_currency(currency)
@@ -133,7 +133,7 @@ def resolve_marketplace_config(
             )
         )
         raise UnsupportedMarketError(
-            "Unsupported ebay market route "
+            "Unsupported eBay market route "
             f"'{normalized_country or '?'}'/'{normalized_currency or '?'}'. "
             f"Supported routes: {supported}. No fallback is applied."
         )
