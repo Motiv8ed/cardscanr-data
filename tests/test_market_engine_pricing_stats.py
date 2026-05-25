@@ -59,7 +59,6 @@ class PricingStatsTests(unittest.TestCase):
         )
         self.assertEqual(determine_confidence(included_count=8, average_match_score=0.95), "high")
         self.assertEqual(stats.confidence, "high")
-        self.assertEqual(stats.stale_after, now.replace() + (stats.stale_after - now))
         self.assertEqual((stats.stale_after - now).total_seconds(), 24 * 3600)
 
     def test_no_comps_uses_short_stale_after(self) -> None:
