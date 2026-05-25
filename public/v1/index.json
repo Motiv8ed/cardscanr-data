@@ -1,5 +1,5 @@
 {
-  "cacheVersion": "2026.05.25.0937",
+  "cacheVersion": "2026.05.25.0939",
   "datasets": [
     {
       "description": "CardScanR internal data API manifest",
@@ -15539,15 +15539,27 @@
       "url": "/v1/prices/current/pokemon/jp/24025.json"
     },
     {
+      "description": "Pokemon TCG JP latest-known current prices for 24026",
+      "game": "pokemon",
+      "id": "prices_current_pokemon_jp_24026",
+      "language": "jp",
+      "recommendedCacheTtlSeconds": 43200,
+      "schemaVersion": "1.0.0",
+      "sha256": "ce5b06393cdad0916d42bc07684d00c6b3292242f9fffcc007eb429c587df660",
+      "type": "price_current",
+      "updatedAtUtc": "2026-05-25T09:39:36Z",
+      "url": "/v1/prices/current/pokemon/jp/24026.json"
+    },
+    {
       "description": "CardScanR app-facing UTC price freshness/status for Pokemon JP",
       "game": "pokemon",
       "id": "prices_current_pokemon_jp_status",
       "language": "jp",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "2fd0882161fbf0486d746baefc00b9c0295aa9f8de838ce2e7f4610f0f67549e",
+      "sha256": "475d5242366afa61af1d63ab001d8a231248b111f1580d0998751450777aceee",
       "type": "price_current_status",
-      "updatedAtUtc": "2026-05-25T09:37:33Z",
+      "updatedAtUtc": "2026-05-25T09:39:36Z",
       "url": "/v1/prices/current/pokemon/jp/status.json"
     },
     {
@@ -15580,9 +15592,9 @@
       "id": "prices_status",
       "recommendedCacheTtlSeconds": 86400,
       "schemaVersion": "1.0.0",
-      "sha256": "870ade45643887c0a6c9ac53b49fe381a05c9363ee001f4e304a8bb7f692bf45",
+      "sha256": "6ebe8865f963aae0719e0b47966d623d048f7d35ccbbb5181eea8d776cb9cc13",
       "type": "price_status",
-      "updatedAtUtc": "2026-05-25T09:37:33Z",
+      "updatedAtUtc": "2026-05-25T09:39:36Z",
       "url": "/v1/prices/status.json"
     },
     {
@@ -25756,6 +25768,6 @@
       "url": "/v1/history/tracked-cards.json"
     }
   ],
-  "generatedAtUtc": "2026-05-25T09:37:33Z",
+  "generatedAtUtc": "2026-05-25T09:39:36Z",
   "schemaVersion": "1.0.0"
 }
