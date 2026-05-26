@@ -21,7 +21,9 @@ def load_json(path: Path) -> Any:
 
 def iter_catalog_cards(v1_dir: Path = V1_DIR):
     catalog_root = v1_dir / "catalog" / "pokemon"
-    for language in ["en", "jp"]:
+    language_dirs = [item for item in catalog_root.iterdir() if item.is_dir()] if catalog_root.exists() else []
+    for language_dir in sorted(language_dirs, key=lambda item: item.name.lower()):
+        language = language_dir.name
         cards_dir = catalog_root / language / "cards"
         if not cards_dir.exists():
             continue

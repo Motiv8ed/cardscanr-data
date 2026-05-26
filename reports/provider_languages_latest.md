@@ -1,6 +1,6 @@
 # Provider Language Audit
 
-Generated: 2026-05-26T20:32:32Z
+Generated: 2026-05-26T20:40:31Z
 
 - Languages found: en, jp, zh
 - App-supported languages: en, jp, zh
@@ -11,7 +11,7 @@ Generated: 2026-05-26T20:32:32Z
 |----------|---------------:|--------------:|---------------|----------|----------------|----------------|----------------|
 | en | 31,515 | 335 | yes | yes | yes | yes | Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence. |
 | jp | 24,032 | 462 | yes | yes | yes | yes | Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence. |
-| zh | 6,439 | 58 | yes | yes | no | no | Catalogue-only mode is active. Add a safe pricing source before enabling market pricing in-app. |
+| zh | 6,439 | 58 | yes | yes | yes | no | Catalogue-only mode is active. Add a safe pricing source before enabling market pricing in-app. |
 
 ## Provider Language Codes
 

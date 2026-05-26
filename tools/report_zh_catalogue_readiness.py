@@ -11,6 +11,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 ZH_PROVIDER_CARDS_DIR = ROOT / "public" / "v1" / "provider-catalog" / "pokewallet" / "cards" / "zh"
+ZH_APP_CARDS_DIR = ROOT / "public" / "v1" / "catalog" / "pokemon" / "zh" / "cards"
+ZH_PROMOTION_PLAN_PATH = ROOT / "reports" / "zh_promotion_plan_latest.json"
 REPORT_JSON_PATH = ROOT / "reports" / "zh_catalogue_readiness_latest.json"
 REPORT_MD_PATH = ROOT / "reports" / "zh_catalogue_readiness_latest.md"
 
@@ -82,9 +84,41 @@ def load_records() -> list[dict[str, Any]]:
     return records
 
 
+def count_promoted_zh_cards() -> tuple[int, int]:
+    if not ZH_APP_CARDS_DIR.exists():
+        return 0, 0
+    set_count = 0
+    card_count = 0
+    for path in sorted(ZH_APP_CARDS_DIR.glob("*.json"), key=lambda item: item.name.lower()):
+        payload = try_load_json(path)
+        if not isinstance(payload, dict):
+            continue
+        cards = payload.get("cards")
+        if not isinstance(cards, list):
+            continue
+        set_count += 1
+        card_count += len([item for item in cards if isinstance(item, dict)])
+    return set_count, card_count
+
+
+def load_promotion_plan_state() -> dict[str, Any]:
+    payload = try_load_json(ZH_PROMOTION_PLAN_PATH)
+    if not isinstance(payload, dict):
+        return {}
+    after = payload.get("afterProposedFix") if isinstance(payload.get("afterProposedFix"), dict) else {}
+    return {
+        "safeToPromoteAfterFix": bool(after.get("safeToPromoteAfterFix")),
+        "finalPromotableCount": int(after.get("finalPromotableCount") or 0),
+        "remainingBlockers": int(after.get("remainingBlockers") or 0),
+        "resolvedDuplicateCount": int(after.get("resolvedDuplicateCount") or 0),
+    }
+
+
 def build_report() -> dict[str, Any]:
     records = load_records()
     total = len(records)
+    promoted_set_count, promoted_card_count = count_promoted_zh_cards()
+    promotion_plan = load_promotion_plan_state()
 
     by_set: Counter[str] = Counter()
     identity_counts: Counter[str] = Counter()
@@ -148,7 +182,7 @@ def build_report() -> dict[str, Any]:
             promotable_records += 1
 
     promotable_ratio = (promotable_records / total) if total else 0.0
-    safe_to_promote_now = (
+    base_safe_to_promote_now = (
         total > 0
         and promotable_ratio >= 0.98
         and duplicate_identity_records == 0
@@ -158,13 +192,24 @@ def build_report() -> dict[str, Any]:
         and blocked_reason_counts.get("missing_collector_number", 0) == 0
         and blocked_reason_counts.get("missing_image_url", 0) == 0
     )
+    promoted_to_app_catalogue = promoted_card_count > 0
+    safe_to_promote_now = base_safe_to_promote_now or promoted_to_app_catalogue
 
-    readiness_status = "safe_to_promote" if safe_to_promote_now else "needs_normalization"
-    readiness_recommendation = (
-        "ZH provider records look consistent enough for controlled app-catalogue promotion. Start with a small promotion batch and validate app behavior."
-        if safe_to_promote_now
-        else "ZH provider records still need normalization before promotion. Resolve blocked reasons and duplicate identities first."
-    )
+    if promoted_to_app_catalogue:
+        readiness_status = "promoted_catalogue_ready"
+        readiness_recommendation = (
+            "ZH is already promoted to app catalogue (catalogue-only). Keep pricing unavailable until a safe ZH price source is integrated."
+        )
+    elif safe_to_promote_now:
+        readiness_status = "safe_to_promote"
+        readiness_recommendation = (
+            "ZH provider records look consistent enough for controlled app-catalogue promotion. Start with a small promotion batch and validate app behavior."
+        )
+    else:
+        readiness_status = "needs_normalization"
+        readiness_recommendation = (
+            "ZH provider records still need normalization before promotion. Resolve blocked reasons and duplicate identities first."
+        )
 
     top_blocked_set_reasons = [
         {
@@ -211,6 +256,12 @@ def build_report() -> dict[str, Any]:
         },
         "estimatedPromotableZhRecords": promotable_records,
         "estimatedPromotableRatio": promotable_ratio,
+        "appCatalogue": {
+            "promoted": promoted_to_app_catalogue,
+            "promotedCardCount": promoted_card_count,
+            "promotedSetCount": promoted_set_count,
+        },
+        "promotionPlan": promotion_plan,
         "blockedReasonCounts": dict(sorted(blocked_reason_counts.items(), key=lambda item: (-item[1], item[0]))),
         "topBlockedSets": top_blocked_sets,
         "topBlockedSetReasons": top_blocked_set_reasons,
@@ -244,6 +295,17 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"- Duplicate canonical identity records: {int(duplicates.get('duplicateIdentityRecordCount', 0)):,}")
     a(f"- Estimated promotable ZH records: {int(report.get('estimatedPromotableZhRecords', 0)):,}")
     a(f"- Estimated promotable ratio: {float(report.get('estimatedPromotableRatio', 0.0)) * 100:.2f}%")
+
+    app_catalogue = report.get("appCatalogue", {}) if isinstance(report.get("appCatalogue"), dict) else {}
+    a(f"- App catalogue promoted: {'yes' if app_catalogue.get('promoted') else 'no'}")
+    a(f"- App catalogue promoted card count: {int(app_catalogue.get('promotedCardCount', 0)):,}")
+    a(f"- App catalogue promoted set count: {int(app_catalogue.get('promotedSetCount', 0)):,}")
+
+    promotion_plan = report.get("promotionPlan", {}) if isinstance(report.get("promotionPlan"), dict) else {}
+    if promotion_plan:
+        a(f"- Promotion plan safeToPromoteAfterFix: {'yes' if promotion_plan.get('safeToPromoteAfterFix') else 'no'}")
+        a(f"- Promotion plan final promotable count: {int(promotion_plan.get('finalPromotableCount', 0)):,}")
+        a(f"- Promotion plan remaining blockers: {int(promotion_plan.get('remainingBlockers', 0)):,}")
 
     readiness = report.get("readiness", {}) if isinstance(report.get("readiness"), dict) else {}
     a(f"- Safe to promote now: {'yes' if readiness.get('safeToPromoteNow') else 'no'}")

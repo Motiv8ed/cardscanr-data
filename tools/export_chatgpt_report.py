@@ -27,6 +27,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 EXPORT_DIR = ROOT / "reports" / "chatgpt_exports"
 CURRENT_PRICE_ROOT = ROOT / "public" / "v1" / "prices" / "current" / "pokemon"
+APP_CATALOG_ROOT = ROOT / "public" / "v1" / "catalog" / "pokemon"
+IMAGE_MANIFEST_PATH = ROOT / "public" / "v1" / "images" / "cards-manifest.json"
 
 # Safe files to always include in zip (relative to ROOT)
 ZIP_FILES_DEFAULT: list[str] = [
@@ -879,6 +881,48 @@ def _collect_v1_counts() -> dict[str, Any]:
     }
 
 
+def _collect_app_catalogue_counts() -> dict[str, int]:
+    counts: dict[str, int] = {}
+    if not APP_CATALOG_ROOT.exists():
+        return counts
+
+    for language_dir in sorted([item for item in APP_CATALOG_ROOT.iterdir() if item.is_dir()], key=lambda item: item.name.lower()):
+        cards_dir = language_dir / "cards"
+        if not cards_dir.exists():
+            continue
+        card_count = 0
+        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            payload = _load_json(str(path.relative_to(ROOT).as_posix())) or {}
+            cards = payload.get("cards")
+            if isinstance(cards, list):
+                card_count += len([item for item in cards if isinstance(item, dict)])
+        counts[language_dir.name] = card_count
+    return counts
+
+
+def _collect_image_manifest_counts() -> dict[str, int]:
+    manifest = _load_json("public/v1/images/cards-manifest.json")
+    if not isinstance(manifest, dict):
+        return {}
+
+    language_map = manifest.get("languageCountMap")
+    if isinstance(language_map, dict):
+        return {str(language): int(count or 0) for language, count in language_map.items()}
+
+    records = manifest.get("records")
+    if not isinstance(records, list):
+        return {}
+    counts: dict[str, int] = {}
+    for row in records:
+        if not isinstance(row, dict):
+            continue
+        language = str(row.get("language") or "").strip().lower()
+        if not language:
+            continue
+        counts[language] = counts.get(language, 0) + 1
+    return counts
+
+
 # ---------------------------------------------------------------------------
 # Next-action recommendation
 # ---------------------------------------------------------------------------
@@ -964,10 +1008,27 @@ def _recommend_next_action(
             import_missing_sets_selected = int(pokewallet_price_import.get("missingPriceSetsSelected") or 0)
 
         zh_ready = bool(zh_catalogue_readiness and zh_catalogue_readiness.get("available") and zh_catalogue_readiness.get("safeToPromoteNow"))
+        zh_promoted = False
+        zh_app_supported = False
+        if provider_language_audit and provider_language_audit.get("available"):
+            for row in provider_language_audit.get("languageRows", []):
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("language") or "").strip().lower() != "zh":
+                    continue
+                zh_promoted = bool(row.get("promotedToAppCatalogue"))
+                zh_app_supported = bool(row.get("appSupported"))
+                break
         has_market_config = bool(market_readiness_config and market_readiness_config.get("available"))
 
         if worker_complete and import_missing_sets_selected == 0:
             if has_market_config:
+                if zh_promoted and zh_app_supported:
+                    return (
+                        "All checks passing. JP missing-set price import is complete and market readiness configs are in place. "
+                        "ZH is promoted and app-supported in catalogue-only mode (pricing still unavailable). "
+                        "Next: wire onboarding/settings integration in app and design eBay sold-listing worker contracts (no live scraping yet)."
+                    )
                 if zh_ready:
                     return (
                         "All checks passing. JP missing-set price import is complete and market readiness configs are in place. "
@@ -1118,6 +1179,18 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a("")
 
         raw_missing_areas = pipeline.get("missingIncompleteAreas", [])
+        provider_audit = report.get("providerLanguageAudit") if isinstance(report.get("providerLanguageAudit"), dict) else {}
+        provider_rows = provider_audit.get("languageRows") if isinstance(provider_audit.get("languageRows"), list) else []
+        zh_is_promoted = False
+        zh_is_app_supported = False
+        for row in provider_rows:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("language") or "").strip().lower() != "zh":
+                continue
+            zh_is_promoted = bool(row.get("promotedToAppCatalogue"))
+            zh_is_app_supported = bool(row.get("appSupported"))
+            break
         missing_areas: list[str] = []
         for area in raw_missing_areas:
             area_text = str(area)
@@ -1126,6 +1199,13 @@ def _render_markdown(report: dict[str, Any]) -> str:
                 "jp current prices are unavailable" in lower_area
                 or "jp prices are unavailable" in lower_area
                 or "keep public jp prices unavailable" in lower_area
+            ):
+                continue
+            if (
+                zh_is_promoted
+                and zh_is_app_supported
+                and "zh provider data exists" in lower_area
+                and ("not app-supported" in lower_area or "not app supported" in lower_area or "not promoted" in lower_area)
             ):
                 continue
             missing_areas.append(area_text)
@@ -1422,6 +1502,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a("## ZH Catalogue Readiness")
         a("")
         a(f"- **Generated:** {zh_catalogue_readiness.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Readiness status:** {zh_catalogue_readiness.get('status', 'unknown')}")
         a(f"- **ZH provider cards/sets:** {int(zh_catalogue_readiness.get('zhProviderCardCount', 0)):,} / {int(zh_catalogue_readiness.get('zhSetCount', 0)):,}")
         a(f"- **Records with provider ID / usable name / set identity / collector / image:** {int(zh_catalogue_readiness.get('recordsWithProviderCardId', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithUsableNameOrOriginalName', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithSetIdentity', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithCollectorNumber', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithImageUrl', 0)):,}")
         a(f"- **Duplicate identity keys/records:** {int(zh_catalogue_readiness.get('duplicateIdentityKeyCount', 0)):,} / {int(zh_catalogue_readiness.get('duplicateIdentityRecordCount', 0)):,}")
@@ -1629,10 +1710,20 @@ def main() -> None:
     market_readiness_config_info = _collect_market_readiness_config()
     market_pricing_foundation_info = _collect_market_pricing_foundation()
     v1_info = _collect_v1_counts()
+    app_catalogue_counts = _collect_app_catalogue_counts()
+    image_manifest_counts = _collect_image_manifest_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
         pipeline_info["pricesByLanguage"] = v1_info["pricesByLanguage"]
         pipeline_info["pricesByLanguageSource"] = "public_v1_current_price_files"
+    if pipeline_info.get("available") and app_catalogue_counts:
+        pipeline_info["pipelineReportAppCatalogueByLanguage"] = pipeline_info.get("appCatalogueByLanguage", {})
+        pipeline_info["appCatalogueByLanguage"] = app_catalogue_counts
+        pipeline_info["appCatalogueByLanguageSource"] = "public_v1_catalog_files"
+    if pipeline_info.get("available") and image_manifest_counts:
+        pipeline_info["pipelineReportImageManifestByLanguage"] = pipeline_info.get("imageManifestByLanguage", {})
+        pipeline_info["imageManifestByLanguage"] = image_manifest_counts
+        pipeline_info["imageManifestByLanguageSource"] = "public_v1_images_cards_manifest"
 
     next_action = _recommend_next_action(
         pipeline_info,

@@ -1,4 +1,9 @@
 {
+  "appCatalogue": {
+    "promoted": true,
+    "promotedCardCount": 6439,
+    "promotedSetCount": 58
+  },
   "blockedReasonCounts": {
     "duplicate_canonical_identity": 738
   },
@@ -90,13 +95,19 @@
   },
   "estimatedPromotableRatio": 0.8853859294921572,
   "estimatedPromotableZhRecords": 5701,
-  "generatedAtUtc": "2026-05-26T20:32:32Z",
+  "generatedAtUtc": "2026-05-26T20:40:32Z",
   "language": "zh",
+  "promotionPlan": {
+    "finalPromotableCount": 6439,
+    "remainingBlockers": 0,
+    "resolvedDuplicateCount": 738,
+    "safeToPromoteAfterFix": true
+  },
   "provider": "pokewallet",
   "readiness": {
-    "recommendation": "ZH provider records still need normalization before promotion. Resolve blocked reasons and duplicate identities first.",
-    "safeToPromoteNow": false,
-    "status": "needs_normalization"
+    "recommendation": "ZH is already promoted to app catalogue (catalogue-only). Keep pricing unavailable until a safe ZH price source is integrated.",
+    "safeToPromoteNow": true,
+    "status": "promoted_catalogue_ready"
   },
   "recordsWithCollectorNumber": 6439,
   "recordsWithImageUrl": 6439,

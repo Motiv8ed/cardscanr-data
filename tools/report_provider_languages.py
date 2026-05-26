@@ -15,6 +15,7 @@ SUPPORTED_LANGUAGES_PATH = ROOT / "public" / "v1" / "supported-languages.json"
 APP_CATALOG_ROOT = ROOT / "public" / "v1" / "catalog" / "pokemon"
 PRICE_STATUS_ROOT = ROOT / "public" / "v1" / "prices" / "current" / "pokemon"
 PIPELINE_REPORT_PATH = ROOT / "reports" / "latest_full_data_pipeline.json"
+IMAGE_MANIFEST_PATH = ROOT / "public" / "v1" / "images" / "cards-manifest.json"
 REPORT_JSON_PATH = ROOT / "reports" / "provider_languages_latest.json"
 REPORT_MD_PATH = ROOT / "reports" / "provider_languages_latest.md"
 
@@ -98,11 +99,20 @@ def detect_price_support() -> dict[str, dict[str, Any]]:
 def detect_image_manifest_support() -> dict[str, dict[str, Any]]:
     pipeline = try_load_json(PIPELINE_REPORT_PATH)
     by_language: dict[str, dict[str, Any]] = {}
-    image_counts = {}
+    image_counts: dict[str, int] = {}
     if isinstance(pipeline, dict):
         candidate = pipeline.get("imageManifestCountByLanguage")
         if isinstance(candidate, dict):
-            image_counts = candidate
+            for language, count in candidate.items():
+                image_counts[str(language)] = int(count or 0)
+
+    # Fallback to the source-of-truth manifest when pipeline counts are stale.
+    manifest = try_load_json(IMAGE_MANIFEST_PATH)
+    if isinstance(manifest, dict):
+        language_map = manifest.get("languageCountMap")
+        if isinstance(language_map, dict):
+            for language, count in language_map.items():
+                image_counts.setdefault(str(language), int(count or 0))
 
     for language, count in image_counts.items():
         by_language[str(language)] = {

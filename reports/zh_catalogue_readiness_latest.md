@@ -1,6 +1,6 @@
 # ZH Catalogue Readiness Audit
 
-Generated: 2026-05-26T20:32:32Z
+Generated: 2026-05-26T20:40:32Z
 
 - ZH provider card count: 6,439
 - ZH set count: 58
@@ -13,9 +13,15 @@ Generated: 2026-05-26T20:32:32Z
 - Duplicate canonical identity records: 738
 - Estimated promotable ZH records: 5,701
 - Estimated promotable ratio: 88.54%
-- Safe to promote now: no
-- Readiness status: needs_normalization
-- Recommendation: ZH provider records still need normalization before promotion. Resolve blocked reasons and duplicate identities first.
+- App catalogue promoted: yes
+- App catalogue promoted card count: 6,439
+- App catalogue promoted set count: 58
+- Promotion plan safeToPromoteAfterFix: yes
+- Promotion plan final promotable count: 6,439
+- Promotion plan remaining blockers: 0
+- Safe to promote now: yes
+- Readiness status: promoted_catalogue_ready
+- Recommendation: ZH is already promoted to app catalogue (catalogue-only). Keep pricing unavailable until a safe ZH price source is integrated.
 
 ## Blocked Reasons
 
