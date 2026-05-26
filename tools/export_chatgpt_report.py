@@ -51,6 +51,10 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/provider_languages_latest.md",
     "reports/zh_catalogue_readiness_latest.json",
     "reports/zh_catalogue_readiness_latest.md",
+    "reports/zh_duplicate_identities_latest.json",
+    "reports/zh_duplicate_identities_latest.md",
+    "reports/zh_promotion_plan_latest.json",
+    "reports/zh_promotion_plan_latest.md",
     "reports/image_cache_strategy_latest.json",
     "reports/image_cache_strategy_latest.md",
     "public/v1/markets/cardscanr-markets.json",
@@ -688,6 +692,53 @@ def _collect_zh_catalogue_readiness_audit() -> dict[str, Any]:
     }
 
 
+def _collect_zh_duplicate_identity_audit() -> dict[str, Any]:
+    data = _load_json("reports/zh_duplicate_identities_latest.json")
+    if data is None:
+        return {"available": False}
+
+    duplicate_groups = data.get("duplicateGroups") if isinstance(data.get("duplicateGroups"), list) else []
+    top_group = duplicate_groups[0] if duplicate_groups and isinstance(duplicate_groups[0], dict) else {}
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "candidateRecordCount": data.get("candidateRecordCount", 0),
+        "duplicateGroupCount": data.get("duplicateGroupCount", 0),
+        "duplicateRecordCount": data.get("duplicateRecordCount", 0),
+        "blockedNonDuplicateReasonCounts": data.get("blockedNonDuplicateReasonCounts", {}),
+        "duplicateRootCauseCounts": data.get("duplicateRootCauseCounts", {}),
+        "topGroupSize": top_group.get("groupSize", 0),
+        "topGroupIdentity": top_group.get("canonicalIdentityKey"),
+        "topGroupRootCause": top_group.get("suspectedRootCause"),
+    }
+
+
+def _collect_zh_promotion_plan() -> dict[str, Any]:
+    data = _load_json("reports/zh_promotion_plan_latest.json")
+    if data is None:
+        return {"available": False}
+
+    current = data.get("current") if isinstance(data.get("current"), dict) else {}
+    after = data.get("afterProposedFix") if isinstance(data.get("afterProposedFix"), dict) else {}
+    proposal = data.get("proposal") if isinstance(data.get("proposal"), dict) else {}
+    examples = data.get("exampleGeneratedCanonicalIds") if isinstance(data.get("exampleGeneratedCanonicalIds"), list) else []
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "proposalName": proposal.get("name"),
+        "proposalRule": proposal.get("rule"),
+        "enJpUnchanged": proposal.get("enJpUnchanged") is True,
+        "userFacingDisplayUnchanged": proposal.get("userFacingDisplayUnchanged") is True,
+        "currentBlockedCount": current.get("currentBlockedCount", 0),
+        "currentPromotableCount": current.get("currentPromotableCount", 0),
+        "resolvedDuplicateCount": after.get("resolvedDuplicateCount", 0),
+        "finalPromotableCount": after.get("finalPromotableCount", 0),
+        "remainingBlockers": after.get("remainingBlockers", 0),
+        "safeToPromoteAfterFix": after.get("safeToPromoteAfterFix") is True,
+        "exampleGeneratedCanonicalIds": examples[:5],
+    }
+
+
 def _collect_image_cache_strategy_report() -> dict[str, Any]:
     data = _load_json("reports/image_cache_strategy_latest.json")
     if data is None:
@@ -1275,6 +1326,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
     jp_price_coverage_audit = report.get("jpPriceCoverageAudit", {})
     provider_language_audit = report.get("providerLanguageAudit", {})
     zh_catalogue_readiness = report.get("zhCatalogueReadiness", {})
+    zh_duplicate_identity_audit = report.get("zhDuplicateIdentityAudit", {})
+    zh_promotion_plan = report.get("zhPromotionPlan", {})
     image_cache_strategy = report.get("imageCacheStrategy", {})
     market_readiness_config = report.get("marketReadinessConfig", {})
     market_pricing_foundation = report.get("marketPricingFoundation", {})
@@ -1377,6 +1430,39 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Safe to promote now:** {'yes' if zh_catalogue_readiness.get('safeToPromoteNow') else 'no'}")
         if zh_catalogue_readiness.get("recommendation"):
             a(f"- **Recommendation:** {zh_catalogue_readiness.get('recommendation')}")
+        a("")
+
+    if zh_duplicate_identity_audit.get("available"):
+        a("## ZH Duplicate Identity Audit")
+        a("")
+        a(f"- **Generated:** {zh_duplicate_identity_audit.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Candidate records:** {int(zh_duplicate_identity_audit.get('candidateRecordCount', 0)):,}")
+        a(f"- **Duplicate groups/records:** {int(zh_duplicate_identity_audit.get('duplicateGroupCount', 0)):,} / {int(zh_duplicate_identity_audit.get('duplicateRecordCount', 0)):,}")
+        a(f"- **Root causes:** {zh_duplicate_identity_audit.get('duplicateRootCauseCounts', {})}")
+        a(f"- **Top duplicate group:** {zh_duplicate_identity_audit.get('topGroupIdentity', 'n/a')} (size={int(zh_duplicate_identity_audit.get('topGroupSize', 0)):,}, cause={zh_duplicate_identity_audit.get('topGroupRootCause', 'n/a')})")
+        a("")
+
+    if zh_promotion_plan.get("available"):
+        a("## ZH Promotion Plan (Dry Run)")
+        a("")
+        a(f"- **Generated:** {zh_promotion_plan.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Proposal:** {zh_promotion_plan.get('proposalName', 'n/a')}")
+        a(f"- **Rule:** {zh_promotion_plan.get('proposalRule', 'n/a')}")
+        a(f"- **EN/JP unchanged:** {'yes' if zh_promotion_plan.get('enJpUnchanged') else 'no'}")
+        a(f"- **Current blocked/promotable:** {int(zh_promotion_plan.get('currentBlockedCount', 0)):,} / {int(zh_promotion_plan.get('currentPromotableCount', 0)):,}")
+        a(f"- **Resolved duplicates:** {int(zh_promotion_plan.get('resolvedDuplicateCount', 0)):,}")
+        a(f"- **Final promotable:** {int(zh_promotion_plan.get('finalPromotableCount', 0)):,}")
+        a(f"- **Remaining blockers:** {int(zh_promotion_plan.get('remainingBlockers', 0)):,}")
+        a(f"- **Safe to promote after fix:** {'yes' if zh_promotion_plan.get('safeToPromoteAfterFix') else 'no'}")
+        examples = zh_promotion_plan.get("exampleGeneratedCanonicalIds", [])
+        if isinstance(examples, list) and examples:
+            a("- **Example generated IDs:**")
+            for item in examples[:3]:
+                if isinstance(item, dict):
+                    a(
+                        f"  - {item.get('currentCanonicalBaseId', '')} -> "
+                        f"{item.get('proposedCanonicalBaseId', '')}"
+                    )
         a("")
 
     if image_cache_strategy.get("available"):
@@ -1537,6 +1623,8 @@ def main() -> None:
     jp_price_coverage_audit_info = _collect_jp_price_coverage_audit()
     provider_language_audit_info = _collect_provider_language_audit()
     zh_catalogue_readiness_info = _collect_zh_catalogue_readiness_audit()
+    zh_duplicate_identity_audit_info = _collect_zh_duplicate_identity_audit()
+    zh_promotion_plan_info = _collect_zh_promotion_plan()
     image_cache_strategy_info = _collect_image_cache_strategy_report()
     market_readiness_config_info = _collect_market_readiness_config()
     market_pricing_foundation_info = _collect_market_pricing_foundation()
@@ -1576,6 +1664,8 @@ def main() -> None:
         "jpPriceCoverageAudit": jp_price_coverage_audit_info,
         "providerLanguageAudit": provider_language_audit_info,
         "zhCatalogueReadiness": zh_catalogue_readiness_info,
+        "zhDuplicateIdentityAudit": zh_duplicate_identity_audit_info,
+        "zhPromotionPlan": zh_promotion_plan_info,
         "imageCacheStrategy": image_cache_strategy_info,
         "marketReadinessConfig": market_readiness_config_info,
         "marketPricingFoundation": market_pricing_foundation_info,
