@@ -1,6 +1,6 @@
 # Provider Language Audit
 
-Generated: 2026-05-26T09:02:06Z
+Generated: 2026-05-26T10:28:51Z
 
 - Languages found: en, jp, zh
 - App-supported languages: en, jp

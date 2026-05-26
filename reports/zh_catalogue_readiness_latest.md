@@ -1,6 +1,6 @@
 # ZH Catalogue Readiness Audit
 
-Generated: 2026-05-26T09:02:06Z
+Generated: 2026-05-26T10:28:51Z
 
 - ZH provider card count: 6,439
 - ZH set count: 58
