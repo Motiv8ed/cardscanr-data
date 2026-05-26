@@ -1,6 +1,6 @@
 # ZH Promotion Plan (Dry Run)
 
-Generated: 2026-05-26T20:17:40Z
+Generated: 2026-05-26T20:28:23Z
 
 ## Proposed ZH Identity Rule
 

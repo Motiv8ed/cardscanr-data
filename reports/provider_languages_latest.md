@@ -1,17 +1,17 @@
 # Provider Language Audit
 
-Generated: 2026-05-26T10:28:51Z
+Generated: 2026-05-26T20:28:21Z
 
 - Languages found: en, jp, zh
-- App-supported languages: en, jp
-- Promoted to app catalogue: en, jp
+- App-supported languages: en, jp, zh
+- Promoted to app catalogue: en, jp, zh
 - Current price supported: en, jp
 
 | Language | Provider cards | Provider sets | App-supported | Promoted | Image manifest | Current prices | Recommendation |
 |----------|---------------:|--------------:|---------------|----------|----------------|----------------|----------------|
 | en | 31,515 | 335 | yes | yes | yes | yes | Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence. |
 | jp | 24,032 | 462 | yes | yes | yes | yes | Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence. |
-| zh | 6,439 | 58 | no | no | no | no | Provider data exists but language is not app-supported. Run readiness audit before promotion. |
+| zh | 6,439 | 58 | yes | yes | no | no | Catalogue-only mode is active. Add a safe pricing source before enabling market pricing in-app. |
 
 ## Provider Language Codes
 

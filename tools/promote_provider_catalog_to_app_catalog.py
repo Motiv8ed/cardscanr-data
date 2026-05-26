@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import json
 import os
@@ -302,6 +302,28 @@ def collector_identity_key(value: Any) -> str:
     if re.fullmatch(r"\d+", compact or ""):
         return compact.lstrip("0") or "0"
     return raw
+
+
+def short_identity_token(value: Any, *, fallback: str) -> str:
+    raw = str(value or "").strip().lower()
+    raw = re.sub(r"[^a-z0-9]+", "", raw)
+    if not raw:
+        raw = fallback
+    return raw[:10]
+
+
+def zh_disambiguated_canonical_id(candidate: PromotionCandidate) -> str:
+    card = candidate.provider.card
+    provider_set_identity = (
+        card.get("providerSetId")
+        or card.get("providerSetCode")
+        or card.get("providerSetName")
+        or candidate.app_set_id
+    )
+    provider_card_id = card.get("providerCardId")
+    set_token = short_identity_token(provider_set_identity, fallback="set")
+    card_token = short_identity_token(provider_card_id, fallback="card")
+    return f"{candidate.canonical_base_id}~z{set_token}~p{card_token}"
 
 
 def display_name_from_provider(raw_name: str, set_code: str, collector_number: str) -> str:
@@ -811,29 +833,70 @@ def promote(languages: list[str], *, include_zh: bool, dry_run: bool, write_repo
             )
 
     duplicate_keys, duplicate_groups = summarize_duplicate_groups(candidate_records)
+    grouped_candidates: dict[str, list[PromotionCandidate]] = defaultdict(list)
+    for candidate in candidate_records:
+        grouped_candidates[candidate.identity_key].append(candidate)
+
     promoted_candidates: list[PromotionCandidate] = []
     seen_candidate_keys: set[str] = set()
-    for candidate in sorted(candidate_records, key=lambda item: (item.identity_key, str(item.provider.card.get("providerCardId")))):
-        if candidate.identity_key in duplicate_keys:
-            reason_counts["duplicate_candidate"] += 1
-            reason_counts_by_language[candidate.provider.language]["duplicate_candidate"] += 1
-            blocked.append(
-                {
-                    "language": candidate.provider.language,
-                    "providerCardId": candidate.provider.card.get("providerCardId"),
-                    "providerSetId": candidate.provider.card.get("providerSetId") or candidate.provider.file_set_id,
-                    "providerSetCode": candidate.provider.card.get("providerSetCode") or candidate.provider.file_set_code,
-                    "cardNumber": candidate.collector_number,
-                    "name": candidate.raw_name,
-                    "reason": "duplicate_candidate",
-                    "identityKey": candidate.identity_key,
-                }
-            )
+    zh_disambiguated_count = 0
+    zh_disambiguated_group_count = 0
+
+    for identity_key in sorted(grouped_candidates):
+        group = sorted(
+            grouped_candidates[identity_key],
+            key=lambda item: str(item.provider.card.get("providerCardId") or ""),
+        )
+        if len(group) <= 1:
+            candidate = group[0]
+            if candidate.identity_key in seen_candidate_keys:
+                continue
+            promoted_candidates.append(candidate)
+            seen_candidate_keys.add(candidate.identity_key)
             continue
-        if candidate.identity_key in seen_candidate_keys:
+
+        language = group[0].provider.language
+        if language != "zh":
+            for candidate in group:
+                reason_counts["duplicate_candidate"] += 1
+                reason_counts_by_language[candidate.provider.language]["duplicate_candidate"] += 1
+                blocked.append(
+                    {
+                        "language": candidate.provider.language,
+                        "providerCardId": candidate.provider.card.get("providerCardId"),
+                        "providerSetId": candidate.provider.card.get("providerSetId") or candidate.provider.file_set_id,
+                        "providerSetCode": candidate.provider.card.get("providerSetCode") or candidate.provider.file_set_code,
+                        "cardNumber": candidate.collector_number,
+                        "name": candidate.raw_name,
+                        "reason": "duplicate_candidate",
+                        "identityKey": candidate.identity_key,
+                    }
+                )
             continue
-        promoted_candidates.append(candidate)
-        seen_candidate_keys.add(candidate.identity_key)
+
+        zh_disambiguated_group_count += 1
+        group_ids: set[str] = set()
+        for candidate in group:
+            disambiguated_id = zh_disambiguated_canonical_id(candidate)
+            if disambiguated_id in group_ids:
+                reason_counts["duplicate_candidate"] += 1
+                reason_counts_by_language[candidate.provider.language]["duplicate_candidate"] += 1
+                blocked.append(
+                    {
+                        "language": candidate.provider.language,
+                        "providerCardId": candidate.provider.card.get("providerCardId"),
+                        "providerSetId": candidate.provider.card.get("providerSetId") or candidate.provider.file_set_id,
+                        "providerSetCode": candidate.provider.card.get("providerSetCode") or candidate.provider.file_set_code,
+                        "cardNumber": candidate.collector_number,
+                        "name": candidate.raw_name,
+                        "reason": "duplicate_candidate",
+                        "identityKey": candidate.identity_key,
+                    }
+                )
+                continue
+            group_ids.add(disambiguated_id)
+            promoted_candidates.append(replace(candidate, canonical_base_id=disambiguated_id))
+            zh_disambiguated_count += 1
 
     promoted_by_language: Counter[str] = Counter()
     promoted_set_ids: dict[str, set[str]] = defaultdict(set)
@@ -900,6 +963,11 @@ def promote(languages: list[str], *, include_zh: bool, dry_run: bool, write_repo
             for language in sorted(enabled)
         },
         "topDuplicateGroups": duplicate_groups[:20],
+        "zhDuplicateDisambiguation": {
+            "appliedRecordCount": zh_disambiguated_count,
+            "appliedGroupCount": zh_disambiguated_group_count,
+            "remainingBlockedCount": reason_counts_by_language.get("zh", Counter()).get("duplicate_candidate", 0),
+        },
         "topMissingSetMappings": [
             {"key": key, "count": count}
             for key, count in Counter(

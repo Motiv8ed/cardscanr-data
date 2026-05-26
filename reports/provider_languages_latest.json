@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-26T10:28:51Z",
+  "generatedAtUtc": "2026-05-26T20:28:21Z",
   "languageRows": [
     {
       "appCatalogueCardCount": 46417,
@@ -48,12 +48,12 @@
       "recommendation": "Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence."
     },
     {
-      "appCatalogueCardCount": 0,
-      "appCatalogueSetCount": 0,
-      "appCatalogueStatus": "unknown",
-      "appPricingStatus": "unknown",
-      "appSupported": false,
-      "appVisibility": "hidden",
+      "appCatalogueCardCount": 6439,
+      "appCatalogueSetCount": 58,
+      "appCatalogueStatus": "partial",
+      "appPricingStatus": "unavailable",
+      "appSupported": true,
+      "appVisibility": "beta",
       "currentPriceRecordCount": 0,
       "currentPriceSetFileCount": 0,
       "currentPriceSource": null,
@@ -61,14 +61,14 @@
       "hasImageManifestSupport": false,
       "imageManifestRecordCount": 0,
       "language": "zh",
-      "promotedToAppCatalogue": false,
+      "promotedToAppCatalogue": true,
       "providerCardCount": 6439,
       "providerLanguageCodes": [
         "chn"
       ],
       "providerSetCount": 58,
       "providerSetFilesWritten": 58,
-      "recommendation": "Provider data exists but language is not app-supported. Run readiness audit before promotion."
+      "recommendation": "Catalogue-only mode is active. Add a safe pricing source before enabling market pricing in-app."
     }
   ],
   "provider": "pokewallet",
@@ -81,7 +81,8 @@
   "summary": {
     "appSupportedLanguages": [
       "en",
-      "jp"
+      "jp",
+      "zh"
     ],
     "currentPriceSupportedLanguages": [
       "en",
@@ -95,7 +96,8 @@
     ],
     "promotedToAppCatalogueLanguages": [
       "en",
-      "jp"
+      "jp",
+      "zh"
     ]
   }
 }
