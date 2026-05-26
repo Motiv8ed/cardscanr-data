@@ -1,63 +1,54 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 173,
-  "lastUpdatedAtUtc": "2026-05-26T05:12:00Z",
+  "enCurrentPriceCursor": 193,
+  "lastUpdatedAtUtc": "2026-05-26T06:13:48Z",
   "lastBatchSetIds": [
-    "bwp",
-    "bxy",
-    "cel25",
-    "cel25c",
-    "clc",
-    "clk",
-    "col1",
-    "cs0l",
-    "dc1",
-    "det1",
-    "dhd",
-    "dp1",
-    "dp2",
-    "dp3",
-    "dp4",
-    "dp5",
-    "dp6",
-    "dp7",
-    "dpp",
-    "drs"
+    "dv1",
+    "ec1",
+    "ec2",
+    "ec3",
+    "ec4",
+    "ec5",
+    "ecard1",
+    "ecard2",
+    "ecard3",
+    "erb",
+    "ex1",
+    "ex10",
+    "ex11",
+    "ex12",
+    "ex13",
+    "ex14",
+    "ex15",
+    "ex16",
+    "ex2",
+    "ex3"
   ],
   "lastProcessedSetIds": [
-    "bwp",
-    "bxy",
-    "cel25",
-    "cel25c",
-    "clc",
-    "clk",
-    "col1",
-    "cs0l",
-    "dc1",
-    "det1",
-    "dhd",
-    "dp1",
-    "dp2",
-    "dp3",
-    "dp4",
-    "dp5",
-    "dp6",
-    "dp7",
-    "dpp",
-    "drs"
+    "dv1",
+    "ec1",
+    "ec2",
+    "ec3",
+    "ec4",
+    "ec5",
+    "ecard1",
+    "ecard2",
+    "ecard3",
+    "erb",
+    "ex1",
+    "ex10",
+    "ex11",
+    "ex12",
+    "ex13",
+    "ex14",
+    "ex15",
+    "ex16",
+    "ex2",
+    "ex3"
   ],
   "lastStopReason": "completed",
   "lastRateLimited": false,
   "requestLedger": [
-    {
-      "providerRequestCounts": {
-        "pokemon_tcg_api": 20
-      },
-      "requests": 20,
-      "source": "local_price_update",
-      "status": "built",
-      "timestampUtc": "2026-05-24T05:55:18Z"
-    },
     {
       "providerRequestCounts": {
         "pokemon_tcg_api": 20
@@ -410,7 +401,16 @@
       "timestampUtc": "2026-05-26T04:11:40Z"
     },
     {
-      "timestampUtc": "2026-05-26T05:13:26Z",
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 20
+      },
+      "requests": 20,
+      "source": "local_price_update",
+      "status": "built",
+      "timestampUtc": "2026-05-26T05:13:26Z"
+    },
+    {
+      "timestampUtc": "2026-05-26T06:14:59Z",
       "requests": 20,
       "providerRequestCounts": {
         "pokemon_tcg_api": 20
