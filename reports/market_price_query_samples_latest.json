@@ -1,0 +1,399 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T09:45:27Z",
+  "status": "ok",
+  "mode": "query_generation_only",
+  "liveEbayEnabled": false,
+  "selectedInput": {
+    "market": "AU",
+    "language": "en",
+    "game": "pokemon",
+    "limit": 10,
+    "cardId": null,
+    "setId": null,
+    "variant": "raw",
+    "condition": "near_mint",
+    "graded": false
+  },
+  "querySafety": {
+    "bannedTerms": [
+      "proxy",
+      "custom",
+      "fake",
+      "digital",
+      "lot",
+      "bundle"
+    ],
+    "excludeDamagedWhenConditionIsNotDamaged": true
+  },
+  "marketSamples": {
+    "AU": [
+      {
+        "canonicalCardId": "pokemon|en|1375|001/165|alakazam_1",
+        "setId": "1375",
+        "cardName": "Alakazam 1",
+        "collectorNumber": "001/165",
+        "market": "AU",
+        "currency": "AUD",
+        "query": "\"Alakazam 1\" \"Expedition\" \"001/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|002/165|ampharos_2",
+        "setId": "1375",
+        "cardName": "Ampharos 2",
+        "collectorNumber": "002/165",
+        "market": "AU",
+        "currency": "AUD",
+        "query": "\"Ampharos 2\" \"Expedition\" \"002/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|003/165|arbok_3",
+        "setId": "1375",
+        "cardName": "Arbok 3",
+        "collectorNumber": "003/165",
+        "market": "AU",
+        "currency": "AUD",
+        "query": "\"Arbok 3\" \"Expedition\" \"003/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|004/165|blastoise_4",
+        "setId": "1375",
+        "cardName": "Blastoise 4",
+        "collectorNumber": "004/165",
+        "market": "AU",
+        "currency": "AUD",
+        "query": "\"Blastoise 4\" \"Expedition\" \"004/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|005/165|butterfree_5",
+        "setId": "1375",
+        "cardName": "Butterfree 5",
+        "collectorNumber": "005/165",
+        "market": "AU",
+        "currency": "AUD",
+        "query": "\"Butterfree 5\" \"Expedition\" \"005/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      }
+    ],
+    "US": [
+      {
+        "canonicalCardId": "pokemon|en|1375|001/165|alakazam_1",
+        "setId": "1375",
+        "cardName": "Alakazam 1",
+        "collectorNumber": "001/165",
+        "market": "US",
+        "currency": "USD",
+        "query": "\"Alakazam 1\" \"Expedition\" \"001/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|002/165|ampharos_2",
+        "setId": "1375",
+        "cardName": "Ampharos 2",
+        "collectorNumber": "002/165",
+        "market": "US",
+        "currency": "USD",
+        "query": "\"Ampharos 2\" \"Expedition\" \"002/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|003/165|arbok_3",
+        "setId": "1375",
+        "cardName": "Arbok 3",
+        "collectorNumber": "003/165",
+        "market": "US",
+        "currency": "USD",
+        "query": "\"Arbok 3\" \"Expedition\" \"003/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|004/165|blastoise_4",
+        "setId": "1375",
+        "cardName": "Blastoise 4",
+        "collectorNumber": "004/165",
+        "market": "US",
+        "currency": "USD",
+        "query": "\"Blastoise 4\" \"Expedition\" \"004/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|005/165|butterfree_5",
+        "setId": "1375",
+        "cardName": "Butterfree 5",
+        "collectorNumber": "005/165",
+        "market": "US",
+        "currency": "USD",
+        "query": "\"Butterfree 5\" \"Expedition\" \"005/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      }
+    ],
+    "GB": [
+      {
+        "canonicalCardId": "pokemon|en|1375|001/165|alakazam_1",
+        "setId": "1375",
+        "cardName": "Alakazam 1",
+        "collectorNumber": "001/165",
+        "market": "GB",
+        "currency": "GBP",
+        "query": "\"Alakazam 1\" \"Expedition\" \"001/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|002/165|ampharos_2",
+        "setId": "1375",
+        "cardName": "Ampharos 2",
+        "collectorNumber": "002/165",
+        "market": "GB",
+        "currency": "GBP",
+        "query": "\"Ampharos 2\" \"Expedition\" \"002/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|003/165|arbok_3",
+        "setId": "1375",
+        "cardName": "Arbok 3",
+        "collectorNumber": "003/165",
+        "market": "GB",
+        "currency": "GBP",
+        "query": "\"Arbok 3\" \"Expedition\" \"003/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|004/165|blastoise_4",
+        "setId": "1375",
+        "cardName": "Blastoise 4",
+        "collectorNumber": "004/165",
+        "market": "GB",
+        "currency": "GBP",
+        "query": "\"Blastoise 4\" \"Expedition\" \"004/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|005/165|butterfree_5",
+        "setId": "1375",
+        "cardName": "Butterfree 5",
+        "collectorNumber": "005/165",
+        "market": "GB",
+        "currency": "GBP",
+        "query": "\"Butterfree 5\" \"Expedition\" \"005/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      }
+    ],
+    "CA": [
+      {
+        "canonicalCardId": "pokemon|en|1375|001/165|alakazam_1",
+        "setId": "1375",
+        "cardName": "Alakazam 1",
+        "collectorNumber": "001/165",
+        "market": "CA",
+        "currency": "CAD",
+        "query": "\"Alakazam 1\" \"Expedition\" \"001/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|002/165|ampharos_2",
+        "setId": "1375",
+        "cardName": "Ampharos 2",
+        "collectorNumber": "002/165",
+        "market": "CA",
+        "currency": "CAD",
+        "query": "\"Ampharos 2\" \"Expedition\" \"002/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|003/165|arbok_3",
+        "setId": "1375",
+        "cardName": "Arbok 3",
+        "collectorNumber": "003/165",
+        "market": "CA",
+        "currency": "CAD",
+        "query": "\"Arbok 3\" \"Expedition\" \"003/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|004/165|blastoise_4",
+        "setId": "1375",
+        "cardName": "Blastoise 4",
+        "collectorNumber": "004/165",
+        "market": "CA",
+        "currency": "CAD",
+        "query": "\"Blastoise 4\" \"Expedition\" \"004/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      },
+      {
+        "canonicalCardId": "pokemon|en|1375|005/165|butterfree_5",
+        "setId": "1375",
+        "cardName": "Butterfree 5",
+        "collectorNumber": "005/165",
+        "market": "CA",
+        "currency": "CAD",
+        "query": "\"Butterfree 5\" \"Expedition\" \"005/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
+        "excludeTerms": [
+          "-proxy",
+          "-custom",
+          "-fake",
+          "-digital",
+          "-lot",
+          "-bundle",
+          "-damaged"
+        ]
+      }
+    ]
+  }
+}

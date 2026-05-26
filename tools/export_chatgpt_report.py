@@ -56,7 +56,15 @@ ZIP_FILES_DEFAULT: list[str] = [
     "public/v1/markets/cardscanr-markets.json",
     "public/v1/markets/marketplace-sources.json",
     "public/v1/markets/onboarding-questionnaire.json",
+    "public/v1/markets/market-price-schema.json",
+    "public/v1/markets/market-price-status.json",
     "docs/market_pricing/EBAY_MARKET_PRICING_READINESS.md",
+    "docs/market_pricing/MARKET_PRICE_DATA_MODEL.md",
+    "reports/market_price_query_samples_latest.json",
+    "reports/market_price_query_samples_latest.md",
+    "reports/market_pricing_worker_latest.json",
+    "reports/market_pricing_worker_latest.md",
+    "reports/market_pricing_jobs_latest.json",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -754,6 +762,48 @@ def _collect_market_readiness_config() -> dict[str, Any]:
     }
 
 
+def _collect_market_pricing_foundation() -> dict[str, Any]:
+    query_samples = _load_json("reports/market_price_query_samples_latest.json")
+    worker_latest = _load_json("reports/market_pricing_worker_latest.json")
+    worker_jobs = _load_json("reports/market_pricing_jobs_latest.json")
+    market_status = _load_json("public/v1/markets/market-price-status.json")
+    market_schema = _load_json("public/v1/markets/market-price-schema.json")
+
+    if all(item is None for item in [query_samples, worker_latest, worker_jobs, market_status, market_schema]):
+        return {"available": False}
+
+    query_counts: dict[str, int] = {}
+    if isinstance(query_samples, dict):
+        market_samples = query_samples.get("marketSamples")
+        if isinstance(market_samples, dict):
+            for market, rows in market_samples.items():
+                if isinstance(rows, list):
+                    query_counts[str(market)] = len(rows)
+
+    worker_summary = worker_latest.get("summary") if isinstance(worker_latest, dict) and isinstance(worker_latest.get("summary"), dict) else {}
+    source_status = market_status.get("sourceStatus") if isinstance(market_status, dict) and isinstance(market_status.get("sourceStatus"), dict) else {}
+
+    return {
+        "available": True,
+        "schemaVersion": market_schema.get("schemaVersion") if isinstance(market_schema, dict) else None,
+        "statusVersion": market_status.get("schemaVersion") if isinstance(market_status, dict) else None,
+        "liveEbayWorkerStatus": source_status.get("liveEbayWorker") or (market_status or {}).get("liveEbayWorkerStatus"),
+        "mockProviderStatus": source_status.get("mockProvider"),
+        "manualProviderStatus": source_status.get("manualProvider"),
+        "lastWorkerRunAtUtc": (market_status or {}).get("lastWorkerRunAtUtc") if isinstance(market_status, dict) else None,
+        "workerStatus": (worker_latest or {}).get("status") if isinstance(worker_latest, dict) else None,
+        "workerRecordsBuilt": worker_summary.get("recordsBuilt", 0),
+        "workerJobsProcessed": worker_summary.get("jobsProcessed", 0),
+        "workerMode": (worker_latest or {}).get("mode") if isinstance(worker_latest, dict) else None,
+        "querySamplesAvailable": isinstance(query_samples, dict),
+        "querySampleCountsByMarket": dict(sorted(query_counts.items())),
+        "queryGeneratedAtUtc": (query_samples or {}).get("generatedAtUtc") if isinstance(query_samples, dict) else None,
+        "workerGeneratedAtUtc": (worker_latest or {}).get("generatedAtUtc") if isinstance(worker_latest, dict) else None,
+        "jobReportGeneratedAtUtc": (worker_jobs or {}).get("generatedAtUtc") if isinstance(worker_jobs, dict) else None,
+        "warning": "Live eBay scraping is not enabled yet."
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -1227,6 +1277,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
     zh_catalogue_readiness = report.get("zhCatalogueReadiness", {})
     image_cache_strategy = report.get("imageCacheStrategy", {})
     market_readiness_config = report.get("marketReadinessConfig", {})
+    market_pricing_foundation = report.get("marketPricingFoundation", {})
     missing_price_worker = report.get("pokewalletMissingPriceWorker", {})
     if price_import.get("available"):
         a("## PokeWallet Price Import")
@@ -1356,6 +1407,18 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **eBay readiness doc available:** {'yes' if market_readiness_config.get('ebayReadinessDocAvailable') else 'no'}")
         a("")
 
+    if market_pricing_foundation.get("available"):
+        a("## Market Pricing Foundation")
+        a("")
+        a(f"- **Live eBay worker status:** {market_pricing_foundation.get('liveEbayWorkerStatus', 'disabled')}")
+        a(f"- **Mock provider status:** {market_pricing_foundation.get('mockProviderStatus', 'unknown')}")
+        a(f"- **Manual provider status:** {market_pricing_foundation.get('manualProviderStatus', 'unknown')}")
+        a(f"- **Last worker run:** {market_pricing_foundation.get('lastWorkerRunAtUtc', 'n/a')}")
+        a(f"- **Worker summary:** status={market_pricing_foundation.get('workerStatus', 'n/a')}, mode={market_pricing_foundation.get('workerMode', 'n/a')}, jobs={market_pricing_foundation.get('workerJobsProcessed', 0)}, records={market_pricing_foundation.get('workerRecordsBuilt', 0)}")
+        a(f"- **Query sample counts by market:** {market_pricing_foundation.get('querySampleCountsByMarket', {})}")
+        a(f"- **Warning:** {market_pricing_foundation.get('warning', 'Live eBay scraping is not enabled yet.')}")
+        a("")
+
     if missing_price_worker.get("available"):
         a("## PokeWallet Missing Price Worker")
         a("")
@@ -1476,6 +1539,7 @@ def main() -> None:
     zh_catalogue_readiness_info = _collect_zh_catalogue_readiness_audit()
     image_cache_strategy_info = _collect_image_cache_strategy_report()
     market_readiness_config_info = _collect_market_readiness_config()
+    market_pricing_foundation_info = _collect_market_pricing_foundation()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -1514,6 +1578,7 @@ def main() -> None:
         "zhCatalogueReadiness": zh_catalogue_readiness_info,
         "imageCacheStrategy": image_cache_strategy_info,
         "marketReadinessConfig": market_readiness_config_info,
+        "marketPricingFoundation": market_pricing_foundation_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }

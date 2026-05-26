@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T00:00:00Z",
+  "id": "cardscanr-market-price-record-v1",
+  "notes": [
+    "Schema contract for local market/sold-listing derived prices.",
+    "No live eBay scraping is enabled by this schema.",
+    "Market prices are separate from public provider current prices."
+  ],
+  "statusValues": [
+    "priced",
+    "no_results",
+    "insufficient_data",
+    "stale",
+    "error",
+    "unavailable"
+  ],
+  "confidenceLabels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "recordFields": [
+    {"name": "game", "type": "string", "required": true, "example": "pokemon"},
+    {"name": "language", "type": "string", "required": true, "example": "en"},
+    {"name": "canonicalCardId", "type": "string", "required": true, "example": "pokemon|en|base1|4|charizard"},
+    {"name": "setId", "type": "string", "required": true, "example": "base1"},
+    {"name": "setName", "type": "string", "required": true, "example": "Base"},
+    {"name": "collectorNumber", "type": "string", "required": true, "example": "4"},
+    {"name": "cardName", "type": "string", "required": true, "example": "Charizard"},
+    {"name": "variant", "type": "string", "required": true, "example": "raw"},
+    {"name": "condition", "type": "string", "required": true, "example": "near_mint"},
+    {"name": "gradedState", "type": "string", "required": true, "example": "ungraded"},
+    {"name": "marketCountry", "type": "string", "required": true, "example": "AU"},
+    {"name": "currency", "type": "string", "required": true, "example": "AUD"},
+    {"name": "source", "type": "string", "required": true, "example": "ebay_sold_listings"},
+    {"name": "sourceProvider", "type": "string", "required": true, "example": "mock"},
+    {"name": "sampleCount", "type": "integer", "required": true, "example": 5},
+    {"name": "medianPrice", "type": "number", "required": false, "example": 149.5},
+    {"name": "averagePrice", "type": "number", "required": false, "example": 151.2},
+    {"name": "lowPrice", "type": "number", "required": false, "example": 120.0},
+    {"name": "highPrice", "type": "number", "required": false, "example": 189.0},
+    {"name": "shippingIncluded", "type": "boolean", "required": true, "example": true},
+    {"name": "soldDateRange", "type": "object", "required": false, "fields": ["from", "to"]},
+    {"name": "evidenceListingLinks", "type": "array", "required": true, "items": "string", "maxItems": 25},
+    {"name": "confidenceScore", "type": "number", "required": true, "minimum": 0, "maximum": 1},
+    {"name": "confidenceLabel", "type": "string", "required": true, "values": ["low", "medium", "high"]},
+    {"name": "outlierFilteringNotes", "type": "string", "required": false},
+    {"name": "lastUpdatedAtUtc", "type": "string", "required": true, "format": "date-time"},
+    {"name": "status", "type": "string", "required": true, "values": ["priced", "no_results", "insufficient_data", "stale", "error", "unavailable"]}
+  ]
+}

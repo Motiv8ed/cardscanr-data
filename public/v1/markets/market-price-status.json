@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T09:45:29Z",
+  "status": "enabled_foundation",
+  "supportedMarkets": [
+    "AU",
+    "US",
+    "GB",
+    "CA",
+    "EU"
+  ],
+  "sourceStatus": {
+    "ebaySoldListingsWorker": "planned",
+    "liveEbayWorker": "disabled",
+    "mockProvider": "enabled",
+    "manualProvider": "enabled"
+  },
+  "liveEbayWorkerStatus": "planned_disabled",
+  "legalTermsReviewRequiredBeforeLiveScraping": true,
+  "lastWorkerRunAtUtc": "2026-05-26T09:45:29Z",
+  "notes": [
+    "Live eBay scraping is disabled and not implemented in this foundation.",
+    "Only mock/manual providers may write market price outputs in this phase.",
+    "Do not overwrite EN/JP provider current prices; market prices are stored separately."
+  ],
+  "lastWorkerProvider": "mock"
+}
