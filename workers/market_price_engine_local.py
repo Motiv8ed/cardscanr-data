@@ -44,9 +44,6 @@ sys.path.insert(0, str(ROOT))
 from cardscanr_market_engine.scheduler import MarketPriceRefreshScheduler, MarketSchedulerConfig
 from cardscanr_market_engine.smoke_utils import append_jsonl, sanitize_for_report, write_json
 
-_REDACTED = "***REDACTED***"
-_SENSITIVE_KEY_TERMS = ("key", "token", "secret", "authorization", "apikey", "password")
-
 
 # ---------------------------------------------------------------------------
 # Utilities
