@@ -1,6 +1,6 @@
 # JP Price Coverage Audit
 
-- generatedAtUtc: 2026-05-26T08:34:54Z
+- generatedAtUtc: 2026-05-26T20:02:31Z
 - ledgerPath: data/pokewallet_price_request_ledger.json
 
 ## Coverage Summary
@@ -73,7 +73,7 @@
 
 - status: needs_review
 - message: JP current prices still have uncovered app cards.
-- next step: Continue the missing-set import worker until coverage is complete.
+- next step: Missing-set import is complete. Run unmatched/unusable price audits and app integration validation.
 - note: JP catalogue cards still have uncovered current-price gaps.
 - note: Missing-set JP price import is complete; move to non-price audits.
 

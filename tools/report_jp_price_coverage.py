@@ -222,6 +222,7 @@ def build_report() -> dict[str, Any]:
     import_validation = str(import_report.get("validationResult") or "") if import_report else ""
     worker_complete = bool(worker_report and worker_report.get("status") == "complete")
     missing_sets_selected = int(import_report.get("missingPriceSetsSelected") or 0) if import_report else None
+    missing_set_import_complete = worker_complete and missing_sets_selected == 0
 
     coverage_pct = float((len(covered_card_ids) / len(cards)) * 100) if cards else 0.0
     coverage_state = "complete" if len(uncovered_card_ids) == 0 else "partial"
@@ -239,6 +240,15 @@ def build_report() -> dict[str, Any]:
         app_readiness_notes.append("Missing-set JP price import is complete; move to non-price audits.")
     else:
         app_readiness_notes.append("JP missing-set import still needs attention before treating coverage as final.")
+
+    if missing_set_import_complete:
+        next_step = (
+            "Missing-set import is complete. Run unmatched/unusable price audits and app integration validation."
+        )
+    elif coverage_state == "complete":
+        next_step = "Run unmatched/unusable audits and app integration validation."
+    else:
+        next_step = "Continue the missing-set import worker until coverage is complete."
 
     readiness_status = "ready_for_app_validation" if coverage_state == "complete" and not orphan_records and not duplicate_summary["exactDuplicatePriceRowCount"] else "needs_review"
 
@@ -286,7 +296,7 @@ def build_report() -> dict[str, Any]:
         "appReadinessSummary": {
             "status": readiness_status,
             "message": "JP current prices fully cover the JP app catalogue." if coverage_state == "complete" else "JP current prices still have uncovered app cards.",
-            "nextStep": "Run unmatched/unusable audits and app integration validation." if coverage_state == "complete" else "Continue the missing-set import worker until coverage is complete.",
+            "nextStep": next_step,
             "notes": app_readiness_notes,
             "coverageComplete": coverage_state == "complete",
             "workerComplete": worker_complete,
