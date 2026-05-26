@@ -45,6 +45,8 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/pokewallet_price_import_latest.md",
     "reports/pokewallet_missing_price_worker_latest.json",
     "reports/pokewallet_missing_price_worker_latest.md",
+    "reports/jp_price_coverage_latest.json",
+    "reports/jp_price_coverage_latest.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -574,6 +576,50 @@ def _collect_pokewallet_missing_price_worker_report() -> dict[str, Any]:
     }
 
 
+def _collect_jp_price_coverage_audit() -> dict[str, Any]:
+    data = _load_json("reports/jp_price_coverage_latest.json")
+    if data is None:
+        return {"available": False}
+
+    catalogue = data.get("catalogue") if isinstance(data.get("catalogue"), dict) else {}
+    current_price_files = data.get("currentPriceFiles") if isinstance(data.get("currentPriceFiles"), dict) else {}
+    set_coverage = data.get("setCoverage") if isinstance(data.get("setCoverage"), dict) else {}
+    duplicate_and_ambiguous = data.get("duplicateAndAmbiguous") if isinstance(data.get("duplicateAndAmbiguous"), dict) else {}
+    breakdowns = data.get("breakdowns") if isinstance(data.get("breakdowns"), dict) else {}
+    readiness = data.get("appReadinessSummary") if isinstance(data.get("appReadinessSummary"), dict) else {}
+    support = data.get("supportingReports") if isinstance(data.get("supportingReports"), dict) else {}
+
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "ledgerPath": data.get("ledgerPath"),
+        "totalJpAppCatalogueCards": catalogue.get("totalJpAppCatalogueCards", 0),
+        "coveredJpAppCatalogueCards": catalogue.get("coveredJpAppCatalogueCards", 0),
+        "uncoveredJpAppCatalogueCards": catalogue.get("uncoveredJpAppCatalogueCards", 0),
+        "coveragePct": catalogue.get("coveragePct", 0.0),
+        "currentPriceFileCount": current_price_files.get("fileCount", 0),
+        "currentPriceRecordCount": current_price_files.get("recordCount", 0),
+        "worstMissingCoverageSets": set_coverage.get("worstMissingCoverageSets", []),
+        "bestCoverageSets": set_coverage.get("bestCoverageSets", []),
+        "cardsWithMultipleCurrentPriceRows": duplicate_and_ambiguous.get("cardsWithMultipleCurrentPriceRows", 0),
+        "exactDuplicatePriceRowCount": duplicate_and_ambiguous.get("exactDuplicatePriceRowCount", 0),
+        "orphanCurrentPriceRows": duplicate_and_ambiguous.get("orphanCurrentPriceRows", 0),
+        "currentPriceRowsWithoutCanonicalCardId": duplicate_and_ambiguous.get("currentPriceRowsWithoutCanonicalCardId", 0),
+        "sourceCounts": breakdowns.get("sourceCounts", {}),
+        "currencyCounts": breakdowns.get("currencyCounts", {}),
+        "variantCounts": breakdowns.get("variantCounts", {}),
+        "appReadinessStatus": readiness.get("status"),
+        "appReadinessMessage": readiness.get("message"),
+        "appReadinessNextStep": readiness.get("nextStep"),
+        "appReadinessNotes": readiness.get("notes", []),
+        "latestImportMissingPriceSetsSelected": support.get("latestImportMissingPriceSetsSelected"),
+        "latestImportUnmatchedRecords": support.get("latestImportUnmatchedRecords"),
+        "latestImportUnusableRecords": support.get("latestImportUnusableRecords"),
+        "latestImportValidationResult": support.get("latestImportValidationResult"),
+        "workerStatus": support.get("workerStatus"),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -1023,6 +1069,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
 
     # PokeWallet price import report
     price_import = report.get("pokewalletPriceImport", {})
+    jp_price_coverage_audit = report.get("jpPriceCoverageAudit", {})
     missing_price_worker = report.get("pokewalletMissingPriceWorker", {})
     if price_import.get("available"):
         a("## PokeWallet Price Import")
@@ -1058,6 +1105,29 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a(f"- **Recommended next action:** {price_import.get('nextRecommendedAction')}")
         if price_import.get("nextRecommendedSafeCommand"):
             a(f"- **Recommended safe command:** {price_import.get('nextRecommendedSafeCommand')}")
+        a("")
+
+    if jp_price_coverage_audit.get("available"):
+        a("## JP Price Coverage Audit")
+        a("")
+        a(f"- **Generated:** {jp_price_coverage_audit.get('generatedAtUtc', 'n/a')}")
+        a(
+            f"- **Coverage:** {int(jp_price_coverage_audit.get('coveredJpAppCatalogueCards', 0)):,} / "
+            f"{int(jp_price_coverage_audit.get('totalJpAppCatalogueCards', 0)):,} "
+            f"({float(jp_price_coverage_audit.get('coveragePct', 0.0)):.2f}%)"
+        )
+        a(f"- **Cards without current price:** {int(jp_price_coverage_audit.get('uncoveredJpAppCatalogueCards', 0)):,}")
+        a(
+            f"- **Current price files / rows:** {int(jp_price_coverage_audit.get('currentPriceFileCount', 0)):,} / "
+            f"{int(jp_price_coverage_audit.get('currentPriceRecordCount', 0)):,}"
+        )
+        a(f"- **Worst missing-coverage sets:** {jp_price_coverage_audit.get('worstMissingCoverageSets', [])[:3]}")
+        a(f"- **Best coverage sets:** {jp_price_coverage_audit.get('bestCoverageSets', [])[:3]}")
+        a(f"- **Duplicate/ambiguous rows:** multi-row cards={int(jp_price_coverage_audit.get('cardsWithMultipleCurrentPriceRows', 0)):,}, exact duplicates={int(jp_price_coverage_audit.get('exactDuplicatePriceRowCount', 0)):,}")
+        a(f"- **Unmatched/unusable summary:** orphan rows={int(jp_price_coverage_audit.get('orphanCurrentPriceRows', 0)):,}, missing canonical ids={int(jp_price_coverage_audit.get('currentPriceRowsWithoutCanonicalCardId', 0)):,}, latest import unmatched={jp_price_coverage_audit.get('latestImportUnmatchedRecords', 'n/a')}, latest import unusable={jp_price_coverage_audit.get('latestImportUnusableRecords', 'n/a')}")
+        a(f"- **App readiness:** {jp_price_coverage_audit.get('appReadinessStatus', 'n/a')} — {jp_price_coverage_audit.get('appReadinessMessage', '')}")
+        if jp_price_coverage_audit.get("appReadinessNextStep"):
+            a(f"- **Next step:** {jp_price_coverage_audit.get('appReadinessNextStep')}")
         a("")
 
     if missing_price_worker.get("available"):
@@ -1175,6 +1245,7 @@ def main() -> None:
     pokewallet_price_import_info = _collect_pokewallet_price_import_report()
     pokewallet_price_budget_ledger_info = _collect_pokewallet_price_budget_ledger()
     pokewallet_missing_price_worker_info = _collect_pokewallet_missing_price_worker_report()
+    jp_price_coverage_audit_info = _collect_jp_price_coverage_audit()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -1204,6 +1275,7 @@ def main() -> None:
         "pokewalletPriceImport": pokewallet_price_import_info,
         "pokewalletPriceBudgetLedger": pokewallet_price_budget_ledger_info,
         "pokewalletMissingPriceWorker": pokewallet_missing_price_worker_info,
+        "jpPriceCoverageAudit": jp_price_coverage_audit_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }
