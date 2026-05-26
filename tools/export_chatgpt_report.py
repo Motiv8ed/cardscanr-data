@@ -71,6 +71,7 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/market_pricing_worker_latest.json",
     "reports/market_pricing_worker_latest.md",
     "reports/market_pricing_jobs_latest.json",
+    "reports/market_price_engine_local_latest.json",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -857,6 +858,33 @@ def _collect_market_pricing_foundation() -> dict[str, Any]:
     }
 
 
+def _collect_local_market_engine_runner() -> dict[str, Any]:
+    runner_latest = _load_json("reports/market_price_engine_local_latest.json")
+    runner_exists = (ROOT / "workers" / "market_price_engine_local.py").exists()
+    if runner_latest is None:
+        return {"available": False, "runnerExists": runner_exists}
+
+    env_summary = runner_latest.get("env_summary") if isinstance(runner_latest.get("env_summary"), dict) else {}
+    return {
+        "available": True,
+        "runnerExists": runner_exists,
+        "startedAt": runner_latest.get("started_at"),
+        "completedAt": runner_latest.get("completed_at"),
+        "cyclesRequested": runner_latest.get("cycles_requested", 0),
+        "cyclesCompleted": runner_latest.get("cycles_completed", 0),
+        "dryRun": runner_latest.get("dry_run", False),
+        "totalJobsEnqueued": runner_latest.get("total_jobs_enqueued", 0),
+        "totalJobsProcessed": runner_latest.get("total_jobs_processed", 0),
+        "totalJobsCompleted": runner_latest.get("total_jobs_completed", 0),
+        "totalJobsFailed": runner_latest.get("total_jobs_failed", 0),
+        "errors": runner_latest.get("errors", []),
+        "supabaseEnvPresent": runner_latest.get("supabase_env_present", False),
+        "marketLookupProvider": env_summary.get("market_lookup_provider", "mock"),
+        "mockOnlyStatus": "mock_only" if env_summary.get("market_lookup_provider", "mock") == "mock" else "non_mock_blocked",
+        "liveProviderDisabled": env_summary.get("market_lookup_provider", "mock") == "mock",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -1586,6 +1614,30 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Warning:** {market_pricing_foundation.get('warning', 'Live eBay scraping is not enabled yet.')}")
         a("")
 
+    local_runner = report.get("localMarketEngineRunner", {})
+    if local_runner.get("runnerExists") or local_runner.get("available"):
+        a("## Local Market Price Engine Runner (Phase 4B)")
+        a("")
+        a(f"- **Runner exists:** {'yes' if local_runner.get('runnerExists') else 'no'}")
+        a(f"- **Provider mode:** {local_runner.get('marketLookupProvider', 'mock')} ({'live provider disabled' if local_runner.get('liveProviderDisabled') else 'non-mock — BLOCKED'})")
+        if local_runner.get("available"):
+            a(f"- **Last run started:** {local_runner.get('startedAt', 'n/a')}")
+            a(f"- **Last run completed:** {local_runner.get('completedAt', 'n/a')}")
+            a(f"- **Cycles:** {local_runner.get('cyclesCompleted', 0)} / {local_runner.get('cyclesRequested', 0)} completed")
+            a(f"- **Dry-run:** {'yes' if local_runner.get('dryRun') else 'no'}")
+            a(f"- **Jobs enqueued / processed / completed / failed:** "
+              f"{local_runner.get('totalJobsEnqueued', 0)} / "
+              f"{local_runner.get('totalJobsProcessed', 0)} / "
+              f"{local_runner.get('totalJobsCompleted', 0)} / "
+              f"{local_runner.get('totalJobsFailed', 0)}")
+            a(f"- **Supabase env present:** {'yes' if local_runner.get('supabaseEnvPresent') else 'no'}")
+            runner_errors = local_runner.get("errors", [])
+            if runner_errors:
+                a(f"- **Errors ({len(runner_errors)}):** {'; '.join(str(e) for e in runner_errors[:3])}")
+        else:
+            a("- **No run report found.** Run: `python workers/market_price_engine_local.py --dry-run`")
+        a("")
+
     if missing_price_worker.get("available"):
         a("## PokeWallet Missing Price Worker")
         a("")
@@ -1709,6 +1761,7 @@ def main() -> None:
     image_cache_strategy_info = _collect_image_cache_strategy_report()
     market_readiness_config_info = _collect_market_readiness_config()
     market_pricing_foundation_info = _collect_market_pricing_foundation()
+    local_market_engine_runner_info = _collect_local_market_engine_runner()
     v1_info = _collect_v1_counts()
     app_catalogue_counts = _collect_app_catalogue_counts()
     image_manifest_counts = _collect_image_manifest_counts()
@@ -1760,6 +1813,7 @@ def main() -> None:
         "imageCacheStrategy": image_cache_strategy_info,
         "marketReadinessConfig": market_readiness_config_info,
         "marketPricingFoundation": market_pricing_foundation_info,
+        "localMarketEngineRunner": local_market_engine_runner_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }
