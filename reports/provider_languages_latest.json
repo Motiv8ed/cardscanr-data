@@ -1,0 +1,101 @@
+{
+  "generatedAtUtc": "2026-05-26T09:02:06Z",
+  "languageRows": [
+    {
+      "appCatalogueCardCount": 46417,
+      "appCatalogueSetCount": 388,
+      "appCatalogueStatus": "partial",
+      "appPricingStatus": "available",
+      "appSupported": true,
+      "appVisibility": "public",
+      "currentPriceRecordCount": 31417,
+      "currentPriceSetFileCount": 160,
+      "currentPriceSource": "pokemon_tcg_api",
+      "hasCurrentPriceSupport": true,
+      "hasImageManifestSupport": true,
+      "imageManifestRecordCount": 46417,
+      "language": "en",
+      "promotedToAppCatalogue": true,
+      "providerCardCount": 31515,
+      "providerLanguageCodes": [
+        "eng"
+      ],
+      "providerSetCount": 335,
+      "providerSetFilesWritten": 331,
+      "recommendation": "Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence."
+    },
+    {
+      "appCatalogueCardCount": 28043,
+      "appCatalogueSetCount": 472,
+      "appCatalogueStatus": "partial",
+      "appPricingStatus": "unavailable",
+      "appSupported": true,
+      "appVisibility": "beta",
+      "currentPriceRecordCount": 40012,
+      "currentPriceSetFileCount": 380,
+      "currentPriceSource": "pokewallet",
+      "hasCurrentPriceSupport": true,
+      "hasImageManifestSupport": true,
+      "imageManifestRecordCount": 28043,
+      "language": "jp",
+      "promotedToAppCatalogue": true,
+      "providerCardCount": 24032,
+      "providerLanguageCodes": [
+        "jap"
+      ],
+      "providerSetCount": 462,
+      "providerSetFilesWritten": 451,
+      "recommendation": "Language is app-ready for catalogue and prices. Keep normal validation/reporting cadence."
+    },
+    {
+      "appCatalogueCardCount": 0,
+      "appCatalogueSetCount": 0,
+      "appCatalogueStatus": "unknown",
+      "appPricingStatus": "unknown",
+      "appSupported": false,
+      "appVisibility": "hidden",
+      "currentPriceRecordCount": 0,
+      "currentPriceSetFileCount": 0,
+      "currentPriceSource": null,
+      "hasCurrentPriceSupport": false,
+      "hasImageManifestSupport": false,
+      "imageManifestRecordCount": 0,
+      "language": "zh",
+      "promotedToAppCatalogue": false,
+      "providerCardCount": 6439,
+      "providerLanguageCodes": [
+        "chn"
+      ],
+      "providerSetCount": 58,
+      "providerSetFilesWritten": 58,
+      "recommendation": "Provider data exists but language is not app-supported. Run readiness audit before promotion."
+    }
+  ],
+  "provider": "pokewallet",
+  "providerLanguageCodesFound": {
+    "chn": 58,
+    "eng": 335,
+    "jap": 462
+  },
+  "schemaVersion": "1.0.0",
+  "summary": {
+    "appSupportedLanguages": [
+      "en",
+      "jp"
+    ],
+    "currentPriceSupportedLanguages": [
+      "en",
+      "jp"
+    ],
+    "languageCount": 3,
+    "languagesFound": [
+      "en",
+      "jp",
+      "zh"
+    ],
+    "promotedToAppCatalogueLanguages": [
+      "en",
+      "jp"
+    ]
+  }
+}

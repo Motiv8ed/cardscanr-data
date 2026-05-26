@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T00:00:00Z",
+  "notes": [
+    "Marketplace source definitions are app-facing metadata only.",
+    "No live eBay fetch/scrape behavior is enabled by this file."
+  ],
+  "sources": [
+    {
+      "id": "pokemon_tcg_api",
+      "displayName": "Pokemon TCG API",
+      "sourceType": "api_aggregated",
+      "supportedMarkets": [
+        "us",
+        "au",
+        "gb",
+        "ca"
+      ],
+      "supportedLanguages": [
+        "en"
+      ],
+      "supportedCurrencies": [
+        "USD"
+      ],
+      "freshnessExpectation": "daily_to_intraday_cached",
+      "confidenceNotes": "High confidence for EN baseline pricing where present.",
+      "appDisplayRules": {
+        "showSourceLabel": true,
+        "showConfidenceLabel": true,
+        "showStaleWarning": true,
+        "preferAsDefault": true
+      },
+      "availabilityStatus": "live"
+    },
+    {
+      "id": "pokewallet",
+      "displayName": "PokeWallet",
+      "sourceType": "api_aggregated",
+      "supportedMarkets": [
+        "eu_global",
+        "us",
+        "au",
+        "gb",
+        "ca"
+      ],
+      "supportedLanguages": [
+        "jp",
+        "en"
+      ],
+      "supportedCurrencies": [
+        "USD",
+        "EUR"
+      ],
+      "freshnessExpectation": "batch_refresh_cached",
+      "confidenceNotes": "Useful for JP and cross-market fallback; confidence should include match diagnostics.",
+      "appDisplayRules": {
+        "showSourceLabel": true,
+        "showConfidenceLabel": true,
+        "showStaleWarning": true,
+        "preferAsDefault": false
+      },
+      "availabilityStatus": "live"
+    },
+    {
+      "id": "ebay_sold_listings_manual",
+      "displayName": "eBay Sold Listings (Manual Entry)",
+      "sourceType": "manual_evidence",
+      "supportedMarkets": [
+        "au",
+        "us",
+        "gb",
+        "ca"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp",
+        "zh"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR"
+      ],
+      "freshnessExpectation": "user_driven_manual",
+      "confidenceNotes": "Depends on user-entered listing evidence quality.",
+      "appDisplayRules": {
+        "showSourceLabel": true,
+        "showConfidenceLabel": true,
+        "showStaleWarning": true,
+        "preferAsDefault": false
+      },
+      "availabilityStatus": "manual"
+    },
+    {
+      "id": "ebay_sold_listings_worker_planned",
+      "displayName": "eBay Sold Listings Worker (Planned)",
+      "sourceType": "worker_planned",
+      "supportedMarkets": [
+        "au",
+        "us",
+        "gb",
+        "ca"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp",
+        "zh"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR"
+      ],
+      "freshnessExpectation": "planned_incremental_refresh",
+      "confidenceNotes": "Planned source only; legal and implementation review required before activation.",
+      "appDisplayRules": {
+        "showSourceLabel": true,
+        "showConfidenceLabel": true,
+        "showStaleWarning": true,
+        "preferAsDefault": false
+      },
+      "availabilityStatus": "planned"
+    },
+    {
+      "id": "manual_price",
+      "displayName": "Manual Price",
+      "sourceType": "manual_override",
+      "supportedMarkets": [
+        "au",
+        "us",
+        "gb",
+        "ca",
+        "eu_global"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp",
+        "zh"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR",
+        "JPY"
+      ],
+      "freshnessExpectation": "user_managed",
+      "confidenceNotes": "Use for user-specified valuations or overrides.",
+      "appDisplayRules": {
+        "showSourceLabel": true,
+        "showConfidenceLabel": false,
+        "showStaleWarning": false,
+        "preferAsDefault": false
+      },
+      "availabilityStatus": "manual"
+    },
+    {
+      "id": "unavailable",
+      "displayName": "Unavailable",
+      "sourceType": "placeholder",
+      "supportedMarkets": [
+        "au",
+        "us",
+        "gb",
+        "ca",
+        "eu_global"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp",
+        "zh"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR",
+        "JPY"
+      ],
+      "freshnessExpectation": "none",
+      "confidenceNotes": "Fallback marker when no usable source is available.",
+      "appDisplayRules": {
+        "showSourceLabel": false,
+        "showConfidenceLabel": false,
+        "showStaleWarning": false,
+        "preferAsDefault": false
+      },
+      "availabilityStatus": "disabled"
+    }
+  ]
+}

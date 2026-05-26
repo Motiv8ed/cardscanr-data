@@ -1,0 +1,64 @@
+{
+  "appDeviceCacheRecommendation": {
+    "boundedCacheSize": {
+      "enabled": true,
+      "evictionPolicy": "lru",
+      "recommendedMaxMb": 512
+    },
+    "cacheOnDevice": true,
+    "loadUrlFirst": true,
+    "placeholderAndErrorState": true,
+    "prefetchSavedInventoryAndRecentScans": true
+  },
+  "currentPolicy": {
+    "localCacheEnabled": false,
+    "notes": [
+      "Card images are treated as mostly static reference assets.",
+      "Images should be cached by exact card identity, not by card name alone.",
+      "This repository stores image metadata and references only, not binary image files."
+    ],
+    "strategy": null
+  },
+  "externalStorageOptions": [
+    {
+      "fit": "Good for low-cost object storage close to edge delivery.",
+      "notes": "Use signed/public URL strategy and immutable cache-control headers.",
+      "option": "Cloudflare R2"
+    },
+    {
+      "fit": "Good when CardScanR metadata and auth already rely on Supabase.",
+      "notes": "Use bucket policies and predictable object paths by canonical image key.",
+      "option": "Supabase Storage"
+    },
+    {
+      "fit": "Good for globally cached immutable assets with simple deployment.",
+      "notes": "Publish-only flow can be automated from validated image manifests.",
+      "option": "Static CDN/Bucket"
+    }
+  ],
+  "generatedAtUtc": "2026-05-26T09:02:07Z",
+  "gitBinaryImageCacheNotRecommended": {
+    "reasons": [
+      "Repository size and clone times grow quickly when binary images are committed.",
+      "Git diff/review quality degrades for binary-only updates.",
+      "Frequent image churn produces noisy commit history and costly CI sync.",
+      "Mobile apps already have stronger local disk caching and eviction controls."
+    ],
+    "recommended": false
+  },
+  "imageManifestRecordsByLanguage": {
+    "en": {
+      "cardCount": 46417,
+      "imageUrlRecordCount": 46417,
+      "pokewalletImageSourceCount": 26058
+    },
+    "jp": {
+      "cardCount": 28043,
+      "imageUrlRecordCount": 28043,
+      "pokewalletImageSourceCount": 21797
+    }
+  },
+  "localCachedBinaryCount": 0,
+  "recommendation": "Keep public repository image delivery URL-first and binary-free. Cache images on-device with bounded size and selective prefetch for saved inventory/recent scans. If server-side binary hosting is needed later, use external object storage/CDN instead of Git blobs.",
+  "schemaVersion": "1.0.0"
+}

@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T00:00:00Z",
+  "notes": [
+    "Data-side market configuration only. No live marketplace scraping is enabled here.",
+    "This file is app-facing configuration for market/currency behavior."
+  ],
+  "markets": [
+    {
+      "marketId": "au",
+      "countryCode": "AU",
+      "displayName": "Australia",
+      "currencyCode": "AUD",
+      "defaultLocale": "en-AU",
+      "defaultMarketplace": "ebay_au",
+      "supportedMarketplaceSources": [
+        "pokemon_tcg_api",
+        "pokewallet",
+        "ebay_sold_listings_manual",
+        "manual_price",
+        "unavailable"
+      ],
+      "priceDisplayNotes": [
+        "Primary display currency is AUD.",
+        "Sold-listing pricing is planned, not live."
+      ],
+      "soldListingPricing": {
+        "supported": false,
+        "planned": true
+      },
+      "currencyConversion": {
+        "supported": true,
+        "planned": true,
+        "fallbackCurrency": "USD"
+      }
+    },
+    {
+      "marketId": "us",
+      "countryCode": "US",
+      "displayName": "United States",
+      "currencyCode": "USD",
+      "defaultLocale": "en-US",
+      "defaultMarketplace": "pokemon_tcg_api",
+      "supportedMarketplaceSources": [
+        "pokemon_tcg_api",
+        "pokewallet",
+        "ebay_sold_listings_manual",
+        "manual_price",
+        "unavailable"
+      ],
+      "priceDisplayNotes": [
+        "Primary display currency is USD.",
+        "pokemon_tcg_api is the current EN baseline source."
+      ],
+      "soldListingPricing": {
+        "supported": false,
+        "planned": true
+      },
+      "currencyConversion": {
+        "supported": true,
+        "planned": true,
+        "fallbackCurrency": "USD"
+      }
+    },
+    {
+      "marketId": "gb",
+      "countryCode": "GB",
+      "displayName": "United Kingdom",
+      "currencyCode": "GBP",
+      "defaultLocale": "en-GB",
+      "defaultMarketplace": "ebay_gb",
+      "supportedMarketplaceSources": [
+        "pokemon_tcg_api",
+        "pokewallet",
+        "ebay_sold_listings_manual",
+        "manual_price",
+        "unavailable"
+      ],
+      "priceDisplayNotes": [
+        "Primary display currency is GBP.",
+        "Sold-listing pricing is planned, not live."
+      ],
+      "soldListingPricing": {
+        "supported": false,
+        "planned": true
+      },
+      "currencyConversion": {
+        "supported": true,
+        "planned": true,
+        "fallbackCurrency": "USD"
+      }
+    },
+    {
+      "marketId": "ca",
+      "countryCode": "CA",
+      "displayName": "Canada",
+      "currencyCode": "CAD",
+      "defaultLocale": "en-CA",
+      "defaultMarketplace": "ebay_ca",
+      "supportedMarketplaceSources": [
+        "pokemon_tcg_api",
+        "pokewallet",
+        "ebay_sold_listings_manual",
+        "manual_price",
+        "unavailable"
+      ],
+      "priceDisplayNotes": [
+        "Primary display currency is CAD.",
+        "Sold-listing pricing is planned, not live."
+      ],
+      "soldListingPricing": {
+        "supported": false,
+        "planned": true
+      },
+      "currencyConversion": {
+        "supported": true,
+        "planned": true,
+        "fallbackCurrency": "USD"
+      }
+    },
+    {
+      "marketId": "eu_global",
+      "countryCode": "EU",
+      "displayName": "EU/Global Fallback",
+      "currencyCode": "EUR",
+      "defaultLocale": "en-IE",
+      "defaultMarketplace": "global_fallback",
+      "supportedMarketplaceSources": [
+        "pokewallet",
+        "manual_price",
+        "unavailable"
+      ],
+      "priceDisplayNotes": [
+        "Fallback display when local market source is unavailable.",
+        "Use converted values and confidence labels when source market differs."
+      ],
+      "soldListingPricing": {
+        "supported": false,
+        "planned": true
+      },
+      "currencyConversion": {
+        "supported": true,
+        "planned": true,
+        "fallbackCurrency": "EUR"
+      }
+    }
+  ]
+}

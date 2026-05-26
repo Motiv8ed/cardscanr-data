@@ -171,6 +171,27 @@ def build_entries(ts: str, existing: dict[str, dict[str, Any]]) -> list[dict[str
             None,
         ),
         (
+            "markets_cardscanr_markets",
+            V1_DIR / "markets" / "cardscanr-markets.json",
+            "markets_config",
+            "CardScanR market display and source planning configuration",
+            None,
+        ),
+        (
+            "markets_marketplace_sources",
+            V1_DIR / "markets" / "marketplace-sources.json",
+            "markets_sources",
+            "CardScanR marketplace source definitions",
+            None,
+        ),
+        (
+            "markets_onboarding_questionnaire",
+            V1_DIR / "markets" / "onboarding-questionnaire.json",
+            "markets_onboarding",
+            "CardScanR market onboarding and preference questionnaire",
+            None,
+        ),
+        (
             "supported_sources",
             V1_DIR / "supported-sources.json",
             "supported_sources",

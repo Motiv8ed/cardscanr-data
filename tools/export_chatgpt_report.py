@@ -47,6 +47,16 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/pokewallet_missing_price_worker_latest.md",
     "reports/jp_price_coverage_latest.json",
     "reports/jp_price_coverage_latest.md",
+    "reports/provider_languages_latest.json",
+    "reports/provider_languages_latest.md",
+    "reports/zh_catalogue_readiness_latest.json",
+    "reports/zh_catalogue_readiness_latest.md",
+    "reports/image_cache_strategy_latest.json",
+    "reports/image_cache_strategy_latest.md",
+    "public/v1/markets/cardscanr-markets.json",
+    "public/v1/markets/marketplace-sources.json",
+    "public/v1/markets/onboarding-questionnaire.json",
+    "docs/market_pricing/EBAY_MARKET_PRICING_READINESS.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -620,6 +630,130 @@ def _collect_jp_price_coverage_audit() -> dict[str, Any]:
     }
 
 
+def _collect_provider_language_audit() -> dict[str, Any]:
+    data = _load_json("reports/provider_languages_latest.json")
+    if data is None:
+        return {"available": False}
+
+    summary = data.get("summary") if isinstance(data.get("summary"), dict) else {}
+    rows = data.get("languageRows") if isinstance(data.get("languageRows"), list) else []
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "provider": data.get("provider"),
+        "languagesFound": summary.get("languagesFound", []),
+        "appSupportedLanguages": summary.get("appSupportedLanguages", []),
+        "promotedToAppCatalogueLanguages": summary.get("promotedToAppCatalogueLanguages", []),
+        "currentPriceSupportedLanguages": summary.get("currentPriceSupportedLanguages", []),
+        "providerLanguageCodesFound": data.get("providerLanguageCodesFound", {}),
+        "languageRows": rows,
+    }
+
+
+def _collect_zh_catalogue_readiness_audit() -> dict[str, Any]:
+    data = _load_json("reports/zh_catalogue_readiness_latest.json")
+    if data is None:
+        return {"available": False}
+
+    readiness = data.get("readiness") if isinstance(data.get("readiness"), dict) else {}
+    duplicates = data.get("duplicateCanonicalIdentity") if isinstance(data.get("duplicateCanonicalIdentity"), dict) else {}
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "zhProviderCardCount": data.get("zhProviderCardCount", 0),
+        "zhSetCount": data.get("zhSetCount", 0),
+        "recordsWithProviderCardId": data.get("recordsWithProviderCardId", 0),
+        "recordsWithUsableNameOrOriginalName": data.get("recordsWithUsableNameOrOriginalName", 0),
+        "recordsWithSetIdentity": data.get("recordsWithSetIdentity", 0),
+        "recordsWithCollectorNumber": data.get("recordsWithCollectorNumber", 0),
+        "recordsWithImageUrl": data.get("recordsWithImageUrl", 0),
+        "duplicateIdentityKeyCount": duplicates.get("duplicateIdentityKeyCount", 0),
+        "duplicateIdentityRecordCount": duplicates.get("duplicateIdentityRecordCount", 0),
+        "estimatedPromotableZhRecords": data.get("estimatedPromotableZhRecords", 0),
+        "estimatedPromotableRatio": data.get("estimatedPromotableRatio", 0.0),
+        "blockedReasonCounts": data.get("blockedReasonCounts", {}),
+        "topBlockedSets": data.get("topBlockedSets", []),
+        "topBlockedSetReasons": data.get("topBlockedSetReasons", []),
+        "status": readiness.get("status"),
+        "safeToPromoteNow": readiness.get("safeToPromoteNow") is True,
+        "recommendation": readiness.get("recommendation"),
+    }
+
+
+def _collect_image_cache_strategy_report() -> dict[str, Any]:
+    data = _load_json("reports/image_cache_strategy_latest.json")
+    if data is None:
+        return {"available": False}
+
+    policy = data.get("currentPolicy") if isinstance(data.get("currentPolicy"), dict) else {}
+    app_behavior = data.get("appDeviceCacheRecommendation") if isinstance(data.get("appDeviceCacheRecommendation"), dict) else {}
+    bounded = app_behavior.get("boundedCacheSize") if isinstance(app_behavior.get("boundedCacheSize"), dict) else {}
+    return {
+        "available": True,
+        "generatedAtUtc": data.get("generatedAtUtc"),
+        "strategy": policy.get("strategy"),
+        "localCacheEnabled": policy.get("localCacheEnabled") is True,
+        "localCachedBinaryCount": data.get("localCachedBinaryCount", 0),
+        "imageManifestRecordsByLanguage": data.get("imageManifestRecordsByLanguage", {}),
+        "gitBinaryImageCacheRecommended": (data.get("gitBinaryImageCacheNotRecommended") or {}).get("recommended") is True,
+        "gitBinaryReasons": (data.get("gitBinaryImageCacheNotRecommended") or {}).get("reasons", []),
+        "loadUrlFirst": app_behavior.get("loadUrlFirst") is True,
+        "cacheOnDevice": app_behavior.get("cacheOnDevice") is True,
+        "prefetchSavedInventoryAndRecentScans": app_behavior.get("prefetchSavedInventoryAndRecentScans") is True,
+        "placeholderAndErrorState": app_behavior.get("placeholderAndErrorState") is True,
+        "boundedCacheEnabled": bounded.get("enabled") is True,
+        "boundedCacheMaxMb": bounded.get("recommendedMaxMb"),
+        "boundedCacheEvictionPolicy": bounded.get("evictionPolicy"),
+        "externalStorageOptions": data.get("externalStorageOptions", []),
+        "recommendation": data.get("recommendation"),
+    }
+
+
+def _collect_market_readiness_config() -> dict[str, Any]:
+    markets = _load_json("public/v1/markets/cardscanr-markets.json")
+    sources = _load_json("public/v1/markets/marketplace-sources.json")
+    onboarding = _load_json("public/v1/markets/onboarding-questionnaire.json")
+    readiness_doc_path = ROOT / "docs" / "market_pricing" / "EBAY_MARKET_PRICING_READINESS.md"
+
+    if markets is None and sources is None and onboarding is None and not readiness_doc_path.exists():
+        return {"available": False}
+
+    market_rows = markets.get("markets", []) if isinstance(markets, dict) else []
+    source_rows = sources.get("sources", []) if isinstance(sources, dict) else []
+    questionnaire_rows = (
+        ((onboarding.get("questionnaire") or {}).get("questions", []))
+        if isinstance(onboarding, dict)
+        else []
+    )
+
+    planned_sold_markets = []
+    for row in market_rows:
+        if not isinstance(row, dict):
+            continue
+        sold = row.get("soldListingPricing") if isinstance(row.get("soldListingPricing"), dict) else {}
+        if sold.get("planned") is True:
+            planned_sold_markets.append(str(row.get("marketId") or ""))
+
+    sources_by_status: dict[str, int] = {}
+    for row in source_rows:
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("availabilityStatus") or "unknown")
+        sources_by_status[status] = int(sources_by_status.get(status, 0)) + 1
+
+    return {
+        "available": True,
+        "marketsConfigured": len([row for row in market_rows if isinstance(row, dict)]),
+        "marketIds": [str(row.get("marketId") or "") for row in market_rows if isinstance(row, dict)],
+        "marketSourceDefinitions": len([row for row in source_rows if isinstance(row, dict)]),
+        "marketSourcesByAvailabilityStatus": dict(sorted(sources_by_status.items())),
+        "plannedSoldListingMarkets": sorted([value for value in planned_sold_markets if value]),
+        "onboardingQuestionCount": len([row for row in questionnaire_rows if isinstance(row, dict)]),
+        "onboardingQuestionIds": [str(row.get("id") or "") for row in questionnaire_rows if isinstance(row, dict)],
+        "ebayReadinessDocAvailable": readiness_doc_path.exists(),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data counts from public v1 (fallback if pipeline report not available)
 # ---------------------------------------------------------------------------
@@ -655,6 +789,10 @@ def _recommend_next_action(
     pokewallet_api_audit: dict[str, Any] | None = None,
     pokewallet_price_import: dict[str, Any] | None = None,
     pokewallet_missing_price_worker: dict[str, Any] | None = None,
+    provider_language_audit: dict[str, Any] | None = None,
+    zh_catalogue_readiness: dict[str, Any] | None = None,
+    image_cache_strategy: dict[str, Any] | None = None,
+    market_readiness_config: dict[str, Any] | None = None,
     v1: dict[str, Any] | None = None,
 ) -> str:
     issues: list[str] = []
@@ -724,7 +862,22 @@ def _recommend_next_action(
         if pokewallet_price_import and pokewallet_price_import.get("available"):
             import_missing_sets_selected = int(pokewallet_price_import.get("missingPriceSetsSelected") or 0)
 
+        zh_ready = bool(zh_catalogue_readiness and zh_catalogue_readiness.get("available") and zh_catalogue_readiness.get("safeToPromoteNow"))
+        has_market_config = bool(market_readiness_config and market_readiness_config.get("available"))
+
         if worker_complete and import_missing_sets_selected == 0:
+            if has_market_config:
+                if zh_ready:
+                    return (
+                        "All checks passing. JP missing-set price import is complete and market readiness configs are in place. "
+                        "Next: wire onboarding/settings integration in app, run controlled ZH promotion validation, "
+                        "then design eBay sold-listing worker contracts (no live scraping yet)."
+                    )
+                return (
+                    "All checks passing. JP missing-set price import is complete and market readiness configs are in place. "
+                    "Next: wire onboarding/settings integration in app, keep ZH unpromoted until readiness blockers are resolved, "
+                    "and design eBay sold-listing worker contracts later (no live scraping yet)."
+                )
             return (
                 "All checks passing. JP missing-set price import is complete. "
                 "Next audits: unmatched/unusable price records audit, JP card price coverage by app card, "
@@ -1070,6 +1223,10 @@ def _render_markdown(report: dict[str, Any]) -> str:
     # PokeWallet price import report
     price_import = report.get("pokewalletPriceImport", {})
     jp_price_coverage_audit = report.get("jpPriceCoverageAudit", {})
+    provider_language_audit = report.get("providerLanguageAudit", {})
+    zh_catalogue_readiness = report.get("zhCatalogueReadiness", {})
+    image_cache_strategy = report.get("imageCacheStrategy", {})
+    market_readiness_config = report.get("marketReadinessConfig", {})
     missing_price_worker = report.get("pokewalletMissingPriceWorker", {})
     if price_import.get("available"):
         a("## PokeWallet Price Import")
@@ -1128,6 +1285,75 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **App readiness:** {jp_price_coverage_audit.get('appReadinessStatus', 'n/a')} — {jp_price_coverage_audit.get('appReadinessMessage', '')}")
         if jp_price_coverage_audit.get("appReadinessNextStep"):
             a(f"- **Next step:** {jp_price_coverage_audit.get('appReadinessNextStep')}")
+        a("")
+
+    if provider_language_audit.get("available"):
+        a("## Provider Language Audit")
+        a("")
+        a(f"- **Generated:** {provider_language_audit.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Languages found:** {provider_language_audit.get('languagesFound', [])}")
+        a(f"- **App-supported languages:** {provider_language_audit.get('appSupportedLanguages', [])}")
+        a(f"- **Promoted languages:** {provider_language_audit.get('promotedToAppCatalogueLanguages', [])}")
+        a(f"- **Current price languages:** {provider_language_audit.get('currentPriceSupportedLanguages', [])}")
+        a(f"- **Provider language codes:** {provider_language_audit.get('providerLanguageCodesFound', {})}")
+        rows = provider_language_audit.get("languageRows", [])
+        if isinstance(rows, list) and rows:
+            a("")
+            a("| Language | Provider cards | Provider sets | App-supported | Promoted | Prices |")
+            a("|----------|---------------:|--------------:|---------------|----------|--------|")
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                a(
+                    f"| {row.get('language', '')} | "
+                    f"{int(row.get('providerCardCount', 0)):,} | "
+                    f"{int(row.get('providerSetCount', 0)):,} | "
+                    f"{'yes' if row.get('appSupported') else 'no'} | "
+                    f"{'yes' if row.get('promotedToAppCatalogue') else 'no'} | "
+                    f"{'yes' if row.get('hasCurrentPriceSupport') else 'no'} |"
+                )
+        a("")
+
+    if zh_catalogue_readiness.get("available"):
+        a("## ZH Catalogue Readiness")
+        a("")
+        a(f"- **Generated:** {zh_catalogue_readiness.get('generatedAtUtc', 'n/a')}")
+        a(f"- **ZH provider cards/sets:** {int(zh_catalogue_readiness.get('zhProviderCardCount', 0)):,} / {int(zh_catalogue_readiness.get('zhSetCount', 0)):,}")
+        a(f"- **Records with provider ID / usable name / set identity / collector / image:** {int(zh_catalogue_readiness.get('recordsWithProviderCardId', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithUsableNameOrOriginalName', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithSetIdentity', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithCollectorNumber', 0)):,} / {int(zh_catalogue_readiness.get('recordsWithImageUrl', 0)):,}")
+        a(f"- **Duplicate identity keys/records:** {int(zh_catalogue_readiness.get('duplicateIdentityKeyCount', 0)):,} / {int(zh_catalogue_readiness.get('duplicateIdentityRecordCount', 0)):,}")
+        a(f"- **Estimated promotable ZH records:** {int(zh_catalogue_readiness.get('estimatedPromotableZhRecords', 0)):,} ({float(zh_catalogue_readiness.get('estimatedPromotableRatio', 0.0)) * 100:.2f}%)")
+        a(f"- **Blocked reasons:** {zh_catalogue_readiness.get('blockedReasonCounts', {})}")
+        a(f"- **Safe to promote now:** {'yes' if zh_catalogue_readiness.get('safeToPromoteNow') else 'no'}")
+        if zh_catalogue_readiness.get("recommendation"):
+            a(f"- **Recommendation:** {zh_catalogue_readiness.get('recommendation')}")
+        a("")
+
+    if image_cache_strategy.get("available"):
+        a("## Image Cache Strategy")
+        a("")
+        a(f"- **Generated:** {image_cache_strategy.get('generatedAtUtc', 'n/a')}")
+        a(f"- **Strategy:** {image_cache_strategy.get('strategy', 'n/a')} (local cache enabled: {'yes' if image_cache_strategy.get('localCacheEnabled') else 'no'})")
+        a(f"- **Image manifest records by language:** {image_cache_strategy.get('imageManifestRecordsByLanguage', {})}")
+        a(f"- **Local cached binary count:** {int(image_cache_strategy.get('localCachedBinaryCount', 0)):,}")
+        a(f"- **Load URL first / cache on device:** {'yes' if image_cache_strategy.get('loadUrlFirst') else 'no'} / {'yes' if image_cache_strategy.get('cacheOnDevice') else 'no'}")
+        a(f"- **Prefetch saved inventory/recent scans:** {'yes' if image_cache_strategy.get('prefetchSavedInventoryAndRecentScans') else 'no'}")
+        a(f"- **Placeholder/error state:** {'yes' if image_cache_strategy.get('placeholderAndErrorState') else 'no'}")
+        a(f"- **Bounded cache:** {'yes' if image_cache_strategy.get('boundedCacheEnabled') else 'no'} (max MB={image_cache_strategy.get('boundedCacheMaxMb', 'n/a')}, policy={image_cache_strategy.get('boundedCacheEvictionPolicy', 'n/a')})")
+        a(f"- **External storage options:** {image_cache_strategy.get('externalStorageOptions', [])}")
+        if image_cache_strategy.get("recommendation"):
+            a(f"- **Recommendation:** {image_cache_strategy.get('recommendation')}")
+        a("")
+
+    if market_readiness_config.get("available"):
+        a("## Market/eBay Readiness Config")
+        a("")
+        a(f"- **Markets configured:** {int(market_readiness_config.get('marketsConfigured', 0)):,} ({market_readiness_config.get('marketIds', [])})")
+        a(f"- **Source definitions:** {int(market_readiness_config.get('marketSourceDefinitions', 0)):,}")
+        a(f"- **Sources by status:** {market_readiness_config.get('marketSourcesByAvailabilityStatus', {})}")
+        a(f"- **Planned sold-listing markets:** {market_readiness_config.get('plannedSoldListingMarkets', [])}")
+        a(f"- **Onboarding question count:** {int(market_readiness_config.get('onboardingQuestionCount', 0)):,}")
+        a(f"- **Onboarding question ids:** {market_readiness_config.get('onboardingQuestionIds', [])}")
+        a(f"- **eBay readiness doc available:** {'yes' if market_readiness_config.get('ebayReadinessDocAvailable') else 'no'}")
         a("")
 
     if missing_price_worker.get("available"):
@@ -1246,6 +1472,10 @@ def main() -> None:
     pokewallet_price_budget_ledger_info = _collect_pokewallet_price_budget_ledger()
     pokewallet_missing_price_worker_info = _collect_pokewallet_missing_price_worker_report()
     jp_price_coverage_audit_info = _collect_jp_price_coverage_audit()
+    provider_language_audit_info = _collect_provider_language_audit()
+    zh_catalogue_readiness_info = _collect_zh_catalogue_readiness_audit()
+    image_cache_strategy_info = _collect_image_cache_strategy_report()
+    market_readiness_config_info = _collect_market_readiness_config()
     v1_info = _collect_v1_counts()
     if pipeline_info.get("available") and v1_info.get("pricesByLanguage"):
         pipeline_info["pipelineReportPricesByLanguage"] = pipeline_info.get("pricesByLanguage", {})
@@ -1259,6 +1489,10 @@ def main() -> None:
         pokewallet_api_audit_info,
         pokewallet_price_import_info,
         pokewallet_missing_price_worker_info,
+        provider_language_audit_info,
+        zh_catalogue_readiness_info,
+        image_cache_strategy_info,
+        market_readiness_config_info,
         v1_info,
     )
 
@@ -1276,6 +1510,10 @@ def main() -> None:
         "pokewalletPriceBudgetLedger": pokewallet_price_budget_ledger_info,
         "pokewalletMissingPriceWorker": pokewallet_missing_price_worker_info,
         "jpPriceCoverageAudit": jp_price_coverage_audit_info,
+        "providerLanguageAudit": provider_language_audit_info,
+        "zhCatalogueReadiness": zh_catalogue_readiness_info,
+        "imageCacheStrategy": image_cache_strategy_info,
+        "marketReadinessConfig": market_readiness_config_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }

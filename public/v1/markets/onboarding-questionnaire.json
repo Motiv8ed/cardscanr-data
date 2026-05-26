@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T00:00:00Z",
+  "notes": [
+    "Generic app-readable onboarding/settings questionnaire.",
+    "UI rendering is handled in app code; this file only supplies question metadata and options."
+  ],
+  "questionnaire": {
+    "id": "market_pricing_onboarding_v1",
+    "version": 1,
+    "questions": [
+      {
+        "id": "preferred_market",
+        "type": "single_select",
+        "key": "preferredMarket",
+        "prompt": "Which country/market do you want prices for?",
+        "required": true,
+        "options": [
+          {"value": "au", "label": "Australia"},
+          {"value": "us", "label": "United States"},
+          {"value": "gb", "label": "United Kingdom"},
+          {"value": "ca", "label": "Canada"},
+          {"value": "eu_global", "label": "EU/Global fallback"}
+        ]
+      },
+      {
+        "id": "default_currency",
+        "type": "single_select",
+        "key": "defaultCurrency",
+        "prompt": "What currency do you want displayed by default?",
+        "required": true,
+        "options": [
+          {"value": "AUD", "label": "AUD"},
+          {"value": "USD", "label": "USD"},
+          {"value": "GBP", "label": "GBP"},
+          {"value": "CAD", "label": "CAD"},
+          {"value": "EUR", "label": "EUR"},
+          {"value": "JPY", "label": "JPY"}
+        ]
+      },
+      {
+        "id": "primary_use_case",
+        "type": "single_select",
+        "key": "primaryUseCase",
+        "prompt": "How do you mainly use CardScanR?",
+        "required": true,
+        "options": [
+          {"value": "collector", "label": "collector"},
+          {"value": "seller_reseller", "label": "seller/reseller"},
+          {"value": "pack_opening_tracker", "label": "pack opening tracker"},
+          {"value": "binder_completion", "label": "binder completion"},
+          {"value": "mystery_pack_builder", "label": "mystery pack builder"},
+          {"value": "market_price_checker", "label": "market price checker"}
+        ]
+      },
+      {
+        "id": "prefer_local_sold_pricing",
+        "type": "boolean",
+        "key": "preferLocalSoldPricing",
+        "prompt": "Do you want local sold-listing pricing when available?",
+        "required": true,
+        "default": true
+      },
+      {
+        "id": "show_international_fallback",
+        "type": "boolean",
+        "key": "showInternationalFallback",
+        "prompt": "Do you want international prices shown as fallback?",
+        "required": true,
+        "default": true
+      },
+      {
+        "id": "currency_display_mode",
+        "type": "single_select",
+        "key": "currencyDisplayMode",
+        "prompt": "Do you want multiple currencies shown or only your market currency?",
+        "required": true,
+        "options": [
+          {"value": "market_only", "label": "Only my market currency"},
+          {"value": "multi_currency", "label": "Show multiple currencies"}
+        ]
+      },
+      {
+        "id": "show_confidence_labels",
+        "type": "boolean",
+        "key": "showPriceConfidenceLabels",
+        "prompt": "Do you want price confidence labels?",
+        "required": true,
+        "default": true
+      },
+      {
+        "id": "show_stale_warnings",
+        "type": "boolean",
+        "key": "showStalePriceWarnings",
+        "prompt": "Do you want stale price warnings?",
+        "required": true,
+        "default": true
+      },
+      {
+        "id": "include_shipping_later",
+        "type": "boolean",
+        "key": "includeShippingInEstimatesLater",
+        "prompt": "Do you want to include shipping in market price estimates later?",
+        "required": true,
+        "default": true
+      },
+      {
+        "id": "include_graded_pricing_later",
+        "type": "boolean",
+        "key": "includeGradedPricingLater",
+        "prompt": "Do you want graded card pricing later?",
+        "required": true,
+        "default": false
+      }
+    ]
+  }
+}

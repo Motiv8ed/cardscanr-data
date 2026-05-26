@@ -1,0 +1,158 @@
+{
+  "blockedReasonCounts": {
+    "duplicate_canonical_identity": 738
+  },
+  "duplicateCanonicalIdentity": {
+    "duplicateIdentityKeyCount": 109,
+    "duplicateIdentityRecordCount": 738,
+    "topDuplicateIdentityExamples": [
+      {
+        "count": 13,
+        "identity": "pokemon|zh|cbb2c|1|eevee-cbb2c-01|normal"
+      },
+      {
+        "count": 13,
+        "identity": "pokemon|zh|cbb2c|6|umbreon-cbb2c-06|normal"
+      },
+      {
+        "count": 13,
+        "identity": "pokemon|zh|cbb2c|7|leafeon-cbb2c-07|normal"
+      },
+      {
+        "count": 13,
+        "identity": "pokemon|zh|cbb2c|9|sylveon-cbb2c-09|normal"
+      },
+      {
+        "count": 12,
+        "identity": "pokemon|zh|cbb2c|2|vaporeon-cbb2c-02|normal"
+      },
+      {
+        "count": 12,
+        "identity": "pokemon|zh|cbb2c|3|jolteon-cbb2c-03|normal"
+      },
+      {
+        "count": 12,
+        "identity": "pokemon|zh|cbb2c|4|flareon-cbb2c-04|normal"
+      },
+      {
+        "count": 12,
+        "identity": "pokemon|zh|cbb2c|5|espeon-cbb2c-05|normal"
+      },
+      {
+        "count": 12,
+        "identity": "pokemon|zh|cbb2c|8|glaceon-cbb2c-08|normal"
+      },
+      {
+        "count": 9,
+        "identity": "pokemon|zh|cbb1c|1|sprigatito-cbb1c-01|normal"
+      },
+      {
+        "count": 9,
+        "identity": "pokemon|zh|cbb1c|3|fuecoco-cbb1c-03|normal"
+      },
+      {
+        "count": 9,
+        "identity": "pokemon|zh|cbb1c|5|quaxly-cbb1c-05|normal"
+      },
+      {
+        "count": 8,
+        "identity": "pokemon|zh|cbb1c|2|floragato-cbb1c-02|normal"
+      },
+      {
+        "count": 8,
+        "identity": "pokemon|zh|cbb1c|4|crocalor-cbb1c-04|normal"
+      },
+      {
+        "count": 8,
+        "identity": "pokemon|zh|cbb1c|6|quaxwell-cbb1c-06|normal"
+      },
+      {
+        "count": 7,
+        "identity": "pokemon|zh|cbb1c|7|captain-pikachu-cbb1c-07|normal"
+      },
+      {
+        "count": 7,
+        "identity": "pokemon|zh|cbb3c|11|chandelure-cbb3c-11|normal"
+      },
+      {
+        "count": 7,
+        "identity": "pokemon|zh|cbb3c|13|mimikyu-cbb3c-13|normal"
+      },
+      {
+        "count": 7,
+        "identity": "pokemon|zh|cbb3c|14|morpeko-cbb3c-14|normal"
+      },
+      {
+        "count": 7,
+        "identity": "pokemon|zh|cbb3c|15|ceruledge-cbb3c-15|normal"
+      }
+    ]
+  },
+  "estimatedPromotableRatio": 0.8853859294921572,
+  "estimatedPromotableZhRecords": 5701,
+  "generatedAtUtc": "2026-05-26T09:02:06Z",
+  "language": "zh",
+  "provider": "pokewallet",
+  "readiness": {
+    "recommendation": "ZH provider records still need normalization before promotion. Resolve blocked reasons and duplicate identities first.",
+    "safeToPromoteNow": false,
+    "status": "needs_normalization"
+  },
+  "recordsWithCollectorNumber": 6439,
+  "recordsWithImageUrl": 6439,
+  "recordsWithProviderCardId": 6439,
+  "recordsWithSetIdentity": 6439,
+  "recordsWithUsableNameOrOriginalName": 6439,
+  "schemaVersion": "1.0.0",
+  "topBlockedSetReasons": [
+    {
+      "count": 194,
+      "reason": "duplicate_canonical_identity",
+      "setIdentity": "-242"
+    },
+    {
+      "count": 192,
+      "reason": "duplicate_canonical_identity",
+      "setIdentity": "-240"
+    },
+    {
+      "count": 123,
+      "reason": "duplicate_canonical_identity",
+      "setIdentity": "-15"
+    },
+    {
+      "count": 118,
+      "reason": "duplicate_canonical_identity",
+      "setIdentity": "-14"
+    },
+    {
+      "count": 111,
+      "reason": "duplicate_canonical_identity",
+      "setIdentity": "-13"
+    }
+  ],
+  "topBlockedSets": [
+    {
+      "blockedRecords": 194,
+      "setIdentity": "-242"
+    },
+    {
+      "blockedRecords": 192,
+      "setIdentity": "-240"
+    },
+    {
+      "blockedRecords": 123,
+      "setIdentity": "-15"
+    },
+    {
+      "blockedRecords": 118,
+      "setIdentity": "-14"
+    },
+    {
+      "blockedRecords": 111,
+      "setIdentity": "-13"
+    }
+  ],
+  "zhProviderCardCount": 6439,
+  "zhSetCount": 58
+}
