@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-26T23:53:34Z",
+  "inputFile": "/tmp/workspace/Motiv8ed/cardscanr-data/data/manual_market_prices/examples/sample_sold_listings.csv",
+  "mode": "write",
+  "market": "AU",
+  "language": "en",
+  "rowsRead": 14,
+  "rowsAccepted": 9,
+  "rowsExcluded": 5,
+  "exclusionReasons": {
+    "market_mismatch:JP": 1,
+    "lot_or_bundle": 1,
+    "proxy_or_custom": 1,
+    "digital": 1,
+    "damaged_excluded": 1
+  },
+  "matchedRows": 9,
+  "unmatchedRows": 0,
+  "ambiguousRows": 0,
+  "aggregatesBuilt": 7,
+  "writeTargets": [
+    "public/v1/markets/prices/au/pokemon/en/base1.json"
+  ],
+  "liveEbayScrapingEnabled": false,
+  "source": "ebay_sold_listings_manual"
+}

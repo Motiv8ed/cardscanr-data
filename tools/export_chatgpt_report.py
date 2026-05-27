@@ -72,6 +72,8 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/market_pricing_worker_latest.md",
     "reports/market_pricing_jobs_latest.json",
     "reports/market_price_engine_local_latest.json",
+    "reports/manual_sold_listing_import_latest.json",
+    "reports/manual_sold_listing_import_latest.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -885,8 +887,32 @@ def _collect_local_market_engine_runner() -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Data counts from public v1 (fallback if pipeline report not available)
+def _collect_manual_sold_listing_import_report() -> dict[str, Any]:
+    report = _load_json("reports/manual_sold_listing_import_latest.json")
+    importer_exists = (ROOT / "tools" / "import_manual_sold_listings.py").exists()
+    if report is None:
+        return {"available": False, "importerExists": importer_exists}
+    return {
+        "available": True,
+        "importerExists": importer_exists,
+        "mode": report.get("mode"),
+        "market": report.get("market"),
+        "language": report.get("language"),
+        "inputFile": report.get("inputFile"),
+        "generatedAtUtc": report.get("generatedAtUtc"),
+        "rowsRead": report.get("rowsRead", 0),
+        "rowsAccepted": report.get("rowsAccepted", 0),
+        "rowsExcluded": report.get("rowsExcluded", 0),
+        "exclusionReasons": report.get("exclusionReasons", {}),
+        "rowsMatched": report.get("matchedRows", 0),
+        "rowsUnmatched": report.get("unmatchedRows", 0),
+        "rowsAmbiguous": report.get("ambiguousRows", 0),
+        "aggregatesBuilt": report.get("aggregatesBuilt", 0),
+        "writeTargets": report.get("writeTargets", []),
+        "liveEbayScrapingDisabled": True,
+    }
+
+
 # ---------------------------------------------------------------------------
 
 def _collect_v1_counts() -> dict[str, Any]:
@@ -1671,6 +1697,35 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a(f"- **Last request:** {budget_ledger.get('lastRequestAtUtc') or 'n/a'}")
         a("")
 
+    manual_import = report.get("manualSoldListingImport", {})
+    if manual_import.get("importerExists") or manual_import.get("available"):
+        a("## Manual Sold Listing Import Pipeline")
+        a("")
+        a(f"- **Importer exists:** {'yes' if manual_import.get('importerExists') else 'no'}")
+        a(f"- **Live eBay scraping:** disabled")
+        if manual_import.get("available"):
+            a(f"- **Last run mode:** {manual_import.get('mode', 'n/a')}")
+            a(f"- **Market / language:** {manual_import.get('market', 'n/a')} / {manual_import.get('language', 'n/a')}")
+            a(f"- **Generated at:** {manual_import.get('generatedAtUtc', 'n/a')}")
+            a(f"- **Rows read / accepted / excluded:** "
+              f"{manual_import.get('rowsRead', 0)} / "
+              f"{manual_import.get('rowsAccepted', 0)} / "
+              f"{manual_import.get('rowsExcluded', 0)}")
+            a(f"- **Matched / unmatched / ambiguous:** "
+              f"{manual_import.get('rowsMatched', 0)} / "
+              f"{manual_import.get('rowsUnmatched', 0)} / "
+              f"{manual_import.get('rowsAmbiguous', 0)}")
+            a(f"- **Aggregates built:** {manual_import.get('aggregatesBuilt', 0)}")
+            exclusion_reasons = manual_import.get("exclusionReasons", {})
+            if exclusion_reasons:
+                a(f"- **Exclusion reasons:** {', '.join(f'{k}={v}' for k, v in exclusion_reasons.items())}")
+            write_targets = manual_import.get("writeTargets", [])
+            if write_targets:
+                a(f"- **Write targets ({len(write_targets)}):** {', '.join(str(t) for t in write_targets[:5])}")
+        else:
+            a("- **No run report found.** Run: `python tools/import_manual_sold_listings.py --market AU --language en --input data/manual_market_prices/examples/sample_sold_listings.csv --dry-run`")
+        a("")
+
     # Next action
     a("## Next Recommended Action")
     a("")
@@ -1762,6 +1817,7 @@ def main() -> None:
     market_readiness_config_info = _collect_market_readiness_config()
     market_pricing_foundation_info = _collect_market_pricing_foundation()
     local_market_engine_runner_info = _collect_local_market_engine_runner()
+    manual_sold_listing_import_info = _collect_manual_sold_listing_import_report()
     v1_info = _collect_v1_counts()
     app_catalogue_counts = _collect_app_catalogue_counts()
     image_manifest_counts = _collect_image_manifest_counts()
@@ -1814,6 +1870,7 @@ def main() -> None:
         "marketReadinessConfig": market_readiness_config_info,
         "marketPricingFoundation": market_pricing_foundation_info,
         "localMarketEngineRunner": local_market_engine_runner_info,
+        "manualSoldListingImport": manual_sold_listing_import_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }
