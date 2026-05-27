@@ -1,6 +1,9 @@
 {
-  "dryRun": true,
-  "finishedAtUtc": "2026-05-25T06:22:23.018712Z",
+  "dryRun": false,
+  "enqueueOnly": false,
+  "enqueued": 19,
+  "finishedAtUtc": "2026-05-27T20:19:30.430592Z",
+  "maxJobs": 50,
   "plan": [
     {
       "card_name": "Smoke Test Charizard ex",
@@ -184,6 +187,1018 @@
     }
   ],
   "planItemCount": 20,
-  "startedAtUtc": "2026-05-25T06:22:23.018694Z",
-  "status": "dry_run"
+  "process": true,
+  "processed": 20,
+  "skippedActive": 1,
+  "startedAtUtc": "2026-05-27T20:18:57.981812Z",
+  "status": "success",
+  "steps": [
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "AUD",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "USD",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "GBP",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "CAD",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "AUD",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "USD",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "GBP",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "CAD",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "AUD",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "USD",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "GBP",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "CAD",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "AUD",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "USD",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "GBP",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "CAD",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "AUD",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "USD",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "GBP",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "CAD",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "get_or_create_price_key"
+    },
+    {
+      "active_job_id": "c196f886-e23c-4b2c-970b-2a4c198bd69b",
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "AUD",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_skipped_active"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "USD",
+      "job_id": "75a0d2c1-d8d1-4c03-8dde-968cddff0d98",
+      "job_status": "queued",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "GBP",
+      "job_id": "97265b8e-1d45-4817-a072-65217f157f1a",
+      "job_status": "queued",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "CAD",
+      "job_id": "bdfa5002-bd85-42af-ae85-a4d82ded59a0",
+      "job_status": "queued",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "AUD",
+      "job_id": "aa333938-a918-4803-976e-49d21c591868",
+      "job_status": "queued",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "USD",
+      "job_id": "ec4fe380-4bb6-4715-b0ac-1a06f6609c45",
+      "job_status": "queued",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "GBP",
+      "job_id": "0928fe80-1eb5-4d83-acd9-15ad13c8097c",
+      "job_status": "queued",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "CAD",
+      "job_id": "bb7edacb-6eb8-44d9-a70d-43c2fa0afeb8",
+      "job_status": "queued",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "AUD",
+      "job_id": "4cc56449-991c-49b5-b43d-8a08c8949cf4",
+      "job_status": "queued",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "USD",
+      "job_id": "f3215889-d052-4e6e-a684-2fab898f55b0",
+      "job_status": "queued",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "GBP",
+      "job_id": "7d77beda-63c4-49e4-8905-e5c1ae8a6931",
+      "job_status": "queued",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "CAD",
+      "job_id": "df50993b-e489-49b3-a3b7-95be2f4b04d7",
+      "job_status": "queued",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "AUD",
+      "job_id": "fb2fe077-2251-4af5-9b7c-0ed1b9b9d09a",
+      "job_status": "queued",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "USD",
+      "job_id": "0258d77b-5c20-4a7a-8832-cb174c1c064e",
+      "job_status": "queued",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "GBP",
+      "job_id": "c3374ca7-2028-47b0-98b9-d66d47a0bcf7",
+      "job_status": "queued",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Pikachu",
+      "currency": "CAD",
+      "job_id": "a6db019c-de02-4c19-a278-5907283bdd00",
+      "job_status": "queued",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "AUD",
+      "job_id": "e9d8d206-d1e8-4fee-9835-934b9e37bcd3",
+      "job_status": "queued",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "USD",
+      "job_id": "27f4d981-086c-4da5-8ea9-913f048a308c",
+      "job_status": "queued",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "GBP",
+      "job_id": "5ff881ba-0a17-4b58-bb13-06da4e267c26",
+      "job_status": "queued",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "CAD",
+      "job_id": "f10c0dcb-b573-4633-9d72-e9cb96f5520a",
+      "job_status": "queued",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "step": "enqueue_refresh_job"
+    },
+    {
+      "processedCount": 20,
+      "results": [
+        {
+          "confidence": "high",
+          "currency": "AUD",
+          "includedCount": 9,
+          "jobId": "c196f886-e23c-4b2c-970b-2a4c198bd69b",
+          "marketCountry": "AU",
+          "marketplace": "EBAY_AU",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 48.99,
+          "rejectedCount": 6,
+          "snapshotId": "949ce0a4-ed8a-49b8-8993-e9032b73f018",
+          "status": "completed"
+        },
+        {
+          "confidence": "high",
+          "currency": "USD",
+          "includedCount": 9,
+          "jobId": "75a0d2c1-d8d1-4c03-8dde-968cddff0d98",
+          "marketCountry": "US",
+          "marketplace": "EBAY_US",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 64.46,
+          "rejectedCount": 6,
+          "snapshotId": "13b2383f-776e-4e1a-8ad6-6b5965f5b2b8",
+          "status": "completed"
+        },
+        {
+          "confidence": "high",
+          "currency": "GBP",
+          "includedCount": 9,
+          "jobId": "97265b8e-1d45-4817-a072-65217f157f1a",
+          "marketCountry": "GB",
+          "marketplace": "EBAY_GB",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 59.03,
+          "rejectedCount": 6,
+          "snapshotId": "b3bbac74-8b7e-4095-8872-89bf595b7751",
+          "status": "completed"
+        },
+        {
+          "confidence": "high",
+          "currency": "CAD",
+          "includedCount": 9,
+          "jobId": "bdfa5002-bd85-42af-ae85-a4d82ded59a0",
+          "marketCountry": "CA",
+          "marketplace": "EBAY_CA",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 33.36,
+          "rejectedCount": 6,
+          "snapshotId": "521a958e-d4f0-42d0-b54b-dec47595a260",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "AUD",
+          "includedCount": 9,
+          "jobId": "aa333938-a918-4803-976e-49d21c591868",
+          "marketCountry": "AU",
+          "marketplace": "EBAY_AU",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 50.98,
+          "rejectedCount": 6,
+          "snapshotId": "a7d9763a-79b2-44e4-97a5-9abab3ffb77d",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "USD",
+          "includedCount": 9,
+          "jobId": "ec4fe380-4bb6-4715-b0ac-1a06f6609c45",
+          "marketCountry": "US",
+          "marketplace": "EBAY_US",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 34.53,
+          "rejectedCount": 6,
+          "snapshotId": "8ebfd73c-9ef6-4274-aa26-c9b4671eeac0",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "GBP",
+          "includedCount": 9,
+          "jobId": "0928fe80-1eb5-4d83-acd9-15ad13c8097c",
+          "marketCountry": "GB",
+          "marketplace": "EBAY_GB",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 19.44,
+          "rejectedCount": 6,
+          "snapshotId": "c9d36fa1-2b26-461c-b7e0-f20446d146ef",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "CAD",
+          "includedCount": 9,
+          "jobId": "bb7edacb-6eb8-44d9-a70d-43c2fa0afeb8",
+          "marketCountry": "CA",
+          "marketplace": "EBAY_CA",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 51.39,
+          "rejectedCount": 6,
+          "snapshotId": "b52ad726-2111-4bb5-84df-ecf32b5c4674",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "AUD",
+          "includedCount": 9,
+          "jobId": "4cc56449-991c-49b5-b43d-8a08c8949cf4",
+          "marketCountry": "AU",
+          "marketplace": "EBAY_AU",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 63.76,
+          "rejectedCount": 6,
+          "snapshotId": "52d08b70-26d7-4c45-be6d-58c91ea2d1d4",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "USD",
+          "includedCount": 9,
+          "jobId": "f3215889-d052-4e6e-a684-2fab898f55b0",
+          "marketCountry": "US",
+          "marketplace": "EBAY_US",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 22.45,
+          "rejectedCount": 6,
+          "snapshotId": "182ca1da-a054-49fb-86f6-c9dc789d5a30",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "GBP",
+          "includedCount": 9,
+          "jobId": "7d77beda-63c4-49e4-8905-e5c1ae8a6931",
+          "marketCountry": "GB",
+          "marketplace": "EBAY_GB",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 33.08,
+          "rejectedCount": 6,
+          "snapshotId": "42020362-b8aa-4b0e-912f-b4981f15e355",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "CAD",
+          "includedCount": 9,
+          "jobId": "df50993b-e489-49b3-a3b7-95be2f4b04d7",
+          "marketCountry": "CA",
+          "marketplace": "EBAY_CA",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 31.0,
+          "rejectedCount": 6,
+          "snapshotId": "f3f69800-4270-4773-b691-584bcdb0c784",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "AUD",
+          "includedCount": 9,
+          "jobId": "fb2fe077-2251-4af5-9b7c-0ed1b9b9d09a",
+          "marketCountry": "AU",
+          "marketplace": "EBAY_AU",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 41.29,
+          "rejectedCount": 6,
+          "snapshotId": "a9392fbe-de72-48f4-9efe-0d27068d097e",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "USD",
+          "includedCount": 9,
+          "jobId": "0258d77b-5c20-4a7a-8832-cb174c1c064e",
+          "marketCountry": "US",
+          "marketplace": "EBAY_US",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 23.52,
+          "rejectedCount": 6,
+          "snapshotId": "bca9e02b-d03e-471a-9d85-44c7165fcd5c",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "GBP",
+          "includedCount": 9,
+          "jobId": "c3374ca7-2028-47b0-98b9-d66d47a0bcf7",
+          "marketCountry": "GB",
+          "marketplace": "EBAY_GB",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 56.19,
+          "rejectedCount": 6,
+          "snapshotId": "93594089-8667-4a03-88fa-ca4892a2e2d2",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "CAD",
+          "includedCount": 9,
+          "jobId": "a6db019c-de02-4c19-a278-5907283bdd00",
+          "marketCountry": "CA",
+          "marketplace": "EBAY_CA",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 62.03,
+          "rejectedCount": 6,
+          "snapshotId": "88fb983c-983e-44f8-b60c-bb3045816e5b",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "AUD",
+          "includedCount": 9,
+          "jobId": "e9d8d206-d1e8-4fee-9835-934b9e37bcd3",
+          "marketCountry": "AU",
+          "marketplace": "EBAY_AU",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 20.54,
+          "rejectedCount": 6,
+          "snapshotId": "65a05e86-254f-4b68-a972-c8a4a151f677",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "USD",
+          "includedCount": 9,
+          "jobId": "27f4d981-086c-4da5-8ea9-913f048a308c",
+          "marketCountry": "US",
+          "marketplace": "EBAY_US",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 31.76,
+          "rejectedCount": 6,
+          "snapshotId": "008fdc71-190c-4cf9-b380-c12cd8d7babe",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "GBP",
+          "includedCount": 9,
+          "jobId": "5ff881ba-0a17-4b58-bb13-06da4e267c26",
+          "marketCountry": "GB",
+          "marketplace": "EBAY_GB",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 56.01,
+          "rejectedCount": 6,
+          "snapshotId": "14dc26c9-e2b0-48fc-b506-94fd0b22d592",
+          "status": "completed"
+        },
+        {
+          "confidence": "medium",
+          "currency": "CAD",
+          "includedCount": 9,
+          "jobId": "f10c0dcb-b573-4633-9d72-e9cb96f5520a",
+          "marketCountry": "CA",
+          "marketplace": "EBAY_CA",
+          "priceKeyId": "***REDACTED***",
+          "recommendedPrice": 55.47,
+          "rejectedCount": 6,
+          "snapshotId": "917c8d61-ce5c-465b-aca4-9310e68b86d7",
+          "status": "completed"
+        }
+      ],
+      "step": "worker_run_once"
+    }
+  ],
+  "verifyResults": [
+    {
+      "cacheCurrency": "AUD",
+      "cacheExists": true,
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "AUD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com.au",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com.au",
+        "ebay.com.au",
+        "ebay.com.au"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "USD",
+      "cacheExists": true,
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "USD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com",
+        "ebay.com",
+        "ebay.com"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "GBP",
+      "cacheExists": true,
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "GBP",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.co.uk",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.co.uk",
+        "ebay.co.uk",
+        "ebay.co.uk"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "CAD",
+      "cacheExists": true,
+      "card_name": "Smoke Test Charizard ex",
+      "currency": "CAD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.ca",
+      "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.ca",
+        "ebay.ca",
+        "ebay.ca"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "AUD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "AUD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com.au",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com.au",
+        "ebay.com.au",
+        "ebay.com.au"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "USD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "USD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com",
+        "ebay.com",
+        "ebay.com"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "GBP",
+      "cacheExists": true,
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "GBP",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.co.uk",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.co.uk",
+        "ebay.co.uk",
+        "ebay.co.uk"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "CAD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Charizard ex",
+      "currency": "CAD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.ca",
+      "fingerprint": "pokemon|en|obf|125/197|demo_charizard_ex|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.ca",
+        "ebay.ca",
+        "ebay.ca"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "AUD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "AUD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com.au",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com.au",
+        "ebay.com.au",
+        "ebay.com.au"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "USD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "USD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com",
+        "ebay.com",
+        "ebay.com"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "GBP",
+      "cacheExists": true,
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "GBP",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.co.uk",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.co.uk",
+        "ebay.co.uk",
+        "ebay.co.uk"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "CAD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Umbreon VMAX",
+      "currency": "CAD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.ca",
+      "fingerprint": "pokemon|en|evs|215/203|demo_umbreon_vmax|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.ca",
+        "ebay.ca",
+        "ebay.ca"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "AUD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Pikachu",
+      "currency": "AUD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com.au",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com.au",
+        "ebay.com.au",
+        "ebay.com.au"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "USD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Pikachu",
+      "currency": "USD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com",
+        "ebay.com",
+        "ebay.com"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "GBP",
+      "cacheExists": true,
+      "card_name": "[DEMO] Pikachu",
+      "currency": "GBP",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.co.uk",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.co.uk",
+        "ebay.co.uk",
+        "ebay.co.uk"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "CAD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Pikachu",
+      "currency": "CAD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.ca",
+      "fingerprint": "pokemon|en|base1|58/102|demo_pikachu|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.ca",
+        "ebay.ca",
+        "ebay.ca"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "AUD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "AUD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com.au",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|au|aud",
+      "market_country": "AU",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com.au",
+        "ebay.com.au",
+        "ebay.com.au"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "USD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "USD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.com",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|us|usd",
+      "market_country": "US",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.com",
+        "ebay.com",
+        "ebay.com"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "GBP",
+      "cacheExists": true,
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "GBP",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.co.uk",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|gb|gbp",
+      "market_country": "GB",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.co.uk",
+        "ebay.co.uk",
+        "ebay.co.uk"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    },
+    {
+      "cacheCurrency": "CAD",
+      "cacheExists": true,
+      "card_name": "[DEMO] Mewtwo",
+      "currency": "CAD",
+      "currencyMatch": true,
+      "domainMatch": true,
+      "evidenceCount": 5,
+      "expected_domain": "ebay.ca",
+      "fingerprint": "pokemon|en|base1|10/102|demo_mewtwo|raw|raw|ca|cad",
+      "market_country": "CA",
+      "price_key_id": "***REDACTED***",
+      "sampleDomains": [
+        "ebay.ca",
+        "ebay.ca",
+        "ebay.ca"
+      ],
+      "snapshotExists": true,
+      "status": "ok"
+    }
+  ]
 }

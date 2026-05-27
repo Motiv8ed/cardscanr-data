@@ -44,6 +44,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Load Supabase env if not already set
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
+if (Test-Path $envLoader) {
+    . $envLoader
+}
+
 if (-not $DryRun) {
     $requiredVars = @("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")
     $missing = @()

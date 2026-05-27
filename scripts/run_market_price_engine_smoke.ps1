@@ -25,6 +25,12 @@ if ($missing.Count -gt 0) {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
+# Load Supabase env if not already set
+$envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
+if (Test-Path $envLoader) {
+    . $envLoader
+}
+
 $pythonPath = Join-Path $repoRoot ".venv\Scripts\python.exe"
 if (-not (Test-Path $pythonPath)) {
     $pythonPath = "python"

@@ -165,6 +165,54 @@ Upload the `.zip` or `.md` file directly to ChatGPT. The bundle excludes `.env`,
 
 ---
 
+## Supabase configuration (local dev)
+
+### Flutter app convention
+- The Flutter app uses only the Supabase **anon key** (never the service role key).
+- App config files: `supabase_env.json`, `supabase_env.example.json`, `supabase_env.local.json` (local only, not committed).
+- Never commit real keys or secrets to git.
+
+### cardscanr-data convention
+- The worker/scheduler uses the **service role key** (never the anon key for writes).
+- Local config: `supabase_env.local.json` (see `supabase_env.example.json` for format).
+- This file is git-ignored and must never be committed.
+- Example config:
+
+```json
+{
+  "SUPABASE_URL": "https://your-project.supabase.co",
+  "SUPABASE_ANON_KEY": "your-anon-key-used-by-app-only",
+  "SUPABASE_SERVICE_ROLE_KEY": "your-local-worker-service-role-key-do-not-commit"
+}
+```
+
+- The worker loads config in this order:
+  1. **Process environment variables** (highest priority)
+  2. `supabase_env.local.json` (if present, only for missing values)
+- Secrets are never printed or logged.
+
+### How to run the worker/scheduler with local config
+
+```powershell
+# Load env vars for this session (never prints secrets)
+. scripts/load_supabase_env.ps1 supabase_env.local.json
+
+# Then run the worker
+scripts/run_market_price_worker.ps1
+
+# Or the scheduler
+scripts/run_market_price_scheduler.ps1
+```
+
+All market engine scripts will attempt to load the local config if present.
+
+### Safety rules
+- Never commit `supabase_env.local.json`, `.env`, or any real keys.
+- Never put the service role key in the Flutter app or any committed file.
+- Only the worker/scheduler uses the service role key, and only from local env or ignored config.
+- The anon key is safe for app use, but do not commit real values.
+
+---
 
 ## App-facing data contract
 

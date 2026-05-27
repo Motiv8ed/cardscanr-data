@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+
 from dataclasses import dataclass
 import os
 from pathlib import Path
+
+# Load local Supabase config if env vars are not set
+try:
+    from .supabase_env_loader import load_supabase_env
+    load_supabase_env()
+except Exception:
+    pass  # Safe: never fail if loader missing
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = ROOT / "reports"
