@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-05-27T00:46:06Z",
+  "liveEbayScrapingEnabled": false,
+  "liveEbayDisabledNote": "Live eBay access is disabled until provider/legal/terms approach is approved.",
+  "summary": {
+    "registeredProviders": [
+      "ebay_disabled",
+      "manual",
+      "mock"
+    ],
+    "enabledProviders": [
+      "mock",
+      "manual"
+    ],
+    "disabledProviders": [
+      "ebay_disabled"
+    ],
+    "defaultAllowedProviders": [
+      "mock",
+      "manual"
+    ],
+    "nextRecommendedProviderStep": "Decide on eBay access method: (a) eBay Browse API with OAuth, (b) Apify actor, (c) local browser worker. Then implement as a new provider module and add to the registry allow-list after legal/terms sign-off."
+  },
+  "providers": [
+    {
+      "providerName": "mock",
+      "enabled": true,
+      "liveNetworkRequired": false,
+      "requiresCredentials": false,
+      "supportedMarkets": [
+        "AU",
+        "US",
+        "GB",
+        "CA",
+        "EU"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR"
+      ],
+      "returnsEvidenceListings": true,
+      "returnsConfidenceScore": true,
+      "safeForCloud": true,
+      "nextImplementationStep": "Already functional. Extend fixture cards if needed.",
+      "notes": "Returns deterministic fake evidence seeded from the search request fields."
+    },
+    {
+      "providerName": "manual",
+      "enabled": true,
+      "liveNetworkRequired": false,
+      "requiresCredentials": false,
+      "supportedMarkets": [
+        "AU",
+        "US",
+        "GB",
+        "CA",
+        "EU"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR"
+      ],
+      "returnsEvidenceListings": true,
+      "returnsConfidenceScore": false,
+      "safeForCloud": true,
+      "nextImplementationStep": "Add real sold-listing CSV/JSON export data to data/manual_market_prices/ and re-run the importer.",
+      "notes": "Reads from a local JSON file — no network required."
+    },
+    {
+      "providerName": "ebay_disabled",
+      "enabled": false,
+      "liveNetworkRequired": true,
+      "requiresCredentials": true,
+      "supportedMarkets": [
+        "AU",
+        "US",
+        "GB",
+        "CA",
+        "EU"
+      ],
+      "supportedLanguages": [
+        "en",
+        "jp"
+      ],
+      "supportedCurrencies": [
+        "AUD",
+        "USD",
+        "GBP",
+        "CAD",
+        "EUR"
+      ],
+      "returnsEvidenceListings": false,
+      "returnsConfidenceScore": false,
+      "safeForCloud": false,
+      "nextImplementationStep": "Choose one: (a) eBay Browse API with OAuth, (b) Apify eBay scraper actor, (c) local browser worker. Obtain legal/terms sign-off, then implement as a new provider module.",
+      "notes": "liveEbayScrapingEnabled: false. Live eBay access is disabled until provider/legal/terms approach is approved."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # Manual Sold Listing Import Report
 
-**Generated:** 2026-05-26T23:53:34Z
-**Mode:** write
+**Generated:** 2026-05-27T00:42:51Z
+**Mode:** dry_run
 **Input file:** `/tmp/workspace/Motiv8ed/cardscanr-data/data/manual_market_prices/examples/sample_sold_listings.csv`
 
 ## Row Counts
