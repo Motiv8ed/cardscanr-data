@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAtUtc": "2026-05-27T00:42:42Z",
+  "generatedAtUtc": "2026-05-27T00:46:06Z",
   "liveEbayScrapingEnabled": false,
-  "liveEbayWarning": "Live eBay access is disabled until provider/legal/terms approach is approved.",
+  "liveEbayDisabledNote": "Live eBay access is disabled until provider/legal/terms approach is approved.",
   "summary": {
     "registeredProviders": [
       "ebay_disabled",
@@ -27,7 +27,7 @@
       "providerName": "mock",
       "enabled": true,
       "liveNetworkRequired": false,
-      "secretsRequired": false,
+      "requiresCredentials": false,
       "supportedMarkets": [
         "AU",
         "US",
@@ -56,7 +56,7 @@
       "providerName": "manual",
       "enabled": true,
       "liveNetworkRequired": false,
-      "secretsRequired": false,
+      "requiresCredentials": false,
       "supportedMarkets": [
         "AU",
         "US",
@@ -85,7 +85,7 @@
       "providerName": "ebay_disabled",
       "enabled": false,
       "liveNetworkRequired": true,
-      "secretsRequired": true,
+      "requiresCredentials": true,
       "supportedMarkets": [
         "AU",
         "US",

@@ -124,7 +124,7 @@ class MarketPriceProviderCapabilities:
     provider_name: str
     enabled: bool
     live_network_required: bool
-    secrets_required: bool
+    requires_credentials: bool
     supported_markets: tuple[str, ...]
     supported_languages: tuple[str, ...]
     supported_currencies: tuple[str, ...]

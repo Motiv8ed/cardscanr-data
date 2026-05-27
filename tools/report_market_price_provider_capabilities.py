@@ -50,7 +50,7 @@ def _caps_to_dict(caps: MarketPriceProviderCapabilities) -> dict[str, Any]:
         "providerName": caps.provider_name,
         "enabled": caps.enabled,
         "liveNetworkRequired": caps.live_network_required,
-        "secretsRequired": caps.secrets_required,
+        "requiresCredentials": caps.requires_credentials,
         "supportedMarkets": list(caps.supported_markets),
         "supportedLanguages": list(caps.supported_languages),
         "supportedCurrencies": list(caps.supported_currencies),
@@ -71,7 +71,7 @@ def build_report(registry: MarketPriceProviderRegistry) -> dict[str, Any]:
         "schemaVersion": "1.0.0",
         "generatedAtUtc": _utc_now(),
         "liveEbayScrapingEnabled": False,
-        "liveEbayWarning": (
+        "liveEbayDisabledNote": (
             "Live eBay access is disabled until provider/legal/terms approach is approved."
         ),
         "summary": {
@@ -105,7 +105,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     a(f"Generated: {report['generatedAtUtc']}")
     a("")
     a(f"> **Live eBay scraping enabled: no**  ")
-    a(f"> {report['liveEbayWarning']}")
+    a(f"> {report['liveEbayDisabledNote']}")
     a("")
     summary = report.get("summary", {})
     a("## Summary")
@@ -127,7 +127,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         a(f"### {provider['providerName']} — {enabled_flag}")
         a("")
         a(f"- Live network required: {'yes' if provider['liveNetworkRequired'] else 'no'}")
-        a(f"- Secrets required: {'yes' if provider['secretsRequired'] else 'no'}")
+        a(f"- Secrets required: {'yes' if provider['requiresCredentials'] else 'no'}")
         a(f"- Safe for cloud/Codex: {'yes' if provider['safeForCloud'] else 'no'}")
         a(f"- Returns evidence listings: {'yes' if provider['returnsEvidenceListings'] else 'no'}")
         a(f"- Returns confidence score: {'yes' if provider['returnsConfidenceScore'] else 'no'}")

@@ -871,7 +871,7 @@ def _collect_provider_capabilities_summary() -> dict[str, Any]:
     return {
         "available": True,
         "liveEbayScrapingEnabled": caps_report.get("liveEbayScrapingEnabled", False),
-        "liveEbayWarning": caps_report.get("liveEbayWarning", ""),
+        "liveEbayDisabledNote": caps_report.get("liveEbayDisabledNote", ""),
         "enabledProviders": summary.get("enabledProviders", []),
         "disabledProviders": summary.get("disabledProviders", []),
         "registeredProviders": summary.get("registeredProviders", []),
@@ -1760,8 +1760,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
         a("")
         live_flag = "disabled" if not provider_caps.get("liveEbayScrapingEnabled", False) else "enabled"
         a(f"- **Live eBay scraping:** {live_flag}")
-        if provider_caps.get("liveEbayWarning"):
-            a(f"- **Warning:** {provider_caps['liveEbayWarning']}")
+        if provider_caps.get("liveEbayDisabledNote"):
+            a(f"- **Warning:** {provider_caps['liveEbayDisabledNote']}")
         enabled = provider_caps.get("enabledProviders", [])
         disabled = provider_caps.get("disabledProviders", [])
         a(f"- **Enabled providers:** {', '.join(enabled) if enabled else 'none'}")

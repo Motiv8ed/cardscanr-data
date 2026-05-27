@@ -175,7 +175,7 @@ class TestMarketPriceProviderCapabilities(unittest.TestCase):
             provider_name="mock",
             enabled=True,
             live_network_required=False,
-            secrets_required=False,
+            requires_credentials=False,
             supported_markets=("AU", "US", "GB", "CA"),
             supported_languages=("en",),
             supported_currencies=("AUD", "USD"),
@@ -186,7 +186,7 @@ class TestMarketPriceProviderCapabilities(unittest.TestCase):
         )
         self.assertTrue(caps.enabled)
         self.assertFalse(caps.live_network_required)
-        self.assertFalse(caps.secrets_required)
+        self.assertFalse(caps.requires_credentials)
         self.assertTrue(caps.safe_for_cloud)
         self.assertIn("AU", caps.supported_markets)
 
@@ -195,7 +195,7 @@ class TestMarketPriceProviderCapabilities(unittest.TestCase):
             provider_name="mock",
             enabled=True,
             live_network_required=False,
-            secrets_required=False,
+            requires_credentials=False,
             supported_markets=("AU",),
             supported_languages=("en",),
             supported_currencies=("AUD",),

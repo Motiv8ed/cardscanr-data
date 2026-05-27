@@ -44,7 +44,7 @@ class ManualMarketPriceProvider:
         provider_name="manual",
         enabled=True,
         live_network_required=False,
-        secrets_required=False,
+        requires_credentials=False,
         supported_markets=("AU", "US", "GB", "CA", "EU"),
         supported_languages=("en", "jp"),
         supported_currencies=("AUD", "USD", "GBP", "CAD", "EUR"),

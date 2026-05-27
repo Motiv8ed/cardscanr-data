@@ -60,7 +60,7 @@ class DisabledEbayMarketPriceProvider:
         provider_name="ebay_disabled",
         enabled=False,
         live_network_required=True,
-        secrets_required=True,
+        requires_credentials=True,
         supported_markets=("AU", "US", "GB", "CA", "EU"),
         supported_languages=("en", "jp"),
         supported_currencies=("AUD", "USD", "GBP", "CAD", "EUR"),
