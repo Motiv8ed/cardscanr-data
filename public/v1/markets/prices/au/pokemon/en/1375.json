@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAtUtc": "2026-05-26T09:45:29Z",
+  "generatedAtUtc": "2026-05-27T01:24:25Z",
   "market": "AU",
   "game": "pokemon",
   "language": "en",
@@ -21,26 +21,32 @@
       "gradedState": "ungraded",
       "marketCountry": "AU",
       "currency": "AUD",
-      "source": "ebay_sold_listings",
+      "source": "mock_market_provider",
       "sourceProvider": "mock",
-      "sampleCount": 0,
-      "medianPrice": null,
-      "averagePrice": null,
-      "lowPrice": null,
-      "highPrice": null,
+      "sampleCount": 5,
+      "medianPrice": 99.0,
+      "averagePrice": 97.2,
+      "lowPrice": 81.0,
+      "highPrice": 108.0,
       "shippingIncluded": false,
       "soldDateRange": {
-        "from": null,
-        "to": null
+        "from": "2026-05-21T01:24:25Z",
+        "to": "2026-05-25T01:24:25Z"
       },
-      "evidenceListingLinks": [],
-      "confidenceScore": 0.0,
-      "confidenceLabel": "low",
-      "outlierFilteringNotes": "No sold-listing evidence returned.",
-      "lastUpdatedAtUtc": "2026-05-26T09:45:29Z",
-      "status": "no_results",
+      "evidenceListingLinks": [
+        "https://www.ebay.com.au/itm/mock-2a5efd42b4-1",
+        "https://www.ebay.com.au/itm/mock-2a5efd42b4-2",
+        "https://www.ebay.com.au/itm/mock-2a5efd42b4-3",
+        "https://www.ebay.com.au/itm/mock-2a5efd42b4-4",
+        "https://www.ebay.com.au/itm/mock-2a5efd42b4-5"
+      ],
+      "confidenceScore": 0.85,
+      "confidenceLabel": "high",
+      "outlierFilteringNotes": "No outliers removed.",
+      "lastUpdatedAtUtc": "2026-05-27T01:24:25Z",
+      "status": "priced",
       "query": "\"Alakazam 1\" \"Expedition\" \"001/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
-      "providerNotes": "No deterministic mock fixture for this card."
+      "providerNotes": "Deterministic mock listings (seed=2a5efd42b4)"
     },
     {
       "game": "pokemon",
@@ -55,26 +61,32 @@
       "gradedState": "ungraded",
       "marketCountry": "AU",
       "currency": "AUD",
-      "source": "ebay_sold_listings",
+      "source": "mock_market_provider",
       "sourceProvider": "mock",
-      "sampleCount": 0,
-      "medianPrice": null,
-      "averagePrice": null,
-      "lowPrice": null,
-      "highPrice": null,
+      "sampleCount": 4,
+      "medianPrice": 74.5,
+      "averagePrice": 75.25,
+      "lowPrice": 72.99,
+      "highPrice": 79.0,
       "shippingIncluded": false,
       "soldDateRange": {
-        "from": null,
-        "to": null
+        "from": "2026-05-21T01:24:25Z",
+        "to": "2026-05-25T01:24:25Z"
       },
-      "evidenceListingLinks": [],
-      "confidenceScore": 0.0,
-      "confidenceLabel": "low",
-      "outlierFilteringNotes": "No sold-listing evidence returned.",
-      "lastUpdatedAtUtc": "2026-05-26T09:45:29Z",
-      "status": "no_results",
+      "evidenceListingLinks": [
+        "https://www.ebay.com.au/itm/mock-e5ecc6de41-1",
+        "https://www.ebay.com.au/itm/mock-e5ecc6de41-2",
+        "https://www.ebay.com.au/itm/mock-e5ecc6de41-3",
+        "https://www.ebay.com.au/itm/mock-e5ecc6de41-4",
+        "https://www.ebay.com.au/itm/mock-e5ecc6de41-5"
+      ],
+      "confidenceScore": 0.73,
+      "confidenceLabel": "medium",
+      "outlierFilteringNotes": "Applied IQR outlier filter to sold totals.",
+      "lastUpdatedAtUtc": "2026-05-27T01:24:25Z",
+      "status": "priced",
       "query": "\"Ampharos 2\" \"Expedition\" \"002/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
-      "providerNotes": "No deterministic mock fixture for this card."
+      "providerNotes": "Deterministic mock listings (seed=e5ecc6de41)"
     },
     {
       "game": "pokemon",
@@ -89,26 +101,32 @@
       "gradedState": "ungraded",
       "marketCountry": "AU",
       "currency": "AUD",
-      "source": "ebay_sold_listings",
+      "source": "mock_market_provider",
       "sourceProvider": "mock",
-      "sampleCount": 0,
-      "medianPrice": null,
-      "averagePrice": null,
-      "lowPrice": null,
-      "highPrice": null,
+      "sampleCount": 4,
+      "medianPrice": 132.5,
+      "averagePrice": 133.25,
+      "lowPrice": 130.99,
+      "highPrice": 137.0,
       "shippingIncluded": false,
       "soldDateRange": {
-        "from": null,
-        "to": null
+        "from": "2026-05-21T01:24:25Z",
+        "to": "2026-05-25T01:24:25Z"
       },
-      "evidenceListingLinks": [],
-      "confidenceScore": 0.0,
-      "confidenceLabel": "low",
-      "outlierFilteringNotes": "No sold-listing evidence returned.",
-      "lastUpdatedAtUtc": "2026-05-26T09:45:29Z",
-      "status": "no_results",
+      "evidenceListingLinks": [
+        "https://www.ebay.com.au/itm/mock-d9a5c270be-1",
+        "https://www.ebay.com.au/itm/mock-d9a5c270be-2",
+        "https://www.ebay.com.au/itm/mock-d9a5c270be-3",
+        "https://www.ebay.com.au/itm/mock-d9a5c270be-4",
+        "https://www.ebay.com.au/itm/mock-d9a5c270be-5"
+      ],
+      "confidenceScore": 0.73,
+      "confidenceLabel": "medium",
+      "outlierFilteringNotes": "Applied IQR outlier filter to sold totals.",
+      "lastUpdatedAtUtc": "2026-05-27T01:24:25Z",
+      "status": "priced",
       "query": "\"Arbok 3\" \"Expedition\" \"003/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
-      "providerNotes": "No deterministic mock fixture for this card."
+      "providerNotes": "Deterministic mock listings (seed=d9a5c270be)"
     },
     {
       "game": "pokemon",
@@ -123,26 +141,32 @@
       "gradedState": "ungraded",
       "marketCountry": "AU",
       "currency": "AUD",
-      "source": "ebay_sold_listings",
+      "source": "mock_market_provider",
       "sourceProvider": "mock",
-      "sampleCount": 0,
-      "medianPrice": null,
-      "averagePrice": null,
-      "lowPrice": null,
-      "highPrice": null,
+      "sampleCount": 5,
+      "medianPrice": 151.0,
+      "averagePrice": 150.4,
+      "lowPrice": 139.0,
+      "highPrice": 157.0,
       "shippingIncluded": false,
       "soldDateRange": {
-        "from": null,
-        "to": null
+        "from": "2026-05-21T01:24:25Z",
+        "to": "2026-05-25T01:24:25Z"
       },
-      "evidenceListingLinks": [],
-      "confidenceScore": 0.0,
-      "confidenceLabel": "low",
-      "outlierFilteringNotes": "No sold-listing evidence returned.",
-      "lastUpdatedAtUtc": "2026-05-26T09:45:29Z",
-      "status": "no_results",
+      "evidenceListingLinks": [
+        "https://www.ebay.com.au/itm/mock-6e98877118-1",
+        "https://www.ebay.com.au/itm/mock-6e98877118-2",
+        "https://www.ebay.com.au/itm/mock-6e98877118-3",
+        "https://www.ebay.com.au/itm/mock-6e98877118-4",
+        "https://www.ebay.com.au/itm/mock-6e98877118-5"
+      ],
+      "confidenceScore": 0.85,
+      "confidenceLabel": "high",
+      "outlierFilteringNotes": "No outliers removed.",
+      "lastUpdatedAtUtc": "2026-05-27T01:24:25Z",
+      "status": "priced",
       "query": "\"Blastoise 4\" \"Expedition\" \"004/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
-      "providerNotes": "No deterministic mock fixture for this card."
+      "providerNotes": "Deterministic mock listings (seed=6e98877118)"
     },
     {
       "game": "pokemon",
@@ -157,26 +181,32 @@
       "gradedState": "ungraded",
       "marketCountry": "AU",
       "currency": "AUD",
-      "source": "ebay_sold_listings",
+      "source": "mock_market_provider",
       "sourceProvider": "mock",
-      "sampleCount": 0,
-      "medianPrice": null,
-      "averagePrice": null,
-      "lowPrice": null,
-      "highPrice": null,
+      "sampleCount": 5,
+      "medianPrice": 107.0,
+      "averagePrice": 105.6,
+      "lowPrice": 91.0,
+      "highPrice": 115.0,
       "shippingIncluded": false,
       "soldDateRange": {
-        "from": null,
-        "to": null
+        "from": "2026-05-21T01:24:25Z",
+        "to": "2026-05-25T01:24:25Z"
       },
-      "evidenceListingLinks": [],
-      "confidenceScore": 0.0,
-      "confidenceLabel": "low",
-      "outlierFilteringNotes": "No sold-listing evidence returned.",
-      "lastUpdatedAtUtc": "2026-05-26T09:45:29Z",
-      "status": "no_results",
+      "evidenceListingLinks": [
+        "https://www.ebay.com.au/itm/mock-d9df7fe338-1",
+        "https://www.ebay.com.au/itm/mock-d9df7fe338-2",
+        "https://www.ebay.com.au/itm/mock-d9df7fe338-3",
+        "https://www.ebay.com.au/itm/mock-d9df7fe338-4",
+        "https://www.ebay.com.au/itm/mock-d9df7fe338-5"
+      ],
+      "confidenceScore": 0.85,
+      "confidenceLabel": "high",
+      "outlierFilteringNotes": "No outliers removed.",
+      "lastUpdatedAtUtc": "2026-05-27T01:24:25Z",
+      "status": "priced",
       "query": "\"Butterfree 5\" \"Expedition\" \"005/165\" pokemon card en raw raw near mint -proxy -custom -fake -digital -lot -bundle -damaged",
-      "providerNotes": "No deterministic mock fixture for this card."
+      "providerNotes": "Deterministic mock listings (seed=d9df7fe338)"
     }
   ]
 }

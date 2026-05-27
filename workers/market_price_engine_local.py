@@ -234,6 +234,44 @@ def _write_engine_reports(
     append_jsonl(reports_dir / "market_price_engine_local_runs.jsonl", clean)
 
 
+def _read_market_pricing_worker_summary(reports_dir: Path) -> dict[str, Any]:
+    """Read the latest market_pricing_worker report and return a safe provider summary.
+
+    Looks first in the given reports_dir, then falls back to ROOT/reports.
+    Returns an empty dict if no report is found.
+    """
+    import json as _json
+
+    candidates = [
+        reports_dir / "market_pricing_worker_latest.json",
+        ROOT / "reports" / "market_pricing_worker_latest.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            try:
+                data = _json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict):
+                    continue
+                prov = data.get("providerSummary")
+                summary = data.get("summary", {})
+                return {
+                    "available": True,
+                    "providerRequested": data.get("providerRequested") or data.get("provider"),
+                    "providerResolved": data.get("providerResolved"),
+                    "providerEnabled": data.get("providerEnabled", True),
+                    "liveEbayDisabled": not data.get("liveEbayEnabled", False),
+                    "evidenceAccepted": (prov or summary).get("evidenceAccepted", 0) if isinstance(prov or summary, dict) else 0,
+                    "evidenceRejected": (prov or summary).get("evidenceRejected", 0) if isinstance(prov or summary, dict) else 0,
+                    "aggregatesBuilt": (prov or summary).get("aggregatesBuilt", 0) if isinstance(prov or summary, dict) else 0,
+                    "workerMode": data.get("mode"),
+                    "workerStatus": data.get("status"),
+                    "generatedAtUtc": data.get("generatedAtUtc"),
+                }
+            except Exception:
+                continue
+    return {"available": False}
+
+
 # ---------------------------------------------------------------------------
 # Main orchestrator
 # ---------------------------------------------------------------------------
@@ -364,6 +402,7 @@ def run_local_engine(
             "worker_max_jobs": effective_max_jobs,
             "poll_seconds": poll_seconds,
         },
+        "market_pricing_worker_summary": _read_market_pricing_worker_summary(reports_dir),
     }
 
     _write_engine_reports(report, reports_dir)

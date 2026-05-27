@@ -116,7 +116,7 @@ class MockMarketPriceProvider:
 
         return MarketPriceProviderResult(
             provider_name=self.name,
-            source="ebay_sold_listings",
+            source="mock_market_provider",
             listings=listings,
             notes=f"Deterministic mock listings (seed={digest[:10]})",
             raw_metadata={"providerDomain": domain, "mockSeed": digest[:10]},

@@ -841,6 +841,24 @@ def _collect_market_pricing_foundation() -> dict[str, Any]:
 
     worker_summary = worker_latest.get("summary") if isinstance(worker_latest, dict) and isinstance(worker_latest.get("summary"), dict) else {}
     source_status = market_status.get("sourceStatus") if isinstance(market_status, dict) and isinstance(market_status.get("sourceStatus"), dict) else {}
+    worker_prov_summary = worker_latest.get("providerSummary") if isinstance(worker_latest, dict) and isinstance(worker_latest.get("providerSummary"), dict) else {}
+
+    # Build provider summary block from latest worker report
+    provider_summary: dict[str, Any] = {
+        "latestProviderUsed": (worker_latest or {}).get("providerResolved") or (worker_latest or {}).get("provider") if isinstance(worker_latest, dict) else None,
+        "providerRequested": worker_prov_summary.get("providerRequested") or (worker_latest or {}).get("provider") if isinstance(worker_latest, dict) else None,
+        "providerResolved": worker_prov_summary.get("providerResolved"),
+        "providerEnabled": worker_prov_summary.get("providerEnabled", True),
+        "liveEbayDisabled": worker_prov_summary.get("liveEbayDisabled", True),
+        "evidenceAccepted": worker_prov_summary.get("evidenceAccepted", worker_summary.get("evidenceAccepted", 0)),
+        "evidenceRejected": worker_prov_summary.get("evidenceRejected", worker_summary.get("evidenceRejected", 0)),
+        "rejectionReasons": worker_prov_summary.get("rejectionReasons", worker_summary.get("rejectionReasons", {})),
+        "aggregatesBuilt": worker_prov_summary.get("aggregatesBuilt", worker_summary.get("aggregatesBuilt", 0)),
+        "nextRecommendedMarketPricingStep": (
+            "Run mock provider with --write to generate market price files, "
+            "then import real sold listings via import_manual_sold_listings.py and run with --provider manual."
+        ),
+    }
 
     return {
         "available": True,
@@ -859,7 +877,9 @@ def _collect_market_pricing_foundation() -> dict[str, Any]:
         "queryGeneratedAtUtc": (query_samples or {}).get("generatedAtUtc") if isinstance(query_samples, dict) else None,
         "workerGeneratedAtUtc": (worker_latest or {}).get("generatedAtUtc") if isinstance(worker_latest, dict) else None,
         "jobReportGeneratedAtUtc": (worker_jobs or {}).get("generatedAtUtc") if isinstance(worker_jobs, dict) else None,
-        "warning": "Live eBay scraping is not enabled yet."
+        "providerSummary": provider_summary,
+        "warning": "Live eBay scraping is not enabled yet.",
+        "liveEbayDisabledWarning": (worker_latest or {}).get("liveEbayDisabledWarning", "Live eBay scraping is disabled.") if isinstance(worker_latest, dict) else "Live eBay scraping is disabled.",
     }
 
 
