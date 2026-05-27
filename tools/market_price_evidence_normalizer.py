@@ -322,6 +322,44 @@ def _scrub_raw(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Evidence listing filter (post-provider pass)
+# ---------------------------------------------------------------------------
+
+
+def filter_evidence_listings(
+    listings: list[MarketPriceEvidenceListing],
+    *,
+    allow_exclusion_terms: frozenset[str] = frozenset(),
+) -> tuple[list[MarketPriceEvidenceListing], list[dict[str, Any]]]:
+    """
+    Apply exclusion-term filtering to already-normalised evidence listings.
+
+    Returns (accepted_listings, rejected_rows).
+    Each rejected_row dict contains ``title`` and ``rejectReason``.
+
+    Useful for a second-pass filter at the worker level after the provider
+    has already produced MarketPriceEvidenceListing objects.
+    """
+    accepted: list[MarketPriceEvidenceListing] = []
+    rejected: list[dict[str, Any]] = []
+
+    for listing in listings:
+        reject_reason: Optional[str] = None
+        for term_key, pattern in EXCLUSION_TERM_PATTERNS.items():
+            if term_key in allow_exclusion_terms:
+                continue
+            if pattern.search(listing.title):
+                reject_reason = f"excluded:{term_key}"
+                break
+        if reject_reason is None:
+            accepted.append(listing)
+        else:
+            rejected.append({"title": listing.title, "rejectReason": reject_reason})
+
+    return accepted, rejected
+
+
+# ---------------------------------------------------------------------------
 # Batch helper
 # ---------------------------------------------------------------------------
 

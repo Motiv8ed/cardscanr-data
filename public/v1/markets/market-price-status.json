@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAtUtc": "2026-05-26T23:53:34Z",
-  "status": "enabled_manual_import",
+  "generatedAtUtc": "2026-05-27T01:24:25Z",
+  "status": "enabled_foundation",
   "supportedMarkets": [
     "AU",
     "US",
@@ -18,10 +18,10 @@
   },
   "liveEbayWorkerStatus": "planned_disabled",
   "legalTermsReviewRequiredBeforeLiveScraping": true,
-  "lastWorkerRunAtUtc": "2026-05-26T09:45:29Z",
+  "lastWorkerRunAtUtc": "2026-05-27T01:24:25Z",
   "notes": [
     "Live eBay scraping is disabled and not implemented in this foundation.",
-    "Manual sold-listing import is enabled via tools/import_manual_sold_listings.py.",
+    "Only mock/manual providers may write market price outputs in this phase.",
     "Do not overwrite EN/JP provider current prices; market prices are stored separately."
   ],
   "lastWorkerProvider": "mock",

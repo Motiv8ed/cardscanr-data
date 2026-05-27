@@ -403,6 +403,64 @@ def build_jobs(
     return jobs
 
 
+def aggregate_evidence_listings(listings: list[Any]) -> MarketPriceAggregate:
+    """
+    Aggregate MarketPriceEvidenceListing objects into a MarketPriceAggregate.
+
+    Accepts any objects that have ``total_price`` (float), ``listing_url`` (str),
+    ``sold_date`` (str ISO-8601), and ``shipping_price`` (float) attributes —
+    matching the MarketPriceEvidenceListing dataclass from
+    market_pricing_provider_contracts.
+    """
+    if not listings:
+        return MarketPriceAggregate(
+            status="no_results",
+            sample_count=0,
+            median_price=None,
+            average_price=None,
+            low_price=None,
+            high_price=None,
+            sold_date_from=None,
+            sold_date_to=None,
+            evidence_links=[],
+            confidence_score=0.0,
+            confidence_label="low",
+            outlier_filtering_notes="No sold-listing evidence returned.",
+            shipping_included=False,
+        )
+
+    totals = [item.total_price for item in listings]
+    filtered_totals = sorted(_drop_outliers_iqr(totals))
+    used_outlier_filter = len(filtered_totals) != len(totals)
+    if not filtered_totals:
+        filtered_totals = sorted(totals)
+
+    sample_count = len(filtered_totals)
+    status = "priced" if sample_count >= 3 else "insufficient_data"
+
+    confidence_score = min(1.0, round(0.25 + (sample_count * 0.12), 2))
+    confidence_label = confidence_from_score(confidence_score)
+    sold_dates = sorted(item.sold_date for item in listings if item.sold_date)
+
+    return MarketPriceAggregate(
+        status=status,
+        sample_count=sample_count,
+        median_price=round(float(median(filtered_totals)), 2),
+        average_price=round(float(mean(filtered_totals)), 2),
+        low_price=round(float(min(filtered_totals)), 2),
+        high_price=round(float(max(filtered_totals)), 2),
+        sold_date_from=sold_dates[0] if sold_dates else None,
+        sold_date_to=sold_dates[-1] if sold_dates else None,
+        evidence_links=[item.listing_url for item in listings][:25],
+        confidence_score=confidence_score,
+        confidence_label=confidence_label,
+        outlier_filtering_notes=(
+            "Applied IQR outlier filter to sold totals." if used_outlier_filter else "No outliers removed."
+        ),
+        shipping_included=all(getattr(item, "shipping_price", 1.0) == 0.0 for item in listings),
+    )
+
+
 def aggregate_listings(listings: list[SoldListingEvidence]) -> MarketPriceAggregate:
     if not listings:
         return MarketPriceAggregate(
