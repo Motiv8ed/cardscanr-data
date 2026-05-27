@@ -74,6 +74,9 @@ ZIP_FILES_DEFAULT: list[str] = [
     "reports/market_price_engine_local_latest.json",
     "reports/manual_sold_listing_import_latest.json",
     "reports/manual_sold_listing_import_latest.md",
+    "reports/market_price_provider_capabilities_latest.json",
+    "reports/market_price_provider_capabilities_latest.md",
+    "docs/market_pricing/PROVIDER_ADAPTER_DESIGN.md",
     # Public v1 status/index files (small, safe)
     "public/v1/provider-catalog/pokewallet/status.json",
     "public/v1/provider-catalog/pokewallet/languages-summary.json",
@@ -857,6 +860,23 @@ def _collect_market_pricing_foundation() -> dict[str, Any]:
         "workerGeneratedAtUtc": (worker_latest or {}).get("generatedAtUtc") if isinstance(worker_latest, dict) else None,
         "jobReportGeneratedAtUtc": (worker_jobs or {}).get("generatedAtUtc") if isinstance(worker_jobs, dict) else None,
         "warning": "Live eBay scraping is not enabled yet."
+    }
+
+
+def _collect_provider_capabilities_summary() -> dict[str, Any]:
+    caps_report = _load_json("reports/market_price_provider_capabilities_latest.json")
+    if caps_report is None:
+        return {"available": False}
+    summary = caps_report.get("summary") if isinstance(caps_report.get("summary"), dict) else {}
+    return {
+        "available": True,
+        "liveEbayScrapingEnabled": caps_report.get("liveEbayScrapingEnabled", False),
+        "liveEbayWarning": caps_report.get("liveEbayWarning", ""),
+        "enabledProviders": summary.get("enabledProviders", []),
+        "disabledProviders": summary.get("disabledProviders", []),
+        "registeredProviders": summary.get("registeredProviders", []),
+        "nextRecommendedProviderStep": summary.get("nextRecommendedProviderStep", ""),
+        "generatedAtUtc": caps_report.get("generatedAtUtc"),
     }
 
 
@@ -1707,14 +1727,18 @@ def _render_markdown(report: dict[str, Any]) -> str:
             a(f"- **Last run mode:** {manual_import.get('mode', 'n/a')}")
             a(f"- **Market / language:** {manual_import.get('market', 'n/a')} / {manual_import.get('language', 'n/a')}")
             a(f"- **Generated at:** {manual_import.get('generatedAtUtc', 'n/a')}")
-            a(f"- **Rows read / accepted / excluded:** "
-              f"{manual_import.get('rowsRead', 0)} / "
-              f"{manual_import.get('rowsAccepted', 0)} / "
-              f"{manual_import.get('rowsExcluded', 0)}")
-            a(f"- **Matched / unmatched / ambiguous:** "
-              f"{manual_import.get('rowsMatched', 0)} / "
-              f"{manual_import.get('rowsUnmatched', 0)} / "
-              f"{manual_import.get('rowsAmbiguous', 0)}")
+            a(
+                f"- **Rows read / accepted / excluded:** "
+                f"{manual_import.get('rowsRead', 0)} / "
+                f"{manual_import.get('rowsAccepted', 0)} / "
+                f"{manual_import.get('rowsExcluded', 0)}"
+            )
+            a(
+                f"- **Matched / unmatched / ambiguous:** "
+                f"{manual_import.get('rowsMatched', 0)} / "
+                f"{manual_import.get('rowsUnmatched', 0)} / "
+                f"{manual_import.get('rowsAmbiguous', 0)}"
+            )
             a(f"- **Aggregates built:** {manual_import.get('aggregatesBuilt', 0)}")
             exclusion_reasons = manual_import.get("exclusionReasons", {})
             if exclusion_reasons:
@@ -1723,7 +1747,27 @@ def _render_markdown(report: dict[str, Any]) -> str:
             if write_targets:
                 a(f"- **Write targets ({len(write_targets)}):** {', '.join(str(t) for t in write_targets[:5])}")
         else:
-            a("- **No run report found.** Run: `python tools/import_manual_sold_listings.py --market AU --language en --input data/manual_market_prices/examples/sample_sold_listings.csv --dry-run`")
+            a(
+                "- **No run report found.** Run: "
+                "`python tools/import_manual_sold_listings.py --market AU --language en "
+                "--input data/manual_market_prices/examples/sample_sold_listings.csv --dry-run`"
+            )
+        a("")
+
+    provider_caps = report.get("providerCapabilities", {})
+    if provider_caps:
+        a("## Market Price Provider Capabilities")
+        a("")
+        live_flag = "disabled" if not provider_caps.get("liveEbayScrapingEnabled", False) else "enabled"
+        a(f"- **Live eBay scraping:** {live_flag}")
+        if provider_caps.get("liveEbayWarning"):
+            a(f"- **Warning:** {provider_caps['liveEbayWarning']}")
+        enabled = provider_caps.get("enabledProviders", [])
+        disabled = provider_caps.get("disabledProviders", [])
+        a(f"- **Enabled providers:** {', '.join(enabled) if enabled else 'none'}")
+        a(f"- **Disabled providers:** {', '.join(disabled) if disabled else 'none'}")
+        if provider_caps.get("nextRecommendedProviderStep"):
+            a(f"- **Next provider step:** {provider_caps['nextRecommendedProviderStep']}")
         a("")
 
     # Next action
@@ -1818,6 +1862,7 @@ def main() -> None:
     market_pricing_foundation_info = _collect_market_pricing_foundation()
     local_market_engine_runner_info = _collect_local_market_engine_runner()
     manual_sold_listing_import_info = _collect_manual_sold_listing_import_report()
+    provider_capabilities_info = _collect_provider_capabilities_summary()
     v1_info = _collect_v1_counts()
     app_catalogue_counts = _collect_app_catalogue_counts()
     image_manifest_counts = _collect_image_manifest_counts()
@@ -1871,6 +1916,7 @@ def main() -> None:
         "marketPricingFoundation": market_pricing_foundation_info,
         "localMarketEngineRunner": local_market_engine_runner_info,
         "manualSoldListingImport": manual_sold_listing_import_info,
+        "providerCapabilities": provider_capabilities_info,
         "v1": v1_info,
         "nextRecommendedAction": next_action,
     }

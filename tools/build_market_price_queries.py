@@ -27,6 +27,125 @@ REPORT_MD_PATH = ROOT / "reports" / "market_price_query_samples_latest.md"
 SAMPLE_MARKETS = ["au", "us", "gb", "ca"]
 
 
+# ---------------------------------------------------------------------------
+# Query builder v2 — provider-ready multi-strategy queries
+# ---------------------------------------------------------------------------
+
+_MARKET_EBAY_META: dict[str, dict[str, str]] = {
+    "AU": {"domain": "www.ebay.com.au", "marketplace": "EBAY_AU", "currency": "AUD"},
+    "US": {"domain": "www.ebay.com",    "marketplace": "EBAY_US", "currency": "USD"},
+    "GB": {"domain": "www.ebay.co.uk",  "marketplace": "EBAY_GB", "currency": "GBP"},
+    "CA": {"domain": "www.ebay.ca",     "marketplace": "EBAY_CA", "currency": "CAD"},
+    "EU": {"domain": "www.ebay.ie",     "marketplace": "EBAY_EU", "currency": "EUR"},
+}
+
+
+def build_provider_queries(
+    *,
+    market: str,
+    card_name: str,
+    set_name: str,
+    collector_number: str,
+    language: str = "en",
+    variant: str = "raw",
+    condition: str = "near_mint",
+    graded: bool = False,
+    exclusion_terms: list[str] | None = None,
+    include_damaged: bool = False,
+) -> dict[str, Any]:
+    """
+    Build provider-ready query variants for a single card + market combination.
+
+    Returns a dict with:
+    - ``market`` — normalised market code
+    - ``marketplace`` — canonical marketplace slug (e.g. EBAY_AU)
+    - ``domain`` — eBay domain string (informational, not opened)
+    - ``currency``
+    - ``exclusionTerms`` — list of ``-term`` exclusion strings
+    - ``queries.base`` — full query with all tokens
+    - ``queries.exact`` — tight query using quoted card + set tokens
+    - ``queries.broad`` — fallback query with fewer tokens
+    - ``qualityWarnings`` — list of strings when card identity is weak
+
+    No network calls are made.  No URLs are opened.
+    """
+    market_upper = market.strip().upper()
+    meta = _MARKET_EBAY_META.get(market_upper, _MARKET_EBAY_META["US"])
+
+    exclusions: list[str] = list(exclusion_terms or BANNED_TERMS)
+    if not include_damaged and condition.lower() != "damaged":
+        exclusions.append("damaged")
+    exclusion_tokens = [f"-{t}" for t in exclusions]
+
+    warnings: list[str] = []
+    if not card_name or card_name.strip() in {"", "unknown"}:
+        warnings.append("card_name is missing or unknown — query quality will be poor")
+    if not set_name or set_name.strip() in {"", "unknown"}:
+        warnings.append("set_name is missing or unknown — broad fallback will be used")
+    if not collector_number:
+        warnings.append("collector_number missing — cannot build exact query")
+
+    # Graded tokens
+    graded_tokens = ["graded", "psa", "bgs"] if graded else ["raw"]
+
+    # Base query: all identity tokens + graded state + condition + exclusions
+    base_tokens: list[str] = []
+    if card_name:
+        base_tokens.append(f'"{card_name}"')
+    if set_name:
+        base_tokens.append(f'"{set_name}"')
+    if collector_number:
+        base_tokens.append(f'"{collector_number}"')
+    base_tokens += ["pokemon", "card", language, variant]
+    base_tokens += graded_tokens
+    if condition:
+        base_tokens.append(condition.replace("_", " "))
+    base_tokens += exclusion_tokens
+    base_query = " ".join(t for t in base_tokens if t)
+
+    # Exact query: quoted card name + set + collector only
+    exact_tokens: list[str] = []
+    if card_name:
+        exact_tokens.append(f'"{card_name}"')
+    if set_name:
+        exact_tokens.append(f'"{set_name}"')
+    if collector_number:
+        exact_tokens.append(collector_number)
+    exact_tokens += ["pokemon", "sold"] + graded_tokens + exclusion_tokens
+    exact_query = " ".join(t for t in exact_tokens if t)
+
+    # Broad fallback: card name only + pokemon + exclusions
+    broad_tokens: list[str] = []
+    if card_name:
+        broad_tokens.append(card_name)
+    broad_tokens += ["pokemon", "card"] + graded_tokens + exclusion_tokens
+    broad_query = " ".join(t for t in broad_tokens if t)
+
+    return {
+        "market": market_upper,
+        "marketplace": meta["marketplace"],
+        "domain": meta["domain"],
+        "currency": meta["currency"],
+        "exclusionTerms": exclusion_tokens,
+        "queries": {
+            "base": base_query,
+            "exact": exact_query,
+            "broad": broad_query,
+        },
+        "queryMeta": {
+            "language": language,
+            "variant": variant,
+            "condition": condition,
+            "graded": graded,
+            "cardName": card_name,
+            "setName": set_name,
+            "collectorNumber": collector_number,
+        },
+        "qualityWarnings": warnings,
+        "liveEbayEnabled": False,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build market pricing query samples")
     parser.add_argument("--market", default="AU", help="Target market (AU/US/GB/CA/EU)")
