@@ -16,6 +16,7 @@ from .models import (
     ProviderResult,
 )
 from .pricing_stats import calculate_pricing_stats
+from .providers.errors import ProviderError, sanitize_provider_diagnostics
 
 
 def utc_now() -> datetime:
@@ -216,6 +217,15 @@ class MarketPriceJobRunner:
                 "status": "completed",
             }
         except Exception as exc:
+            provider_diagnostics: dict[str, Any] | None = None
+            if isinstance(exc, ProviderError):
+                provider_diagnostics = sanitize_provider_diagnostics(
+                    {
+                        "providerErrorCode": exc.error_code,
+                        "retryable": exc.retryable,
+                        "diagnostics": exc.diagnostics,
+                    }
+                )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
             fail_job_error: str | None = None
             try:
@@ -229,6 +239,8 @@ class MarketPriceJobRunner:
                 "status": "failed",
                 "error": str(exc),
             }
+            if provider_diagnostics:
+                result["providerDiagnostics"] = provider_diagnostics
             if fail_job_error:
                 result["failJobError"] = fail_job_error
             return result

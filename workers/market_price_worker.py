@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
-from cardscanr_market_engine.providers import MockMarketCompsProvider
+from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 
@@ -35,7 +35,7 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the CardScanR market price worker in mock mode.")
+    parser = argparse.ArgumentParser(description="Run the CardScanR market price worker.")
     parser.add_argument("--once", action="store_true", help="Process one poll cycle and exit.")
     parser.add_argument("--max-cycles", type=int, default=0, help="Optional cycle limit for loop mode.")
     parser.add_argument("--max-jobs", type=int, default=0, help="Override MARKET_WORKER_MAX_JOBS_PER_RUN.")
@@ -46,10 +46,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     config = MarketEngineConfig.from_env(require_supabase=True)
-    if config.provider_name != "mock":
-        raise ValueError("Phase 2 supports MARKET_LOOKUP_PROVIDER=mock only")
     if config.worker_concurrency != 1:
-        print("[market-engine] MARKET_WORKER_CONCURRENCY>1 is not used in Phase 2; continuing sequentially.")
+        print("[market-engine] MARKET_WORKER_CONCURRENCY>1 is not used for local browser provider; continuing sequentially.")
 
     client = SupabaseMarketEngineClient(
         supabase_url=config.supabase_url,
@@ -57,7 +55,7 @@ def main() -> int:
     )
     runner = MarketPriceJobRunner(
         client=client,
-        provider=MockMarketCompsProvider(),
+        provider=create_market_comps_provider(config.provider_name),
         config=config,
     )
     poll_seconds = args.poll_seconds if args.poll_seconds > 0 else config.poll_seconds

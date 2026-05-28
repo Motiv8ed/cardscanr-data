@@ -27,7 +27,7 @@ if ($MaxCycles -gt 0) { $argsList += @("--max-cycles", [string]$MaxCycles) }
 if ($MaxJobs -gt 0) { $argsList += @("--max-jobs", [string]$MaxJobs) }
 if ($PollSeconds -gt 0) { $argsList += @("--poll-seconds", [string]$PollSeconds) }
 
-Write-Host "[market-engine] Running mock market price worker..."
+Write-Host "[market-engine] Running market price worker..."
 & $pythonPath @argsList
 if ($LASTEXITCODE -ne 0) {
     throw "market_price_worker.py failed with exit code $LASTEXITCODE"

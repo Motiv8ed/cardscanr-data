@@ -24,6 +24,11 @@ def _parse_positive_int(name: str, default: int) -> int:
     return value
 
 
+def _parse_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "true" if default else "false").strip().lower()
+    return raw in {"1", "true", "yes", "y", "on"}
+
+
 @dataclass(frozen=True)
 class MarketEngineConfig:
     supabase_url: str
@@ -41,6 +46,14 @@ class MarketEngineConfig:
     refresh_popular_cooldown_hours: int
     refresh_hot_card_cooldown_hours: int
     refresh_low_value_cooldown_hours: int
+    ebay_browser_headless: bool
+    ebay_browser_max_results: int
+    ebay_browser_timeout_seconds: int
+    ebay_browser_cooldown_seconds: int
+    ebay_browser_min_seconds_between_requests: int
+    ebay_browser_user_data_dir: str | None
+    provider_max_requests_per_minute: int
+    provider_max_requests_per_day: int
     reports_dir: Path
     latest_report_path: Path
     runs_report_path: Path
@@ -74,6 +87,16 @@ class MarketEngineConfig:
             refresh_popular_cooldown_hours=_parse_positive_int("MARKET_REFRESH_POPULAR_COOLDOWN_HOURS", 4),
             refresh_hot_card_cooldown_hours=_parse_positive_int("MARKET_REFRESH_HOT_CARD_COOLDOWN_HOURS", 2),
             refresh_low_value_cooldown_hours=_parse_positive_int("MARKET_REFRESH_LOW_VALUE_COOLDOWN_HOURS", 12),
+            ebay_browser_headless=_parse_bool("EBAY_BROWSER_HEADLESS", True),
+            ebay_browser_max_results=_parse_positive_int("EBAY_BROWSER_MAX_RESULTS", 30),
+            ebay_browser_timeout_seconds=_parse_positive_int("EBAY_BROWSER_TIMEOUT_SECONDS", 45),
+            ebay_browser_cooldown_seconds=_parse_positive_int("EBAY_BROWSER_COOLDOWN_SECONDS", 20),
+            ebay_browser_min_seconds_between_requests=_parse_positive_int(
+                "EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS", 20
+            ),
+            ebay_browser_user_data_dir=os.getenv("EBAY_BROWSER_USER_DATA_DIR", "").strip() or None,
+            provider_max_requests_per_minute=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE", 2),
+            provider_max_requests_per_day=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_DAY", 200),
             reports_dir=reports_dir,
             latest_report_path=reports_dir / "market_price_worker_latest.json",
             runs_report_path=reports_dir / "market_price_worker_runs.jsonl",
