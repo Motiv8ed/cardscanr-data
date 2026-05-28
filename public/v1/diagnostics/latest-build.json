@@ -1,7 +1,7 @@
 {
   "buildStatus": "success",
-  "builtAtUtc": "2026-05-26T20:21:15Z",
-  "cacheVersion": "2026.05.26.2021",
+  "builtAtUtc": "2026-05-28T10:28:21Z",
+  "cacheVersion": "2026.05.28.1028",
   "cardsPriced": 0,
   "cardsRequested": 4,
   "catalogueEnCardsFetched": 46417,
@@ -45,148 +45,127 @@
   "catalogueJpSourceStrategy": "tcgdex_set_details_plus_global_card_list",
   "catalogueJpStatus": "partial_built",
   "catalogueJpStoppedReason": "not_rebuilt",
-  "currentPriceEnBatchCursorAfter": 253,
-  "currentPriceEnBatchCursorBefore": 233,
+  "currentPriceEnBatchCursorAfter": 273,
+  "currentPriceEnBatchCursorBefore": 253,
   "currentPriceEnBatchEnabled": true,
   "currentPriceEnBatchSetIds": [
-    "mcd21",
-    "mcd22",
-    "mcdp",
-    "mcrp",
-    "mcvs",
-    "me03",
-    "me1",
-    "me2",
-    "me2pt5",
-    "me3",
-    "me4",
-    "med",
-    "mep",
-    "mps",
-    "msd",
-    "nde",
-    "ndi",
-    "neo1",
-    "neo2",
-    "neo3"
+    "neo4",
+    "ng",
+    "np",
+    "nr",
+    "pccp",
+    "pgo",
+    "pkmsm",
+    "pkmtch",
+    "pl1",
+    "pl2",
+    "pl3",
+    "pl4",
+    "pop1",
+    "pop2",
+    "pop3",
+    "pop4",
+    "pop5",
+    "pop6",
+    "pop7",
+    "pop8"
   ],
   "currentPriceEnBatchSize": 20,
   "currentPriceEnBatchStrategy": "rotating_set_batch",
   "currentPriceEnCurrency": "USD",
   "currentPriceEnExpectedUpdateIntervalMinutes": 60,
   "currentPriceEnFailedTransientSetIds": [
-    "mcd22",
-    "mcdp",
-    "mcrp",
-    "mcvs",
-    "me03",
-    "me2pt5",
-    "me4",
-    "med",
-    "mep",
-    "mps",
-    "msd",
-    "nde",
-    "ndi",
-    "neo1",
-    "neo2",
-    "neo3"
+    "neo4",
+    "ng",
+    "pgo",
+    "pkmsm",
+    "pkmtch",
+    "pl1",
+    "pl2",
+    "pop2",
+    "pop3",
+    "pop4",
+    "pop5"
   ],
   "currentPriceEnFallbackReasons": [],
   "currentPriceEnFullRotationEstimatedHours": 20,
   "currentPriceEnKeptExistingSetIds": [
-    "mcd22",
-    "neo1",
-    "neo2",
-    "neo3"
+    "neo4",
+    "pgo",
+    "pl1",
+    "pl2",
+    "pop2",
+    "pop3",
+    "pop4",
+    "pop5"
   ],
-  "currentPriceEnPriceRecordsWritten": 574,
+  "currentPriceEnPriceRecordsWritten": 632,
   "currentPriceEnProcessedSetIds": [
-    "mcd21",
-    "mcd22",
-    "mcdp",
-    "mcrp",
-    "mcvs",
-    "me03",
-    "me1",
-    "me2",
-    "me2pt5",
-    "me3",
-    "me4",
-    "med",
-    "mep",
-    "mps",
-    "msd",
-    "nde",
-    "ndi",
-    "neo1",
-    "neo2",
-    "neo3"
+    "neo4",
+    "ng",
+    "np",
+    "nr",
+    "pccp",
+    "pgo",
+    "pkmsm",
+    "pkmtch",
+    "pl1",
+    "pl2",
+    "pl3",
+    "pl4",
+    "pop1",
+    "pop2",
+    "pop3",
+    "pop4",
+    "pop5",
+    "pop6",
+    "pop7",
+    "pop8"
   ],
   "currentPriceEnProviderFailureReasons": [
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcd22"
+      "setId": "neo4"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcdp"
+      "setId": "ng"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcrp"
+      "setId": "pgo"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcvs"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me03"
+      "setId": "pkmsm"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "me2pt5"
+      "setId": "pkmtch"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me4"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl1"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "med"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mep"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mps"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop3"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "msd"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop4"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "nde"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "ndi"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo1"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo2"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo3"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop5"
     }
   ],
   "currentPriceEnProviderPriority": [
@@ -197,21 +176,21 @@
     "pokewallet": 90
   },
   "currentPriceEnProviderRequestCounts": {
-    "pokemon_tcg_api": 26
+    "pokemon_tcg_api": 33
   },
   "currentPriceEnProviderUsed": [
     "pokemon_tcg_api"
   ],
   "currentPriceEnRateLimited": false,
   "currentPriceEnRequestCap": 90,
-  "currentPriceEnRequestsUsed": 26,
+  "currentPriceEnRequestsUsed": 33,
   "currentPriceEnRequirePokewallet": false,
   "currentPriceEnSetsAttempted": 20,
-  "currentPriceEnSetsFailedTransient": 16,
-  "currentPriceEnSetsKeptExisting": 4,
-  "currentPriceEnSetsUpdated": 3,
-  "currentPriceEnSetsWritten": 3,
-  "currentPriceEnSkippedNoPriceSets": 13,
+  "currentPriceEnSetsFailedTransient": 11,
+  "currentPriceEnSetsKeptExisting": 8,
+  "currentPriceEnSetsUpdated": 7,
+  "currentPriceEnSetsWritten": 7,
+  "currentPriceEnSkippedNoPriceSets": 5,
   "currentPriceEnSource": "pokemon_tcg_api",
   "currentPriceEnStatus": "partial_built",
   "currentPriceEnStopReason": "completed_with_transient_failures",
@@ -219,67 +198,47 @@
   "currentPriceEnTransientFailureReasons": [
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcd22"
+      "setId": "neo4"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcdp"
+      "setId": "ng"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcrp"
+      "setId": "pgo"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcvs"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me03"
+      "setId": "pkmsm"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "me2pt5"
+      "setId": "pkmtch"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me4"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl1"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "med"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mep"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mps"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop3"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "msd"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop4"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "nde"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "ndi"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo1"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo2"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo3"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop5"
     }
   ],
   "currentPriceJpPriceRecordsWritten": 0,
@@ -1705,13 +1664,13 @@
     "diagnostics"
   ],
   "errorCount": 0,
-  "fallbackTimeout": 5,
+  "fallbackTimeout": 11,
   "firstTrackedCreatedCount": 0,
   "livePriceCount": 0,
   "manualFallbackCount": 0,
   "noResultCount": 0,
   "pokemonTcgApiFallbackSets": 0,
-  "pokemonTcgApiRequestsAttempted": 26,
+  "pokemonTcgApiRequestsAttempted": 33,
   "pokewalletApiKeyPresent": false,
   "pokewalletEnabled": false,
   "pokewalletNoUsableRecords": 0,
@@ -1723,67 +1682,47 @@
   "providerFailureReasons": [
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcd22"
+      "setId": "neo4"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcdp"
+      "setId": "ng"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcrp"
+      "setId": "pgo"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcvs"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me03"
+      "setId": "pkmsm"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "me2pt5"
+      "setId": "pkmtch"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me4"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl1"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "med"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mep"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mps"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop3"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "msd"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop4"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "nde"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "ndi"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo1"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo2"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo3"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop5"
     }
   ],
   "providerFallbackReasons": [],
@@ -1796,21 +1735,21 @@
     "pokewallet": 90
   },
   "providerRequestCounts": {
-    "pokemon_tcg_api": 26
+    "pokemon_tcg_api": 33
   },
-  "providerRequestsAttempted": 26,
-  "providerRequestsFailed": 22,
-  "providerRequestsSucceeded": 4,
+  "providerRequestsAttempted": 33,
+  "providerRequestsFailed": 24,
+  "providerRequestsSucceeded": 9,
   "providerSourceCounts": {
-    "pokemon_tcg_api": 3
+    "pokemon_tcg_api": 7
   },
   "rateLimitStatus": "not_limited",
   "requestCap": 90,
-  "requestsUsed": 26,
+  "requestsUsed": 33,
   "setsAttempted": 20,
-  "setsFailedTransient": 16,
-  "setsKeptExisting": 4,
-  "setsUpdated": 3,
+  "setsFailedTransient": 11,
+  "setsKeptExisting": 8,
+  "setsUpdated": 7,
   "sourcesUsed": [],
   "stopReason": "completed_with_transient_failures",
   "tcgdexAttempted": 0,
@@ -1823,67 +1762,47 @@
   "transientFailureReasons": [
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcd22"
+      "setId": "neo4"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcdp"
+      "setId": "ng"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcrp"
+      "setId": "pgo"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "mcvs"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me03"
+      "setId": "pkmsm"
     },
     {
       "reason": "pokemon_tcg_api_ReadTimeout",
-      "setId": "me2pt5"
+      "setId": "pkmtch"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "me4"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl1"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "med"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pl2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mep"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop2"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "mps"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop3"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "msd"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop4"
     },
     {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "nde"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "ndi"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo1"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo2"
-    },
-    {
-      "reason": "pokemon_tcg_api_HTTPError",
-      "setId": "neo3"
+      "reason": "pokemon_tcg_api_ReadTimeout",
+      "setId": "pop5"
     }
   ]
 }
