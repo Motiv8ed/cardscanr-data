@@ -36,6 +36,11 @@ class MarketEngineConfig:
     medium_confidence_hours: int
     low_confidence_hours: int
     no_comps_hours: int
+    refresh_default_cooldown_hours: int
+    refresh_high_value_cooldown_hours: int
+    refresh_popular_cooldown_hours: int
+    refresh_hot_card_cooldown_hours: int
+    refresh_low_value_cooldown_hours: int
     reports_dir: Path
     latest_report_path: Path
     runs_report_path: Path
@@ -64,6 +69,11 @@ class MarketEngineConfig:
             medium_confidence_hours=_parse_positive_int("MARKET_CACHE_MEDIUM_CONFIDENCE_HOURS", 12),
             low_confidence_hours=_parse_positive_int("MARKET_CACHE_LOW_CONFIDENCE_HOURS", 6),
             no_comps_hours=_parse_positive_int("MARKET_CACHE_NO_COMPS_HOURS", 3),
+            refresh_default_cooldown_hours=_parse_positive_int("MARKET_REFRESH_DEFAULT_COOLDOWN_HOURS", 6),
+            refresh_high_value_cooldown_hours=_parse_positive_int("MARKET_REFRESH_HIGH_VALUE_COOLDOWN_HOURS", 4),
+            refresh_popular_cooldown_hours=_parse_positive_int("MARKET_REFRESH_POPULAR_COOLDOWN_HOURS", 4),
+            refresh_hot_card_cooldown_hours=_parse_positive_int("MARKET_REFRESH_HOT_CARD_COOLDOWN_HOURS", 2),
+            refresh_low_value_cooldown_hours=_parse_positive_int("MARKET_REFRESH_LOW_VALUE_COOLDOWN_HOURS", 12),
             reports_dir=reports_dir,
             latest_report_path=reports_dir / "market_price_worker_latest.json",
             runs_report_path=reports_dir / "market_price_worker_runs.jsonl",

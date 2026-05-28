@@ -150,6 +150,7 @@ class MarketEngineSchedulerTests(unittest.TestCase):
                 "id": "k1",
                 "has_cache": True,
                 "stale_after": iso(self.now + timedelta(hours=8)),
+                "last_updated_at": iso(self.now - timedelta(hours=1)),
                 "current_market_price": 25,
                 "recommended_price": 24,
                 "popularity_score": 10,
@@ -159,6 +160,44 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         )
         self.assertFalse(decision.should_enqueue)
         self.assertEqual(decision.reason, "fresh_cache")
+
+    def test_scheduler_uses_policy_cooldown_for_cache_freshness(self) -> None:
+        scheduler = self.scheduler_for(FakeSchedulerClient())
+        decision = scheduler.evaluate_candidate(
+            {
+                "id": "k1",
+                "has_cache": True,
+                "stale_after": iso(self.now - timedelta(hours=1)),
+                "last_updated_at": iso(self.now - timedelta(hours=2)),
+                "current_market_price": 25,
+                "recommended_price": 24,
+                "popularity_score": 0,
+                "inventory_count": 0,
+            },
+            now=self.now,
+        )
+        self.assertFalse(decision.should_enqueue)
+        self.assertEqual(decision.reason, "fresh_cache")
+        self.assertEqual(decision.details["cooldown_hours"], 6)
+
+    def test_scheduler_allows_hot_card_after_shorter_policy_cooldown(self) -> None:
+        scheduler = self.scheduler_for(FakeSchedulerClient())
+        decision = scheduler.evaluate_candidate(
+            {
+                "id": "k1",
+                "has_cache": True,
+                "stale_after": iso(self.now + timedelta(hours=8)),
+                "last_updated_at": iso(self.now - timedelta(hours=3)),
+                "current_market_price": 150,
+                "recommended_price": 145,
+                "popularity_score": 10,
+                "inventory_count": 0,
+            },
+            now=self.now,
+        )
+        self.assertTrue(decision.should_enqueue)
+        self.assertEqual(decision.priority, 80)
+        self.assertEqual(decision.details["cooldown_hours"], 2)
 
     def test_active_job_is_skipped_and_reported(self) -> None:
         key_id = "k-active"

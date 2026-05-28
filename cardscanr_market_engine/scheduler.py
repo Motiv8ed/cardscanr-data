@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import REPORTS_DIR
+from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
 
 
@@ -169,6 +170,7 @@ class MarketPriceRefreshScheduler:
         popular = popularity_score >= 15 or inventory_count >= 8
         recently_seen = self._is_recent(last_seen_at, now=now)
         very_old = self._is_old(last_seen_at, now=now)
+        last_updated_at = _parse_utc(candidate.get("last_updated_at"))
         score = 0
         if not has_cache:
             score += 1000
@@ -186,6 +188,7 @@ class MarketPriceRefreshScheduler:
             "has_cache": has_cache,
             "stale_after": utc_iso(stale_after) if stale_after else None,
             "is_stale": is_stale,
+            "last_updated_at": utc_iso(last_updated_at) if last_updated_at else None,
             "current_market_price": current_market_price,
             "recommended_price": recommended_price,
             "value_signal": value_signal,
@@ -201,7 +204,32 @@ class MarketPriceRefreshScheduler:
             reason = "missing_cache_recent" if recently_seen else "missing_cache"
             return SchedulerDecision(should_enqueue=True, priority=50, reason=reason, score=score, details=details)
 
-        if not is_stale:
+        policy = calculate_refresh_policy(
+            cache_row={
+                "last_updated_at": candidate.get("last_updated_at"),
+                "current_market_price": candidate.get("current_market_price"),
+                "recommended_price": candidate.get("recommended_price"),
+            },
+            price_key_row={
+                "popularity_score": popularity_score,
+                "inventory_count": inventory_count,
+            },
+            active_job=None,
+            now=now,
+            request_reason="scheduler",
+            force=False,
+            config=RefreshCooldownConfig.from_env(),
+        )
+        details.update(
+            {
+                "cooldown_hours": policy.cooldown_hours,
+                "cooldown_until": utc_iso(policy.cooldown_until) if policy.cooldown_until else None,
+                "cooldown_reason": policy.reason,
+                "cache_is_fresh": policy.cache_is_fresh,
+            }
+        )
+
+        if not policy.can_refresh:
             return SchedulerDecision(
                 should_enqueue=False,
                 priority=None,
@@ -270,12 +298,20 @@ class MarketPriceRefreshScheduler:
                     "candidate_type": "missing_cache",
                 }
         if self.config.include_stale_cache:
-            for row in self.client.list_stale_cache_keys(
-                stale_before_iso=utc_iso(now),
-                limit=fetch_limit,
-                min_popularity_score=self.config.min_popularity_score,
-                min_inventory_count=self.config.min_inventory_count,
-            ):
+            if hasattr(self.client, "list_cache_refresh_candidates"):
+                cache_rows = self.client.list_cache_refresh_candidates(
+                    limit=fetch_limit,
+                    min_popularity_score=self.config.min_popularity_score,
+                    min_inventory_count=self.config.min_inventory_count,
+                )
+            else:
+                cache_rows = self.client.list_stale_cache_keys(
+                    stale_before_iso=utc_iso(now),
+                    limit=fetch_limit,
+                    min_popularity_score=self.config.min_popularity_score,
+                    min_inventory_count=self.config.min_inventory_count,
+                )
+            for row in cache_rows:
                 key_id = str(row.get("id", "")).strip()
                 if not key_id:
                     continue
@@ -292,6 +328,7 @@ class MarketPriceRefreshScheduler:
                     "stale_after": row.get("stale_after"),
                     "current_market_price": row.get("current_market_price"),
                     "recommended_price": row.get("recommended_price"),
+                    "last_updated_at": row.get("last_updated_at"),
                     "candidate_type": "stale_cache",
                 }
         candidates = list(rows.values())
