@@ -1,6 +1,6 @@
 {
   "fingerprint": "pokemon|en|smoke-test|001/999|smoke_test_charizard_ex|raw|raw|au|aud",
-  "finishedAtUtc": "2026-05-29T01:32:35.231367Z",
+  "finishedAtUtc": "2026-05-29T09:49:27.767320Z",
   "identity": {
     "card_name": "Smoke Test Charizard ex",
     "collector_number": "001/999",
@@ -15,7 +15,7 @@
   },
   "priceKeyId": "***REDACTED***",
   "provider": "mock",
-  "startedAtUtc": "2026-05-29T01:32:32.668789Z",
+  "startedAtUtc": "2026-05-29T09:49:24.207643Z",
   "status": "success",
   "steps": [
     {
@@ -24,7 +24,7 @@
     },
     {
       "dedupe_reused": true,
-      "job_id": "aed65033-d6e9-461b-ad06-72fa948a865c",
+      "job_id": "2b8654da-70d0-4aab-b6ec-f9498d93f326",
       "status": "queued",
       "step": "enqueue_dedupe_check"
     },
@@ -34,13 +34,13 @@
           "confidence": "high",
           "currency": "AUD",
           "includedCount": 9,
-          "jobId": "aed65033-d6e9-461b-ad06-72fa948a865c",
+          "jobId": "2b8654da-70d0-4aab-b6ec-f9498d93f326",
           "marketCountry": "AU",
           "marketplace": "EBAY_AU",
           "priceKeyId": "***REDACTED***",
-          "recommendedPrice": 48.99,
+          "recommendedPrice": 47.02,
           "rejectedCount": 6,
-          "snapshotId": "a6c0c499-928c-427d-ab37-1e9024d0ff90",
+          "snapshotId": "8a148219-3fa9-4880-b782-9a0ee59e5517",
           "status": "completed"
         }
       ],
@@ -58,8 +58,8 @@
       "step": "bundle_validation"
     },
     {
-      "first_job_id": "aed65033-d6e9-461b-ad06-72fa948a865c",
-      "new_job_id": "d9468f15-6893-4e3b-b95b-824d272a5105",
+      "first_job_id": "2b8654da-70d0-4aab-b6ec-f9498d93f326",
+      "new_job_id": "a5ec87f6-d5d5-4622-99b8-b49d6d14623e",
       "new_status": "queued",
       "step": "post_complete_enqueue_allowed"
     }

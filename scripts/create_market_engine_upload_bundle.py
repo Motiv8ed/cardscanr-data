@@ -20,6 +20,7 @@ SUPPORTED_KINDS = {
     "ebay_browser_debug",
     "ebay_browser_live_write_smoke",
     "ebay_browser_live_worker_batch",
+    "ebay_browser_live_scheduler",
     "market_price_engine_smoke",
 }
 MAX_JSONL_BYTES = 2_000_000
@@ -142,6 +143,13 @@ def _candidate_files(kind: str, *, root: Path, include_html: bool) -> list[Path]
         files.extend(debug_root.glob("**/screenshot.png"))
         if include_html:
             files.extend(debug_root.glob("**/page.html"))
+    elif kind == "ebay_browser_live_scheduler":
+        files.extend(
+            [
+                reports / "ebay_browser_live_scheduler_latest.json",
+                reports / "ebay_browser_live_scheduler_runs.jsonl",
+            ]
+        )
     elif kind == "market_price_engine_smoke":
         files.extend(
             [
@@ -157,6 +165,8 @@ def default_output_path(kind: str, *, root: Path) -> Path:
         return root / "reports" / "chatgpt_uploads" / "ebay_browser_market_matrix_latest.zip"
     if kind == "ebay_browser_live_worker_batch":
         return root / "reports" / "chatgpt_uploads" / "ebay_browser_live_worker_batch_latest.zip"
+    if kind == "ebay_browser_live_scheduler":
+        return root / "reports" / "chatgpt_uploads" / "ebay_browser_live_scheduler_latest.zip"
     return root / "reports" / "chatgpt_uploads" / f"{kind}_{utc_stamp()}.zip"
 
 

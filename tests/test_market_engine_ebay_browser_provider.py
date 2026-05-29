@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sys
@@ -36,6 +37,7 @@ from scripts.debug_ebay_browser_market_matrix import plan_market_matrix  # noqa:
 from scripts.smoke_ebay_browser_live_worker_batch import default_plan as live_worker_default_plan  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import parse_market_list as parse_worker_market_list  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import run_batch as run_live_worker_batch  # noqa: E402
+from scripts.smoke_ebay_browser_live_scheduler import run_live_scheduler  # noqa: E402
 from scripts.create_market_engine_upload_bundle import create_bundle  # noqa: E402
 from scripts.smoke_ebay_browser_live_write import _summarize_bundle  # noqa: E402
 from scripts.smoke_ebay_browser_live_write import _validation_flags  # noqa: E402
@@ -116,7 +118,7 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertEqual(provider.config.channel, "chrome")
 
     def test_default_profile_name_is_cardscanr(self) -> None:
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {"LIVE_EBAY_SCHEDULER_MAX_KEYS_SCANNED_PER_RUN": "25"}, clear=True):
             config = EbayBrowserProviderConfig.from_env()
         self.assertEqual(config.profile_name, "cardscanr")
 
@@ -825,6 +827,195 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(report["jobs_processed"], ["11111111-1111-1111-1111-111111111111"])
         self.assertTrue(report["markets"][0]["processed"])
 
+    def test_live_scheduler_refuses_real_enqueue_when_disabled_by_default(self) -> None:
+        import scripts.smoke_ebay_browser_live_scheduler as live_scheduler
+
+        fake_config = type(
+            "Config",
+            (),
+            {"provider_name": "ebay_browser", "supabase_url": "https://example.supabase.co", "supabase_service_role_key": "secret"},
+        )()
+        args = type("Args", (), {"markets": "AU", "max_enqueues": 2, "dry_run": False, "real_enqueue": True})()
+        with patch.dict(os.environ, {"ENABLE_EBAY_REAL_LOOKUP": "true"}, clear=True):
+            with patch.object(live_scheduler.MarketEngineConfig, "from_env", return_value=fake_config):
+                with self.assertRaises(RuntimeError):
+                    run_live_scheduler(args, client=object())
+
+    def test_live_scheduler_refuses_real_enqueue_without_confirmation(self) -> None:
+        import scripts.smoke_ebay_browser_live_scheduler as live_scheduler
+
+        fake_config = type(
+            "Config",
+            (),
+            {"provider_name": "ebay_browser", "supabase_url": "https://example.supabase.co", "supabase_service_role_key": "secret"},
+        )()
+        args = type("Args", (), {"markets": "AU", "max_enqueues": 2, "dry_run": False, "real_enqueue": True})()
+        with patch.dict(
+            os.environ,
+            {"ENABLE_EBAY_REAL_LOOKUP": "true", "ENABLE_LIVE_EBAY_SCHEDULER": "true"},
+            clear=True,
+        ):
+            with patch.object(live_scheduler.MarketEngineConfig, "from_env", return_value=fake_config):
+                with self.assertRaises(RuntimeError):
+                    run_live_scheduler(args, client=object())
+
+    def test_live_scheduler_dry_run_skips_and_does_not_enqueue(self) -> None:
+        import scripts.smoke_ebay_browser_live_scheduler as live_scheduler
+
+        class FakeClient:
+            def __init__(self) -> None:
+                self.requested: list[dict] = []
+
+            def list_missing_cache_keys(self, **_kwargs: object) -> list[dict]:
+                return [
+                    {"id": "k-au-missing", "fingerprint": "f-au", "market_country": "au", "currency": "aud"},
+                    {"id": "k-us-missing", "fingerprint": "f-us", "market_country": "us", "currency": "usd"},
+                ]
+
+            def list_cache_refresh_candidates(self, **_kwargs: object) -> list[dict]:
+                return [
+                    {"id": "k-au-fresh", "fingerprint": "f-au-fresh", "market_country": "au", "currency": "aud", "stale_after": "2099-01-01T00:00:00Z"},
+                    {"id": "k-au-active", "fingerprint": "f-au-active", "market_country": "au", "currency": "aud", "stale_after": "2020-01-01T00:00:00Z"},
+                ]
+
+            def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict:
+                return {"k-au-active": {"id": "job-active", "status": "queued"}}
+
+            def count_live_scheduler_jobs_today(self) -> int:
+                return 0
+
+            def get_price_key(self, price_key_id: str) -> MarketPriceKey:
+                return MarketPriceKey(
+                    id=price_key_id,
+                    game="pokemon",
+                    card_name="Charizard ex",
+                    normalized_card_name="charizard ex",
+                    set_name="Obsidian Flames",
+                    set_code="sv03",
+                    collector_number="125/197",
+                    language="en",
+                    variant="raw",
+                    condition="raw",
+                    market_country="au",
+                    currency="aud",
+                    fingerprint=f"fingerprint-{price_key_id}",
+                )
+
+            def request_market_price_refresh(self, **kwargs: object) -> dict:
+                self.requested.append(kwargs)
+                return {"action": "job_enqueued", "job_id": "job-1", "price_key_id": "k-au-missing"}
+
+        fake_config = type(
+            "Config",
+            (),
+            {"provider_name": "ebay_browser", "supabase_url": "https://example.supabase.co", "supabase_service_role_key": "secret"},
+        )()
+        args = type("Args", (), {"markets": "AU", "max_enqueues": 1, "dry_run": True, "real_enqueue": False})()
+        with patch.dict(os.environ, {"LIVE_EBAY_SCHEDULER_MAX_KEYS_SCANNED_PER_RUN": "25"}, clear=True):
+            with patch.object(live_scheduler.MarketEngineConfig, "from_env", return_value=fake_config):
+                client = FakeClient()
+                report = run_live_scheduler(args, client=client, now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc))
+        self.assertTrue(report["dryRun"])
+        self.assertEqual(report["summary"]["jobsWouldEnqueue"], 1)
+        self.assertEqual(report["summary"]["jobsEnqueued"], 0)
+        self.assertEqual(client.requested, [])
+        reasons = {item["fingerprint"]: item["reason"] for item in report["candidateDecisions"]}
+        self.assertEqual(reasons["f-us"], "market_not_allowed")
+        self.assertEqual(reasons["f-au-fresh"], "not_stale")
+        self.assertEqual(reasons["f-au-active"], "active_job_exists")
+
+    def test_live_scheduler_real_enqueue_uses_request_rpc(self) -> None:
+        import scripts.smoke_ebay_browser_live_scheduler as live_scheduler
+
+        class FakeClient:
+            def __init__(self) -> None:
+                self.requested: list[dict] = []
+
+            def list_missing_cache_keys(self, **_kwargs: object) -> list[dict]:
+                return [{"id": "k-au", "fingerprint": "f-au", "market_country": "au", "currency": "aud"}]
+
+            def list_cache_refresh_candidates(self, **_kwargs: object) -> list[dict]:
+                return []
+
+            def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict:
+                return {}
+
+            def count_live_scheduler_jobs_today(self) -> int:
+                return 0
+
+            def get_price_key(self, price_key_id: str) -> MarketPriceKey:
+                return MarketPriceKey(
+                    id=price_key_id,
+                    game="pokemon",
+                    card_name="Charizard ex",
+                    normalized_card_name="charizard ex",
+                    set_name="Obsidian Flames",
+                    set_code="sv03",
+                    collector_number="125/197",
+                    language="en",
+                    variant="raw",
+                    condition="raw",
+                    market_country="au",
+                    currency="aud",
+                    fingerprint="fingerprint-k-au",
+                )
+
+            def request_market_price_refresh(self, **kwargs: object) -> dict:
+                self.requested.append(kwargs)
+                return {"action": "job_enqueued", "job_id": "job-1", "price_key_id": "k-au"}
+
+        fake_config = type(
+            "Config",
+            (),
+            {"provider_name": "ebay_browser", "supabase_url": "https://example.supabase.co", "supabase_service_role_key": "secret"},
+        )()
+        args = type("Args", (), {"markets": "AU", "max_enqueues": 2, "dry_run": False, "real_enqueue": True})()
+        with patch.dict(
+            os.environ,
+            {
+                "ENABLE_EBAY_REAL_LOOKUP": "true",
+                "ENABLE_LIVE_EBAY_SCHEDULER": "true",
+                "CONFIRM_LIVE_EBAY_SCHEDULER": "true",
+                "LIVE_EBAY_SCHEDULER_DRY_RUN": "false",
+                "LIVE_EBAY_SCHEDULER_DAILY_ENQUEUE_CAP": "20",
+            },
+            clear=True,
+        ):
+            with patch.object(live_scheduler.MarketEngineConfig, "from_env", return_value=fake_config):
+                client = FakeClient()
+                report = run_live_scheduler(args, client=client, now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc))
+        self.assertEqual(report["summary"]["jobsEnqueued"], 1)
+        self.assertEqual(client.requested[0]["reason"], "live_ebay_scheduler")
+        self.assertFalse(client.requested[0]["force_refresh"])
+
+    def test_live_scheduler_daily_cap_skips(self) -> None:
+        import scripts.smoke_ebay_browser_live_scheduler as live_scheduler
+
+        class FakeClient:
+            def list_missing_cache_keys(self, **_kwargs: object) -> list[dict]:
+                return [{"id": "k-au", "fingerprint": "f-au", "market_country": "au", "currency": "aud"}]
+
+            def list_cache_refresh_candidates(self, **_kwargs: object) -> list[dict]:
+                return []
+
+            def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict:
+                return {}
+
+            def count_live_scheduler_jobs_today(self) -> int:
+                return 20
+
+        fake_config = type(
+            "Config",
+            (),
+            {"provider_name": "ebay_browser", "supabase_url": "https://example.supabase.co", "supabase_service_role_key": "secret"},
+        )()
+        args = type("Args", (), {"markets": "AU", "max_enqueues": 2, "dry_run": True, "real_enqueue": False})()
+        with patch.dict(os.environ, {"LIVE_EBAY_SCHEDULER_DAILY_ENQUEUE_CAP": "20"}, clear=True):
+            with patch.object(live_scheduler.MarketEngineConfig, "from_env", return_value=fake_config):
+                report = run_live_scheduler(args, client=FakeClient(), now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc))
+        self.assertEqual(report["summary"]["jobsWouldEnqueue"], 0)
+        self.assertEqual(report["summary"]["skipped"]["daily_cap_reached"], 1)
+
     def test_bulk_worker_requires_live_confirmation(self) -> None:
         import workers.market_price_worker as worker
 
@@ -906,6 +1097,24 @@ class ParserTests(unittest.TestCase):
                 self.assertIn("reports/ebay_browser_debug/live_worker_batch/latest/au/debug_summary.json", names)
                 self.assertFalse(any(".browser_profiles" in name for name in names))
                 latest = zip_file.read("reports/ebay_browser_live_worker_batch_latest.json").decode("utf-8")
+                self.assertIn("***REDACTED***", latest)
+                self.assertNotIn("secret", latest)
+
+    def test_live_scheduler_upload_bundle_excludes_secret_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reports = root / "reports"
+            reports.mkdir(parents=True)
+            (reports / "ebay_browser_live_scheduler_latest.json").write_text('{"apiKey":"secret","status":"success"}', encoding="utf-8")
+            (reports / "ebay_browser_live_scheduler_runs.jsonl").write_text('{"token":"secret"}\n', encoding="utf-8")
+            (root / ".browser_profiles" / "cardscanr").mkdir(parents=True)
+            (root / ".browser_profiles" / "cardscanr" / "Cookies").write_text("secret", encoding="utf-8")
+            bundle = create_bundle(kind="ebay_browser_live_scheduler", root=root)
+            with ZipFile(bundle) as zip_file:
+                names = set(zip_file.namelist())
+                self.assertIn("reports/ebay_browser_live_scheduler_latest.json", names)
+                self.assertFalse(any(".browser_profiles" in name for name in names))
+                latest = zip_file.read("reports/ebay_browser_live_scheduler_latest.json").decode("utf-8")
                 self.assertIn("***REDACTED***", latest)
                 self.assertNotIn("secret", latest)
 

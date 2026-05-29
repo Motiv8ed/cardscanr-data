@@ -69,6 +69,15 @@ class MarketEngineConfig:
     ebay_browser_user_data_dir: str | None
     provider_max_requests_per_minute: int
     provider_max_requests_per_day: int
+    enable_live_ebay_scheduler: bool
+    confirm_live_ebay_scheduler: bool
+    live_ebay_scheduler_markets: str
+    live_ebay_scheduler_max_enqueues_per_run: int
+    live_ebay_scheduler_max_keys_scanned_per_run: int
+    live_ebay_scheduler_min_cooldown_hours: int
+    live_ebay_scheduler_allow_force_refresh: bool
+    live_ebay_scheduler_dry_run: bool
+    live_ebay_scheduler_daily_enqueue_cap: int
     reports_dir: Path
     latest_report_path: Path
     runs_report_path: Path
@@ -117,6 +126,15 @@ class MarketEngineConfig:
             ebay_browser_user_data_dir=_parse_browser_user_data_dir(),
             provider_max_requests_per_minute=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE", 2),
             provider_max_requests_per_day=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_DAY", 200),
+            enable_live_ebay_scheduler=_parse_bool("ENABLE_LIVE_EBAY_SCHEDULER", False),
+            confirm_live_ebay_scheduler=_parse_bool("CONFIRM_LIVE_EBAY_SCHEDULER", False),
+            live_ebay_scheduler_markets=os.getenv("LIVE_EBAY_SCHEDULER_MARKETS", "AU").strip() or "AU",
+            live_ebay_scheduler_max_enqueues_per_run=_parse_positive_int("LIVE_EBAY_SCHEDULER_MAX_ENQUEUES_PER_RUN", 2),
+            live_ebay_scheduler_max_keys_scanned_per_run=_parse_positive_int("LIVE_EBAY_SCHEDULER_MAX_KEYS_SCANNED_PER_RUN", 25),
+            live_ebay_scheduler_min_cooldown_hours=_parse_positive_int("LIVE_EBAY_SCHEDULER_MIN_COOLDOWN_HOURS", 6),
+            live_ebay_scheduler_allow_force_refresh=_parse_bool("LIVE_EBAY_SCHEDULER_ALLOW_FORCE_REFRESH", False),
+            live_ebay_scheduler_dry_run=_parse_bool("LIVE_EBAY_SCHEDULER_DRY_RUN", True),
+            live_ebay_scheduler_daily_enqueue_cap=_parse_positive_int("LIVE_EBAY_SCHEDULER_DAILY_ENQUEUE_CAP", 20),
             reports_dir=reports_dir,
             latest_report_path=reports_dir / "market_price_worker_latest.json",
             runs_report_path=reports_dir / "market_price_worker_runs.jsonl",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import timezone
 import re
 from typing import Any
 
@@ -422,6 +423,19 @@ class SupabaseMarketEngineClient:
             params={"id": f"eq.{job_id}", "select": "*", "limit": 1},
         )
         return MarketPriceRefreshJob.from_row(rows[0]) if rows else None
+
+    def count_live_scheduler_jobs_today(self) -> int:
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={
+                "select": "id",
+                "reason": "eq.live_ebay_scheduler",
+                "requested_at": f"gte.{_iso_or_none(today)}",
+                "limit": 1000,
+            },
+        )
+        return len(rows)
 
     def insert_snapshot(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._table_post("market_price_snapshots", payload)[0]

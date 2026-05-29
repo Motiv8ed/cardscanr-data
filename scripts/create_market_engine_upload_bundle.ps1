@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("ebay_browser_market_matrix", "ebay_browser_debug", "ebay_browser_live_write_smoke", "ebay_browser_live_worker_batch", "market_price_engine_smoke")]
+    [ValidateSet("ebay_browser_market_matrix", "ebay_browser_debug", "ebay_browser_live_write_smoke", "ebay_browser_live_worker_batch", "ebay_browser_live_scheduler", "market_price_engine_smoke")]
     [string]$Kind,
     [switch]$IncludeHtml,
     [string]$Output = ""
