@@ -166,10 +166,16 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(client.cache_payload["currency"], "USD")
         self.assertEqual(client.cache_payload["market_country"], "US")
         self.assertEqual(client.cache_payload["marketplace"], "EBAY_US")
-        self.assertEqual(client.cache_payload["current_market_price"], 21.0)
+        self.assertEqual(client.cache_payload["current_market_price"], 20.0)
+        price_views = client.snapshot_payload["diagnostics_json"]["priceViews"]
+        self.assertEqual(price_views["priceBasis"], "item_price")
+        self.assertEqual(price_views["itemPrice"]["recommended"], 20.0)
+        self.assertEqual(price_views["landedPrice"]["recommended"], 21.0)
         self.assertEqual(len(client.evidence_rows or []), 3)
         self.assertEqual(client.evidence_rows[2]["rejection_reason"], "graded_for_raw_request")
         self.assertEqual(client.evidence_rows[0]["raw_json"]["providerDomain"], "ebay.com")
+        self.assertTrue(client.evidence_rows[0]["raw_json"]["compQuality"]["included"])
+        self.assertTrue(client.evidence_rows[0]["raw_json"]["compQuality"]["exact_card_match"])
         self.assertIsNotNone(client.completed)
         self.assertIsNone(client.failed)
 

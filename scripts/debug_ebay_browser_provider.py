@@ -98,9 +98,13 @@ def comp_to_dict(comp: Any) -> dict[str, Any]:
 
 def main() -> int:
     args = parse_args()
+    debug_dir = ROOT / "reports" / "ebay_browser_debug" / "latest"
+    import os
+    os.environ.setdefault("EBAY_BROWSER_DEBUG_ARTIFACT_DIR", str(debug_dir))
     request = build_request(args)
     query = build_provider_search_query(request)
     provider = create_market_comps_provider("ebay_browser")
+    browser_config = getattr(getattr(provider, "config", None), "safe_diagnostics", lambda: {})()
     result = provider.fetch_comps(request)
     payload = sanitize_provider_diagnostics(
         {
@@ -108,6 +112,14 @@ def main() -> int:
             "finishedAtUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "provider": result.provider_name,
             "marketplace": result.marketplace,
+            "browserConfig": browser_config,
+            "debugArtifacts": {
+                "directory": str(debug_dir),
+                "pageHtml": str(debug_dir / "page.html"),
+                "screenshot": str(debug_dir / "screenshot.png"),
+                "summary": str(debug_dir / "debug_summary.json"),
+                "runsJsonl": str(ROOT / "reports" / "ebay_browser_debug" / "runs.jsonl"),
+            },
             "query": {
                 "query_text": query.query_text,
                 "search_url": query.search_url,

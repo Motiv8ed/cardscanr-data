@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 from urllib.parse import urlencode
 
 from ..models import ProviderRequest
@@ -48,6 +49,11 @@ def _is_graded_condition(value: object) -> bool:
     return any(marker in text for marker in GRADED_MARKERS)
 
 
+def _use_negative_terms() -> bool:
+    raw = os.getenv("EBAY_QUERY_USE_NEGATIVE_TERMS", "true").strip().lower()
+    return raw in {"1", "true", "yes", "y", "on"}
+
+
 def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery:
     key = request.price_key
     include_terms = tuple(
@@ -62,7 +68,10 @@ def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery
     )
     graded = _is_graded_condition(key.condition) or _is_graded_condition(key.variant)
     exclude_terms = tuple(term for term in RAW_EXCLUDE_TERMS if not (graded and term in GRADED_MARKERS))
-    query_text = " ".join((*include_terms, *(f"-{term}" for term in exclude_terms)))
+    query_terms = list(include_terms)
+    if _use_negative_terms():
+        query_terms.extend(f"-{term}" for term in exclude_terms)
+    query_text = " ".join(query_terms)
     params = {
         "_nkw": query_text,
         "LH_Sold": "1",
@@ -80,6 +89,7 @@ def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery
         market_country=request.market_country.upper(),
         diagnostics={
             "graded": graded,
+            "useNegativeTerms": _use_negative_terms(),
             "marketplace": request.marketplace,
             "searchLocale": request.search_locale,
             "displayName": request.display_name,

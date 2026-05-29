@@ -14,6 +14,8 @@ except Exception:
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = ROOT / "reports"
+DEFAULT_EBAY_BROWSER_PROFILE_NAME = "cardscanr"
+DEFAULT_EBAY_BROWSER_USER_DATA_DIR = ROOT / ".browser_profiles" / DEFAULT_EBAY_BROWSER_PROFILE_NAME
 
 
 def _parse_positive_int(name: str, default: int) -> int:
@@ -27,6 +29,16 @@ def _parse_positive_int(name: str, default: int) -> int:
 def _parse_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name, "true" if default else "false").strip().lower()
     return raw in {"1", "true", "yes", "y", "on"}
+
+
+def _parse_browser_user_data_dir() -> str:
+    raw = os.getenv("EBAY_BROWSER_USER_DATA_DIR", "").strip()
+    if not raw:
+        return str(DEFAULT_EBAY_BROWSER_USER_DATA_DIR)
+    path = Path(raw)
+    if not path.is_absolute():
+        path = ROOT / path
+    return str(path)
 
 
 @dataclass(frozen=True)
@@ -47,6 +59,9 @@ class MarketEngineConfig:
     refresh_hot_card_cooldown_hours: int
     refresh_low_value_cooldown_hours: int
     ebay_browser_headless: bool
+    ebay_browser_engine: str
+    ebay_browser_channel: str
+    ebay_browser_profile_name: str
     ebay_browser_max_results: int
     ebay_browser_timeout_seconds: int
     ebay_browser_cooldown_seconds: int
@@ -88,13 +103,18 @@ class MarketEngineConfig:
             refresh_hot_card_cooldown_hours=_parse_positive_int("MARKET_REFRESH_HOT_CARD_COOLDOWN_HOURS", 2),
             refresh_low_value_cooldown_hours=_parse_positive_int("MARKET_REFRESH_LOW_VALUE_COOLDOWN_HOURS", 12),
             ebay_browser_headless=_parse_bool("EBAY_BROWSER_HEADLESS", True),
+            ebay_browser_engine=os.getenv("EBAY_BROWSER_ENGINE", "chrome").strip().lower() or "chrome",
+            ebay_browser_channel=os.getenv("EBAY_BROWSER_CHANNEL", "chrome").strip().lower() or "chrome",
+            ebay_browser_profile_name=os.getenv(
+                "EBAY_BROWSER_PROFILE_NAME", DEFAULT_EBAY_BROWSER_PROFILE_NAME
+            ).strip() or DEFAULT_EBAY_BROWSER_PROFILE_NAME,
             ebay_browser_max_results=_parse_positive_int("EBAY_BROWSER_MAX_RESULTS", 30),
             ebay_browser_timeout_seconds=_parse_positive_int("EBAY_BROWSER_TIMEOUT_SECONDS", 45),
             ebay_browser_cooldown_seconds=_parse_positive_int("EBAY_BROWSER_COOLDOWN_SECONDS", 20),
             ebay_browser_min_seconds_between_requests=_parse_positive_int(
                 "EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS", 20
             ),
-            ebay_browser_user_data_dir=os.getenv("EBAY_BROWSER_USER_DATA_DIR", "").strip() or None,
+            ebay_browser_user_data_dir=_parse_browser_user_data_dir(),
             provider_max_requests_per_minute=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE", 2),
             provider_max_requests_per_day=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_DAY", 200),
             reports_dir=reports_dir,

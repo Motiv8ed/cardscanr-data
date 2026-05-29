@@ -9,12 +9,40 @@ import requests
 from .models import MarketPriceKey, MarketPriceRefreshJob
 
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F-]{1,64}$")
+MAX_ERROR_BODY_CHARS = 4000
 
 
 def _iso_or_none(value: datetime | None) -> str | None:
     if value is None:
         return None
     return value.astimezone().isoformat().replace("+00:00", "Z")
+
+
+def _response_body_for_error(response: requests.Response) -> str:
+    try:
+        text = response.text
+    except Exception:
+        return "<unavailable>"
+    if len(text) > MAX_ERROR_BODY_CHARS:
+        return text[:MAX_ERROR_BODY_CHARS] + "...<truncated>"
+    return text
+
+
+def _payload_keys(payload: dict[str, Any]) -> list[str]:
+    return sorted(str(key) for key in payload.keys())
+
+
+class SupabaseRpcError(requests.HTTPError):
+    def __init__(self, *, rpc_name: str, response: requests.Response, payload: dict[str, Any]) -> None:
+        self.rpc_name = rpc_name
+        self.status_code = response.status_code
+        self.response_body = _response_body_for_error(response)
+        self.payload_keys = _payload_keys(payload)
+        message = (
+            f"Supabase RPC '{rpc_name}' failed with status_code={self.status_code}; "
+            f"response_body={self.response_body!r}; payload_keys={self.payload_keys}"
+        )
+        super().__init__(message, response=response)
 
 
 class SupabaseMarketEngineClient:
@@ -37,7 +65,8 @@ class SupabaseMarketEngineClient:
             headers={"Prefer": "return=representation"},
             timeout=self.timeout_seconds,
         )
-        response.raise_for_status()
+        if response.status_code >= 400:
+            raise SupabaseRpcError(rpc_name=name, response=response, payload=payload)
         return response.json()
 
     def _table_get(self, table: str, *, params: dict[str, Any]) -> list[dict[str, Any]]:
@@ -65,6 +94,20 @@ class SupabaseMarketEngineClient:
             params=params,
             json=payload,
             headers={"Prefer": prefer},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, list):
+            return data
+        return [data]
+
+    def _table_patch(self, table: str, payload: dict[str, Any], *, params: dict[str, Any]) -> list[dict[str, Any]]:
+        response = self.session.patch(
+            f"{self.supabase_url}/rest/v1/{table}",
+            params=params,
+            json=payload,
+            headers={"Prefer": "return=representation"},
             timeout=self.timeout_seconds,
         )
         response.raise_for_status()
@@ -162,6 +205,47 @@ class SupabaseMarketEngineClient:
         if "id" not in row or "status" not in row:
             raise ValueError("enqueue_market_price_refresh returned row missing id/status")
         return row
+
+    def request_market_price_refresh(
+        self,
+        *,
+        game: str,
+        card_name: str,
+        normalized_card_name: str,
+        set_name: str,
+        set_code: str,
+        collector_number: str,
+        language: str,
+        variant: str,
+        condition: str,
+        market_country: str,
+        currency: str,
+        fingerprint: str,
+        reason: str = "live_ebay_write_smoke",
+        force_refresh: bool = False,
+    ) -> dict[str, Any]:
+        result = self._rpc(
+            "request_market_price_refresh",
+            {
+                "p_game": game,
+                "p_card_name": card_name,
+                "p_normalized_card_name": normalized_card_name,
+                "p_set_name": set_name,
+                "p_set_code": set_code,
+                "p_collector_number": collector_number,
+                "p_language": language,
+                "p_variant": variant,
+                "p_condition": condition,
+                "p_market_country": market_country,
+                "p_currency": currency,
+                "p_fingerprint": fingerprint,
+                "p_reason": reason,
+                "p_force_refresh": force_refresh,
+            },
+        )
+        if not isinstance(result, dict):
+            raise ValueError("request_market_price_refresh returned unexpected payload shape")
+        return result
 
     def get_market_price_bundle(self, *, fingerprint: str, evidence_limit: int = 50) -> dict[str, Any] | None:
         bundle = self._rpc(
@@ -313,6 +397,31 @@ class SupabaseMarketEngineClient:
             if key_id and key_id not in active:
                 active[key_id] = row
         return active
+
+    def claim_specific_refresh_job(self, *, job_id: str, worker_id: str) -> MarketPriceRefreshJob | None:
+        if UUID_PATTERN.fullmatch(str(job_id).strip()) is None:
+            raise ValueError("job_id must be a UUID")
+        rows = self._table_patch(
+            "market_price_refresh_jobs",
+            {
+                "status": "running",
+                "worker_id": worker_id,
+                "locked_at": _iso_or_none(datetime.now().astimezone()),
+                "started_at": _iso_or_none(datetime.now().astimezone()),
+                "error_message": None,
+            },
+            params={"id": f"eq.{job_id}", "status": "eq.queued", "select": "*"},
+        )
+        if not rows:
+            return None
+        return MarketPriceRefreshJob.from_row(rows[0])
+
+    def get_refresh_job(self, *, job_id: str) -> MarketPriceRefreshJob | None:
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={"id": f"eq.{job_id}", "select": "*", "limit": 1},
+        )
+        return MarketPriceRefreshJob.from_row(rows[0]) if rows else None
 
     def insert_snapshot(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._table_post("market_price_snapshots", payload)[0]

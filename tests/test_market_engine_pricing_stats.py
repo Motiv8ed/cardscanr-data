@@ -36,6 +36,33 @@ def evaluated(total_price: float, *, included: bool = True, score: float = 0.9, 
     )
 
 
+def evaluated_prices(
+    sold_price: float,
+    shipping_price: float,
+    *,
+    included: bool = True,
+    score: float = 0.9,
+    reason: str | None = None,
+) -> EvaluatedComp:
+    total_price = round(sold_price + shipping_price, 2)
+    return EvaluatedComp(
+        comp=SoldComp(
+            source_listing_id=f"listing-{sold_price}-{shipping_price}",
+            title="sample",
+            sold_price=sold_price,
+            shipping_price=shipping_price,
+            total_price=total_price,
+            currency="USD",
+            sold_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
+            listing_url="https://example.test/listing",
+            condition_text="Raw",
+        ),
+        included_in_estimate=included,
+        rejection_reason=reason,
+        match_score=score,
+    )
+
+
 class PricingStatsTests(unittest.TestCase):
     def test_pricing_stats_include_median_average_low_high(self) -> None:
         stats = calculate_pricing_stats(
@@ -43,12 +70,34 @@ class PricingStatsTests(unittest.TestCase):
             now=datetime(2026, 5, 25, tzinfo=timezone.utc),
             config=config(),
         )
-        self.assertEqual(stats.median_price, 20.0)
-        self.assertEqual(stats.average_price, 20.0)
-        self.assertEqual(stats.low_price, 10.0)
-        self.assertEqual(stats.high_price, 30.0)
-        self.assertEqual(stats.recommended_price, 20.0)
+        self.assertEqual(stats.median_price, 19.0)
+        self.assertEqual(stats.average_price, 19.0)
+        self.assertEqual(stats.low_price, 9.0)
+        self.assertEqual(stats.high_price, 29.0)
+        self.assertEqual(stats.recommended_price, 19.0)
         self.assertEqual(stats.confidence, "medium")
+
+    def test_item_stats_exclude_shipping_and_landed_stats_include_shipping(self) -> None:
+        stats = calculate_pricing_stats(
+            [
+                evaluated_prices(9.0, 15.0),
+                evaluated_prices(13.0, 0.0),
+                evaluated_prices(20.0, 20.0),
+            ],
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=config(),
+        )
+        self.assertEqual(stats.item_median_price, 13.0)
+        self.assertEqual(stats.item_low_price, 9.0)
+        self.assertEqual(stats.item_high_price, 20.0)
+        self.assertEqual(stats.item_recommended_price, 13.0)
+        self.assertEqual(stats.landed_median_price, 24.0)
+        self.assertEqual(stats.landed_low_price, 13.0)
+        self.assertEqual(stats.landed_high_price, 40.0)
+        self.assertEqual(stats.landed_recommended_price, 24.0)
+        self.assertEqual(stats.recommended_price, 13.0)
+        self.assertEqual(stats.median_price, 13.0)
+        self.assertEqual(stats.price_basis, "item_price")
 
     def test_confidence_and_stale_after_rules(self) -> None:
         now = datetime(2026, 5, 25, tzinfo=timezone.utc)

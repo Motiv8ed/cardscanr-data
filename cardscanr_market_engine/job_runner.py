@@ -27,6 +27,60 @@ def utc_iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
+    return {
+        "priceBasis": pricing_stats.price_basis,
+        "landedPriceAvailable": pricing_stats.landed_recommended_price is not None,
+        "itemPrice": {
+            "median": pricing_stats.item_median_price,
+            "average": pricing_stats.item_average_price,
+            "low": pricing_stats.item_low_price,
+            "high": pricing_stats.item_high_price,
+            "recommended": pricing_stats.item_recommended_price,
+        },
+        "landedPrice": {
+            "median": pricing_stats.landed_median_price,
+            "average": pricing_stats.landed_average_price,
+            "low": pricing_stats.landed_low_price,
+            "high": pricing_stats.landed_high_price,
+            "recommended": pricing_stats.landed_recommended_price,
+        },
+        "compatibilityFields": {
+            "median_price": "item_median_price",
+            "average_price": "item_average_price",
+            "low_price": "item_low_price",
+            "high_price": "item_high_price",
+            "recommended_price": "item_recommended_price",
+            "current_market_price": "item_recommended_price",
+        },
+    }
+
+
+def classify_comp_quality(item: EvaluatedComp, *, pricing_stats: PricingStats) -> dict[str, Any]:
+    raw = item.comp.raw_metadata
+    title = item.comp.title.lower()
+    requested_card = str(raw.get("requestedCardName", "")).lower()
+    requested_number = str(raw.get("requestedCollectorNumber", "")).lower()
+    exact_card_match = bool(item.match_score >= 0.85 and requested_card and requested_card in title and requested_number and requested_number in title)
+    item_median = pricing_stats.item_median_price or 0
+    landed_median = pricing_stats.landed_median_price or 0
+    possible_item_outlier = bool(item_median and (item.comp.sold_price > item_median * 1.8 or item.comp.sold_price < item_median * 0.55))
+    possible_landed_outlier = bool(
+        landed_median and (item.comp.total_price > landed_median * 1.8 or item.comp.total_price < landed_median * 0.55)
+    )
+    return {
+        "exact_card_match": exact_card_match,
+        "likely_same_card": item.match_score >= 0.7,
+        "variation_listing": item.rejection_reason == "price_range_or_variation_listing" or bool(raw.get("priceRangeListing")),
+        "sealed_or_pack": item.rejection_reason == "sealed_product_for_single_card_request" or bool(raw.get("likely_sealed")),
+        "graded_when_raw": item.rejection_reason == "graded_for_raw_request" or bool(raw.get("likely_graded")),
+        "currency_mismatch": item.rejection_reason == "currency_mismatch",
+        "possible_outlier_item_price": possible_item_outlier,
+        "possible_outlier_landed_price": possible_landed_outlier,
+        "included": item.included_in_estimate,
+    }
+
+
 class MarketPriceJobRunner:
     def __init__(
         self,
@@ -75,6 +129,7 @@ class MarketPriceJobRunner:
                 "providerFingerprint": provider_result.provider_fingerprint,
                 "pricingAsOf": utc_iso(now),
                 "staleAfter": utc_iso(pricing_stats.stale_after),
+                "priceViews": build_price_view_diagnostics(pricing_stats),
                 "fetchedCount": len(provider_result.comps),
                 "marketCountry": provider_request.market_country,
                 "currency": provider_request.currency,
@@ -102,6 +157,7 @@ class MarketPriceJobRunner:
         provider_request: ProviderRequest,
         provider_result: ProviderResult,
         evaluated_comps: list[EvaluatedComp],
+        pricing_stats: PricingStats,
     ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         for item in evaluated_comps:
@@ -132,6 +188,7 @@ class MarketPriceJobRunner:
                         "providerDomain": provider_request.provider_domain,
                         "searchLocale": provider_request.search_locale,
                         "marketDisplayName": provider_request.display_name,
+                        "compQuality": classify_comp_quality(item, pricing_stats=pricing_stats),
                         **item.comp.raw_metadata,
                     },
                 }
@@ -186,6 +243,7 @@ class MarketPriceJobRunner:
                 provider_request=provider_request,
                 provider_result=provider_result,
                 evaluated_comps=evaluated_comps,
+                pricing_stats=pricing_stats,
             )
             self.client.insert_evidence(evidence_rows)
             cache_payload = build_cache_payload(

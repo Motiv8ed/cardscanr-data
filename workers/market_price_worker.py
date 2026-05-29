@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import sys
 import time
@@ -46,6 +47,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     config = MarketEngineConfig.from_env(require_supabase=True)
+    if config.provider_name == "ebay_browser" and os.getenv("CONFIRM_LIVE_EBAY_WORKER", "").strip().lower() != "true":
+        raise ValueError(
+            "MARKET_LOOKUP_PROVIDER=ebay_browser requires CONFIRM_LIVE_EBAY_WORKER=true for the bulk worker. "
+            "Use the one-card live write smoke for controlled validation."
+        )
     if config.worker_concurrency != 1:
         print("[market-engine] MARKET_WORKER_CONCURRENCY>1 is not used for local browser provider; continuing sequentially.")
 

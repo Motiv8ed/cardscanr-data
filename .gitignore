@@ -231,6 +231,7 @@ public/v1/images/cards/
 
 # Local updater runtime artifacts
 logs/
+.browser_profiles/
 .local_updater.lock
 .local_updater.pid
 .tmp_validation.log
@@ -261,6 +262,15 @@ reports/pokewallet_missing_price_worker_latest.md
 reports/pokewallet_missing_price_worker_runs.jsonl
 reports/market_price_worker_latest.json
 reports/market_price_worker_runs.jsonl
+reports/ebay_browser_debug/
+reports/ebay_browser_market_matrix_latest.json
+reports/ebay_browser_market_matrix_runs.jsonl
+reports/ebay_browser_live_write_smoke_latest.json
+reports/ebay_browser_live_write_smoke_runs.jsonl
+reports/ebay_browser_live_worker_batch_latest.json
+reports/ebay_browser_live_worker_batch_runs.jsonl
+reports/chatgpt_uploads/
+reports/chatgpt_upload_*.zip
 
 # ChatGPT export bundles (runtime, not committed)
 reports/chatgpt_exports/

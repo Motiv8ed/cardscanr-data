@@ -1,6 +1,6 @@
 # Phase 5: Local eBay Browser Provider
 
-Phase 5 adds an opt-in Playwright provider that can run on your own PC as a backend worker. It does not use Apify, paid APIs, or third-party scraping services.
+Phase 5 adds an opt-in Playwright provider that can run on your own PC as a controlled backend worker. It does not use Apify, paid APIs, or third-party scraping services.
 
 The default provider remains:
 
@@ -15,50 +15,90 @@ MARKET_LOOKUP_PROVIDER=ebay_browser
 ENABLE_EBAY_REAL_LOOKUP=true
 ```
 
+## Browser Profile
+
+The provider uses locally installed Google Chrome through Playwright `channel="chrome"`. It does not use bundled Chromium by default, and it does not use the user's personal/default Chrome profile.
+
+Dedicated profile:
+
+```text
+EBAY_BROWSER_PROFILE_NAME=cardscanr
+EBAY_BROWSER_USER_DATA_DIR=D:\cardscanr-data\.browser_profiles\cardscanr
+```
+
+If the directory is missing, the provider creates it. `.browser_profiles/` is ignored by git.
+
+To reset the local browser state, stop the worker and delete:
+
+```powershell
+Remove-Item -LiteralPath "D:\cardscanr-data\.browser_profiles\cardscanr" -Recurse -Force
+```
+
 ## Setup
 
-Install Python dependencies, then install the Chromium browser used by Playwright:
+Install Python dependencies, then install Playwright browser support:
 
 ```powershell
 pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-Browser installation is never done by application code.
+The provider launches installed Chrome with `channel="chrome"`. Browser installation is never done by application code.
 
 ## Safety Defaults
 
-Start with concurrency 1. The browser provider opens one browser context/page per lookup and parses the first result page only.
+Start with concurrency 1. The browser provider opens one persistent Chrome context/page per lookup and parses the first result page only.
 
 Relevant environment controls:
 
 ```text
+EBAY_BROWSER_ENGINE=chrome
+EBAY_BROWSER_CHANNEL=chrome
+EBAY_BROWSER_PROFILE_NAME=cardscanr
+EBAY_BROWSER_USER_DATA_DIR=D:\cardscanr-data\.browser_profiles\cardscanr
 EBAY_BROWSER_HEADLESS=true
 EBAY_BROWSER_MAX_RESULTS=30
 EBAY_BROWSER_TIMEOUT_SECONDS=45
 EBAY_BROWSER_COOLDOWN_SECONDS=20
 EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS=20
-EBAY_BROWSER_USER_DATA_DIR=
 MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE=2
 MARKET_PROVIDER_MAX_REQUESTS_PER_DAY=200
 ```
 
-This phase implements max results, timeout, and minimum spacing between provider requests. Keep worker concurrency at 1 while validating local behavior.
+This phase implements max results, timeout, dedicated profile creation, personal profile refusal, and minimum spacing between provider requests. Keep worker concurrency at 1 while validating local behavior.
 
 ## Local Debug
 
-The debug command runs one provider lookup and does not write to Supabase.
+The debug command runs one provider lookup and does not write to Supabase. The output includes sanitized browser config and the Chrome profile path.
+
+Debug artifacts are written for each debug run:
+
+```text
+reports/ebay_browser_debug/latest/page.html
+reports/ebay_browser_debug/latest/screenshot.png
+reports/ebay_browser_debug/latest/debug_summary.json
+reports/ebay_browser_debug/runs.jsonl
+```
+
+Inspect `screenshot.png` first to confirm eBay rendered visible results, then inspect `debug_summary.json` for selector counts, parser errors, page title, current URL, query text, and a body/result text sample. If `resultCount=0` while the screenshot shows results, the browser and query are working and the next fix should target result-card selectors or text parsing. `page.html` is captured without cookies/local storage and is useful for checking changed eBay markup.
+
+Headed AU debug:
+
+```powershell
+.\scripts\debug_ebay_browser_provider.ps1 -Headed -Market AU -Currency AUD -CardName "Charizard ex" -CollectorNumber "125/197" -SetName "Obsidian Flames"
+```
+
+Equivalent direct Python command:
 
 ```powershell
 $env:MARKET_LOOKUP_PROVIDER="ebay_browser"
 $env:ENABLE_EBAY_REAL_LOOKUP="true"
+$env:EBAY_BROWSER_ENGINE="chrome"
+$env:EBAY_BROWSER_CHANNEL="chrome"
+$env:EBAY_BROWSER_PROFILE_NAME="cardscanr"
+$env:EBAY_BROWSER_USER_DATA_DIR="D:\cardscanr-data\.browser_profiles\cardscanr"
+$env:EBAY_BROWSER_HEADLESS="false"
 python scripts/debug_ebay_browser_provider.py --market AU --currency AUD --card-name "Charizard ex" --collector-number "125/197" --set-name "Obsidian Flames"
-```
-
-PowerShell wrapper:
-
-```powershell
-.\scripts\debug_ebay_browser_provider.ps1 -Market AU -Currency AUD -CardName "Charizard ex" -CollectorNumber "125/197" -SetName "Obsidian Flames"
 ```
 
 ## Worker
@@ -67,11 +107,16 @@ The provider does not create jobs and does not bypass cooldown gating. It only r
 
 User-triggered refreshes should go through `request_market_price_refresh(...)`. That shared cache gate prevents repeated user taps from creating duplicate browser lookups.
 
-Run the worker with:
+Run one local browser job:
 
 ```powershell
 $env:MARKET_LOOKUP_PROVIDER="ebay_browser"
 $env:ENABLE_EBAY_REAL_LOOKUP="true"
+$env:EBAY_BROWSER_ENGINE="chrome"
+$env:EBAY_BROWSER_CHANNEL="chrome"
+$env:EBAY_BROWSER_PROFILE_NAME="cardscanr"
+$env:EBAY_BROWSER_USER_DATA_DIR="D:\cardscanr-data\.browser_profiles\cardscanr"
+$env:MARKET_WORKER_CONCURRENCY="1"
 .\scripts\run_market_price_worker.ps1 -Once -MaxJobs 1
 ```
 

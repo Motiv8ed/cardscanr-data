@@ -126,3 +126,14 @@ class PricingStats:
     rejected_count: int
     confidence: Confidence
     stale_after: datetime
+    item_median_price: float | None = None
+    item_average_price: float | None = None
+    item_low_price: float | None = None
+    item_high_price: float | None = None
+    item_recommended_price: float | None = None
+    landed_median_price: float | None = None
+    landed_average_price: float | None = None
+    landed_low_price: float | None = None
+    landed_high_price: float | None = None
+    landed_recommended_price: float | None = None
+    price_basis: str = "item_price"
