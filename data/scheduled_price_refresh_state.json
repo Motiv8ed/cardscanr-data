@@ -1,63 +1,54 @@
 {
   "schemaVersion": "1.0.0",
-  "enCurrentPriceCursor": 285,
-  "lastUpdatedAtUtc": "2026-05-30T10:00:21Z",
+  "enCurrentPriceCursor": 305,
+  "lastUpdatedAtUtc": "2026-05-30T11:04:32Z",
   "lastBatchSetIds": [
-    "pop1",
-    "pop2",
-    "pop3",
-    "pop4",
-    "pop5",
-    "pop6",
-    "pop7",
-    "pop8",
-    "pop9",
-    "ppb",
-    "pps1",
-    "pps2",
-    "pps3",
-    "pps4",
-    "pps5",
-    "pps6",
-    "pps7",
-    "rsv10pt5",
-    "ru1",
-    "sea"
+    "shc",
+    "si1",
+    "si100",
+    "skv",
+    "sm1",
+    "sm10",
+    "sm11",
+    "sm115",
+    "sm12",
+    "sm2",
+    "sm3",
+    "sm35",
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma"
   ],
   "lastProcessedSetIds": [
-    "pop1",
-    "pop2",
-    "pop3",
-    "pop4",
-    "pop5",
-    "pop6",
-    "pop7",
-    "pop8",
-    "pop9",
-    "ppb",
-    "pps1",
-    "pps2",
-    "pps3",
-    "pps4",
-    "pps5",
-    "pps6",
-    "pps7",
-    "rsv10pt5",
-    "ru1",
-    "sea"
+    "shc",
+    "si1",
+    "si100",
+    "skv",
+    "sm1",
+    "sm10",
+    "sm11",
+    "sm115",
+    "sm12",
+    "sm2",
+    "sm3",
+    "sm35",
+    "sm4",
+    "sm5",
+    "sm6",
+    "sm7",
+    "sm75",
+    "sm8",
+    "sm9",
+    "sma"
   ],
-  "lastStopReason": "completed_with_transient_failures",
+  "lastStopReason": "completed",
   "lastRateLimited": false,
   "requestLedger": [
-    {
-      "providerRequestCounts": {
-        "pokemon_tcg_api": 33
-      },
-      "requests": 33,
-      "source": "local_price_update",
-      "status": "partial_built",
-      "timestampUtc": "2026-05-28T10:41:54Z"
-    },
     {
       "providerRequestCounts": {
         "pokemon_tcg_api": 25
@@ -230,12 +221,21 @@
       "timestampUtc": "2026-05-30T08:59:52Z"
     },
     {
-      "timestampUtc": "2026-05-30T10:03:58Z",
-      "requests": 23,
       "providerRequestCounts": {
         "pokemon_tcg_api": 23
       },
+      "requests": 23,
+      "source": "local_price_update",
       "status": "partial_built",
+      "timestampUtc": "2026-05-30T10:03:58Z"
+    },
+    {
+      "timestampUtc": "2026-05-30T11:07:50Z",
+      "requests": 22,
+      "providerRequestCounts": {
+        "pokemon_tcg_api": 22
+      },
+      "status": "built",
       "source": "local_price_update"
     }
   ]
