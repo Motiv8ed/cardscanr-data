@@ -7,10 +7,27 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cardscanr_market_engine.fingerprints import build_market_price_fingerprint
+from cardscanr_market_engine.fingerprints import build_market_price_fingerprint, normalize_market_variant
 
 
 class FingerprintTests(unittest.TestCase):
+    def test_market_variant_aliases_normalize(self) -> None:
+        aliases = {
+            "raw": "raw",
+            "non holo": "non_holo",
+            "non-holo": "non_holo",
+            "regular": "non_holo",
+            "normal": "non_holo",
+            "holo": "holo",
+            "holographic": "holo",
+            "reverse": "reverse_holo",
+            "reverse holo": "reverse_holo",
+            "reverse-holo": "reverse_holo",
+            "rev holo": "reverse_holo",
+        }
+        for raw, expected in aliases.items():
+            self.assertEqual(normalize_market_variant(raw), expected)
+
     def test_fingerprint_normalizes_and_uses_set_name_fallback(self) -> None:
         fingerprint = build_market_price_fingerprint(
             game=" Pokemon ",

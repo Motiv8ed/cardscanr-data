@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from statistics import mean, median
 
 from .config import MarketEngineConfig
+from .fingerprints import normalize_market_variant
 from .models import EvaluatedComp, PricingStats
 
 
@@ -56,6 +57,21 @@ def calculate_pricing_stats(
     landed_prices = [item.comp.total_price for item in included]
     average_match_score = mean([item.match_score for item in included]) if included else 0.0
     confidence = determine_confidence(included_count=len(included), average_match_score=average_match_score)
+    spread_ratio = round(max(item_prices) / min(item_prices), 4) if item_prices and min(item_prices) > 0 else None
+    confidence_warnings: list[str] = []
+    requested_variants = {
+        normalize_market_variant(item.comp.raw_metadata.get("requested_variant"))
+        for item in evaluated_comps
+        if item.comp.raw_metadata.get("requested_variant")
+    }
+    if any(variant in {"non_holo", "holo", "reverse_holo"} for variant in requested_variants) and len(included) < 5:
+        confidence_warnings.append("insufficient_variant_specific_comps")
+    if spread_ratio is not None and spread_ratio > 3 and len(included) < 10:
+        confidence_warnings.append("wide_item_price_spread_small_sample")
+        if confidence == "high":
+            confidence = "medium"
+    if spread_ratio is not None and spread_ratio > 5:
+        confidence_warnings.append("extreme_item_price_spread")
     stale_after = calculate_stale_after(
         now=current_time,
         included_count=len(included),
@@ -85,6 +101,9 @@ def calculate_pricing_stats(
             landed_high_price=None,
             landed_recommended_price=None,
             price_basis="item_price",
+            price_spread_ratio=spread_ratio,
+            confidence_warnings=tuple(confidence_warnings),
+            included_price_distribution=tuple(sorted(item_prices)),
         )
     item_median_price = round_money(median(item_prices))
     item_average_price = round_money(mean(item_prices))
@@ -116,4 +135,7 @@ def calculate_pricing_stats(
         landed_high_price=landed_high_price,
         landed_recommended_price=landed_median_price,
         price_basis="item_price",
+        price_spread_ratio=spread_ratio,
+        confidence_warnings=tuple(confidence_warnings),
+        included_price_distribution=tuple(sorted(item_prices)),
     )

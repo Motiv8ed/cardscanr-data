@@ -27,6 +27,15 @@ def utc_iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
+    summary = provider_result.raw_metadata.get("qualitySummary") or {}
+    return {
+        "direct_item_url_count": int(summary.get("direct_item_url_count") or 0),
+        "generic_url_count": int(summary.get("generic_url_count") or 0),
+        "missing_url_count": int(summary.get("missing_url_count") or 0),
+    }
+
+
 def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
     return {
         "priceBasis": pricing_stats.price_basis,
@@ -68,8 +77,15 @@ def classify_comp_quality(item: EvaluatedComp, *, pricing_stats: PricingStats) -
     possible_landed_outlier = bool(
         landed_median and (item.comp.total_price > landed_median * 1.8 or item.comp.total_price < landed_median * 0.55)
     )
+    collector_number_match = bool(raw.get("collector_number_match", requested_number and requested_number in title))
+    set_name_match = bool(raw.get("set_name_match", True))
+    card_name_match = bool(raw.get("card_name_match", requested_card and requested_card in title))
+    shipping_heavy = bool(item.comp.sold_price > 0 and item.comp.shipping_price > item.comp.sold_price)
     return {
         "exact_card_match": exact_card_match,
+        "collector_number_match": collector_number_match,
+        "set_name_match": set_name_match,
+        "card_name_match": card_name_match,
         "likely_same_card": item.match_score >= 0.7,
         "variation_listing": item.rejection_reason == "price_range_or_variation_listing" or bool(raw.get("priceRangeListing")),
         "sealed_or_pack": item.rejection_reason == "sealed_product_for_single_card_request" or bool(raw.get("likely_sealed")),
@@ -77,6 +93,16 @@ def classify_comp_quality(item: EvaluatedComp, *, pricing_stats: PricingStats) -
         "currency_mismatch": item.rejection_reason == "currency_mismatch",
         "possible_outlier_item_price": possible_item_outlier,
         "possible_outlier_landed_price": possible_landed_outlier,
+        "shipping_heavy": shipping_heavy,
+        "price_outlier_warning": possible_item_outlier or possible_landed_outlier,
+        "url_quality": raw.get("url_quality", "unknown"),
+        "requested_variant": raw.get("requested_variant", "raw"),
+        "detected_variant": raw.get("detected_variant", "unknown"),
+        "variant_match": raw.get("variant_match", True),
+        "variant_warning": raw.get("variant_warning"),
+        "why_included": (
+            "passed_title_currency_variant_and_outlier_filters" if item.included_in_estimate else None
+        ),
         "included": item.included_in_estimate,
     }
 
@@ -146,6 +172,10 @@ class MarketPriceJobRunner:
                     for item in evaluated_comps
                     if item.rejection_reason
                 },
+                "price_spread_ratio": pricing_stats.price_spread_ratio,
+                "confidence_warnings": list(pricing_stats.confidence_warnings),
+                "included_price_distribution": list(pricing_stats.included_price_distribution),
+                "url_quality_counts": url_quality_counts(provider_result),
             },
         }
 

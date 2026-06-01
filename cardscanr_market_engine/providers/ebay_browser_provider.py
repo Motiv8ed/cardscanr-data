@@ -10,9 +10,9 @@ import re
 import threading
 import time
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
-from ..config import DEFAULT_EBAY_BROWSER_PROFILE_NAME, DEFAULT_EBAY_BROWSER_USER_DATA_DIR, ROOT
+from ..config import DEFAULT_EBAY_BROWSER_PROFILE_NAME, DEFAULT_EBAY_BROWSER_USER_DATA_DIR, ROOT, MarketEngineConfig
 from ..models import ProviderRequest, ProviderResult, SoldComp
 from .errors import (
     ProviderBlockedError,
@@ -54,6 +54,7 @@ PICK_YOUR_CARD_PATTERNS = (
 LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ")
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
+SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
 MARKET_COUNTRY_NAMES = {
     "AU": ("australia", "australian"),
     "US": ("united states", "usa", "us "),
@@ -98,6 +99,39 @@ def utc_iso(value: datetime | None = None) -> str:
 
 def _normalise_text(value: object) -> str:
     return " ".join(str(value or "").replace("\xa0", " ").split())
+
+
+def normalize_ebay_listing_url(href: str, *, provider_domain: str) -> dict[str, str | None]:
+    original_href = str(href or "").strip()
+    metadata: dict[str, str | None] = {
+        "url_quality": "missing",
+        "item_id": None,
+        "original_href": original_href or None,
+        "normalized_listing_url": None,
+        "provider_domain": provider_domain,
+    }
+    if not original_href:
+        return metadata
+    absolute = urljoin(f"https://www.{provider_domain}/", original_href)
+    parsed = urlparse(absolute)
+    host = parsed.netloc.lower().split(":", 1)[0]
+    if parsed.scheme.lower() != "https" or not any(host == domain or host.endswith(f".{domain}") for domain in SUPPORTED_EBAY_DOMAINS):
+        metadata["url_quality"] = "malformed_or_non_ebay"
+        return metadata
+    item_match = re.search(r"/itm/(?:[^/?#]+/)?([0-9]+)(?:[/?#]|$)", parsed.path, flags=re.IGNORECASE)
+    if not item_match:
+        metadata["url_quality"] = "generic_non_item"
+        return metadata
+    item_id = item_match.group(1)
+    normalized_url = urlunparse(("https", f"www.{provider_domain}", f"/itm/{item_id}", "", "", ""))
+    metadata.update(
+        {
+            "url_quality": "direct_item",
+            "item_id": item_id,
+            "normalized_listing_url": normalized_url,
+        }
+    )
+    return metadata
 
 
 def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
@@ -348,7 +382,9 @@ def parse_candidate_dict(
     index: int,
 ) -> SoldComp | None:
     href = str(candidate.get("href") or "")
-    if "/itm/" not in href:
+    url_metadata = normalize_ebay_listing_url(href, provider_domain=search_query.provider_domain)
+    listing_url = str(url_metadata.get("normalized_listing_url") or "")
+    if url_metadata["url_quality"] != "direct_item" or not listing_url:
         return None
     raw_text = str(candidate.get("text") or "")
     lines = [_normalise_text(line) for line in raw_text.splitlines()]
@@ -392,7 +428,6 @@ def parse_candidate_dict(
         market_country=search_query.market_country,
     )
     title_flags_text = f" {title} {raw_text} "
-    listing_url = href.split("?", 1)[0]
     source_listing_id = source_listing_id_from_url(listing_url, index=index)
     return SoldComp(
         source_listing_id=source_listing_id,
@@ -407,6 +442,7 @@ def parse_candidate_dict(
         raw_metadata=sanitize_provider_diagnostics(
             {
                 "providerDomain": search_query.provider_domain,
+                **url_metadata,
                 "providerMarketplaceId": search_query.provider_marketplace_id,
                 "marketCountry": request.market_country,
                 "expectedCurrency": search_query.currency,
@@ -642,10 +678,20 @@ def build_quality_summary(comps: list[SoldComp], *, request: ProviderRequest) ->
         "fallback_price_used_count": 0,
         "structured_price_used_count": 0,
         "useful_candidate_count": 0,
+        "direct_item_url_count": 0,
+        "generic_url_count": 0,
+        "missing_url_count": 0,
     }
     for comp in comps:
         title = comp.title.lower()
         raw = comp.raw_metadata
+        url_quality = str(raw.get("url_quality") or "missing")
+        if url_quality == "direct_item":
+            summary["direct_item_url_count"] += 1
+        elif url_quality == "generic_non_item":
+            summary["generic_url_count"] += 1
+        else:
+            summary["missing_url_count"] += 1
         exactish = requested_name in title or collector_number in title
         if exactish:
             summary["exact_title_or_number_matches"] += 1
@@ -796,6 +842,12 @@ class EbayBrowserSoldCompsProvider:
                     search_query=search_query,
                 )
                 quality_summary = build_quality_summary(comps, request=request)
+                for error in parser_errors:
+                    url_quality = error.get("url_quality")
+                    if url_quality == "generic_non_item":
+                        quality_summary["generic_url_count"] += 1
+                    elif url_quality in {"missing", "malformed_or_non_ebay"}:
+                        quality_summary["missing_url_count"] += 1
                 self._write_debug_artifacts(
                     page=page,
                     request=request,
@@ -866,7 +918,19 @@ class EbayBrowserSoldCompsProvider:
                 if len(comps) >= self.config.max_results:
                     break
             else:
-                parse_errors.append({"index": index, "errorType": "candidate_not_parseable", "source": candidate.get("source")})
+                url_metadata = normalize_ebay_listing_url(
+                    str(candidate.get("href") or ""),
+                    provider_domain=search_query.provider_domain,
+                )
+                parse_errors.append(
+                    {
+                        "index": index,
+                        "errorType": "candidate_not_parseable",
+                        "source": candidate.get("source"),
+                        "url_quality": url_metadata["url_quality"],
+                        "original_href": url_metadata["original_href"],
+                    }
+                )
         return comps, parse_errors, visible_sample
 
     def _parse_card(
@@ -898,7 +962,10 @@ class EbayBrowserSoldCompsProvider:
         href = self._first_attribute(card, ["a.s-item__link"], "href")
         if not href:
             return None
-        listing_url = href.split("?", 1)[0]
+        url_metadata = normalize_ebay_listing_url(href, provider_domain=search_query.provider_domain)
+        listing_url = str(url_metadata.get("normalized_listing_url") or "")
+        if url_metadata["url_quality"] != "direct_item" or not listing_url:
+            return None
         source_listing_id = source_listing_id_from_url(listing_url, index=index)
         return SoldComp(
             source_listing_id=source_listing_id,
@@ -913,6 +980,7 @@ class EbayBrowserSoldCompsProvider:
             raw_metadata=sanitize_provider_diagnostics(
                 {
                     "providerDomain": search_query.provider_domain,
+                    **url_metadata,
                     "providerMarketplaceId": search_query.provider_marketplace_id,
                     "marketCountry": request.market_country,
                     "expectedCurrency": search_query.currency,
@@ -985,6 +1053,26 @@ class EbayBrowserSoldCompsProvider:
             page.screenshot(path=str(latest_dir / "screenshot.png"), full_page=True)
         except Exception:
             pass
+        from ..filters import filter_comps
+        from ..pricing_stats import calculate_pricing_stats
+
+        evaluated = filter_comps(request.price_key, comps)
+        pricing_stats = calculate_pricing_stats(
+            evaluated,
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+
+        def compact_comp(item: Any) -> dict[str, Any]:
+            return {
+                "title": item.comp.title,
+                "sold_price": item.comp.sold_price,
+                "shipping_price": item.comp.shipping_price,
+                "total_price": item.comp.total_price,
+                "listing_url": item.comp.listing_url or None,
+                "url_quality": item.comp.raw_metadata.get("url_quality"),
+                "rejection_reason": item.rejection_reason,
+            }
+
         summary = sanitize_provider_diagnostics(
             {
                 "timestamp": utc_iso(),
@@ -997,6 +1085,20 @@ class EbayBrowserSoldCompsProvider:
                 "candidate_selector_counts": selector_counts,
                 "result_count": len(comps),
                 "quality_summary": quality_summary or {},
+                "sample_urls": [
+                    {
+                        "url_quality": comp.raw_metadata.get("url_quality"),
+                        "item_id": comp.raw_metadata.get("item_id"),
+                        "listing_url": comp.listing_url or None,
+                        "original_href": comp.raw_metadata.get("original_href"),
+                    }
+                    for comp in comps[:10]
+                ],
+                "price_spread_ratio": pricing_stats.price_spread_ratio,
+                "confidence": pricing_stats.confidence,
+                "confidence_warnings": list(pricing_stats.confidence_warnings),
+                "top_included_comps": [compact_comp(item) for item in evaluated if item.included_in_estimate][:5],
+                "top_rejected_comps": [compact_comp(item) for item in evaluated if not item.included_in_estimate][:10],
                 "parser_errors": parser_errors[:50],
                 "browser_config": self.config.safe_diagnostics(),
                 "market_config": {

@@ -96,6 +96,11 @@ class FakeProvider:
                 "providerDomain": request.provider_domain,
                 "searchLocale": request.search_locale,
                 "displayName": request.display_name,
+                "qualitySummary": {
+                    "direct_item_url_count": 2,
+                    "generic_url_count": 0,
+                    "missing_url_count": 1,
+                },
             },
         )
 
@@ -171,11 +176,29 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(price_views["priceBasis"], "item_price")
         self.assertEqual(price_views["itemPrice"]["recommended"], 20.0)
         self.assertEqual(price_views["landedPrice"]["recommended"], 21.0)
+        self.assertEqual(
+            client.snapshot_payload["diagnostics_json"]["url_quality_counts"],
+            {
+                "direct_item_url_count": 2,
+                "generic_url_count": 0,
+                "missing_url_count": 1,
+            },
+        )
+        self.assertIn("price_spread_ratio", client.snapshot_payload["diagnostics_json"])
+        self.assertIn("confidence_warnings", client.snapshot_payload["diagnostics_json"])
+        self.assertIn("included_price_distribution", client.snapshot_payload["diagnostics_json"])
         self.assertEqual(len(client.evidence_rows or []), 3)
         self.assertEqual(client.evidence_rows[2]["rejection_reason"], "graded_for_raw_request")
         self.assertEqual(client.evidence_rows[0]["raw_json"]["providerDomain"], "ebay.com")
         self.assertTrue(client.evidence_rows[0]["raw_json"]["compQuality"]["included"])
         self.assertTrue(client.evidence_rows[0]["raw_json"]["compQuality"]["exact_card_match"])
+        self.assertEqual(
+            client.evidence_rows[0]["raw_json"]["compQuality"]["why_included"],
+            "passed_title_currency_variant_and_outlier_filters",
+        )
+        self.assertEqual(client.evidence_rows[0]["raw_json"]["compQuality"]["requested_variant"], "raw")
+        self.assertEqual(client.evidence_rows[0]["raw_json"]["compQuality"]["detected_variant"], "non_holo")
+        self.assertTrue(client.evidence_rows[0]["raw_json"]["compQuality"]["variant_match"])
         self.assertIsNotNone(client.completed)
         self.assertIsNone(client.failed)
 

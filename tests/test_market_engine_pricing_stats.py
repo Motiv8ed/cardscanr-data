@@ -43,6 +43,7 @@ def evaluated_prices(
     included: bool = True,
     score: float = 0.9,
     reason: str | None = None,
+    raw_metadata: dict | None = None,
 ) -> EvaluatedComp:
     total_price = round(sold_price + shipping_price, 2)
     return EvaluatedComp(
@@ -56,6 +57,7 @@ def evaluated_prices(
             sold_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
             listing_url="https://example.test/listing",
             condition_text="Raw",
+            raw_metadata=raw_metadata or {},
         ),
         included_in_estimate=included,
         rejection_reason=reason,
@@ -114,6 +116,38 @@ class PricingStatsTests(unittest.TestCase):
         now = datetime(2026, 5, 25, tzinfo=timezone.utc)
         stale_after = calculate_stale_after(now=now, included_count=0, confidence="low", config=config())
         self.assertEqual((stale_after - now).total_seconds(), 3 * 3600)
+
+    def test_wide_spread_small_sample_downgrades_high_confidence(self) -> None:
+        stats = calculate_pricing_stats(
+            [
+                evaluated_prices(10.0, 0.0, score=0.95),
+                evaluated_prices(11.0, 0.0, score=0.95),
+                evaluated_prices(12.0, 0.0, score=0.95),
+                evaluated_prices(13.0, 0.0, score=0.95),
+                evaluated_prices(14.0, 0.0, score=0.95),
+                evaluated_prices(15.0, 0.0, score=0.95),
+                evaluated_prices(16.0, 0.0, score=0.95),
+                evaluated_prices(40.0, 0.0, score=0.95),
+            ],
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=config(),
+        )
+        self.assertEqual(stats.confidence, "medium")
+        self.assertGreater(stats.price_spread_ratio or 0, 3)
+        self.assertIn("wide_item_price_spread_small_sample", stats.confidence_warnings)
+        self.assertEqual(stats.included_price_distribution[-1], 40.0)
+
+    def test_variant_specific_small_sample_adds_confidence_warning(self) -> None:
+        stats = calculate_pricing_stats(
+            [
+                evaluated_prices(2.0, 0.0, raw_metadata={"requested_variant": "non_holo"}),
+                evaluated_prices(2.5, 0.0, raw_metadata={"requested_variant": "non_holo"}),
+            ],
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=config(),
+        )
+        self.assertEqual(stats.confidence, "low")
+        self.assertIn("insufficient_variant_specific_comps", stats.confidence_warnings)
 
 
 if __name__ == "__main__":

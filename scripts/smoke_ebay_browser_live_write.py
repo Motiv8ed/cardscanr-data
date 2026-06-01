@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
-from cardscanr_market_engine.fingerprints import build_market_price_fingerprint, normalize_name
+from cardscanr_market_engine.fingerprints import build_market_price_fingerprint, normalize_market_variant, normalize_name
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config
 from cardscanr_market_engine.providers import create_market_comps_provider
@@ -67,6 +67,7 @@ def _require_flags() -> None:
 def _identity(args: argparse.Namespace) -> dict[str, str]:
     market = args.market.lower()
     currency = args.currency.lower()
+    variant = normalize_market_variant(args.variant)
     fingerprint = build_market_price_fingerprint(
         game="pokemon",
         language="en",
@@ -74,7 +75,7 @@ def _identity(args: argparse.Namespace) -> dict[str, str]:
         set_name=args.set_name,
         collector_number=args.collector_number,
         card_name=args.card_name,
-        variant=args.variant,
+        variant=variant,
         condition=args.condition,
         market_country=market,
         currency=currency,
@@ -87,7 +88,7 @@ def _identity(args: argparse.Namespace) -> dict[str, str]:
         "set_code": args.set_code,
         "collector_number": args.collector_number,
         "language": "en",
-        "variant": args.variant,
+        "variant": variant,
         "condition": args.condition,
         "market_country": market,
         "currency": currency,
@@ -107,6 +108,30 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
     evidence = bundle.get("sold_listing_evidence") or []
     included = [item for item in evidence if item.get("included_in_estimate")]
     rejected = [item for item in evidence if not item.get("included_in_estimate")]
+    included_variants: dict[str, int] = {}
+    rejected_variant_mismatch_count = 0
+    def compact_comp(item: dict[str, Any]) -> dict[str, Any]:
+        raw = item.get("raw_json") or {}
+        quality = raw.get("compQuality") or {}
+        return {
+            "title": item.get("title"),
+            "sold_price": item.get("sold_price"),
+            "shipping_price": item.get("shipping_price"),
+            "total_price": item.get("total_price"),
+            "listing_url": item.get("listing_url"),
+            "url_quality": quality.get("url_quality") or raw.get("url_quality"),
+            "requested_variant": quality.get("requested_variant") or raw.get("requested_variant"),
+            "detected_variant": quality.get("detected_variant") or raw.get("detected_variant"),
+            "variant_match": quality.get("variant_match"),
+            "variant_warning": quality.get("variant_warning") or raw.get("variant_warning"),
+            "rejection_reason": item.get("rejection_reason"),
+        }
+    for item in included:
+        variant = str(compact_comp(item).get("detected_variant") or "unknown")
+        included_variants[variant] = included_variants.get(variant, 0) + 1
+    for item in rejected:
+        if str(item.get("rejection_reason") or "").startswith(("wrong_variant_", "weak_variant_")):
+            rejected_variant_mismatch_count += 1
     return {
         "cache_price_summary": {
             "current_market_price": cache.get("current_market_price"),
@@ -134,8 +159,14 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
         "evidence_count": len(evidence),
         "included_count": len(included),
         "rejected_count": len(rejected),
-        "top_included_comps": included[:5],
-        "top_rejected_comps": rejected[:10],
+        "url_quality_counts": diagnostics.get("url_quality_counts") or {},
+        "confidence_warnings": diagnostics.get("confidence_warnings") or [],
+        "price_spread_ratio": diagnostics.get("price_spread_ratio"),
+        "included_price_distribution": diagnostics.get("included_price_distribution") or [],
+        "included_variants_summary": included_variants,
+        "rejected_variant_mismatch_count": rejected_variant_mismatch_count,
+        "top_included_comps": [compact_comp(item) for item in included[:5]],
+        "top_rejected_comps": [compact_comp(item) for item in rejected[:10]],
     }
 
 
@@ -207,6 +238,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         "status": "success",
         "startedAtUtc": started,
         "identity": identity,
+        "requested_variant": identity["variant"],
         "request_market_price_refresh": refresh,
         "force_refresh_requested": force_refresh,
         "job_id": job_id or None,

@@ -11,12 +11,15 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cardscanr_market_engine.fingerprints import build_market_price_fingerprint, normalize_name
+from cardscanr_market_engine.fingerprints import build_market_price_fingerprint, normalize_market_variant, normalize_name
+from cardscanr_market_engine.config import MarketEngineConfig
+from cardscanr_market_engine.filters import filter_comps
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config
 from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.providers.errors import sanitize_provider_diagnostics
 from cardscanr_market_engine.providers.query_builder import build_provider_search_query
+from cardscanr_market_engine.pricing_stats import calculate_pricing_stats
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,6 +42,7 @@ def build_request(args: argparse.Namespace) -> ProviderRequest:
         currency=args.currency,
         marketplace="ebay",
     )
+    variant = normalize_market_variant(args.variant)
     fingerprint = build_market_price_fingerprint(
         game="pokemon",
         language=args.language,
@@ -46,7 +50,7 @@ def build_request(args: argparse.Namespace) -> ProviderRequest:
         set_name=args.set_name,
         collector_number=args.collector_number,
         card_name=args.card_name,
-        variant=args.variant,
+        variant=variant,
         condition=args.condition,
         market_country=market.market_country,
         currency=market.currency,
@@ -60,7 +64,7 @@ def build_request(args: argparse.Namespace) -> ProviderRequest:
         set_code=args.set_code or None,
         collector_number=args.collector_number,
         language=args.language.lower(),
-        variant=args.variant.lower(),
+        variant=variant,
         condition=args.condition.lower(),
         market_country=market.market_country.lower(),
         currency=market.currency.lower(),
@@ -106,6 +110,8 @@ def main() -> int:
     provider = create_market_comps_provider("ebay_browser")
     browser_config = getattr(getattr(provider, "config", None), "safe_diagnostics", lambda: {})()
     result = provider.fetch_comps(request)
+    evaluated = filter_comps(request.price_key, result.comps)
+    pricing_stats = calculate_pricing_stats(evaluated, config=MarketEngineConfig.from_env(require_supabase=False))
     payload = sanitize_provider_diagnostics(
         {
             "status": "success",
@@ -127,6 +133,20 @@ def main() -> int:
                 "currency": query.currency,
             },
             "resultCount": len(result.comps),
+            "urlQualityCounts": result.raw_metadata.get("qualitySummary") or {},
+            "priceSpreadRatio": pricing_stats.price_spread_ratio,
+            "confidenceWarnings": list(pricing_stats.confidence_warnings),
+            "topIncludedComps": [
+                comp_to_dict(item.comp) for item in evaluated if item.included_in_estimate
+            ][:5],
+            "topRejectedComps": [
+                {
+                    **comp_to_dict(item.comp),
+                    "rejection_reason": item.rejection_reason,
+                }
+                for item in evaluated
+                if not item.included_in_estimate
+            ][:10],
             "results": [comp_to_dict(comp) for comp in result.comps],
             "raw_metadata": result.raw_metadata,
         }

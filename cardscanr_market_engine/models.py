@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
+from .fingerprints import normalize_market_variant
 from .marketplaces import LocalMarketConfig
 
 Confidence = Literal["high", "medium", "low", "unknown"]
@@ -37,7 +38,7 @@ class MarketPriceKey:
             set_code=row.get("set_code"),
             collector_number=str(row["collector_number"]),
             language=str(row["language"]),
-            variant=str(row["variant"]),
+            variant=normalize_market_variant(row["variant"]),
             condition=str(row["condition"]),
             market_country=str(row["market_country"]),
             currency=str(row["currency"]),
@@ -137,3 +138,6 @@ class PricingStats:
     landed_high_price: float | None = None
     landed_recommended_price: float | None = None
     price_basis: str = "item_price"
+    price_spread_ratio: float | None = None
+    confidence_warnings: tuple[str, ...] = ()
+    included_price_distribution: tuple[float, ...] = ()

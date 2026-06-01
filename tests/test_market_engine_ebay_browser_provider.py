@@ -25,6 +25,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     contains_block_marker,
     count_candidate_selectors,
     is_price_range_text,
+    normalize_ebay_listing_url,
     parse_candidate_dict,
     parse_price_text,
     parse_shipping_text,
@@ -198,6 +199,21 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertNotIn("-graded", query.query_text)
         self.assertIn("-proxy", query.query_text)
 
+    def test_query_builder_adds_reverse_holo_for_reverse_holo_variant(self) -> None:
+        query = build_provider_search_query(sample_request(variant="reverse_holo"))
+        self.assertIn("reverse holo", query.query_text)
+
+    def test_query_builder_excludes_holo_terms_for_non_holo_variant(self) -> None:
+        query = build_provider_search_query(sample_request(variant="non_holo"))
+        self.assertNotIn(" reverse holo ", f" {query.query_text} ")
+        self.assertIn("-holo", query.query_text)
+        self.assertIn("-reverse", query.query_text)
+
+    def test_query_builder_holo_avoids_reverse_where_possible(self) -> None:
+        query = build_provider_search_query(sample_request(variant="holo"))
+        self.assertIn(" holo ", f" {query.query_text} ")
+        self.assertIn("-reverse", query.query_text)
+
 
 class ParserTests(unittest.TestCase):
     def test_price_parser_handles_aud_usd_gbp_cad_examples(self) -> None:
@@ -244,7 +260,30 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(comp.total_price, 24.23)
         self.assertEqual(comp.currency, "AUD")
         self.assertIn("/itm/", comp.listing_url)
+        self.assertEqual(comp.listing_url, "https://www.ebay.com.au/itm/1234567890")
+        self.assertEqual(comp.raw_metadata["url_quality"], "direct_item")
+        self.assertEqual(comp.raw_metadata["item_id"], "1234567890")
+        self.assertEqual(comp.raw_metadata["original_href"], "https://www.ebay.com.au/itm/1234567890?hash=abc")
         self.assertEqual(comp.raw_metadata["soldDateText"], "Sold 29 May 2026")
+
+    def test_relative_item_url_becomes_absolute_provider_url(self) -> None:
+        normalized = normalize_ebay_listing_url("/itm/123456?hash=abc", provider_domain="ebay.com.au")
+        self.assertEqual(normalized["url_quality"], "direct_item")
+        self.assertEqual(normalized["item_id"], "123456")
+        self.assertEqual(normalized["normalized_listing_url"], "https://www.ebay.com.au/itm/123456")
+
+    def test_generic_search_url_is_not_treated_as_item_url(self) -> None:
+        normalized = normalize_ebay_listing_url(
+            "https://www.ebay.com.au/sch/i.html?_nkw=charizard",
+            provider_domain="ebay.com.au",
+        )
+        self.assertEqual(normalized["url_quality"], "generic_non_item")
+        self.assertIsNone(normalized["normalized_listing_url"])
+
+    def test_missing_url_is_safe(self) -> None:
+        normalized = normalize_ebay_listing_url("", provider_domain="ebay.com.au")
+        self.assertEqual(normalized["url_quality"], "missing")
+        self.assertIsNone(normalized["normalized_listing_url"])
 
     def test_candidate_parser_handles_free_postage(self) -> None:
         request = sample_request(country="AU", currency="AUD")
@@ -431,6 +470,9 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(summary["likely_pick_your_card_count"], 1)
         self.assertEqual(summary["useful_candidate_count"], 1)
         self.assertEqual(summary["fallback_price_used_count"], 2)
+        self.assertEqual(summary["direct_item_url_count"], 2)
+        self.assertEqual(summary["generic_url_count"], 0)
+        self.assertEqual(summary["missing_url_count"], 0)
 
     def test_marketplace_scope_diagnostics(self) -> None:
         with patch.dict(os.environ, {"EBAY_MARKET_SCOPE": "marketplace"}, clear=True):
@@ -1143,7 +1185,17 @@ class ParserTests(unittest.TestCase):
                         }
                     },
                 },
-                "sold_listing_evidence": [{"included_in_estimate": True}, {"included_in_estimate": False}],
+                "sold_listing_evidence": [
+                    {
+                        "included_in_estimate": True,
+                        "raw_json": {"compQuality": {"detected_variant": "non_holo"}},
+                    },
+                    {
+                        "included_in_estimate": False,
+                        "rejection_reason": "wrong_variant_reverse_holo",
+                        "raw_json": {"compQuality": {"detected_variant": "reverse_holo"}},
+                    },
+                ],
             }
         )
         cache_summary = summary["cache_price_summary"]
@@ -1153,6 +1205,8 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(cache_summary["landed_recommended_price"], 24.0)
         self.assertEqual(cache_summary["included_count"], 2)
         self.assertEqual(cache_summary["rejected_count"], 1)
+        self.assertEqual(summary["included_variants_summary"], {"non_holo": 1})
+        self.assertEqual(summary["rejected_variant_mismatch_count"], 1)
 
 
 @unittest.skipUnless(

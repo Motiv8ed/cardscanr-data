@@ -23,6 +23,24 @@ def normalize_collector_number(value: object) -> str:
     return text
 
 
+def normalize_market_variant(value: object) -> str:
+    text = normalize_text(value).replace("-", " ").replace("_", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    aliases = {
+        "": "raw",
+        "raw": "raw",
+        "non holo": "non_holo",
+        "regular": "non_holo",
+        "normal": "non_holo",
+        "holo": "holo",
+        "holographic": "holo",
+        "reverse": "reverse_holo",
+        "reverse holo": "reverse_holo",
+        "rev holo": "reverse_holo",
+    }
+    return aliases.get(text, text.replace(" ", "_") or "raw")
+
+
 def build_market_price_fingerprint(
     *,
     game: object,
@@ -43,7 +61,7 @@ def build_market_price_fingerprint(
         set_identity,
         normalize_collector_number(collector_number) or "-",
         normalize_name(card_name),
-        normalize_text(variant) or "raw",
+        normalize_market_variant(variant),
         normalize_text(condition) or "unknown",
         normalize_text(market_country) or "unknown",
         normalize_text(currency) or "usd",

@@ -12,21 +12,29 @@ from cardscanr_market_engine.filters import filter_comps
 from cardscanr_market_engine.models import MarketPriceKey, SoldComp
 
 
-def sample_price_key() -> MarketPriceKey:
+def sample_price_key(
+    *,
+    card_name: str = "Charizard",
+    normalized_card_name: str = "charizard",
+    set_name: str = "Base Set",
+    set_code: str = "base1",
+    collector_number: str = "4",
+    variant: str = "raw",
+) -> MarketPriceKey:
     return MarketPriceKey(
         id="key-1",
         game="pokemon",
-        card_name="Charizard",
-        normalized_card_name="charizard",
-        set_name="Base Set",
-        set_code="base1",
-        collector_number="4",
+        card_name=card_name,
+        normalized_card_name=normalized_card_name,
+        set_name=set_name,
+        set_code=set_code,
+        collector_number=collector_number,
         language="en",
-        variant="raw",
+        variant=variant,
         condition="near_mint",
         market_country="us",
         currency="usd",
-        fingerprint="pokemon|en|base1|4|charizard|raw|near_mint|us|usd",
+        fingerprint=f"pokemon|en|{set_code}|{collector_number}|{normalized_card_name}|{variant}|near_mint|us|usd",
     )
 
 
@@ -124,6 +132,90 @@ class FilterTests(unittest.TestCase):
         reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
         self.assertEqual(reasons["range"], "price_range_or_variation_listing")
         self.assertEqual(reasons["pick"], "price_range_or_variation_listing")
+
+    def test_wrong_collector_number_is_rejected(self) -> None:
+        evaluated = filter_comps(sample_price_key(), [sold_comp("Charizard Base Set 99 raw", 20.0)])
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_collector_number")
+
+    def test_wrong_card_name_is_rejected(self) -> None:
+        evaluated = filter_comps(sample_price_key(), [sold_comp("Blastoise Base Set 4 raw", 20.0)])
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_card_name")
+
+    def test_wrong_explicit_set_code_is_rejected(self) -> None:
+        key = sample_price_key()
+        keyed = MarketPriceKey(**{**key.__dict__, "set_code": "sv03"})
+        evaluated = filter_comps(keyed, [sold_comp("Charizard sv04 4 raw", 20.0)])
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_set")
+
+    def test_jumbo_listing_is_rejected(self) -> None:
+        evaluated = filter_comps(sample_price_key(), [sold_comp("Charizard Base Set 4 jumbo card", 20.0)])
+        self.assertEqual(evaluated[0].rejection_reason, "oversized_or_jumbo")
+
+    def test_exact_raw_card_with_free_delivery_is_included(self) -> None:
+        evaluated = filter_comps(
+            sample_price_key(),
+            [sold_comp_prices("Charizard Base Set 4 raw", 12.99, 0.0)],
+        )
+        self.assertTrue(evaluated[0].included_in_estimate)
+
+    def test_non_holo_espurr_rejects_reverse_holo(self) -> None:
+        key = sample_price_key(
+            card_name="Espurr",
+            normalized_card_name="espurr",
+            set_name="Chaos Rising",
+            set_code="me02",
+            collector_number="036/086",
+            variant="non_holo",
+        )
+        evaluated = filter_comps(
+            key,
+            [sold_comp_prices("Espurr - 036/086 - Reverse Holo - Chaos Rising - NM/M - Pokemon Card", 2.96, 0)],
+        )
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_variant_reverse_holo")
+        self.assertEqual(evaluated[0].comp.raw_metadata["requested_variant"], "non_holo")
+        self.assertEqual(evaluated[0].comp.raw_metadata["detected_variant"], "reverse_holo")
+        self.assertFalse(evaluated[0].comp.raw_metadata["variant_match"])
+
+    def test_non_holo_espurr_includes_plain_common(self) -> None:
+        key = sample_price_key(
+            card_name="Espurr",
+            normalized_card_name="espurr",
+            set_name="Chaos Rising",
+            set_code="me02",
+            collector_number="036/086",
+            variant="non_holo",
+        )
+        evaluated = filter_comps(key, [sold_comp_prices("Espurr 036/086 Chaos Rising Common", 2.0, 0)])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].comp.raw_metadata["detected_variant"], "non_holo")
+
+    def test_reverse_holo_requires_reverse_holo_title(self) -> None:
+        key = sample_price_key(variant="reverse_holo")
+        evaluated = filter_comps(
+            key,
+            [
+                sold_comp_prices("Charizard Base Set 4 Reverse Holo", 20, 0, source_listing_id="reverse"),
+                sold_comp_prices("Charizard Base Set 4 Common", 10, 0, source_listing_id="plain"),
+            ],
+        )
+        reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
+        self.assertIsNone(reasons["reverse"])
+        self.assertEqual(reasons["plain"], "weak_variant_match")
+
+    def test_holo_rejects_reverse_holo(self) -> None:
+        evaluated = filter_comps(
+            sample_price_key(variant="holo"),
+            [sold_comp_prices("Charizard Base Set 4 Reverse Holo", 20, 0)],
+        )
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_variant_reverse_holo")
+
+    def test_raw_keeps_generic_variant_behavior(self) -> None:
+        evaluated = filter_comps(
+            sample_price_key(variant="raw"),
+            [sold_comp_prices("Charizard Base Set 4 Reverse Holo", 20, 0)],
+        )
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].comp.raw_metadata["detected_variant"], "reverse_holo")
 
 
 if __name__ == "__main__":
