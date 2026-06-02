@@ -17,6 +17,7 @@ from cardscanr_market_engine.models import (
     ProviderResult,
     SoldComp,
 )
+from cardscanr_market_engine.providers.errors import ProviderIdentityUnavailableError
 
 
 def fixed_config() -> MarketEngineConfig:
@@ -263,6 +264,49 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertEqual(result["error"], "provider boom")
         self.assertEqual(result["failJobError"], "fail rpc boom")
+
+    def test_job_runner_report_contains_identity_guard_reason(self) -> None:
+        class IdentityBlockedProvider:
+            marketplace_name = "ebay"
+
+            def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+                raise ProviderIdentityUnavailableError(
+                    "english_market_identity_unavailable",
+                    diagnostics={
+                        "blocked_reason": "english_market_identity_unavailable",
+                        "market_country": request.market_country,
+                        "provider_marketplace": request.provider_marketplace_id,
+                        "original_card_name": "[non_latin_redacted length=5 sha256=test]",
+                        "latin_ratio": 0.0,
+                        "non_latin_detected": True,
+                    },
+                )
+
+        client = FakeClient()
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=IdentityBlockedProvider(),
+            config=fixed_config(),
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-identity-blocked",
+                price_key_id="key-1",
+                reason="scheduler_refresh",
+                priority=90,
+                status="running",
+                attempt_count=1,
+            )
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["error"], "english_market_identity_unavailable")
+        self.assertEqual(result["providerDiagnostics"]["providerErrorCode"], "provider_identity_unavailable")
+        diagnostics = result["providerDiagnostics"]["diagnostics"]
+        self.assertEqual(diagnostics["blocked_reason"], "english_market_identity_unavailable")
+        self.assertEqual(client.failed, {"job_id": "job-identity-blocked", "error_message": result["error"]})
 
     def test_job_runner_fails_cleanly_for_unsupported_market(self) -> None:
         class UnsupportedMarketProvider(FakeProvider):

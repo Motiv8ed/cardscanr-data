@@ -62,6 +62,10 @@ class ProviderPermanentError(ProviderError):
     error_code = "provider_permanent"
 
 
+class ProviderIdentityUnavailableError(ProviderPermanentError):
+    error_code = "provider_identity_unavailable"
+
+
 class ProviderParseError(ProviderError):
     error_code = "provider_parse_error"
     retryable = True

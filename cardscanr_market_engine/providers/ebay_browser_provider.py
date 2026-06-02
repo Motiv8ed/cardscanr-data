@@ -18,11 +18,13 @@ from .errors import (
     ProviderBlockedError,
     ProviderDisabledError,
     ProviderError,
+    ProviderIdentityUnavailableError,
     ProviderParseError,
     ProviderTemporaryError,
     ProviderUnsupportedMarketError,
     sanitize_provider_diagnostics,
 )
+from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_english_market_identity
 from .query_builder import ProviderSearchQuery, build_provider_search_query
 
 
@@ -758,6 +760,12 @@ class EbayBrowserSoldCompsProvider:
             raise ProviderUnsupportedMarketError(
                 "eBay browser provider currently supports AU/AUD, US/USD, GB/GBP, and CA/CAD only",
                 diagnostics={"marketCountry": request.market_country, "currency": request.currency},
+            )
+        identity_guard = evaluate_english_market_identity(request)
+        if identity_guard.blocked:
+            raise ProviderIdentityUnavailableError(
+                ENGLISH_MARKET_IDENTITY_UNAVAILABLE,
+                diagnostics=identity_guard.diagnostics,
             )
         search_query = build_provider_search_query(request)
         self._wait_for_request_slot()

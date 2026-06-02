@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 import re
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config  # noqa: E402
-from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest  # noqa: E402
+from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest, ProviderResult  # noqa: E402
 from cardscanr_market_engine.filters import filter_comps  # noqa: E402
 from cardscanr_market_engine.providers import MockMarketCompsProvider, create_market_comps_provider  # noqa: E402
 from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E402
@@ -31,7 +32,12 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     parse_shipping_text,
     parse_sold_date_text,
 )
-from cardscanr_market_engine.providers.errors import ProviderDisabledError, sanitize_provider_diagnostics  # noqa: E402
+from cardscanr_market_engine.providers.identity_guard import evaluate_english_market_identity  # noqa: E402
+from cardscanr_market_engine.providers.errors import (  # noqa: E402
+    ProviderDisabledError,
+    ProviderIdentityUnavailableError,
+    sanitize_provider_diagnostics,
+)
 from cardscanr_market_engine.providers.errors import ProviderUnsupportedMarketError  # noqa: E402
 from cardscanr_market_engine.providers.query_builder import build_provider_search_query  # noqa: E402
 from scripts.debug_ebay_browser_market_matrix import plan_market_matrix  # noqa: E402
@@ -51,13 +57,16 @@ def sample_request(
     currency: str = "AUD",
     condition: str = "raw",
     variant: str = "raw",
+    card_name: str = "Charizard ex",
+    normalized_card_name: str | None = None,
+    raw: dict | None = None,
 ) -> ProviderRequest:
     market = resolve_marketplace_config(market_country=country, currency=currency, marketplace="ebay")
     key = MarketPriceKey(
         id="key-1",
         game="pokemon",
-        card_name="Charizard ex",
-        normalized_card_name="charizard ex",
+        card_name=card_name,
+        normalized_card_name=normalized_card_name if normalized_card_name is not None else card_name.lower(),
         set_name="Obsidian Flames",
         set_code="sv03",
         collector_number="125/197",
@@ -67,6 +76,7 @@ def sample_request(
         market_country=country.lower(),
         currency=currency.lower(),
         fingerprint=f"pokemon|en|sv03|125-197|charizard-ex|{variant}|{condition}|{country.lower()}|{currency.lower()}",
+        raw=raw or {},
     )
     return ProviderRequest(
         price_key=key,
@@ -160,6 +170,101 @@ class ProviderFactoryTests(unittest.TestCase):
         provider = EbayBrowserSoldCompsProvider()
         with self.assertRaises(ProviderUnsupportedMarketError):
             provider.fetch_comps(sample_request(country="DE", currency="EUR"))
+
+
+class EnglishMarketIdentityGuardTests(unittest.TestCase):
+    def _empty_result(self, request: ProviderRequest) -> ProviderResult:
+        return ProviderResult(
+            provider_name="ebay_browser",
+            marketplace=request.provider_marketplace_id,
+            provider_fingerprint="test:fingerprint",
+            query_used="Charizard ex 125/197 Obsidian Flames Pokemon card",
+            comps=[],
+            raw_metadata={"marketCountry": request.market_country},
+        )
+
+    def test_english_card_name_passes_for_au(self) -> None:
+        provider = EbayBrowserSoldCompsProvider()
+        request = sample_request(country="AU", currency="AUD", card_name="Charizard ex")
+        with patch.object(provider, "_wait_for_request_slot") as wait_for_slot:
+            with patch.object(provider, "_fetch_with_playwright", return_value=self._empty_result(request)) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(result.marketplace, "EBAY_AU")
+        wait_for_slot.assert_called_once()
+        fetch.assert_called_once()
+
+    def test_japanese_card_name_is_blocked_for_au(self) -> None:
+        provider = EbayBrowserSoldCompsProvider()
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="ハスブレロ",
+            normalized_card_name="ハスブレロ",
+        )
+        with patch.object(provider, "_wait_for_request_slot") as wait_for_slot:
+            with patch.object(provider, "_fetch_with_playwright") as fetch:
+                with self.assertRaises(ProviderIdentityUnavailableError) as ctx:
+                    provider.fetch_comps(request)
+        self.assertEqual(str(ctx.exception), "english_market_identity_unavailable")
+        self.assertEqual(ctx.exception.diagnostics["blocked_reason"], "english_market_identity_unavailable")
+        self.assertEqual(ctx.exception.diagnostics["market_country"], "AU")
+        self.assertEqual(ctx.exception.diagnostics["provider_marketplace"], "EBAY_AU")
+        self.assertTrue(ctx.exception.diagnostics["non_latin_detected"])
+        self.assertLess(ctx.exception.diagnostics["latin_ratio"], 0.5)
+        self.assertNotIn("ハスブレロ", str(ctx.exception.diagnostics))
+        wait_for_slot.assert_not_called()
+        fetch.assert_not_called()
+
+    def test_japanese_card_name_is_blocked_for_us_gb_ca(self) -> None:
+        cases = (("US", "USD"), ("GB", "GBP"), ("CA", "CAD"))
+        for country, currency in cases:
+            with self.subTest(country=country):
+                provider = EbayBrowserSoldCompsProvider()
+                request = sample_request(
+                    country=country,
+                    currency=currency,
+                    card_name="ハスブレロ",
+                    normalized_card_name="ハスブレロ",
+                )
+                with patch.object(provider, "_fetch_with_playwright") as fetch:
+                    with self.assertRaises(ProviderIdentityUnavailableError) as ctx:
+                        provider.fetch_comps(request)
+                self.assertEqual(ctx.exception.diagnostics["blocked_reason"], "english_market_identity_unavailable")
+                self.assertEqual(ctx.exception.diagnostics["market_country"], country)
+                fetch.assert_not_called()
+
+    def test_japanese_card_name_is_not_globally_blocked_for_future_jp_market(self) -> None:
+        request = replace(
+            sample_request(
+                country="AU",
+                currency="AUD",
+                card_name="ハスブレロ",
+                normalized_card_name="ハスブレロ",
+            ),
+            market_country="JP",
+            currency="JPY",
+            provider_marketplace_id="EBAY_JP",
+            provider_domain="ebay.co.jp",
+            search_locale="ja-JP",
+            display_name="Japan",
+        )
+        guard = evaluate_english_market_identity(request)
+        self.assertFalse(guard.blocked)
+        self.assertIsNone(guard.reason)
+        self.assertTrue(guard.diagnostics["non_latin_detected"])
+
+    def test_safe_english_alias_allows_query_without_original_non_latin_name(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="ハスブレロ",
+            normalized_card_name="ハスブレロ",
+            raw={"english_card_name": "Lombre"},
+        )
+        query = build_provider_search_query(request)
+        self.assertIn("Lombre", query.query_text)
+        self.assertNotIn("ハスブレロ", query.query_text)
+        self.assertTrue(query.diagnostics["identityGuard"]["english_alias_available"])
 
 
 class QueryBuilderTests(unittest.TestCase):

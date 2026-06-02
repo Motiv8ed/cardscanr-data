@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 
 from ..fingerprints import normalize_market_variant
 from ..models import ProviderRequest
+from .identity_guard import evaluate_english_market_identity
 
 
 RAW_EXCLUDE_TERMS = (
@@ -57,6 +58,7 @@ def _use_negative_terms() -> bool:
 
 def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery:
     key = request.price_key
+    identity_guard = evaluate_english_market_identity(request)
     variant = normalize_market_variant(key.variant)
     variant_include_terms = {
         "reverse_holo": ("reverse holo",),
@@ -65,7 +67,7 @@ def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery
     include_terms = tuple(
         item
         for item in (
-            _clean(key.card_name),
+            _clean(identity_guard.search_card_name),
             _clean(key.collector_number),
             _clean(key.set_name or key.set_code),
             *variant_include_terms,
@@ -73,6 +75,7 @@ def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery
         )
         if item
     )
+    include_terms = tuple(dict.fromkeys(include_terms))
     graded = _is_graded_condition(key.condition) or _is_graded_condition(key.variant)
     exclude_terms_list = [term for term in RAW_EXCLUDE_TERMS if not (graded and term in GRADED_MARKERS)]
     if variant == "non_holo":
@@ -106,5 +109,6 @@ def build_provider_search_query(request: ProviderRequest) -> ProviderSearchQuery
             "marketplace": request.marketplace,
             "searchLocale": request.search_locale,
             "displayName": request.display_name,
+            "identityGuard": identity_guard.diagnostics,
         },
     )
