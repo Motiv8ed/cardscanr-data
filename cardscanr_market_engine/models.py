@@ -141,3 +141,4 @@ class PricingStats:
     price_spread_ratio: float | None = None
     confidence_warnings: tuple[str, ...] = ()
     included_price_distribution: tuple[float, ...] = ()
+    no_reliable_price_reason: str | None = None

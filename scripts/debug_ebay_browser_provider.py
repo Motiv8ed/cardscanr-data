@@ -18,7 +18,7 @@ from cardscanr_market_engine.marketplaces import resolve_marketplace_config
 from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.providers.errors import sanitize_provider_diagnostics
-from cardscanr_market_engine.providers.query_builder import build_provider_search_query
+from cardscanr_market_engine.providers.query_builder import build_provider_search_queries
 from cardscanr_market_engine.pricing_stats import calculate_pricing_stats
 
 
@@ -106,7 +106,7 @@ def main() -> int:
     import os
     os.environ.setdefault("EBAY_BROWSER_DEBUG_ARTIFACT_DIR", str(debug_dir))
     request = build_request(args)
-    query = build_provider_search_query(request)
+    query_ladder = build_provider_search_queries(request)
     provider = create_market_comps_provider("ebay_browser")
     browser_config = getattr(getattr(provider, "config", None), "safe_diagnostics", lambda: {})()
     result = provider.fetch_comps(request)
@@ -127,11 +127,23 @@ def main() -> int:
                 "runsJsonl": str(ROOT / "reports" / "ebay_browser_debug" / "runs.jsonl"),
             },
             "query": {
-                "query_text": query.query_text,
-                "search_url": query.search_url,
-                "market_country": query.market_country,
-                "currency": query.currency,
+                "query_text": query_ladder[0].query_text if query_ladder else None,
+                "search_url": query_ladder[0].search_url if query_ladder else None,
+                "market_country": query_ladder[0].market_country if query_ladder else request.market_country,
+                "currency": query_ladder[0].currency if query_ladder else request.currency,
             },
+            "queryAttempts": result.raw_metadata.get("queryAttempts")
+            or [
+                {
+                    "query_index": query.query_index,
+                    "query_source": query.query_source,
+                    "query_text": query.query_text,
+                    "search_url": query.search_url,
+                }
+                for query in query_ladder
+            ],
+            "queryAttemptsUsed": result.raw_metadata.get("queryAttemptsUsed"),
+            "queryStopReason": result.raw_metadata.get("queryStopReason"),
             "resultCount": len(result.comps),
             "urlQualityCounts": result.raw_metadata.get("qualitySummary") or {},
             "priceSpreadRatio": pricing_stats.price_spread_ratio,

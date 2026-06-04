@@ -25,7 +25,7 @@ from .errors import (
     sanitize_provider_diagnostics,
 )
 from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_english_market_identity
-from .query_builder import ProviderSearchQuery, build_provider_search_query
+from .query_builder import ProviderSearchQuery, build_provider_search_queries
 
 
 BLOCK_TEXT_MARKERS = ("captcha", "verify", "robot", "unusual traffic", "access denied", "blocked")
@@ -57,6 +57,8 @@ LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ")
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
 SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
+DEFAULT_MAX_QUERY_ATTEMPTS = 4
+EARLY_STOP_EXACT_INCLUDED_COUNT = 5
 MARKET_COUNTRY_NAMES = {
     "AU": ("australia", "australian"),
     "US": ("united states", "usa", "us "),
@@ -446,6 +448,10 @@ def parse_candidate_dict(
                 "providerDomain": search_query.provider_domain,
                 **url_metadata,
                 "providerMarketplaceId": search_query.provider_marketplace_id,
+                "query_index": search_query.query_index,
+                "query_source": search_query.query_source,
+                "query_text": search_query.query_text,
+                "query_search_url": search_query.search_url,
                 "marketCountry": request.market_country,
                 "expectedCurrency": search_query.currency,
                 "detectedCurrency": detected_currency,
@@ -662,7 +668,8 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
 
 
 def build_quality_summary(comps: list[SoldComp], *, request: ProviderRequest) -> dict[str, int]:
-    requested_name = request.price_key.normalized_card_name.replace("_", " ").lower() or request.price_key.card_name.lower()
+    identity_guard = evaluate_english_market_identity(request)
+    requested_name = identity_guard.search_card_name.lower() or request.price_key.normalized_card_name.replace("_", " ").lower() or request.price_key.card_name.lower()
     collector_number = request.price_key.collector_number.lower()
     summary = {
         "total_parsed": len(comps),
@@ -735,6 +742,193 @@ def build_quality_summary(comps: list[SoldComp], *, request: ProviderRequest) ->
     return summary
 
 
+def _max_query_attempts() -> int:
+    return min(_parse_positive_int("EBAY_BROWSER_MAX_QUERY_ATTEMPTS", DEFAULT_MAX_QUERY_ATTEMPTS), DEFAULT_MAX_QUERY_ATTEMPTS)
+
+
+def _tag_comp_with_query(comp: SoldComp, search_query: ProviderSearchQuery) -> SoldComp:
+    metadata = dict(comp.raw_metadata)
+    metadata.setdefault("query_index", search_query.query_index)
+    metadata.setdefault("query_source", search_query.query_source)
+    metadata.setdefault("query_text", search_query.query_text)
+    metadata.setdefault("query_search_url", search_query.search_url)
+    metadata.setdefault("query_sources", [search_query.query_source])
+    metadata.setdefault("query_indexes", [search_query.query_index])
+    return SoldComp(
+        source_listing_id=comp.source_listing_id,
+        title=comp.title,
+        sold_price=comp.sold_price,
+        shipping_price=comp.shipping_price,
+        total_price=comp.total_price,
+        currency=comp.currency,
+        sold_date=comp.sold_date,
+        listing_url=comp.listing_url,
+        condition_text=comp.condition_text,
+        raw_metadata=metadata,
+    )
+
+
+def _dedupe_key(comp: SoldComp) -> str:
+    raw = comp.raw_metadata
+    item_id = str(raw.get("item_id") or "").strip()
+    if item_id:
+        return f"item:{item_id}"
+    canonical_url = str(raw.get("normalized_listing_url") or comp.listing_url or "").strip().lower()
+    if canonical_url:
+        return f"url:{canonical_url}"
+    normalized_title = _normalise_text(comp.title).lower()
+    sold_date = comp.sold_date.astimezone(timezone.utc).date().isoformat()
+    return f"title-price-date:{normalized_title}|{comp.sold_price:.2f}|{sold_date}"
+
+
+def dedupe_sold_comps(comps: list[SoldComp]) -> list[SoldComp]:
+    deduped: dict[str, SoldComp] = {}
+    for comp in comps:
+        key = _dedupe_key(comp)
+        existing = deduped.get(key)
+        if existing is None:
+            metadata = dict(comp.raw_metadata)
+            source = metadata.get("query_source")
+            index = metadata.get("query_index")
+            metadata.setdefault("dedupe_key", key)
+            metadata.setdefault("query_sources", [source] if source is not None else [])
+            metadata.setdefault("query_indexes", [index] if index is not None else [])
+            deduped[key] = SoldComp(
+                source_listing_id=comp.source_listing_id,
+                title=comp.title,
+                sold_price=comp.sold_price,
+                shipping_price=comp.shipping_price,
+                total_price=comp.total_price,
+                currency=comp.currency,
+                sold_date=comp.sold_date,
+                listing_url=comp.listing_url,
+                condition_text=comp.condition_text,
+                raw_metadata=metadata,
+            )
+            continue
+        metadata = dict(existing.raw_metadata)
+        duplicate_sources = list(metadata.get("query_sources") or [])
+        duplicate_indexes = list(metadata.get("query_indexes") or [])
+        source = comp.raw_metadata.get("query_source")
+        index = comp.raw_metadata.get("query_index")
+        if source is not None and source not in duplicate_sources:
+            duplicate_sources.append(source)
+        if index is not None and index not in duplicate_indexes:
+            duplicate_indexes.append(index)
+        metadata["query_sources"] = duplicate_sources
+        metadata["query_indexes"] = duplicate_indexes
+        metadata["duplicate_seen_count"] = int(metadata.get("duplicate_seen_count") or 1) + 1
+        metadata.setdefault("duplicate_listing_urls", [])
+        duplicate_urls = list(metadata.get("duplicate_listing_urls") or [])
+        if comp.listing_url and comp.listing_url not in duplicate_urls:
+            duplicate_urls.append(comp.listing_url)
+        metadata["duplicate_listing_urls"] = duplicate_urls[:10]
+        deduped[key] = SoldComp(
+            source_listing_id=existing.source_listing_id,
+            title=existing.title,
+            sold_price=existing.sold_price,
+            shipping_price=existing.shipping_price,
+            total_price=existing.total_price,
+            currency=existing.currency,
+            sold_date=existing.sold_date,
+            listing_url=existing.listing_url,
+            condition_text=existing.condition_text,
+            raw_metadata=metadata,
+        )
+    return list(deduped.values())
+
+
+def _merge_quality_summaries(summaries: list[dict[str, int]]) -> dict[str, int]:
+    merged: dict[str, int] = {}
+    for summary in summaries:
+        for key, value in summary.items():
+            merged[key] = merged.get(key, 0) + int(value or 0)
+    return merged
+
+
+def _comp_flags(item: Any) -> dict[str, Any]:
+    raw = item.comp.raw_metadata
+    return {
+        "card_name_match": raw.get("card_name_match"),
+        "collector_number_match": raw.get("collector_number_match"),
+        "collector_number_match_quality": raw.get("collector_number_match_quality"),
+        "set_name_match": raw.get("set_name_match"),
+        "set_match_quality": raw.get("set_match_quality"),
+        "requested_variant": raw.get("requested_variant"),
+        "detected_variant": raw.get("detected_variant"),
+        "variant_match": raw.get("variant_match"),
+        "url_quality": raw.get("url_quality"),
+    }
+
+
+def _compact_evaluated_comp(item: Any) -> dict[str, Any]:
+    raw = item.comp.raw_metadata
+    return {
+        "query_index": raw.get("query_index"),
+        "query_source": raw.get("query_source"),
+        "query_sources": raw.get("query_sources") or [],
+        "title": item.comp.title,
+        "sold_price": item.comp.sold_price,
+        "shipping_price": item.comp.shipping_price,
+        "total_price": item.comp.total_price,
+        "currency": item.comp.currency,
+        "sold_date": utc_iso(item.comp.sold_date),
+        "listing_url": item.comp.listing_url or None,
+        "item_id": raw.get("item_id"),
+        "score": item.match_score,
+        "flags": _comp_flags(item),
+        "rejection_reason": item.rejection_reason,
+    }
+
+
+def _attempt_query_index(item: Any) -> int | None:
+    raw = item.comp.raw_metadata
+    try:
+        return int(raw.get("query_index"))
+    except Exception:
+        return None
+
+
+def build_query_attempt_summaries(
+    attempts: list[tuple[ProviderSearchQuery, ProviderResult]],
+    evaluated: list[Any],
+) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for search_query, result in attempts:
+        attempt_evaluated = [item for item in evaluated if _attempt_query_index(item) == search_query.query_index]
+        summaries.append(
+            {
+                "query_index": search_query.query_index,
+                "query_source": search_query.query_source,
+                "query_text": search_query.query_text,
+                "search_url": search_query.search_url,
+                "result_count": len(result.comps),
+                "included_count": sum(1 for item in attempt_evaluated if item.included_in_estimate),
+                "rejected_count": sum(1 for item in attempt_evaluated if not item.included_in_estimate),
+                "quality_summary": result.raw_metadata.get("qualitySummary") or {},
+                "parser_error_count": len(result.raw_metadata.get("parserErrors") or []),
+            }
+        )
+    return summaries
+
+
+def _enough_high_quality_exact_comps(request: ProviderRequest, comps: list[SoldComp]) -> bool:
+    from ..filters import filter_comps
+
+    evaluated = filter_comps(request.price_key, comps)
+    exact = [
+        item
+        for item in evaluated
+        if item.included_in_estimate
+        and item.match_score >= 0.85
+        and bool(item.comp.raw_metadata.get("card_name_match"))
+        and bool(item.comp.raw_metadata.get("collector_number_match"))
+        and str(item.comp.raw_metadata.get("collector_number_match_quality")) in {"full", "short"}
+        and bool(item.comp.raw_metadata.get("set_name_match"))
+    ]
+    return len(exact) >= EARLY_STOP_EXACT_INCLUDED_COUNT
+
+
 class EbayBrowserSoldCompsProvider:
     provider_name = "ebay_browser"
     marketplace_name = "ebay"
@@ -767,10 +961,35 @@ class EbayBrowserSoldCompsProvider:
                 ENGLISH_MARKET_IDENTITY_UNAVAILABLE,
                 diagnostics=identity_guard.diagnostics,
             )
-        search_query = build_provider_search_query(request)
-        self._wait_for_request_slot()
+        search_queries = build_provider_search_queries(request, max_attempts=_max_query_attempts())
+        attempts: list[tuple[ProviderSearchQuery, ProviderResult]] = []
+        aggregate_comps: list[SoldComp] = []
+        stop_reason = "all_query_attempts_exhausted"
         try:
-            return self._fetch_with_playwright(request=request, search_query=search_query)
+            for search_query in search_queries:
+                self._wait_for_request_slot()
+                result = self._fetch_with_playwright(request=request, search_query=search_query)
+                tagged_comps = [_tag_comp_with_query(comp, search_query) for comp in result.comps]
+                result = ProviderResult(
+                    provider_name=result.provider_name,
+                    marketplace=result.marketplace,
+                    provider_fingerprint=result.provider_fingerprint,
+                    query_used=result.query_used,
+                    comps=tagged_comps,
+                    raw_metadata=result.raw_metadata,
+                )
+                attempts.append((search_query, result))
+                aggregate_comps = dedupe_sold_comps([comp for _query, attempt in attempts for comp in attempt.comps])
+                if _enough_high_quality_exact_comps(request, aggregate_comps):
+                    stop_reason = "enough_high_quality_exact_comps"
+                    break
+            return self._build_aggregate_result(
+                request=request,
+                attempts=attempts,
+                comps=aggregate_comps,
+                stop_reason=stop_reason,
+                query_attempt_limit=len(search_queries),
+            )
         except ProviderError:
             raise
         except Exception as exc:
@@ -778,6 +997,83 @@ class EbayBrowserSoldCompsProvider:
                 "eBay browser lookup failed temporarily",
                 diagnostics={"errorType": type(exc).__name__, "providerDomain": request.provider_domain},
             ) from exc
+
+    def _build_aggregate_result(
+        self,
+        *,
+        request: ProviderRequest,
+        attempts: list[tuple[ProviderSearchQuery, ProviderResult]],
+        comps: list[SoldComp],
+        stop_reason: str,
+        query_attempt_limit: int,
+    ) -> ProviderResult:
+        from ..filters import filter_comps
+
+        if not attempts:
+            raise ProviderParseError(
+                "No eBay query attempts were available",
+                diagnostics={"providerDomain": request.provider_domain},
+            )
+        evaluated = filter_comps(request.price_key, comps)
+        query_attempts = build_query_attempt_summaries(attempts, evaluated)
+        quality_summary = build_quality_summary(comps, request=request)
+        attempted_quality_summary = _merge_quality_summaries(
+            [
+                result.raw_metadata.get("qualitySummary") or {}
+                for _search_query, result in attempts
+                if isinstance(result.raw_metadata.get("qualitySummary") or {}, dict)
+            ]
+        )
+        all_parser_errors: list[dict[str, Any]] = []
+        for search_query, result in attempts:
+            for error in result.raw_metadata.get("parserErrors") or []:
+                if isinstance(error, dict):
+                    all_parser_errors.append(
+                        {
+                            "query_index": search_query.query_index,
+                            "query_source": search_query.query_source,
+                            **error,
+                        }
+                    )
+        first_query = attempts[0][0]
+        query_used = " || ".join(search_query.query_text for search_query, _result in attempts)
+        metadata = sanitize_provider_diagnostics(
+            {
+                "providerDomain": first_query.provider_domain,
+                "providerMarketplaceId": first_query.provider_marketplace_id,
+                "marketCountry": first_query.market_country,
+                "currency": first_query.currency,
+                "resultCount": len(comps),
+                "rawResultCountBeforeDedupe": sum(len(result.comps) for _query, result in attempts),
+                "dedupedResultCount": len(comps),
+                "duplicateCount": max(0, sum(len(result.comps) for _query, result in attempts) - len(comps)),
+                "maxResults": self.config.max_results,
+                "browserConfig": self.config.safe_diagnostics(),
+                "queryDiagnostics": first_query.diagnostics,
+                "queryAttempts": query_attempts,
+                "queryAttemptsUsed": len(attempts),
+                "queryAttemptLimit": query_attempt_limit,
+                "queryStopReason": stop_reason,
+                "marketScope": self.config.market_scope,
+                "qualitySummary": quality_summary,
+                "attemptedQualitySummaryBeforeDedupe": attempted_quality_summary,
+                "parserErrors": all_parser_errors[:50],
+            }
+        )
+        provider_result = ProviderResult(
+            provider_name=self.provider_name,
+            marketplace=first_query.provider_marketplace_id,
+            provider_fingerprint=self._aggregate_provider_fingerprint(attempts),
+            query_used=query_used,
+            comps=comps,
+            raw_metadata=metadata,
+        )
+        self._write_aggregate_debug_artifacts(
+            request=request,
+            provider_result=provider_result,
+            evaluated=evaluated,
+        )
+        return provider_result
 
     def _fetch_with_playwright(self, *, request: ProviderRequest, search_query: ProviderSearchQuery) -> ProviderResult:
         try:
@@ -881,6 +1177,9 @@ class EbayBrowserSoldCompsProvider:
                             "providerMarketplaceId": search_query.provider_marketplace_id,
                             "marketCountry": search_query.market_country,
                             "currency": search_query.currency,
+                            "searchUrl": search_query.search_url,
+                            "queryIndex": search_query.query_index,
+                            "querySource": search_query.query_source,
                             "resultCount": len(comps),
                             "maxResults": self.config.max_results,
                             "browserConfig": self.config.safe_diagnostics(),
@@ -990,6 +1289,10 @@ class EbayBrowserSoldCompsProvider:
                     "providerDomain": search_query.provider_domain,
                     **url_metadata,
                     "providerMarketplaceId": search_query.provider_marketplace_id,
+                    "query_index": search_query.query_index,
+                    "query_source": search_query.query_source,
+                    "query_text": search_query.query_text,
+                    "query_search_url": search_query.search_url,
                     "marketCountry": request.market_country,
                     "expectedCurrency": search_query.currency,
                     "detectedCurrency": detected_currency,
@@ -1034,6 +1337,69 @@ class EbayBrowserSoldCompsProvider:
         digest = hashlib.sha256(search_query.search_url.encode("utf-8")).hexdigest()[:16]
         return f"ebay_browser:{search_query.provider_marketplace_id}:{digest}"
 
+    def _aggregate_provider_fingerprint(self, attempts: list[tuple[ProviderSearchQuery, ProviderResult]]) -> str:
+        joined = "|".join(search_query.search_url for search_query, _result in attempts)
+        marketplace = attempts[0][0].provider_marketplace_id
+        digest = hashlib.sha256(joined.encode("utf-8")).hexdigest()[:16]
+        return f"ebay_browser:{marketplace}:aggregate:{digest}"
+
+    def _write_aggregate_debug_artifacts(
+        self,
+        *,
+        request: ProviderRequest,
+        provider_result: ProviderResult,
+        evaluated: list[Any],
+    ) -> None:
+        if self.config.debug_artifact_dir is None:
+            return
+        from ..pricing_stats import calculate_pricing_stats
+
+        pricing_stats = calculate_pricing_stats(
+            evaluated,
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        included = [item for item in evaluated if item.included_in_estimate]
+        rejected = [item for item in evaluated if not item.included_in_estimate]
+        summary = sanitize_provider_diagnostics(
+            {
+                "timestamp": utc_iso(),
+                "aggregate": True,
+                "search_url": (provider_result.raw_metadata.get("queryAttempts") or [{}])[0].get("search_url"),
+                "query_attempts": provider_result.raw_metadata.get("queryAttempts") or [],
+                "query_attempts_used": provider_result.raw_metadata.get("queryAttemptsUsed"),
+                "query_stop_reason": provider_result.raw_metadata.get("queryStopReason"),
+                "result_count": len(provider_result.comps),
+                "raw_result_count_before_dedupe": provider_result.raw_metadata.get("rawResultCountBeforeDedupe"),
+                "deduped_result_count": provider_result.raw_metadata.get("dedupedResultCount"),
+                "duplicate_count": provider_result.raw_metadata.get("duplicateCount"),
+                "quality_summary": provider_result.raw_metadata.get("qualitySummary") or {},
+                "price_spread_ratio": pricing_stats.price_spread_ratio,
+                "confidence": pricing_stats.confidence,
+                "confidence_warnings": list(pricing_stats.confidence_warnings),
+                "included_price_distribution": list(pricing_stats.included_price_distribution),
+                "final_price_basis": pricing_stats.price_basis,
+                "recommended_price": pricing_stats.recommended_price,
+                "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "top_included_comps": [_compact_evaluated_comp(item) for item in included[:10]],
+                "top_rejected_comps": [_compact_evaluated_comp(item) for item in rejected[:20]],
+                "parser_errors": provider_result.raw_metadata.get("parserErrors") or [],
+                "browser_config": self.config.safe_diagnostics(),
+                "market_config": {
+                    "marketCountry": request.market_country,
+                    "currency": request.currency,
+                    "marketplace": request.marketplace,
+                    "providerMarketplaceId": request.provider_marketplace_id,
+                    "providerDomain": request.provider_domain,
+                    "searchLocale": request.search_locale,
+                },
+                "query_text": provider_result.query_used,
+            }
+        )
+        latest_dir = self.config.debug_artifact_dir
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        write_json(latest_dir / "debug_summary.json", summary)
+        append_jsonl(DEBUG_REPORTS_DIR / "runs.jsonl", summary)
+
     def _write_debug_artifacts(
         self,
         *,
@@ -1070,21 +1436,19 @@ class EbayBrowserSoldCompsProvider:
             config=MarketEngineConfig.from_env(require_supabase=False),
         )
 
-        def compact_comp(item: Any) -> dict[str, Any]:
-            return {
-                "title": item.comp.title,
-                "sold_price": item.comp.sold_price,
-                "shipping_price": item.comp.shipping_price,
-                "total_price": item.comp.total_price,
-                "listing_url": item.comp.listing_url or None,
-                "url_quality": item.comp.raw_metadata.get("url_quality"),
-                "rejection_reason": item.rejection_reason,
-            }
-
         summary = sanitize_provider_diagnostics(
             {
                 "timestamp": utc_iso(),
                 "search_url": search_query.search_url,
+                "query_attempts": [
+                    {
+                        "query_index": search_query.query_index,
+                        "query_source": search_query.query_source,
+                        "query_text": search_query.query_text,
+                        "search_url": search_query.search_url,
+                        "result_count": len(comps),
+                    }
+                ],
                 "page_url_after_load": getattr(page, "url", ""),
                 "page_title": title,
                 "detected_block_or_captcha": detected_block,
@@ -1105,8 +1469,12 @@ class EbayBrowserSoldCompsProvider:
                 "price_spread_ratio": pricing_stats.price_spread_ratio,
                 "confidence": pricing_stats.confidence,
                 "confidence_warnings": list(pricing_stats.confidence_warnings),
-                "top_included_comps": [compact_comp(item) for item in evaluated if item.included_in_estimate][:5],
-                "top_rejected_comps": [compact_comp(item) for item in evaluated if not item.included_in_estimate][:10],
+                "included_price_distribution": list(pricing_stats.included_price_distribution),
+                "final_price_basis": pricing_stats.price_basis,
+                "recommended_price": pricing_stats.recommended_price,
+                "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "top_included_comps": [_compact_evaluated_comp(item) for item in evaluated if item.included_in_estimate][:5],
+                "top_rejected_comps": [_compact_evaluated_comp(item) for item in evaluated if not item.included_in_estimate][:10],
                 "parser_errors": parser_errors[:50],
                 "browser_config": self.config.safe_diagnostics(),
                 "market_config": {

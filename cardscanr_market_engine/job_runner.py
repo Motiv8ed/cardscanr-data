@@ -68,7 +68,7 @@ def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
 def classify_comp_quality(item: EvaluatedComp, *, pricing_stats: PricingStats) -> dict[str, Any]:
     raw = item.comp.raw_metadata
     title = item.comp.title.lower()
-    requested_card = str(raw.get("requestedCardName", "")).lower()
+    requested_card = str(raw.get("requestedCanonicalCardName") or raw.get("requestedCardName", "")).lower()
     requested_number = str(raw.get("requestedCollectorNumber", "")).lower()
     exact_card_match = bool(item.match_score >= 0.85 and requested_card and requested_card in title and requested_number and requested_number in title)
     item_median = pricing_stats.item_median_price or 0
@@ -175,6 +175,11 @@ class MarketPriceJobRunner:
                 "price_spread_ratio": pricing_stats.price_spread_ratio,
                 "confidence_warnings": list(pricing_stats.confidence_warnings),
                 "included_price_distribution": list(pricing_stats.included_price_distribution),
+                "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "query_attempts": provider_result.raw_metadata.get("queryAttempts") or [],
+                "query_attempts_used": provider_result.raw_metadata.get("queryAttemptsUsed"),
+                "query_stop_reason": provider_result.raw_metadata.get("queryStopReason"),
+                "final_price_basis": pricing_stats.price_basis,
                 "url_quality_counts": url_quality_counts(provider_result),
             },
         }

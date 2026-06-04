@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,8 +15,9 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from cardscanr_market_engine.config import MarketEngineConfig  # noqa: E402
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config  # noqa: E402
-from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest, ProviderResult  # noqa: E402
+from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest, ProviderResult, SoldComp  # noqa: E402
 from cardscanr_market_engine.filters import filter_comps  # noqa: E402
 from cardscanr_market_engine.providers import MockMarketCompsProvider, create_market_comps_provider  # noqa: E402
 from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E402
@@ -25,6 +27,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     build_quality_summary,
     contains_block_marker,
     count_candidate_selectors,
+    dedupe_sold_comps,
     is_price_range_text,
     normalize_ebay_listing_url,
     parse_candidate_dict,
@@ -39,7 +42,8 @@ from cardscanr_market_engine.providers.errors import (  # noqa: E402
     sanitize_provider_diagnostics,
 )
 from cardscanr_market_engine.providers.errors import ProviderUnsupportedMarketError  # noqa: E402
-from cardscanr_market_engine.providers.query_builder import build_provider_search_query  # noqa: E402
+from cardscanr_market_engine.providers.query_builder import build_provider_search_queries, build_provider_search_query  # noqa: E402
+from cardscanr_market_engine.pricing_stats import calculate_pricing_stats  # noqa: E402
 from scripts.debug_ebay_browser_market_matrix import plan_market_matrix  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import default_plan as live_worker_default_plan  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import parse_market_list as parse_worker_market_list  # noqa: E402
@@ -59,6 +63,10 @@ def sample_request(
     variant: str = "raw",
     card_name: str = "Charizard ex",
     normalized_card_name: str | None = None,
+    set_name: str = "Obsidian Flames",
+    set_code: str | None = "sv03",
+    collector_number: str = "125/197",
+    language: str = "en",
     raw: dict | None = None,
 ) -> ProviderRequest:
     market = resolve_marketplace_config(market_country=country, currency=currency, marketplace="ebay")
@@ -67,15 +75,19 @@ def sample_request(
         game="pokemon",
         card_name=card_name,
         normalized_card_name=normalized_card_name if normalized_card_name is not None else card_name.lower(),
-        set_name="Obsidian Flames",
-        set_code="sv03",
-        collector_number="125/197",
-        language="en",
+        set_name=set_name,
+        set_code=set_code,
+        collector_number=collector_number,
+        language=language,
         variant=variant,
         condition=condition,
         market_country=country.lower(),
         currency=currency.lower(),
-        fingerprint=f"pokemon|en|sv03|125-197|charizard-ex|{variant}|{condition}|{country.lower()}|{currency.lower()}",
+        fingerprint=(
+            f"pokemon|{language}|{set_code or set_name}|{collector_number}|"
+            f"{(normalized_card_name if normalized_card_name is not None else card_name.lower()).replace(' ', '-')}"
+            f"|{variant}|{condition}|{country.lower()}|{currency.lower()}"
+        ),
         raw=raw or {},
     )
     return ProviderRequest(
@@ -190,8 +202,9 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
             with patch.object(provider, "_fetch_with_playwright", return_value=self._empty_result(request)) as fetch:
                 result = provider.fetch_comps(request)
         self.assertEqual(result.marketplace, "EBAY_AU")
-        wait_for_slot.assert_called_once()
-        fetch.assert_called_once()
+        self.assertEqual(wait_for_slot.call_count, 3)
+        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual(result.raw_metadata["queryAttemptsUsed"], 3)
 
     def test_japanese_card_name_is_blocked_for_au(self) -> None:
         provider = EbayBrowserSoldCompsProvider()
@@ -268,6 +281,56 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
 
 
 class QueryBuilderTests(unittest.TestCase):
+    def test_query_ladder_for_pancham_battle_partners(self) -> None:
+        request = sample_request(
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+        )
+        queries = build_provider_search_queries(request)
+        self.assertEqual([query.query_source for query in queries], ["exact", "without_set", "set_code_fallback", "japanese_origin_hint"])
+        self.assertIn('"Pancham" "050/100" "Battle Partners" Pokemon card', queries[0].query_text)
+        self.assertIn('"Pancham" "050/100" Pokemon card', queries[1].query_text)
+        self.assertIn('"Pancham" "SV9" "050" Pokemon card', queries[2].query_text)
+        self.assertIn('"Pancham" "050/100" "Battle Partners" Japanese Pokemon card', queries[3].query_text)
+
+    def test_query_ladder_for_lombre_uses_english_alias(self) -> None:
+        request = sample_request(
+            card_name="ハスブレロ",
+            normalized_card_name="ハスブレロ",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="022/100",
+            language="jp",
+            raw={"english_card_name": "Lombre"},
+        )
+        queries = build_provider_search_queries(request)
+        self.assertEqual([query.query_source for query in queries], ["exact", "without_set", "set_code_fallback", "japanese_origin_hint"])
+        self.assertTrue(all("Lombre" in query.query_text for query in queries))
+        self.assertFalse(any("ハスブレロ" in query.query_text for query in queries))
+        self.assertIn('"Lombre" "022/100" "Battle Partners" Pokemon card', queries[0].query_text)
+
+    def test_jp_local_name_is_not_used_for_english_market_queries(self) -> None:
+        for country, currency in (("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")):
+            with self.subTest(country=country):
+                request = sample_request(
+                    country=country,
+                    currency=currency,
+                    card_name="ハスブレロ",
+                    normalized_card_name="ハスブレロ",
+                    set_name="Battle Partners",
+                    set_code="SV9",
+                    collector_number="022/100",
+                    language="jp",
+                    raw={"canonical_english_name": "Lombre"},
+                )
+                queries = build_provider_search_queries(request)
+                self.assertTrue(all("Lombre" in query.query_text for query in queries))
+                self.assertFalse(any("ハスブレロ" in query.query_text for query in queries))
+
     def test_query_builder_au_uses_ebay_com_au(self) -> None:
         query = build_provider_search_query(sample_request(country="AU", currency="AUD"))
         self.assertEqual(query.provider_domain, "ebay.com.au")
@@ -318,6 +381,165 @@ class QueryBuilderTests(unittest.TestCase):
         query = build_provider_search_query(sample_request(variant="holo"))
         self.assertIn(" holo ", f" {query.query_text} ")
         self.assertIn("-reverse", query.query_text)
+
+
+class EvidenceStrategyTests(unittest.TestCase):
+    def _sold_comp(
+        self,
+        title: str,
+        *,
+        item_id: str,
+        sold_price: float = 2.5,
+        query_index: int = 0,
+        query_source: str = "exact",
+        raw_metadata: dict | None = None,
+    ) -> SoldComp:
+        metadata = {
+            "url_quality": "direct_item",
+            "item_id": item_id,
+            "normalized_listing_url": f"https://www.ebay.com.au/itm/{item_id}",
+            "query_index": query_index,
+            "query_source": query_source,
+        }
+        metadata.update(raw_metadata or {})
+        return SoldComp(
+            source_listing_id=f"ebay-{item_id}",
+            title=title,
+            sold_price=sold_price,
+            shipping_price=0.0,
+            total_price=sold_price,
+            currency="AUD",
+            sold_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
+            listing_url=f"https://www.ebay.com.au/itm/{item_id}",
+            condition_text="Raw",
+            raw_metadata=metadata,
+        )
+
+    def test_aggregator_dedupes_same_item_across_queries(self) -> None:
+        comps = [
+            self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card", item_id="111", query_index=0, query_source="exact"),
+            self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card", item_id="111", query_index=1, query_source="without_set"),
+        ]
+        deduped = dedupe_sold_comps(comps)
+        self.assertEqual(len(deduped), 1)
+        self.assertEqual(deduped[0].raw_metadata["query_sources"], ["exact", "without_set"])
+        self.assertEqual(deduped[0].raw_metadata["duplicate_seen_count"], 2)
+
+    def test_exact_set_number_comps_outrank_loose_comps(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+        )
+        exact = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card", item_id="222")
+        fallback = self._sold_comp("Pancham 050 SV9 Pokemon Card", item_id="223", query_source="set_code_fallback")
+        evaluated = filter_comps(request.price_key, [exact, fallback])
+        scores = {item.comp.source_listing_id: item.match_score for item in evaluated}
+        self.assertGreater(scores["ebay-222"], scores["ebay-223"])
+        self.assertTrue(all(item.included_in_estimate for item in evaluated))
+
+    def test_selector_complete_your_set_listing_is_rejected(self) -> None:
+        request = sample_request(country="AU", currency="AUD")
+        query = build_provider_search_query(request)
+        candidate = {
+            "source": "fixture",
+            "href": "https://www.ebay.com.au/itm/125",
+            "text": "Sold 29 May 2026\nComplete Your Set Charizard ex 125/197\nAU $9.19\nFree postage",
+        }
+        comp = parse_candidate_dict(candidate, request=request, search_query=query, index=0)
+        self.assertIsNotNone(comp)
+        assert comp is not None
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
+
+    def test_no_reliable_price_when_only_weak_comps_exist(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+        )
+        weak = self._sold_comp("Pancham Pokemon Card", item_id="333")
+        evaluated = filter_comps(request.price_key, [weak])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertIsNone(stats.recommended_price)
+        self.assertEqual(stats.no_reliable_price_reason, "all_comps_rejected")
+
+    def test_high_outlier_does_not_dominate_recommended_price(self) -> None:
+        stats = calculate_pricing_stats(
+            [
+                type("Eval", (), {"included_in_estimate": True, "match_score": 0.9, "comp": self._sold_comp("Pancham 050/100 Battle Partners", item_id="401", sold_price=2.0)})(),
+                type("Eval", (), {"included_in_estimate": True, "match_score": 0.9, "comp": self._sold_comp("Pancham 050/100 Battle Partners", item_id="402", sold_price=2.5)})(),
+                type("Eval", (), {"included_in_estimate": True, "match_score": 0.9, "comp": self._sold_comp("Pancham 050/100 Battle Partners", item_id="403", sold_price=3.0)})(),
+                type("Eval", (), {"included_in_estimate": True, "match_score": 0.9, "comp": self._sold_comp("Pancham 050/100 Battle Partners", item_id="404", sold_price=99.0)})(),
+            ],
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertLess(stats.recommended_price or 0, 10.0)
+        self.assertEqual(stats.recommended_price, 2.75)
+
+    def test_aggregate_report_includes_query_attempts_and_rejection_reasons(self) -> None:
+        request = sample_request(country="AU", currency="AUD")
+        queries = build_provider_search_queries(request, max_attempts=2)
+        good = self._sold_comp("Charizard ex 125/197 Obsidian Flames raw Pokemon Card", item_id="501")
+        bad = self._sold_comp("Complete Your Set Charizard ex 125/197", item_id="502")
+        attempts = [
+            (
+                queries[0],
+                ProviderResult(
+                    provider_name="ebay_browser",
+                    marketplace="EBAY_AU",
+                    provider_fingerprint="test:1",
+                    query_used=queries[0].query_text,
+                    comps=[good, bad],
+                    raw_metadata={"qualitySummary": {"total_parsed": 2}, "parserErrors": []},
+                ),
+            )
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            provider = EbayBrowserSoldCompsProvider(
+                config=EbayBrowserProviderConfig(
+                    engine="chrome",
+                    channel="chrome",
+                    profile_name="cardscanr",
+                    headless=True,
+                    max_results=30,
+                    timeout_seconds=45,
+                    cooldown_seconds=20,
+                    min_seconds_between_requests=20,
+                    user_data_dir=Path(tmp) / ".browser_profiles" / "cardscanr",
+                    market_scope="marketplace",
+                    debug_artifact_dir=Path(tmp) / "debug",
+                )
+            )
+            result = provider._build_aggregate_result(
+                request=request,
+                attempts=attempts,
+                comps=dedupe_sold_comps([good, bad]),
+                stop_reason="test",
+                query_attempt_limit=2,
+            )
+            summary = json.loads((Path(tmp) / "debug" / "debug_summary.json").read_text(encoding="utf-8"))
+        self.assertIn("queryAttempts", result.raw_metadata)
+        self.assertEqual(result.raw_metadata["queryAttempts"][0]["search_url"], queries[0].search_url)
+        self.assertEqual(summary["query_attempts"][0]["query_source"], "exact")
+        self.assertEqual(summary["top_rejected_comps"][0]["rejection_reason"], "price_range_or_variation_listing")
 
 
 class ParserTests(unittest.TestCase):

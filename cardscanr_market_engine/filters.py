@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from statistics import median
+from typing import Any
 
 from .fingerprints import normalize_collector_number, normalize_market_variant, normalize_name, normalize_text
 from .models import EvaluatedComp, MarketPriceKey, SoldComp
@@ -11,7 +12,10 @@ REJECTION_PATTERNS: dict[str, tuple[str, ...]] = {
     "variation_or_pick": (
         " choose your card ",
         " you pick ",
+        " you-pick ",
         " pick your card ",
+        " select your card ",
+        " complete your set ",
         " singles common ",
         " holo/reverse/ex ",
         " reverse/holo/ex ",
@@ -38,6 +42,21 @@ REVERSE_HOLO_RE = re.compile(
 )
 NON_HOLO_RE = re.compile(r"\b(?:non[\s-]+holo|regular|normal)\b", flags=re.IGNORECASE)
 HOLO_RE = re.compile(r"\b(?:holo|holographic|holofoil)\b", flags=re.IGNORECASE)
+RAW_ALIAS_FIELDS = (
+    "english_card_name",
+    "englishCardName",
+    "english_name",
+    "englishName",
+    "name_en",
+    "nameEn",
+    "en_name",
+    "enName",
+    "canonical_english_name",
+    "canonicalEnglishName",
+    "canonical_card_name",
+    "canonicalCardName",
+)
+MIN_INCLUDED_SCORE = 0.65
 
 
 def _bounded_score(value: float) -> float:
@@ -48,26 +67,103 @@ def _contains_any(haystack: str, needles: tuple[str, ...]) -> bool:
     return any(needle in haystack for needle in needles)
 
 
-def _collector_number_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
+def _clean(value: object) -> str:
+    return " ".join(str(value or "").strip().split())
+
+
+def _alias_candidates(raw: dict[str, Any]) -> list[object]:
+    candidates: list[object] = []
+    for field in RAW_ALIAS_FIELDS:
+        if field in raw:
+            candidates.append(raw.get(field))
+    aliases = raw.get("aliases")
+    if isinstance(aliases, dict):
+        for field in RAW_ALIAS_FIELDS:
+            if field in aliases:
+                candidates.append(aliases.get(field))
+        for field in ("en", "EN"):
+            if aliases.get(field):
+                candidates.append(aliases.get(field))
+    return candidates
+
+
+def _canonical_card_name(price_key: MarketPriceKey) -> str:
+    for candidate in _alias_candidates(price_key.raw):
+        text = _clean(candidate)
+        if text:
+            return text
+    normalized = _clean(price_key.normalized_card_name).replace("_", " ")
+    if normalized and normalized != "unknown":
+        return normalized
+    return _clean(price_key.card_name)
+
+
+def _canonical_card_names(price_key: MarketPriceKey) -> tuple[str, ...]:
+    names: list[str] = []
+    canonical = _canonical_card_name(price_key)
+    if canonical:
+        names.append(canonical)
+    original = _clean(price_key.card_name)
+    if original:
+        names.append(original)
+    normalized = _clean(price_key.normalized_card_name).replace("_", " ")
+    if normalized and normalized != "unknown":
+        names.append(normalized)
+    normalized_names = []
+    for name in names:
+        text = normalize_name(name).replace("_", " ")
+        if text and text not in normalized_names:
+            normalized_names.append(text)
+    return tuple(normalized_names)
+
+
+def _requested_collector_parts(price_key: MarketPriceKey) -> tuple[str, str, bool]:
     requested = normalize_collector_number(price_key.collector_number)
+    short = requested.split("/", 1)[0] if "/" in requested else requested
+    return requested, short, bool("/" in requested)
+
+
+def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
+    full_numbers = {
+        normalize_collector_number(match)
+        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+    }
+    short_numbers = {
+        normalize_collector_number(match)
+        for match in re.findall(r"(?:#\s*)?\b([A-Za-z]*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+    }
+    full_numbers.discard("")
+    short_numbers.discard("")
+    return full_numbers, short_numbers
+
+
+def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
+    requested, short, has_full_number = _requested_collector_parts(price_key)
     if not requested:
-        return True
+        return {"matches": True, "quality": "not_requested", "requested": "", "detected": []}
     requested_lower = requested.lower()
     if requested_lower in normalized_title:
-        return True
-    detected = {
-        normalize_collector_number(match)
-        for match in re.findall(r"(?:#\s*)?([A-Za-z]*\d+[A-Za-z]*)(?:/\d+)?", normalized_title, flags=re.IGNORECASE)
-    }
-    detected.discard("")
+        return {"matches": True, "quality": "full" if has_full_number else "short", "requested": requested, "detected": [requested]}
+    full_numbers, short_numbers = _detected_collector_numbers(normalized_title)
+    detected = sorted(full_numbers | short_numbers)
+    if requested in full_numbers:
+        return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
+    if not has_full_number and requested in short_numbers:
+        return {"matches": True, "quality": "short", "requested": requested, "detected": detected}
+    if has_full_number and short and short in short_numbers:
+        return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
     if not detected:
-        return True
-    return requested in detected
+        return {"matches": False, "quality": "missing", "requested": requested, "detected": []}
+    return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
+
+
+def _collector_number_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
+    return bool(_collector_number_match_info(price_key, normalized_title)["matches"])
 
 
 def _card_name_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
-    requested = normalize_name(price_key.normalized_card_name or price_key.card_name).replace("_", " ")
-    return not requested or requested in normalized_title
+    names = _canonical_card_names(price_key)
+    return not names or any(name in normalized_title for name in names)
 
 
 def _set_code_conflicts(price_key: MarketPriceKey, normalized_title: str) -> bool:
@@ -77,6 +173,30 @@ def _set_code_conflicts(price_key: MarketPriceKey, normalized_title: str) -> boo
     detected = set(re.findall(r"\b(?:sv|swsh|sm|xy|bw|base)\s*0?\d+\b", normalized_title, flags=re.IGNORECASE))
     normalized_detected = {normalize_text(value).replace(" ", "") for value in detected}
     return bool(normalized_detected and requested.replace(" ", "") not in normalized_detected)
+
+
+def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
+    set_name = normalize_name(price_key.set_name).replace("_", " ")
+    set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+    normalized_compact = normalized_title.replace(" ", "")
+    code_match = bool(set_code and set_code in normalized_compact)
+    name_match = bool(set_name and set_name in normalized_title)
+    conflict = _set_code_conflicts(price_key, normalized_title)
+    if code_match:
+        quality = "set_code"
+    elif name_match:
+        quality = "set_name"
+    elif conflict:
+        quality = "conflict"
+    else:
+        quality = "missing"
+    return {
+        "matches": code_match or name_match,
+        "quality": quality,
+        "conflict": conflict,
+        "requested_set_name": set_name,
+        "requested_set_code": set_code,
+    }
 
 
 def _has_many_card_numbers(normalized_title: str) -> bool:
@@ -121,20 +241,30 @@ def _variant_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | N
 
 def score_comp(price_key: MarketPriceKey, comp: SoldComp) -> float:
     normalized_title = f" {normalize_text(comp.title)} "
-    score = 0.35
-    if normalize_name(price_key.normalized_card_name or price_key.card_name).replace("_", " ") in normalized_title:
+    score = 0.0
+    if _card_name_matches(price_key, normalized_title):
         score += 0.35
-    if price_key.set_code and normalize_text(price_key.set_code) in normalized_title:
-        score += 0.1
-    elif normalize_name(price_key.set_name).replace("_", " ") in normalized_title:
-        score += 0.05
-    if normalize_collector_number(price_key.collector_number).lower() in normalized_title:
-        score += 0.1
+    collector_info = _collector_number_match_info(price_key, normalized_title)
+    if collector_info["quality"] == "full":
+        score += 0.3
+    elif collector_info["quality"] == "short":
+        score += 0.3
+    elif collector_info["quality"] == "short_from_full":
+        score += 0.22
+    elif collector_info["quality"] == "not_requested":
+        score += 0.08
+    set_info = _set_identity_match_info(price_key, normalized_title)
+    if set_info["quality"] == "set_code":
+        score += 0.15
+    elif set_info["quality"] == "set_name":
+        score += 0.12
     requested_variant = normalize_market_variant(price_key.variant)
     if requested_variant == "raw" and " raw " in normalized_title:
         score += 0.1
     elif requested_variant != "raw" and detect_listing_variant(comp.title) == requested_variant:
         score += 0.1
+    if comp.raw_metadata.get("url_quality") == "direct_item" or "/itm/" in comp.listing_url:
+        score += 0.05
     return _bounded_score(score)
 
 
@@ -174,6 +304,8 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "wrong_card_name"
     if _has_many_card_numbers(normalized_title):
         return "multiple_card_numbers"
+    if score_comp(price_key, comp) < MIN_INCLUDED_SCORE:
+        return "weak_evidence_match"
     return None
 
 
@@ -216,7 +348,7 @@ def _exact_card_match_for_evaluated(item: EvaluatedComp) -> bool:
     # exact comps from being rejected only because landed prices are higher elsewhere.
     raw = item.comp.raw_metadata
     title_text = normalize_text(item.comp.title)
-    requested_card = normalize_text(str(raw.get("requestedCardName", "")))
+    requested_card = normalize_text(str(raw.get("requestedCanonicalCardName") or raw.get("requestedCardName", "")))
     requested_number = normalize_collector_number(str(raw.get("requestedCollectorNumber", ""))).lower()
     if requested_card and requested_number:
         return item.match_score >= 0.85 and requested_card in title_text and requested_number in title_text
@@ -229,18 +361,26 @@ def filter_comps(price_key: MarketPriceKey, comps: list[SoldComp]) -> list[Evalu
         rejection_reason = _reject_reason(price_key, comp)
         metadata = dict(comp.raw_metadata)
         metadata.setdefault("requestedCardName", normalize_text(price_key.card_name))
+        metadata.setdefault("requestedCanonicalCardName", normalize_text(_canonical_card_name(price_key)))
         metadata.setdefault("requestedCollectorNumber", normalize_collector_number(price_key.collector_number))
         normalized_title = f" {normalize_text(comp.title)} "
         requested_variant = normalize_market_variant(price_key.variant)
         detected_variant = detect_listing_variant(comp.title)
         variant_match = requested_variant == "raw" or requested_variant == detected_variant
+        collector_info = _collector_number_match_info(price_key, normalized_title)
+        set_info = _set_identity_match_info(price_key, normalized_title)
         metadata.setdefault("requested_variant", requested_variant)
         metadata.setdefault("detected_variant", detected_variant)
         metadata.setdefault("variant_match", variant_match)
         metadata.setdefault("variant_warning", rejection_reason if rejection_reason and rejection_reason.startswith(("wrong_variant_", "weak_variant_")) else None)
-        metadata.setdefault("collector_number_match", _collector_number_matches(price_key, normalized_title))
-        metadata.setdefault("set_name_match", not _set_code_conflicts(price_key, normalized_title))
+        metadata.setdefault("collector_number_match", bool(collector_info["matches"]))
+        metadata.setdefault("collector_number_match_quality", collector_info["quality"])
+        metadata.setdefault("detected_collector_numbers", collector_info["detected"])
+        metadata.setdefault("set_name_match", bool(set_info["matches"]))
+        metadata.setdefault("set_match_quality", set_info["quality"])
+        metadata.setdefault("set_code_conflict", bool(set_info["conflict"]))
         metadata.setdefault("card_name_match", _card_name_matches(price_key, normalized_title))
+        metadata.setdefault("canonical_card_name_candidates", list(_canonical_card_names(price_key)))
         comp_for_eval = SoldComp(
             source_listing_id=comp.source_listing_id,
             title=comp.title,

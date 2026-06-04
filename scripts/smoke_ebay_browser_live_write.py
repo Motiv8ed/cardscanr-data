@@ -114,16 +114,23 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
         raw = item.get("raw_json") or {}
         quality = raw.get("compQuality") or {}
         return {
+            "query_index": raw.get("query_index"),
+            "query_source": raw.get("query_source"),
+            "query_sources": raw.get("query_sources") or [],
+            "item_id": raw.get("item_id"),
             "title": item.get("title"),
             "sold_price": item.get("sold_price"),
             "shipping_price": item.get("shipping_price"),
             "total_price": item.get("total_price"),
             "listing_url": item.get("listing_url"),
+            "match_score": item.get("match_score"),
             "url_quality": quality.get("url_quality") or raw.get("url_quality"),
             "requested_variant": quality.get("requested_variant") or raw.get("requested_variant"),
             "detected_variant": quality.get("detected_variant") or raw.get("detected_variant"),
             "variant_match": quality.get("variant_match"),
             "variant_warning": quality.get("variant_warning") or raw.get("variant_warning"),
+            "collector_number_match_quality": raw.get("collector_number_match_quality"),
+            "set_match_quality": raw.get("set_match_quality"),
             "rejection_reason": item.get("rejection_reason"),
         }
     for item in included:
@@ -163,6 +170,10 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
         "confidence_warnings": diagnostics.get("confidence_warnings") or [],
         "price_spread_ratio": diagnostics.get("price_spread_ratio"),
         "included_price_distribution": diagnostics.get("included_price_distribution") or [],
+        "no_reliable_price_reason": diagnostics.get("no_reliable_price_reason"),
+        "query_attempts": diagnostics.get("query_attempts") or [],
+        "query_attempts_used": diagnostics.get("query_attempts_used"),
+        "query_stop_reason": diagnostics.get("query_stop_reason"),
         "included_variants_summary": included_variants,
         "rejected_variant_mismatch_count": rejected_variant_mismatch_count,
         "top_included_comps": [compact_comp(item) for item in included[:5]],

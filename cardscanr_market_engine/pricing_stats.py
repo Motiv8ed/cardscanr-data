@@ -72,6 +72,10 @@ def calculate_pricing_stats(
             confidence = "medium"
     if spread_ratio is not None and spread_ratio > 5:
         confidence_warnings.append("extreme_item_price_spread")
+    no_reliable_price_reason: str | None = None
+    if not included:
+        no_reliable_price_reason = "all_comps_rejected" if rejected else "no_comps_parsed"
+        confidence_warnings.append(no_reliable_price_reason)
     stale_after = calculate_stale_after(
         now=current_time,
         included_count=len(included),
@@ -104,6 +108,7 @@ def calculate_pricing_stats(
             price_spread_ratio=spread_ratio,
             confidence_warnings=tuple(confidence_warnings),
             included_price_distribution=tuple(sorted(item_prices)),
+            no_reliable_price_reason=no_reliable_price_reason,
         )
     item_median_price = round_money(median(item_prices))
     item_average_price = round_money(mean(item_prices))
@@ -138,4 +143,5 @@ def calculate_pricing_stats(
         price_spread_ratio=spread_ratio,
         confidence_warnings=tuple(confidence_warnings),
         included_price_distribution=tuple(sorted(item_prices)),
+        no_reliable_price_reason=no_reliable_price_reason,
     )

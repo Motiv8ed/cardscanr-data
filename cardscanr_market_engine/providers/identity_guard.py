@@ -115,6 +115,8 @@ def _english_alias_for_request(request: ProviderRequest) -> tuple[str, str] | No
         text = _clean(value)
         if is_safe_latin_alias(text):
             return text, source
+    if is_safe_latin_alias(key.card_name):
+        return None
     normalized_name = _clean(key.normalized_card_name).replace("_", " ")
     if normalized_name and normalized_name != _clean(key.card_name) and is_safe_latin_alias(normalized_name):
         return normalized_name, "normalized_card_name"
