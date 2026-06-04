@@ -8,14 +8,29 @@ from .fingerprints import normalize_collector_number, normalize_market_variant, 
 from .models import EvaluatedComp, MarketPriceKey, SoldComp
 
 REJECTION_PATTERNS: dict[str, tuple[str, ...]] = {
-    "lot_or_bundle": (" lot ", " bundle ", " x2 ", " x3 ", " playset ", " collection "),
+    "lot_or_bundle": (
+        " lot ",
+        " lot of ",
+        " bundle ",
+        " bulk ",
+        " playset ",
+        " collection ",
+        " card lot ",
+        " holo lot ",
+        " mixed lot ",
+    ),
     "variation_or_pick": (
         " choose your card ",
+        " choose your own ",
         " you pick ",
         " you-pick ",
         " pick your card ",
+        " pick your own ",
         " select your card ",
         " complete your set ",
+        " card singles pick ",
+        " all pokemon pick ",
+        " variation listing ",
         " singles common ",
         " holo/reverse/ex ",
         " reverse/holo/ex ",
@@ -42,6 +57,13 @@ REVERSE_HOLO_RE = re.compile(
 )
 NON_HOLO_RE = re.compile(r"\b(?:non[\s-]+holo|regular|normal)\b", flags=re.IGNORECASE)
 HOLO_RE = re.compile(r"\b(?:holo|holographic|holofoil)\b", flags=re.IGNORECASE)
+MIRROR_MASTERBALL_HOLO_RE = re.compile(r"\b(?:mirror[\s-]+holo|master\s*ball|masterball)\b", flags=re.IGNORECASE)
+MULTI_CARD_COUNT_RE = re.compile(
+    r"\b(?:x\s*(?:10|[2-9][0-9]|[1-9][0-9]{2,})|(?:10|[2-9][0-9]|[1-9][0-9]{2,})\s*(?:x|pcs?|cards?))\b",
+    flags=re.IGNORECASE,
+)
+JAPANESE_TEXT_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
+KOREAN_TEXT_RE = re.compile(r"[\uac00-\ud7af]")
 RAW_ALIAS_FIELDS = (
     "english_card_name",
     "englishCardName",
@@ -57,6 +79,22 @@ RAW_ALIAS_FIELDS = (
     "canonicalCardName",
 )
 MIN_INCLUDED_SCORE = 0.65
+SNIPPET_IDENTITY_BOUNDARY_RE = re.compile(
+    r"\s+(?:"
+    r"opens\s+in\s+a\s+new\s+window\s+or\s+tab|"
+    r"pre-owned|brand\s+new|"
+    r"(?:au|us|gbp|cad|\$|£)\s*\$?\d|"
+    r"buy\s+it\s+now|best\s+offer|"
+    r"\+\s*(?:au|us|gbp|cad|\$|£)?\s*\$?\d|"
+    r"delivery|shipping|postage|free\s+returns|"
+    r"view\s+similar\s+active\s+items|sell\s+one\s+like\s+this"
+    r")\b",
+    flags=re.IGNORECASE,
+)
+SOLD_PREFIX_RE = re.compile(
+    r"^sold\s+(?:[0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4}|[A-Za-z]{3,9}\s+[0-9]{1,2},\s+[0-9]{4})\s*",
+    flags=re.IGNORECASE,
+)
 
 
 def _bounded_score(value: float) -> float:
@@ -69,6 +107,131 @@ def _contains_any(haystack: str, needles: tuple[str, ...]) -> bool:
 
 def _clean(value: object) -> str:
     return " ".join(str(value or "").strip().split())
+
+
+def _metadata_text(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        return " ".join(_metadata_text(item) for pair in value.items() for item in pair)
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(_metadata_text(item) for item in value)
+    return _clean(value)
+
+
+def _evidence_text(comp: SoldComp) -> str:
+    raw = comp.raw_metadata
+    parts = [
+        comp.title,
+        comp.condition_text,
+        raw.get("rawTextSnippet"),
+        raw.get("conditionText"),
+        raw.get("itemSpecificsText"),
+        raw.get("item_specifics_text"),
+        raw.get("itemSpecifics"),
+        raw.get("item_specifics"),
+        raw.get("specifics"),
+    ]
+    return " ".join(_clean(part) for part in parts if _clean(part))
+
+
+def _padded_normalized_evidence(comp: SoldComp) -> str:
+    return f" {normalize_text(_evidence_text(comp))} "
+
+
+def _extract_identity_prefix_from_snippet(value: object) -> str:
+    text = SOLD_PREFIX_RE.sub("", _clean(value))
+    if not text:
+        return ""
+    match = SNIPPET_IDENTITY_BOUNDARY_RE.search(text)
+    if match:
+        text = text[: match.start()]
+    return _clean(text)
+
+
+def _identity_text(comp: SoldComp) -> str:
+    raw = comp.raw_metadata
+    parts = [
+        comp.title,
+        raw.get("identityTitle"),
+        raw.get("identity_title"),
+        raw.get("titleLikeText"),
+        raw.get("title_like_text"),
+        _extract_identity_prefix_from_snippet(raw.get("rawTextSnippet")),
+    ]
+    return " ".join(_clean(part) for part in parts if _clean(part))
+
+
+def _padded_normalized_identity(comp: SoldComp) -> str:
+    return f" {normalize_text(_identity_text(comp))} "
+
+
+def _language_family(value: object) -> str:
+    normalized = normalize_text(value).replace("_", "-")
+    if normalized in {"jp", "ja", "jpn", "japanese"}:
+        return "jp"
+    if normalized in {"kr", "ko", "kor", "korean", "korea"}:
+        return "kr"
+    if normalized in {"en", "eng", "english"}:
+        return "en"
+    if normalized in {"zh", "cn", "chn", "chinese", "zh-cn", "zh-tw"}:
+        return "zh"
+    return normalized
+
+
+def _has_explicit_language(text: str, terms: tuple[str, ...]) -> bool:
+    return any(re.search(term, text, flags=re.IGNORECASE) for term in terms)
+
+
+def _language_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
+    requested = _language_family(price_key.language)
+    evidence = _evidence_text(comp)
+    japanese = _has_explicit_language(
+        evidence,
+        (
+            r"\bjapanese\b",
+            r"\bjapan\b",
+            r"\bjpn\b",
+            r"\bjp\b",
+        ),
+    ) or bool(JAPANESE_TEXT_RE.search(evidence))
+    korean = _has_explicit_language(evidence, (r"\bkorean\b", r"\bkorea\b", r"\bkor\b", r"\bkr\b")) or bool(KOREAN_TEXT_RE.search(evidence))
+    chinese = _has_explicit_language(
+        evidence,
+        (
+            r"\bchinese\b",
+            r"\bchina\b",
+            r"\bchn\b",
+            r"\bcn\b",
+            r"\bsimplified chinese\b",
+            r"\btraditional chinese\b",
+            r"\btaiwan\b",
+            r"\bhong kong\b",
+            r"\bhk\b",
+        ),
+    )
+    english = _has_explicit_language(evidence, (r"\benglish\b", r"\beng\b"))
+    if requested == "jp":
+        if korean or chinese or english:
+            return "wrong_language"
+    elif requested == "kr":
+        if japanese or chinese or english:
+            return "wrong_language"
+    elif requested == "en":
+        allows_cross_language = bool(price_key.raw.get("allow_cross_language_fallback") or price_key.raw.get("includeEnglishEquivalent"))
+        if not allows_cross_language and (japanese or korean or chinese):
+            return "wrong_language"
+    return None
+
+
+def _is_lot_or_bundle(normalized_evidence: str) -> bool:
+    if _contains_any(normalized_evidence, REJECTION_PATTERNS["lot_or_bundle"]):
+        return True
+    if re.search(r"\b(?:lot|bulk|bundle)s?\b", normalized_evidence, flags=re.IGNORECASE):
+        return True
+    if MULTI_CARD_COUNT_RE.search(normalized_evidence) and re.search(r"\b(?:cards?|pokemon|holo|non holo|reverse)\b", normalized_evidence, flags=re.IGNORECASE):
+        return True
+    return False
 
 
 def _alias_candidates(raw: dict[str, Any]) -> list[object]:
@@ -123,15 +286,51 @@ def _requested_collector_parts(price_key: MarketPriceKey) -> tuple[str, str, boo
     return requested, short, bool("/" in requested)
 
 
+def _collector_reference_variants(price_key: MarketPriceKey) -> set[str]:
+    requested, short, has_full_number = _requested_collector_parts(price_key)
+    if not requested:
+        return set()
+    variants = {requested.lower()}
+    if has_full_number:
+        total = requested.split("/", 1)[1]
+        hyphen = f"{short}-{total}"
+        variants.add(hyphen.lower())
+        set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+        if set_code:
+            variants.add(f"{hyphen}-{set_code}".lower())
+            variants.add(f"{set_code} {short}".lower())
+            variants.add(f"{set_code}-{short}".lower())
+    return variants
+
+
+def _collector_key(value: object) -> str:
+    text = normalize_collector_number(str(value).replace("-", "/"))
+    parts = []
+    for part in text.split("/"):
+        parts.append(re.sub(r"^0+(\d)", r"\1", part))
+    return "/".join(parts)
+
+
+def _collector_equivalent(left: object, right: object) -> bool:
+    left_key = _collector_key(left)
+    right_key = _collector_key(right)
+    return bool(left_key and right_key and left_key == right_key)
+
+
 def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
     full_numbers = {
         normalize_collector_number(match)
         for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
     }
+    hyphen_numbers = {
+        normalize_collector_number(match.replace("-", "/"))
+        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
+    }
     short_numbers = {
         normalize_collector_number(match)
         for match in re.findall(r"(?:#\s*)?\b([A-Za-z]*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
     }
+    full_numbers |= hyphen_numbers
     full_numbers.discard("")
     short_numbers.discard("")
     return full_numbers, short_numbers
@@ -142,16 +341,21 @@ def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: st
     if not requested:
         return {"matches": True, "quality": "not_requested", "requested": "", "detected": []}
     requested_lower = requested.lower()
-    if requested_lower in normalized_title:
+    if any(variant in normalized_title for variant in _collector_reference_variants(price_key)):
         return {"matches": True, "quality": "full" if has_full_number else "short", "requested": requested, "detected": [requested]}
     full_numbers, short_numbers = _detected_collector_numbers(normalized_title)
     detected = sorted(full_numbers | short_numbers)
-    if requested in full_numbers:
+    if any(_collector_equivalent(requested, value) for value in full_numbers):
         return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
-    if not has_full_number and requested in short_numbers:
+    if not has_full_number and any(_collector_equivalent(requested, value) for value in short_numbers):
         return {"matches": True, "quality": "short", "requested": requested, "detected": detected}
-    if has_full_number and short and short in short_numbers:
+    if has_full_number and short and any(_collector_equivalent(short, value) for value in short_numbers):
         return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
+    set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+    if set_code and short:
+        set_short_re = re.compile(rf"\b{re.escape(set_code)}(?:-[a-z0-9]+)?[\s-]+0*{re.escape(short.lstrip('0') or short)}\b", flags=re.IGNORECASE)
+        if set_short_re.search(normalized_title):
+            return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
     if not detected:
         return {"matches": False, "quality": "missing", "requested": requested, "detected": []}
     return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
@@ -199,13 +403,24 @@ def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -
     }
 
 
-def _has_many_card_numbers(normalized_title: str) -> bool:
-    detected = {
+def _collector_number_references(normalized_title: str) -> set[str]:
+    references = {
         normalize_collector_number(match)
-        for match in re.findall(r"(?:#\s*)?([A-Za-z]*\d+[A-Za-z]*(?:/\d+)?)", normalized_title, flags=re.IGNORECASE)
+        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
     }
-    detected.discard("")
-    return len(detected) >= 4
+    references.update(
+        normalize_collector_number(match.replace("-", "/"))
+        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
+    )
+    references.discard("")
+    return references
+
+
+def _has_many_card_numbers(price_key: MarketPriceKey, normalized_title: str) -> bool:
+    requested, _short, _has_full_number = _requested_collector_parts(price_key)
+    detected = _collector_number_references(normalized_title)
+    detected = {value for value in detected if not _collector_equivalent(value, requested)}
+    return len(detected) >= 1
 
 
 def detect_listing_variant(title: str) -> str:
@@ -214,6 +429,8 @@ def detect_listing_variant(title: str) -> str:
         return "reverse_holo"
     if NON_HOLO_RE.search(normalized_title):
         return "non_holo"
+    if MIRROR_MASTERBALL_HOLO_RE.search(normalized_title):
+        return "holo"
     if HOLO_RE.search(normalized_title):
         return "holo"
     return "non_holo"
@@ -221,7 +438,7 @@ def detect_listing_variant(title: str) -> str:
 
 def _variant_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
     requested = normalize_market_variant(price_key.variant)
-    detected = detect_listing_variant(comp.title)
+    detected = detect_listing_variant(_evidence_text(comp))
     if requested == "raw":
         return None
     if requested == "non_holo":
@@ -240,7 +457,7 @@ def _variant_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | N
 
 
 def score_comp(price_key: MarketPriceKey, comp: SoldComp) -> float:
-    normalized_title = f" {normalize_text(comp.title)} "
+    normalized_title = _padded_normalized_identity(comp)
     score = 0.0
     if _card_name_matches(price_key, normalized_title):
         score += 0.35
@@ -269,9 +486,13 @@ def score_comp(price_key: MarketPriceKey, comp: SoldComp) -> float:
 
 
 def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
-    normalized_title = f" {normalize_text(comp.title)} "
+    normalized_evidence = _padded_normalized_evidence(comp)
+    normalized_identity = _padded_normalized_identity(comp)
     if comp.currency.upper() != price_key.currency.upper():
         return "currency_mismatch"
+    language_rejection = _language_reject_reason(price_key, comp)
+    if language_rejection:
+        return language_rejection
     variant_rejection = _variant_reject_reason(price_key, comp)
     if variant_rejection:
         return variant_rejection
@@ -280,29 +501,29 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
     price_text = f" {normalize_text(comp.raw_metadata.get('priceText', ''))} "
     if re.search(r"\d[\d,]*(?:\.\d{1,2})?\s+(?:to|-)\s+\D*\d", price_text, flags=re.IGNORECASE):
         return "price_range_or_variation_listing"
-    if _contains_any(normalized_title, REJECTION_PATTERNS["variation_or_pick"]):
+    if _contains_any(normalized_evidence, REJECTION_PATTERNS["variation_or_pick"]):
         return "price_range_or_variation_listing"
-    if _contains_any(normalized_title, REJECTION_PATTERNS["lot_or_bundle"]):
-        return "lot_or_bundle"
-    if _contains_any(normalized_title, REJECTION_PATTERNS["proxy_or_custom"]):
+    if _is_lot_or_bundle(normalized_evidence):
+        return "likely_bundle_lot"
+    if _contains_any(normalized_evidence, REJECTION_PATTERNS["proxy_or_custom"]):
         return "proxy_or_custom"
-    if _contains_any(normalized_title, REJECTION_PATTERNS["digital"]):
+    if _contains_any(normalized_evidence, REJECTION_PATTERNS["digital"]):
         return "digital"
-    if _contains_any(normalized_title, REJECTION_PATTERNS["oversized"]):
+    if _contains_any(normalized_evidence, REJECTION_PATTERNS["oversized"]):
         return "oversized_or_jumbo"
     if price_key.variant != "graded" and (
-        _contains_any(normalized_title, GRADED_TERMS) or _contains_any(f" {normalize_text(comp.condition_text)} ", GRADED_TERMS)
+        _contains_any(normalized_evidence, GRADED_TERMS) or _contains_any(f" {normalize_text(comp.condition_text)} ", GRADED_TERMS)
     ):
         return "graded_for_raw_request"
-    if price_key.variant not in {"sealed", "product"} and _contains_any(normalized_title, REJECTION_PATTERNS["sealed_product"]):
+    if price_key.variant not in {"sealed", "product"} and _contains_any(normalized_evidence, REJECTION_PATTERNS["sealed_product"]):
         return "sealed_product_for_single_card_request"
-    if not _collector_number_matches(price_key, normalized_title):
+    if not _collector_number_matches(price_key, normalized_identity):
         return "wrong_collector_number"
-    if _set_code_conflicts(price_key, normalized_title):
+    if _set_code_conflicts(price_key, normalized_identity):
         return "wrong_set"
-    if not _card_name_matches(price_key, normalized_title):
+    if not _card_name_matches(price_key, normalized_identity):
         return "wrong_card_name"
-    if _has_many_card_numbers(normalized_title):
+    if _has_many_card_numbers(price_key, normalized_identity):
         return "multiple_card_numbers"
     if score_comp(price_key, comp) < MIN_INCLUDED_SCORE:
         return "weak_evidence_match"
@@ -363,23 +584,30 @@ def filter_comps(price_key: MarketPriceKey, comps: list[SoldComp]) -> list[Evalu
         metadata.setdefault("requestedCardName", normalize_text(price_key.card_name))
         metadata.setdefault("requestedCanonicalCardName", normalize_text(_canonical_card_name(price_key)))
         metadata.setdefault("requestedCollectorNumber", normalize_collector_number(price_key.collector_number))
-        normalized_title = f" {normalize_text(comp.title)} "
+        normalized_evidence = _padded_normalized_evidence(comp)
+        normalized_identity = _padded_normalized_identity(comp)
         requested_variant = normalize_market_variant(price_key.variant)
-        detected_variant = detect_listing_variant(comp.title)
+        detected_variant = detect_listing_variant(_evidence_text(comp))
         variant_match = requested_variant == "raw" or requested_variant == detected_variant
-        collector_info = _collector_number_match_info(price_key, normalized_title)
-        set_info = _set_identity_match_info(price_key, normalized_title)
+        collector_info = _collector_number_match_info(price_key, normalized_identity)
+        set_info = _set_identity_match_info(price_key, normalized_identity)
+        likely_pick = _contains_any(normalized_evidence, REJECTION_PATTERNS["variation_or_pick"])
+        likely_lot = _is_lot_or_bundle(normalized_evidence)
+        metadata.setdefault("collector_number_identity_text", _identity_text(comp)[:500])
         metadata.setdefault("requested_variant", requested_variant)
         metadata.setdefault("detected_variant", detected_variant)
         metadata.setdefault("variant_match", variant_match)
         metadata.setdefault("variant_warning", rejection_reason if rejection_reason and rejection_reason.startswith(("wrong_variant_", "weak_variant_")) else None)
+        metadata.setdefault("likely_pick_your_card", likely_pick)
+        metadata.setdefault("likely_bundle_lot", likely_lot)
+        metadata.setdefault("language_rejection", "wrong_language" if rejection_reason == "wrong_language" else None)
         metadata.setdefault("collector_number_match", bool(collector_info["matches"]))
         metadata.setdefault("collector_number_match_quality", collector_info["quality"])
         metadata.setdefault("detected_collector_numbers", collector_info["detected"])
         metadata.setdefault("set_name_match", bool(set_info["matches"]))
         metadata.setdefault("set_match_quality", set_info["quality"])
         metadata.setdefault("set_code_conflict", bool(set_info["conflict"]))
-        metadata.setdefault("card_name_match", _card_name_matches(price_key, normalized_title))
+        metadata.setdefault("card_name_match", _card_name_matches(price_key, normalized_identity))
         metadata.setdefault("canonical_card_name_candidates", list(_canonical_card_names(price_key)))
         comp_for_eval = SoldComp(
             source_listing_id=comp.source_listing_id,

@@ -45,20 +45,41 @@ RESULT_SELECTOR_COUNTS = (
     'a[href*="/itm/"]',
 )
 PROMO_TITLE_MARKERS = ("shop on ebay", "sponsored", "advertisement")
+GENERIC_TITLE_MARKERS = (
+    "opens in a new window or tab",
+    "new listing",
+    "image not available",
+)
+TITLE_UI_BOUNDARY_RE = re.compile(
+    r"\s+(?:"
+    r"opens\s+in\s+a\s+new\s+window\s+or\s+tab|"
+    r"pre-owned|brand\s+new|"
+    r"buy\s+it\s+now|best\s+offer|"
+    r"view\s+similar\s+active\s+items|sell\s+one\s+like\s+this"
+    r")\b",
+    flags=re.IGNORECASE,
+)
 PICK_YOUR_CARD_PATTERNS = (
     "choose your card",
+    "choose your own",
     "you pick",
     "pick your card",
+    "pick your own",
+    "select your card",
+    "complete your set",
+    "all pokemon pick",
+    "card singles pick",
+    "variation listing",
     "singles common",
     "holo/reverse/ex",
     "reverse/holo/ex",
 )
-LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ")
+LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ", " bulk ", " card lot ", " holo lot ", " mixed lot ")
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
 SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
-DEFAULT_MAX_QUERY_ATTEMPTS = 4
-EARLY_STOP_EXACT_INCLUDED_COUNT = 5
+DEFAULT_MAX_QUERY_ATTEMPTS = 5
+RESULT_CONTAINER_SELECTOR = 'li.s-item, .srp-results, a[href*="/itm/"]'
 MARKET_COUNTRY_NAMES = {
     "AU": ("australia", "australian"),
     "US": ("united states", "usa", "us "),
@@ -346,6 +367,8 @@ def clean_candidate_title(value: str) -> str:
         return ""
     if any(marker in lowered for marker in PROMO_TITLE_MARKERS):
         return ""
+    if any(marker in lowered for marker in GENERIC_TITLE_MARKERS):
+        return ""
     return title
 
 
@@ -371,6 +394,12 @@ def extract_title_from_lines(lines: list[str], *, href_text: str = "", expected_
             if first_price:
                 candidate_line = candidate_line[: int(first_price["start"])]
         if not candidate_line.strip():
+            continue
+        boundary = TITLE_UI_BOUNDARY_RE.search(candidate_line)
+        if boundary:
+            candidate_line = candidate_line[: boundary.start()]
+        candidate_line = candidate_line.strip()
+        if not candidate_line:
             continue
         title = clean_candidate_title(candidate_line)
         if title:
@@ -450,6 +479,8 @@ def parse_candidate_dict(
                 "providerMarketplaceId": search_query.provider_marketplace_id,
                 "query_index": search_query.query_index,
                 "query_source": search_query.query_source,
+                "query_style": search_query.diagnostics.get("queryStyle") or "unquoted_discovery",
+                "queryStyle": search_query.diagnostics.get("queryStyle") or "unquoted_discovery",
                 "query_text": search_query.query_text,
                 "query_search_url": search_query.search_url,
                 "marketCountry": request.market_country,
@@ -475,6 +506,7 @@ def parse_candidate_dict(
                 "soldDateText": sold_date_text,
                 "candidateSource": candidate.get("source"),
                 "rawTextSnippet": _normalise_text(raw_text)[:500],
+                "identityTitle": title,
             }
         ),
     )
@@ -496,6 +528,7 @@ class EbayBrowserProviderConfig:
     headless: bool
     max_results: int
     timeout_seconds: int
+    launch_timeout_seconds: int
     cooldown_seconds: int
     min_seconds_between_requests: int
     user_data_dir: Path
@@ -521,6 +554,7 @@ class EbayBrowserProviderConfig:
             headless=_parse_bool("EBAY_BROWSER_HEADLESS", True),
             max_results=min(_parse_positive_int("EBAY_BROWSER_MAX_RESULTS", 30), 100),
             timeout_seconds=_parse_positive_int("EBAY_BROWSER_TIMEOUT_SECONDS", 45),
+            launch_timeout_seconds=_parse_positive_int("EBAY_BROWSER_LAUNCH_TIMEOUT_SECONDS", 45),
             cooldown_seconds=_parse_positive_int("EBAY_BROWSER_COOLDOWN_SECONDS", 20),
             min_seconds_between_requests=_parse_positive_int("EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS", 20),
             user_data_dir=user_data_dir,
@@ -564,12 +598,71 @@ class EbayBrowserProviderConfig:
                 "headless": self.headless,
                 "maxResults": self.max_results,
                 "timeoutSeconds": self.timeout_seconds,
+                "launchTimeoutSeconds": self.launch_timeout_seconds,
                 "cooldownSeconds": self.cooldown_seconds,
                 "minSecondsBetweenRequests": self.min_seconds_between_requests,
                 "debugArtifactDir": str(self.debug_artifact_dir) if self.debug_artifact_dir else None,
                 "marketScope": self.market_scope,
             }
         )
+
+
+class StageTimings:
+    def __init__(self) -> None:
+        self._started = time.monotonic()
+        self.fields: dict[str, Any] = {
+            "startedAtMonotonic": round(self._started, 6),
+            "stageDurationsMs": {},
+            "stageSequence": [],
+            "currentStage": None,
+            "timedOutStage": None,
+        }
+
+    def record(self, stage: str, started: float, *, status: str = "completed", extra: dict[str, Any] | None = None) -> None:
+        elapsed_ms = round((time.monotonic() - started) * 1000, 2)
+        self.fields["stageDurationsMs"][stage] = elapsed_ms
+        item: dict[str, Any] = {"stage": stage, "durationMs": elapsed_ms, "status": status}
+        if extra:
+            item.update(extra)
+        self.fields["stageSequence"].append(item)
+        self.fields["currentStage"] = stage
+        if status == "timeout":
+            self.fields["timedOutStage"] = stage
+
+    def snapshot(self) -> dict[str, Any]:
+        payload = dict(self.fields)
+        payload["elapsedMs"] = round((time.monotonic() - self._started) * 1000, 2)
+        return payload
+
+
+class _StageTimer:
+    def __init__(self, timings: StageTimings, stage: str) -> None:
+        self.timings = timings
+        self.stage = stage
+        self.started = 0.0
+
+    def __enter__(self) -> "_StageTimer":
+        self.started = time.monotonic()
+        self.timings.fields["currentStage"] = self.stage
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, _tb: Any) -> bool:
+        status = "timeout" if _looks_like_timeout(exc) else "failed" if exc is not None else "completed"
+        extra = {"errorType": type(exc).__name__} if exc is not None else None
+        self.timings.record(self.stage, self.started, status=status, extra=extra)
+        return False
+
+
+def _looks_like_timeout(exc: Any) -> bool:
+    if exc is None:
+        return False
+    name = type(exc).__name__.lower()
+    return "timeout" in name
+
+
+def _safe_to_try_next_query(search_query: ProviderSearchQuery) -> bool:
+    query_text = str(search_query.query_text or "")
+    return all(ord(ch) <= 127 for ch in query_text)
 
 
 def appears_to_be_personal_chrome_profile(path: Path | str) -> bool:
@@ -590,6 +683,20 @@ def count_candidate_selectors(page: Any) -> dict[str, int]:
         except Exception:
             counts[selector] = -1
     return counts
+
+
+def _safe_page_title(page: Any) -> str:
+    try:
+        return str(page.title())
+    except Exception:
+        return ""
+
+
+def _safe_body_text(page: Any) -> str:
+    try:
+        return str(page.locator("body").inner_text(timeout=5000))
+    except Exception:
+        return ""
 
 
 def collect_candidate_dicts(page: Any, *, max_results: int) -> list[dict[str, Any]]:
@@ -748,12 +855,13 @@ def _max_query_attempts() -> int:
 
 def _tag_comp_with_query(comp: SoldComp, search_query: ProviderSearchQuery) -> SoldComp:
     metadata = dict(comp.raw_metadata)
-    metadata.setdefault("query_index", search_query.query_index)
-    metadata.setdefault("query_source", search_query.query_source)
-    metadata.setdefault("query_text", search_query.query_text)
-    metadata.setdefault("query_search_url", search_query.search_url)
-    metadata.setdefault("query_sources", [search_query.query_source])
-    metadata.setdefault("query_indexes", [search_query.query_index])
+    metadata["query_index"] = search_query.query_index
+    metadata["query_source"] = search_query.query_source
+    metadata["query_style"] = search_query.diagnostics.get("queryStyle") or "unquoted_discovery"
+    metadata["query_text"] = search_query.query_text
+    metadata["query_search_url"] = search_query.search_url
+    metadata["query_sources"] = [search_query.query_source]
+    metadata["query_indexes"] = [search_query.query_index]
     return SoldComp(
         source_listing_id=comp.source_listing_id,
         title=comp.title,
@@ -892,19 +1000,30 @@ def _attempt_query_index(item: Any) -> int | None:
 def build_query_attempt_summaries(
     attempts: list[tuple[ProviderSearchQuery, ProviderResult]],
     evaluated: list[Any],
+    progress_summaries: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     summaries: list[dict[str, Any]] = []
+    progress_by_index = {item.get("query_index"): item for item in progress_summaries or []}
     for search_query, result in attempts:
         attempt_evaluated = [item for item in evaluated if _attempt_query_index(item) == search_query.query_index]
+        progress = progress_by_index.get(search_query.query_index, {})
         summaries.append(
             {
                 "query_index": search_query.query_index,
                 "query_source": search_query.query_source,
+                "query_style": search_query.diagnostics.get("queryStyle") or "unquoted_discovery",
                 "query_text": search_query.query_text,
                 "search_url": search_query.search_url,
                 "result_count": len(result.comps),
                 "included_count": sum(1 for item in attempt_evaluated if item.included_in_estimate),
                 "rejected_count": sum(1 for item in attempt_evaluated if not item.included_in_estimate),
+                "cumulative_included_after_attempt": progress.get("cumulativeIncludedAfterAttempt"),
+                "cumulative_rejected_after_attempt": progress.get("cumulativeRejectedAfterAttempt"),
+                "new_unique_candidates": progress.get("newUniqueCandidatesPerAttempt"),
+                "duplicate_candidates": progress.get("duplicateCandidatesPerAttempt"),
+                "clean_included_count": progress.get("cleanIncludedCount"),
+                "selector_rejected_count": progress.get("selectorRejectedCount"),
+                "wrong_language_rejected_count": progress.get("wrongLanguageRejectedCount"),
                 "quality_summary": result.raw_metadata.get("qualitySummary") or {},
                 "parser_error_count": len(result.raw_metadata.get("parserErrors") or []),
             }
@@ -912,21 +1031,107 @@ def build_query_attempt_summaries(
     return summaries
 
 
-def _enough_high_quality_exact_comps(request: ProviderRequest, comps: list[SoldComp]) -> bool:
+def _is_clean_included(item: Any) -> bool:
+    raw = item.comp.raw_metadata
+    return (
+        bool(item.included_in_estimate)
+        and bool(raw.get("card_name_match"))
+        and bool(raw.get("collector_number_match"))
+        and bool(raw.get("variant_match"))
+        and not raw.get("language_rejection")
+        and (raw.get("url_quality") == "direct_item" or "/itm/" in item.comp.listing_url)
+    )
+
+
+def build_attempt_progress_summaries(
+    request: ProviderRequest,
+    attempts: list[tuple[ProviderSearchQuery, ProviderResult]],
+) -> list[dict[str, Any]]:
     from ..filters import filter_comps
 
-    evaluated = filter_comps(request.price_key, comps)
-    exact = [
-        item
-        for item in evaluated
-        if item.included_in_estimate
-        and item.match_score >= 0.85
-        and bool(item.comp.raw_metadata.get("card_name_match"))
-        and bool(item.comp.raw_metadata.get("collector_number_match"))
-        and str(item.comp.raw_metadata.get("collector_number_match_quality")) in {"full", "short"}
-        and bool(item.comp.raw_metadata.get("set_name_match"))
-    ]
-    return len(exact) >= EARLY_STOP_EXACT_INCLUDED_COUNT
+    summaries: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+    cumulative_raw: list[SoldComp] = []
+    for search_query, result in attempts:
+        attempt_keys = [_dedupe_key(comp) for comp in result.comps]
+        new_keys = {key for key in attempt_keys if key not in seen_keys}
+        duplicate_count = sum(1 for key in attempt_keys if key in seen_keys)
+        seen_keys.update(attempt_keys)
+        cumulative_raw.extend(result.comps)
+        cumulative_comps = dedupe_sold_comps(cumulative_raw)
+        evaluated = filter_comps(request.price_key, cumulative_comps)
+        included = [item for item in evaluated if item.included_in_estimate]
+        rejected = [item for item in evaluated if not item.included_in_estimate]
+        clean_included = [item for item in included if _is_clean_included(item)]
+        selector_rejected_count = sum(1 for item in rejected if item.rejection_reason == "price_range_or_variation_listing")
+        wrong_language_rejected_count = sum(1 for item in rejected if item.rejection_reason == "wrong_language")
+        new_clean_count = sum(1 for item in clean_included if _dedupe_key(item.comp) in new_keys)
+        summaries.append(
+            {
+                "query_index": search_query.query_index,
+                "query_source": search_query.query_source,
+                "queryStyle": search_query.diagnostics.get("queryStyle") or "unquoted_discovery",
+                "cumulativeIncludedAfterAttempt": len(included),
+                "cumulativeRejectedAfterAttempt": len(rejected),
+                "newUniqueCandidatesPerAttempt": len(new_keys),
+                "duplicateCandidatesPerAttempt": duplicate_count,
+                "newCleanIncludedPerAttempt": new_clean_count,
+                "cleanIncludedCount": len(clean_included),
+                "selectorRejectedCount": selector_rejected_count,
+                "wrongLanguageRejectedCount": wrong_language_rejected_count,
+                "totalRejectedCount": len(rejected),
+                "allRejectedReasons": sorted({str(item.rejection_reason) for item in rejected if item.rejection_reason}),
+            }
+        )
+    return summaries
+
+
+def _early_stop_decision(
+    *,
+    request: ProviderRequest,
+    attempts: list[tuple[ProviderSearchQuery, ProviderResult]],
+    search_queries: list[ProviderSearchQuery],
+) -> dict[str, Any]:
+    progress = build_attempt_progress_summaries(request, attempts)
+    if not progress:
+        return {"stop": False, "progress": progress}
+    latest = progress[-1]
+    clean_count = int(latest.get("cleanIncludedCount") or 0)
+    selector_count = int(latest.get("selectorRejectedCount") or 0)
+    rejected_count = int(latest.get("totalRejectedCount") or 0)
+    new_unique = int(latest.get("newUniqueCandidatesPerAttempt") or 0)
+    duplicate_count = int(latest.get("duplicateCandidatesPerAttempt") or 0)
+    new_clean = int(latest.get("newCleanIncludedPerAttempt") or 0)
+    attempted_count = len(attempts)
+    next_query = search_queries[attempted_count] if attempted_count < len(search_queries) else None
+
+    if clean_count >= 3:
+        return {"stop": True, "reason": "enough_clean_comps", "progress": progress}
+    if attempted_count >= 4 and clean_count == 0 and rejected_count > 0 and selector_count == rejected_count:
+        return {"stop": True, "reason": "only_selector_results", "progress": progress}
+    if attempted_count >= 4 and clean_count == 0 and int(latest.get("cumulativeRejectedAfterAttempt") or 0) == 0:
+        return {"stop": True, "reason": "no_useful_candidates", "progress": progress}
+    if clean_count == 2 and attempted_count >= 3 and (new_unique == 0 or new_clean == 0 or duplicate_count > 0):
+        return {
+            "stop": True,
+            "reason": "low_confidence_enough_for_sparse_market",
+            "lowConfidenceSparseMarketReason": "two_clean_comps_after_no_new_useful_candidates",
+            "progress": progress,
+        }
+    if (
+        next_query is not None
+        and (next_query.diagnostics.get("queryStyle") or "") == "quoted_precision"
+        and clean_count > 0
+        and selector_count == 0
+        and new_unique == 0
+    ):
+        return {
+            "stop": True,
+            "reason": "low_confidence_enough_for_sparse_market" if clean_count == 2 else "all_query_attempts_exhausted",
+            "lowConfidenceSparseMarketReason": "quoted_fallback_skipped_after_clean_duplicate_unquoted_results" if clean_count == 2 else None,
+            "progress": progress,
+        }
+    return {"stop": False, "progress": progress}
 
 
 class EbayBrowserSoldCompsProvider:
@@ -949,6 +1154,7 @@ class EbayBrowserSoldCompsProvider:
             self.__class__._last_request_monotonic = time.monotonic()
 
     def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+        lookup_timings = StageTimings()
         route = (request.market_country.upper(), request.currency.upper())
         if route not in SUPPORTED_MARKET_ROUTES:
             raise ProviderUnsupportedMarketError(
@@ -963,12 +1169,42 @@ class EbayBrowserSoldCompsProvider:
             )
         search_queries = build_provider_search_queries(request, max_attempts=_max_query_attempts())
         attempts: list[tuple[ProviderSearchQuery, ProviderResult]] = []
+        failed_attempts: list[dict[str, Any]] = []
         aggregate_comps: list[SoldComp] = []
+        early_stop_progress: list[dict[str, Any]] = []
+        low_confidence_sparse_market_reason: str | None = None
         stop_reason = "all_query_attempts_exhausted"
         try:
             for search_query in search_queries:
-                self._wait_for_request_slot()
-                result = self._fetch_with_playwright(request=request, search_query=search_query)
+                attempt_stage = f"run_query_attempt_{search_query.query_index + 1}"
+                try:
+                    with _StageTimer(lookup_timings, attempt_stage):
+                        self._wait_for_request_slot()
+                        result = self._fetch_with_playwright(request=request, search_query=search_query)
+                except ProviderTemporaryError as exc:
+                    diagnostics = dict(getattr(exc, "diagnostics", {}) or {})
+                    attempt_failure = sanitize_provider_diagnostics(
+                        {
+                            "query_index": search_query.query_index,
+                            "query_source": search_query.query_source,
+                            "query_text": search_query.query_text,
+                            "search_url": search_query.search_url,
+                            "error": str(exc),
+                            "error_type": type(exc).__name__,
+                            "timed_out_stage": diagnostics.get("timedOutStage"),
+                            "stage_timings": diagnostics.get("stageTimings") or diagnostics.get("stage_timings"),
+                            "selector_counts": diagnostics.get("candidateSelectorCounts"),
+                            "debug_artifacts": diagnostics.get("debugArtifacts"),
+                        }
+                    )
+                    failed_attempts.append(attempt_failure)
+                    if (
+                        diagnostics.get("timedOutStage")
+                        and _safe_to_try_next_query(search_query)
+                        and search_query.query_index + 1 < len(search_queries)
+                    ):
+                        continue
+                    raise
                 tagged_comps = [_tag_comp_with_query(comp, search_query) for comp in result.comps]
                 result = ProviderResult(
                     provider_name=result.provider_name,
@@ -980,8 +1216,15 @@ class EbayBrowserSoldCompsProvider:
                 )
                 attempts.append((search_query, result))
                 aggregate_comps = dedupe_sold_comps([comp for _query, attempt in attempts for comp in attempt.comps])
-                if _enough_high_quality_exact_comps(request, aggregate_comps):
-                    stop_reason = "enough_high_quality_exact_comps"
+                stop_decision = _early_stop_decision(
+                    request=request,
+                    attempts=attempts,
+                    search_queries=search_queries,
+                )
+                early_stop_progress = list(stop_decision.get("progress") or [])
+                if stop_decision.get("stop"):
+                    stop_reason = str(stop_decision.get("reason") or "all_query_attempts_exhausted")
+                    low_confidence_sparse_market_reason = stop_decision.get("lowConfidenceSparseMarketReason")  # type: ignore[assignment]
                     break
             return self._build_aggregate_result(
                 request=request,
@@ -989,13 +1232,28 @@ class EbayBrowserSoldCompsProvider:
                 comps=aggregate_comps,
                 stop_reason=stop_reason,
                 query_attempt_limit=len(search_queries),
+                failed_attempts=failed_attempts,
+                stage_timings=lookup_timings.snapshot(),
+                early_stop_progress=early_stop_progress,
+                low_confidence_sparse_market_reason=low_confidence_sparse_market_reason,
             )
         except ProviderError:
+            if failed_attempts and self.config.debug_artifact_dir is not None:
+                self._write_timeout_debug_summary(
+                    request=request,
+                    failed_attempts=failed_attempts,
+                    stage_timings=lookup_timings.snapshot(),
+                    stop_reason="query_attempt_timeout",
+                )
             raise
         except Exception as exc:
             raise ProviderTemporaryError(
                 "eBay browser lookup failed temporarily",
-                diagnostics={"errorType": type(exc).__name__, "providerDomain": request.provider_domain},
+                diagnostics={
+                    "errorType": type(exc).__name__,
+                    "providerDomain": request.provider_domain,
+                    "stageTimings": lookup_timings.snapshot(),
+                },
             ) from exc
 
     def _build_aggregate_result(
@@ -1006,6 +1264,10 @@ class EbayBrowserSoldCompsProvider:
         comps: list[SoldComp],
         stop_reason: str,
         query_attempt_limit: int,
+        failed_attempts: list[dict[str, Any]] | None = None,
+        stage_timings: dict[str, Any] | None = None,
+        early_stop_progress: list[dict[str, Any]] | None = None,
+        low_confidence_sparse_market_reason: str | None = None,
     ) -> ProviderResult:
         from ..filters import filter_comps
 
@@ -1014,8 +1276,12 @@ class EbayBrowserSoldCompsProvider:
                 "No eBay query attempts were available",
                 diagnostics={"providerDomain": request.provider_domain},
             )
-        evaluated = filter_comps(request.price_key, comps)
-        query_attempts = build_query_attempt_summaries(attempts, evaluated)
+        aggregate_timings = StageTimings()
+        with _StageTimer(aggregate_timings, "evidence_filtering"):
+            evaluated = filter_comps(request.price_key, comps)
+        progress_summaries = early_stop_progress or build_attempt_progress_summaries(request, attempts)
+        query_attempts = build_query_attempt_summaries(attempts, evaluated, progress_summaries)
+        latest_progress = progress_summaries[-1] if progress_summaries else {}
         quality_summary = build_quality_summary(comps, request=request)
         attempted_quality_summary = _merge_quality_summaries(
             [
@@ -1051,9 +1317,31 @@ class EbayBrowserSoldCompsProvider:
                 "browserConfig": self.config.safe_diagnostics(),
                 "queryDiagnostics": first_query.diagnostics,
                 "queryAttempts": query_attempts,
+                "failedQueryAttempts": failed_attempts or [],
                 "queryAttemptsUsed": len(attempts),
                 "queryAttemptLimit": query_attempt_limit,
                 "queryStopReason": stop_reason,
+                "earlyStopApplied": stop_reason != "all_query_attempts_exhausted",
+                "cumulativeIncludedAfterEachAttempt": [
+                    item.get("cumulativeIncludedAfterAttempt") for item in progress_summaries
+                ],
+                "cumulativeRejectedAfterEachAttempt": [
+                    item.get("cumulativeRejectedAfterAttempt") for item in progress_summaries
+                ],
+                "newUniqueCandidatesPerAttempt": [
+                    item.get("newUniqueCandidatesPerAttempt") for item in progress_summaries
+                ],
+                "duplicateCandidatesPerAttempt": [
+                    item.get("duplicateCandidatesPerAttempt") for item in progress_summaries
+                ],
+                "cleanIncludedCount": latest_progress.get("cleanIncludedCount", 0),
+                "selectorRejectedCount": latest_progress.get("selectorRejectedCount", 0),
+                "wrongLanguageRejectedCount": latest_progress.get("wrongLanguageRejectedCount", 0),
+                "lowConfidenceSparseMarketReason": low_confidence_sparse_market_reason,
+                "stageTimings": {
+                    **(stage_timings or {}),
+                    "aggregate": aggregate_timings.snapshot(),
+                },
                 "marketScope": self.config.market_scope,
                 "qualitySummary": quality_summary,
                 "attemptedQualitySummaryBeforeDedupe": attempted_quality_summary,
@@ -1068,11 +1356,13 @@ class EbayBrowserSoldCompsProvider:
             comps=comps,
             raw_metadata=metadata,
         )
-        self._write_aggregate_debug_artifacts(
-            request=request,
-            provider_result=provider_result,
-            evaluated=evaluated,
-        )
+        with _StageTimer(aggregate_timings, "report_writing"):
+            self._write_aggregate_debug_artifacts(
+                request=request,
+                provider_result=provider_result,
+                evaluated=evaluated,
+            )
+        provider_result.raw_metadata["stageTimings"]["aggregate"] = aggregate_timings.snapshot()
         return provider_result
 
     def _fetch_with_playwright(self, *, request: ProviderRequest, search_query: ProviderSearchQuery) -> ProviderResult:
@@ -1086,18 +1376,22 @@ class EbayBrowserSoldCompsProvider:
             ) from exc
 
         timeout_ms = self.config.timeout_seconds * 1000
+        launch_timeout_ms = self.config.launch_timeout_seconds * 1000
+        stage_timings = StageTimings()
         with sync_playwright() as playwright:
             context: Any = None
             try:
                 profile_dir = self.config.ensure_profile_dir()
                 try:
-                    context = playwright.chromium.launch_persistent_context(
-                        str(profile_dir),
-                        channel=self.config.channel,
-                        headless=self.config.headless,
-                        locale=request.search_locale,
-                        viewport={"width": 1366, "height": 900},
-                    )
+                    with _StageTimer(stage_timings, "launch_browser"):
+                        context = playwright.chromium.launch_persistent_context(
+                            str(profile_dir),
+                            channel=self.config.channel,
+                            headless=self.config.headless,
+                            locale=request.search_locale,
+                            viewport={"width": 1366, "height": 900},
+                            timeout=launch_timeout_ms,
+                        )
                 except Exception as exc:
                     raise ProviderTemporaryError(
                         "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
@@ -1105,15 +1399,55 @@ class EbayBrowserSoldCompsProvider:
                         diagnostics={
                             "errorType": type(exc).__name__,
                             "browserConfig": self.config.safe_diagnostics(),
+                            "timedOutStage": "launch_browser" if _looks_like_timeout(exc) else None,
+                            "stageTimings": stage_timings.snapshot(),
                         },
                     ) from exc
                 page = context.new_page()
                 page.set_default_timeout(timeout_ms)
-                page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                with _StageTimer(stage_timings, "open_ebay_page"):
+                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                with _StageTimer(stage_timings, "apply_sold_completed_filters"):
+                    if "LH_Sold=1" not in search_query.search_url or "LH_Complete=1" not in search_query.search_url:
+                        raise ProviderParseError(
+                            "eBay search URL is missing sold/completed filters",
+                            diagnostics={"searchUrl": search_query.search_url},
+                        )
                 try:
-                    page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 15000))
+                    with _StageTimer(stage_timings, "wait_for_network_idle"):
+                        page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 15000))
                 except PlaywrightTimeoutError:
                     pass
+
+                try:
+                    with _StageTimer(stage_timings, "wait_for_result_container"):
+                        page.wait_for_selector(RESULT_CONTAINER_SELECTOR, timeout=timeout_ms)
+                except PlaywrightTimeoutError as exc:
+                    title = _safe_page_title(page)
+                    body_text = _safe_body_text(page)
+                    selector_counts = count_candidate_selectors(page)
+                    self._write_debug_artifacts(
+                        page=page,
+                        request=request,
+                        search_query=search_query,
+                        title=title,
+                        body_text=body_text,
+                        detected_block=contains_block_marker(title=title, body_text=body_text),
+                        selector_counts=selector_counts,
+                        comps=[],
+                        parser_errors=[{"errorType": "TimeoutError", "stage": "wait_for_result_container"}],
+                        stage_timings=stage_timings.snapshot(),
+                    )
+                    raise ProviderTemporaryError(
+                        "Timed out waiting for eBay result container",
+                        diagnostics={
+                            "errorType": type(exc).__name__,
+                            "timedOutStage": "wait_for_result_container",
+                            "stageTimings": stage_timings.snapshot(),
+                            "candidateSelectorCounts": selector_counts,
+                            "debugArtifacts": self._debug_artifact_paths(),
+                        },
+                    ) from exc
 
                 title = page.title()
                 body_text = page.locator("body").inner_text(timeout=5000)
@@ -1140,11 +1474,12 @@ class EbayBrowserSoldCompsProvider:
                         },
                     )
 
-                comps, parser_errors, visible_sample = self._parse_page(
-                    page=page,
-                    request=request,
-                    search_query=search_query,
-                )
+                with _StageTimer(stage_timings, "parse_result_rows"):
+                    comps, parser_errors, visible_sample = self._parse_page(
+                        page=page,
+                        request=request,
+                        search_query=search_query,
+                    )
                 quality_summary = build_quality_summary(comps, request=request)
                 for error in parser_errors:
                     url_quality = error.get("url_quality")
@@ -1164,6 +1499,7 @@ class EbayBrowserSoldCompsProvider:
                     parser_errors=parser_errors,
                     visible_result_text_sample=visible_sample,
                     quality_summary=quality_summary,
+                    stage_timings=stage_timings.snapshot(),
                 )
                 return ProviderResult(
                     provider_name=self.provider_name,
@@ -1189,6 +1525,7 @@ class EbayBrowserSoldCompsProvider:
                             "candidateSelectorCounts": selector_counts,
                             "parserErrors": parser_errors[:20],
                             "visibleResultTextSample": visible_sample,
+                            "stageTimings": stage_timings.snapshot(),
                         }
                     ),
                 )
@@ -1291,6 +1628,7 @@ class EbayBrowserSoldCompsProvider:
                     "providerMarketplaceId": search_query.provider_marketplace_id,
                     "query_index": search_query.query_index,
                     "query_source": search_query.query_source,
+                    "query_style": search_query.diagnostics.get("queryStyle") or "unquoted_discovery",
                     "query_text": search_query.query_text,
                     "query_search_url": search_query.search_url,
                     "marketCountry": request.market_country,
@@ -1366,8 +1704,19 @@ class EbayBrowserSoldCompsProvider:
                 "aggregate": True,
                 "search_url": (provider_result.raw_metadata.get("queryAttempts") or [{}])[0].get("search_url"),
                 "query_attempts": provider_result.raw_metadata.get("queryAttempts") or [],
+                "failed_query_attempts": provider_result.raw_metadata.get("failedQueryAttempts") or [],
                 "query_attempts_used": provider_result.raw_metadata.get("queryAttemptsUsed"),
                 "query_stop_reason": provider_result.raw_metadata.get("queryStopReason"),
+                "early_stop_applied": provider_result.raw_metadata.get("earlyStopApplied"),
+                "cumulative_included_after_each_attempt": provider_result.raw_metadata.get("cumulativeIncludedAfterEachAttempt") or [],
+                "cumulative_rejected_after_each_attempt": provider_result.raw_metadata.get("cumulativeRejectedAfterEachAttempt") or [],
+                "new_unique_candidates_per_attempt": provider_result.raw_metadata.get("newUniqueCandidatesPerAttempt") or [],
+                "duplicate_candidates_per_attempt": provider_result.raw_metadata.get("duplicateCandidatesPerAttempt") or [],
+                "clean_included_count": provider_result.raw_metadata.get("cleanIncludedCount"),
+                "selector_rejected_count": provider_result.raw_metadata.get("selectorRejectedCount"),
+                "wrong_language_rejected_count": provider_result.raw_metadata.get("wrongLanguageRejectedCount"),
+                "low_confidence_sparse_market_reason": provider_result.raw_metadata.get("lowConfidenceSparseMarketReason"),
+                "stage_timings": provider_result.raw_metadata.get("stageTimings") or {},
                 "result_count": len(provider_result.comps),
                 "raw_result_count_before_dedupe": provider_result.raw_metadata.get("rawResultCountBeforeDedupe"),
                 "deduped_result_count": provider_result.raw_metadata.get("dedupedResultCount"),
@@ -1400,6 +1749,49 @@ class EbayBrowserSoldCompsProvider:
         write_json(latest_dir / "debug_summary.json", summary)
         append_jsonl(DEBUG_REPORTS_DIR / "runs.jsonl", summary)
 
+    def _write_timeout_debug_summary(
+        self,
+        *,
+        request: ProviderRequest,
+        failed_attempts: list[dict[str, Any]],
+        stage_timings: dict[str, Any],
+        stop_reason: str,
+    ) -> None:
+        if self.config.debug_artifact_dir is None:
+            return
+        latest_dir = self.config.debug_artifact_dir
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        summary = sanitize_provider_diagnostics(
+            {
+                "timestamp": utc_iso(),
+                "status": "failed",
+                "query_stop_reason": stop_reason,
+                "failed_query_attempts": failed_attempts,
+                "stage_timings": stage_timings,
+                "browser_config": self.config.safe_diagnostics(),
+                "market_config": {
+                    "marketCountry": request.market_country,
+                    "currency": request.currency,
+                    "marketplace": request.marketplace,
+                    "providerMarketplaceId": request.provider_marketplace_id,
+                    "providerDomain": request.provider_domain,
+                    "searchLocale": request.search_locale,
+                },
+            }
+        )
+        write_json(latest_dir / "debug_summary.json", summary)
+        append_jsonl(DEBUG_REPORTS_DIR / "runs.jsonl", summary)
+
+    def _debug_artifact_paths(self) -> dict[str, str] | None:
+        if self.config.debug_artifact_dir is None:
+            return None
+        return {
+            "directory": str(self.config.debug_artifact_dir),
+            "pageHtml": str(self.config.debug_artifact_dir / "page.html"),
+            "screenshot": str(self.config.debug_artifact_dir / "screenshot.png"),
+            "summary": str(self.config.debug_artifact_dir / "debug_summary.json"),
+        }
+
     def _write_debug_artifacts(
         self,
         *,
@@ -1414,6 +1806,7 @@ class EbayBrowserSoldCompsProvider:
         parser_errors: list[dict[str, Any]],
         visible_result_text_sample: str = "",
         quality_summary: dict[str, int] | None = None,
+        stage_timings: dict[str, Any] | None = None,
     ) -> None:
         if self.config.debug_artifact_dir is None:
             return
@@ -1455,6 +1848,7 @@ class EbayBrowserSoldCompsProvider:
                 "visible_result_text_sample": visible_result_text_sample,
                 "body_text_sample": _normalise_text(body_text)[:2000],
                 "candidate_selector_counts": selector_counts,
+                "stage_timings": stage_timings or {},
                 "result_count": len(comps),
                 "quality_summary": quality_summary or {},
                 "sample_urls": [

@@ -4,8 +4,10 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +35,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", default="en")
     parser.add_argument("--variant", default="raw")
     parser.add_argument("--condition", default="raw")
+    parser.add_argument("--headed", action="store_true", help="Run Chrome headed for manual QA.")
+    parser.add_argument("--browser-launch-timeout-seconds", type=int, default=120)
+    parser.add_argument("--per-query-timeout-seconds", type=int, default=120)
+    parser.add_argument("--total-card-timeout-seconds", type=int, default=120)
     return parser.parse_args()
 
 
@@ -100,22 +106,81 @@ def comp_to_dict(comp: Any) -> dict[str, Any]:
     )
 
 
+def _read_json_if_exists(path: Path) -> dict[str, Any]:
+    try:
+        if path.exists():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+    return {}
+
+
 def main() -> int:
     args = parse_args()
+    started = time.monotonic()
     debug_dir = ROOT / "reports" / "ebay_browser_debug" / "latest"
-    import os
     os.environ.setdefault("EBAY_BROWSER_DEBUG_ARTIFACT_DIR", str(debug_dir))
+    os.environ["EBAY_BROWSER_HEADLESS"] = "false" if args.headed else os.environ.get("EBAY_BROWSER_HEADLESS", "true")
+    os.environ.setdefault("EBAY_BROWSER_LAUNCH_TIMEOUT_SECONDS", str(max(1, int(args.browser_launch_timeout_seconds))))
+    os.environ.setdefault("EBAY_BROWSER_TIMEOUT_SECONDS", str(max(1, int(args.per_query_timeout_seconds))))
     request = build_request(args)
     query_ladder = build_provider_search_queries(request)
     provider = create_market_comps_provider("ebay_browser")
     browser_config = getattr(getattr(provider, "config", None), "safe_diagnostics", lambda: {})()
-    result = provider.fetch_comps(request)
+    try:
+        result = provider.fetch_comps(request)
+    except Exception as exc:
+        diagnostics = getattr(exc, "diagnostics", {}) if hasattr(exc, "diagnostics") else {}
+        debug_summary = _read_json_if_exists(debug_dir / "debug_summary.json")
+        payload = sanitize_provider_diagnostics(
+            {
+                "status": "failed",
+                "finishedAtUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "elapsedMs": round((time.monotonic() - started) * 1000, 2),
+                "error": str(exc),
+                "errorType": type(exc).__name__,
+                "timedOutStage": (diagnostics or {}).get("timedOutStage")
+                or (debug_summary.get("stage_timings") or {}).get("timedOutStage"),
+                "stageTimings": (diagnostics or {}).get("stageTimings") or debug_summary.get("stage_timings") or {},
+                "providerDiagnostics": diagnostics,
+                "browserConfig": browser_config,
+                "debugArtifacts": {
+                    "directory": str(debug_dir),
+                    "pageHtml": str(debug_dir / "page.html"),
+                    "screenshot": str(debug_dir / "screenshot.png"),
+                    "summary": str(debug_dir / "debug_summary.json"),
+                    "runsJsonl": str(ROOT / "reports" / "ebay_browser_debug" / "runs.jsonl"),
+                },
+                "debugSummary": debug_summary,
+                "queryAttempts": [
+                    {
+                        "query_index": query.query_index,
+                        "query_source": query.query_source,
+                        "query_text": query.query_text,
+                        "search_url": query.search_url,
+                    }
+                    for query in query_ladder
+                ],
+            }
+        )
+        print(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False))
+        return 2
     evaluated = filter_comps(request.price_key, result.comps)
     pricing_stats = calculate_pricing_stats(evaluated, config=MarketEngineConfig.from_env(require_supabase=False))
+    included_count = sum(1 for item in evaluated if item.included_in_estimate)
+    rejected_count = sum(1 for item in evaluated if not item.included_in_estimate)
+    rejection_reason_summary: dict[str, int] = {}
+    for item in evaluated:
+        if item.included_in_estimate:
+            continue
+        key = str(item.rejection_reason or "unknown")
+        rejection_reason_summary[key] = rejection_reason_summary.get(key, 0) + 1
     payload = sanitize_provider_diagnostics(
         {
             "status": "success",
             "finishedAtUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "elapsedMs": round((time.monotonic() - started) * 1000, 2),
             "provider": result.provider_name,
             "marketplace": result.marketplace,
             "browserConfig": browser_config,
@@ -144,10 +209,19 @@ def main() -> int:
             ],
             "queryAttemptsUsed": result.raw_metadata.get("queryAttemptsUsed"),
             "queryStopReason": result.raw_metadata.get("queryStopReason"),
+            "failedQueryAttempts": result.raw_metadata.get("failedQueryAttempts") or [],
+            "stageTimings": result.raw_metadata.get("stageTimings") or {},
             "resultCount": len(result.comps),
+            "includedCount": included_count,
+            "rejectedCount": rejected_count,
+            "rejectionReasonSummary": dict(sorted(rejection_reason_summary.items(), key=lambda pair: pair[0])),
             "urlQualityCounts": result.raw_metadata.get("qualitySummary") or {},
             "priceSpreadRatio": pricing_stats.price_spread_ratio,
+            "confidence": pricing_stats.confidence,
             "confidenceWarnings": list(pricing_stats.confidence_warnings),
+            "recommendedPrice": pricing_stats.recommended_price,
+            "priceBasis": pricing_stats.price_basis,
+            "noReliablePriceReason": pricing_stats.no_reliable_price_reason,
             "topIncludedComps": [
                 comp_to_dict(item.comp) for item in evaluated if item.included_in_estimate
             ][:5],

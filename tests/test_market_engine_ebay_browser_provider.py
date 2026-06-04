@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import json
+import subprocess
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +45,7 @@ from cardscanr_market_engine.providers.errors import (  # noqa: E402
 from cardscanr_market_engine.providers.errors import ProviderUnsupportedMarketError  # noqa: E402
 from cardscanr_market_engine.providers.query_builder import build_provider_search_queries, build_provider_search_query  # noqa: E402
 from cardscanr_market_engine.pricing_stats import calculate_pricing_stats  # noqa: E402
+from scripts.debug_ebay_browser_card_matrix import _run_single_lookup, plan_card_matrix  # noqa: E402
 from scripts.debug_ebay_browser_market_matrix import plan_market_matrix  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import default_plan as live_worker_default_plan  # noqa: E402
 from scripts.smoke_ebay_browser_live_worker_batch import parse_market_list as parse_worker_market_list  # noqa: E402
@@ -168,6 +170,7 @@ class ProviderFactoryTests(unittest.TestCase):
                 headless=True,
                 max_results=30,
                 timeout_seconds=45,
+                launch_timeout_seconds=45,
                 cooldown_seconds=20,
                 min_seconds_between_requests=20,
                 user_data_dir=profile_dir,
@@ -289,13 +292,30 @@ class QueryBuilderTests(unittest.TestCase):
             set_code="SV9",
             collector_number="050/100",
             language="jp",
+            variant="non_holo",
         )
         queries = build_provider_search_queries(request)
-        self.assertEqual([query.query_source for query in queries], ["exact", "without_set", "set_code_fallback", "japanese_origin_hint"])
-        self.assertIn('"Pancham" "050/100" "Battle Partners" Pokemon card', queries[0].query_text)
-        self.assertIn('"Pancham" "050/100" Pokemon card', queries[1].query_text)
-        self.assertIn('"Pancham" "SV9" "050" Pokemon card', queries[2].query_text)
-        self.assertIn('"Pancham" "050/100" "Battle Partners" Japanese Pokemon card', queries[3].query_text)
+        self.assertEqual(
+            [query.query_source for query in queries],
+            [
+                "language_primary_unquoted",
+                "language_variant_unquoted",
+                "broad_number_unquoted",
+                "set_code_language_unquoted",
+                "quoted_precision_fallback",
+            ],
+        )
+        self.assertEqual(queries[0].query_text, "Pancham 050/100 Japanese Pokemon")
+        self.assertEqual(queries[1].query_text, "Pancham 050/100 Japanese non holo Pokemon")
+        self.assertEqual(queries[2].query_text, "Pancham 050/100 Pokemon")
+        self.assertEqual(queries[3].query_text, "Pancham SV9 050 Japanese Pokemon")
+        self.assertEqual(queries[4].query_text, '"Pancham" "050/100" Japanese Pokemon')
+        self.assertEqual(queries[0].diagnostics["queryStyle"], "unquoted_discovery")
+        self.assertEqual(queries[4].diagnostics["queryStyle"], "quoted_precision")
+        self.assertEqual(queries[0].diagnostics["queryPolicy"], "simple_discovery_filter_after")
+        self.assertEqual(queries[0].diagnostics["appliedNegativeTerms"], [])
+        self.assertEqual(queries[0].diagnostics["rejectionPolicy"], "post_parse_only")
+        self.assertEqual(queries[0].diagnostics["primaryQueryReason"], "simple_human_search_terms")
 
     def test_query_ladder_for_lombre_uses_english_alias(self) -> None:
         request = sample_request(
@@ -305,13 +325,39 @@ class QueryBuilderTests(unittest.TestCase):
             set_code="SV9",
             collector_number="022/100",
             language="jp",
+            variant="non_holo",
             raw={"english_card_name": "Lombre"},
         )
         queries = build_provider_search_queries(request)
-        self.assertEqual([query.query_source for query in queries], ["exact", "without_set", "set_code_fallback", "japanese_origin_hint"])
+        self.assertEqual(
+            [query.query_source for query in queries],
+            [
+                "language_primary_unquoted",
+                "language_variant_unquoted",
+                "broad_number_unquoted",
+                "set_code_language_unquoted",
+                "quoted_precision_fallback",
+            ],
+        )
         self.assertTrue(all("Lombre" in query.query_text for query in queries))
         self.assertFalse(any("ハスブレロ" in query.query_text for query in queries))
-        self.assertIn('"Lombre" "022/100" "Battle Partners" Pokemon card', queries[0].query_text)
+        self.assertEqual(queries[0].query_text, "Lombre 022/100 Japanese Pokemon")
+        self.assertEqual(queries[1].query_text, "Lombre 022/100 Japanese non holo Pokemon")
+
+    def test_multi_word_card_has_unquoted_and_quoted_fallback(self) -> None:
+        request = sample_request(
+            card_name="Roxie's Performance",
+            normalized_card_name="roxies performance",
+            set_name="Chaos Rising",
+            set_code="SV10",
+            collector_number="081/086",
+            language="en",
+        )
+        queries = build_provider_search_queries(request)
+        self.assertEqual(queries[0].query_text, "Roxie's Performance 081/086 Pokemon")
+        self.assertEqual(queries[-1].query_text, '"Roxie\'s Performance" "081/086" Pokemon')
+        self.assertEqual(queries[0].diagnostics["queryStyle"], "unquoted_discovery")
+        self.assertEqual(queries[-1].diagnostics["queryStyle"], "quoted_precision")
 
     def test_jp_local_name_is_not_used_for_english_market_queries(self) -> None:
         for country, currency in (("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")):
@@ -356,31 +402,63 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertIn("LH_Sold=1", query.search_url)
         self.assertIn("LH_Complete=1", query.search_url)
 
-    def test_query_builder_excludes_raw_bad_terms(self) -> None:
+    def test_english_query_has_no_negative_terms(self) -> None:
         query = build_provider_search_query(sample_request())
-        for term in ("proxy", "custom", "digital", "code", "jumbo", "lot", "bundle", "pack", "booster", "sealed", "psa", "cgc", "bgs", "graded"):
-            self.assertIn(f"-{term}", query.query_text)
+        for term in ("proxy", "custom", "digital", "code", "jumbo", "pack", "booster", "sealed", "psa", "cgc", "bgs", "graded", "lot", "bundle", "holo", "reverse"):
+            self.assertNotIn(f"-{term}", query.query_text)
+        self.assertEqual(query.query_text, "Charizard ex 125/197 Pokemon")
+        self.assertEqual(query.diagnostics["variantQueryMode"], "broad_variant_unknown_filter_later")
+        self.assertEqual(query.diagnostics["queryPolicy"], "simple_discovery_filter_after")
+        self.assertEqual(query.diagnostics["appliedNegativeTerms"], [])
+        self.assertEqual(query.diagnostics["rejectionPolicy"], "post_parse_only")
 
     def test_query_builder_handles_graded_condition(self) -> None:
         query = build_provider_search_query(sample_request(condition="psa_10", variant="graded"))
         self.assertNotIn("-psa", query.query_text)
         self.assertNotIn("-graded", query.query_text)
-        self.assertIn("-proxy", query.query_text)
+        self.assertNotIn("-proxy", query.query_text)
 
     def test_query_builder_adds_reverse_holo_for_reverse_holo_variant(self) -> None:
-        query = build_provider_search_query(sample_request(variant="reverse_holo"))
-        self.assertIn("reverse holo", query.query_text)
+        queries = build_provider_search_queries(sample_request(variant="reverse_holo"))
+        self.assertTrue(any("reverse holo" in query.query_text for query in queries))
+        self.assertFalse(any("-holo" in query.query_text for query in queries))
+        self.assertEqual(queries[0].diagnostics["variantQueryMode"], "positive_reverse_holo_filter_required")
 
-    def test_query_builder_excludes_holo_terms_for_non_holo_variant(self) -> None:
-        query = build_provider_search_query(sample_request(variant="non_holo"))
-        self.assertNotIn(" reverse holo ", f" {query.query_text} ")
-        self.assertIn("-holo", query.query_text)
-        self.assertIn("-reverse", query.query_text)
+    def test_query_builder_uses_broad_non_holo_query_and_filter_later_diagnostics(self) -> None:
+        queries = build_provider_search_queries(sample_request(variant="non_holo"))
+        self.assertTrue(any("non holo" in query.query_text for query in queries))
+        self.assertFalse(any("-holo" in query.query_text or "-reverse" in query.query_text for query in queries))
+        self.assertFalse(any("-proxy" in query.query_text or "-pack" in query.query_text for query in queries))
+        self.assertEqual(queries[0].diagnostics["variantQueryMode"], "broad_non_holo_filter_later")
+        self.assertEqual(queries[0].diagnostics["appliedNegativeTerms"], [])
 
-    def test_query_builder_holo_avoids_reverse_where_possible(self) -> None:
-        query = build_provider_search_query(sample_request(variant="holo"))
-        self.assertIn(" holo ", f" {query.query_text} ")
-        self.assertIn("-reverse", query.query_text)
+    def test_query_builder_holo_uses_positive_holo_without_reverse_negative(self) -> None:
+        queries = build_provider_search_queries(sample_request(variant="holo"))
+        self.assertTrue(any(" holo " in f" {query.query_text} " for query in queries))
+        self.assertFalse(any("-reverse" in query.query_text for query in queries))
+        self.assertEqual(queries[0].diagnostics["variantQueryMode"], "positive_holo_filter_reverse_later")
+
+    def test_pancham_non_holo_query_ladder_uses_broad_query(self) -> None:
+        request = sample_request(
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        queries = build_provider_search_queries(request)
+        self.assertEqual(queries[0].query_text, "Pancham 050/100 Japanese Pokemon")
+        self.assertEqual(queries[1].query_text, "Pancham 050/100 Japanese non holo Pokemon")
+        self.assertEqual(queries[2].query_text, "Pancham 050/100 Pokemon")
+        self.assertNotIn("-holo", queries[0].query_text)
+        self.assertNotIn("-reverse", queries[0].query_text)
+        self.assertNotIn("-lot", queries[0].query_text)
+        self.assertNotIn("-bundle", queries[0].query_text)
+        self.assertEqual(queries[0].query_source, "language_primary_unquoted")
+        self.assertEqual(queries[1].query_source, "language_variant_unquoted")
+        self.assertEqual(queries[0].diagnostics["variantQueryMode"], "broad_non_holo_filter_later")
 
 
 class EvidenceStrategyTests(unittest.TestCase):
@@ -413,6 +491,16 @@ class EvidenceStrategyTests(unittest.TestCase):
             listing_url=f"https://www.ebay.com.au/itm/{item_id}",
             condition_text="Raw",
             raw_metadata=metadata,
+        )
+
+    def _provider_result(self, request: ProviderRequest, comps: list[SoldComp], *, query_used: str = "test") -> ProviderResult:
+        return ProviderResult(
+            provider_name="ebay_browser",
+            marketplace=request.provider_marketplace_id,
+            provider_fingerprint=f"test:{query_used}",
+            query_used=query_used,
+            comps=comps,
+            raw_metadata={"qualitySummary": {}, "parserErrors": []},
         )
 
     def test_aggregator_dedupes_same_item_across_queries(self) -> None:
@@ -458,6 +546,376 @@ class EvidenceStrategyTests(unittest.TestCase):
         self.assertFalse(evaluated[0].included_in_estimate)
         self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
 
+    def test_junk_terms_are_rejected_by_filtering_not_query_negatives(self) -> None:
+        query = build_provider_search_query(sample_request())
+        for term in ("proxy", "custom", "pack", "booster", "sealed", "psa", "cgc", "bgs", "graded"):
+            self.assertNotIn(f"-{term}", query.query_text)
+
+        request = sample_request(country="AU", currency="AUD")
+        cases = [
+            ("Charizard ex 125/197 Obsidian Flames proxy Pokemon Card", "proxy_or_custom"),
+            ("Charizard ex 125/197 Obsidian Flames custom Pokemon Card", "proxy_or_custom"),
+            ("Charizard ex 125/197 Obsidian Flames PSA 9 Pokemon Card", "graded_for_raw_request"),
+            ("Charizard ex 125/197 Obsidian Flames booster pack fresh Pokemon Card", "sealed_product_for_single_card_request"),
+            ("Charizard ex 125/197 Obsidian Flames code card Pokemon", "digital"),
+            ("Charizard ex 125/197 Obsidian Flames jumbo Pokemon Card", "oversized_or_jumbo"),
+            ("Pick Your Card Charizard ex 125/197 Obsidian Flames Pokemon", "price_range_or_variation_listing"),
+        ]
+        comps = [self._sold_comp(title, item_id=str(700 + index)) for index, (title, _reason) in enumerate(cases)]
+        evaluated = filter_comps(request.price_key, comps)
+        self.assertEqual([item.rejection_reason for item in evaluated], [reason for _title, reason in cases])
+
+    def test_non_holo_filtering_rejects_reverse_holo_and_holo_titles(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="601")
+        holo = self._sold_comp("Pancham 050/100 Battle Partners Holo Pokemon Card", item_id="602")
+        regular = self._sold_comp("Pancham 050/100 Battle Partners Non Holo Pokemon Card", item_id="603")
+        evaluated = filter_comps(request.price_key, [reverse, holo, regular])
+        reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
+        self.assertEqual(reasons["ebay-601"], "wrong_variant_reverse_holo")
+        self.assertEqual(reasons["ebay-602"], "wrong_variant_holo")
+        self.assertIsNone(reasons["ebay-603"])
+
+    def test_non_holo_does_not_reject_non_holo_text(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="610")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertIsNone(evaluated[0].rejection_reason)
+
+    def test_jp_pancham_rejects_korean_language_listing(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 Battle Partners Korean Pokemon Card", item_id="611")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_language")
+
+    def test_jp_pancham_accepts_japanese_listing(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="612")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertIsNone(evaluated[0].rejection_reason)
+
+    def test_korean_request_accepts_korean_and_rejects_japanese(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="kr",
+            variant="non_holo",
+        )
+        korean = self._sold_comp("Pancham 050/100 Battle Partners Korean Pokemon Card", item_id="613")
+        japanese = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="614")
+        evaluated = filter_comps(request.price_key, [korean, japanese])
+        reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
+        self.assertIsNone(reasons["ebay-613"])
+        self.assertEqual(reasons["ebay-614"], "wrong_language")
+
+    def test_pick_your_own_from_raw_snippet_is_rejected(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp(
+            "Pancham 050/100 Battle Partners Japanese Pokemon Card",
+            item_id="615",
+            raw_metadata={"rawTextSnippet": "Battle Partners - All Pokemon - Pick Your Own - Japanese - Postage Discount"},
+        )
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
+
+    def test_pick_your_card_from_title_is_rejected(self) -> None:
+        request = sample_request(country="AU", currency="AUD")
+        comp = self._sold_comp("Pick Your Card Charizard ex 125/197 Obsidian Flames Pokemon", item_id="616")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
+
+    def test_holo_lot_count_is_marked_lot_and_wrong_variant_for_non_holo(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 Battle Partners Japanese Holo Lot*56 Pokemon Cards", item_id="617")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_variant_holo")
+        self.assertTrue(evaluated[0].comp.raw_metadata["likely_bundle_lot"])
+
+    def test_lombre_pick_your_card_listing_remains_rejected(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="ãƒã‚¹ãƒ–ãƒ¬ãƒ­",
+            normalized_card_name="ãƒã‚¹ãƒ–ãƒ¬ãƒ­",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="022/100",
+            language="jp",
+            variant="non_holo",
+            raw={"english_card_name": "Lombre"},
+        )
+        comp = self._sold_comp("Lombre 022/100 Battle Partners Japanese Pick Your Card Pokemon", item_id="618")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertIsNone(stats.recommended_price)
+
+    def test_pancham_clean_japanese_comps_remain_included(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comps = [
+            self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="619", sold_price=2.1),
+            self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="620", sold_price=2.3),
+            self._sold_comp("Pancham 050/100 Battle Partners JP Pokemon Card", item_id="621", sold_price=2.2),
+        ]
+        evaluated = filter_comps(request.price_key, comps)
+        self.assertTrue(all(item.included_in_estimate for item in evaluated))
+        self.assertTrue(all(item.rejection_reason is None for item in evaluated))
+
+    def test_pancham_clean_title_with_collector_number_is_included(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 Battle Partners NM Japanese Pokemon Card TCG", item_id="624")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertIsNone(evaluated[0].rejection_reason)
+
+    def test_pancham_hyphenated_set_code_title_is_included(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("050-100-SV9-B - Pokemon Card - Japanese - Pancham - C", item_id="625")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertIsNone(evaluated[0].rejection_reason)
+
+    def test_raw_snippet_ui_numbers_do_not_trigger_multiple_card_numbers(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp(
+            "050-100-SV9-B - Pokemon Card - Japanese - Pancham - C",
+            item_id="626",
+            raw_metadata={
+                "rawTextSnippet": (
+                    "Sold 14 May 2026 050-100-SV9-B - Pokemon Card - Japanese - Pancham - C "
+                    "Opens in a new window or tab Pre-owned AU $1.54 Buy It Now +AU $4.63 delivery "
+                    "from Japan Free returns View similar active items Sell one like this midorigame "
+                    "99.6% positive (29.7K)"
+                )
+            },
+        )
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+        self.assertIsNone(evaluated[0].rejection_reason)
+        identity_text = evaluated[0].comp.raw_metadata["collector_number_identity_text"]
+        self.assertIn("050-100-SV9-B - Pokemon Card - Japanese - Pancham - C", identity_text)
+        self.assertNotIn("AU $1.54", identity_text)
+        self.assertNotIn("99.6%", identity_text)
+        self.assertNotIn("29.7K", identity_text)
+
+    def test_true_multi_number_title_is_rejected(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comp = self._sold_comp("Pancham 050/100 001/100 098/100 Battle Partners Japanese Pokemon Card", item_id="627")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "multiple_card_numbers")
+
+    def test_confidence_stays_low_for_fewer_than_three_clean_variant_comps(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        comps = [
+            self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="622", sold_price=2.1),
+            self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="623", sold_price=2.3),
+        ]
+        evaluated = filter_comps(request.price_key, comps)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertEqual(stats.included_count, 2)
+        self.assertEqual(stats.confidence, "low")
+        self.assertIn("insufficient_variant_specific_comps", stats.confidence_warnings)
+
+    def test_reverse_holo_filtering_requires_reverse_holo_match(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="reverse_holo",
+        )
+        regular = self._sold_comp("Pancham 050/100 Battle Partners Non Holo Pokemon Card", item_id="604")
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="605")
+        evaluated = filter_comps(request.price_key, [regular, reverse])
+        reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
+        self.assertEqual(reasons["ebay-604"], "weak_variant_match")
+        self.assertIsNone(reasons["ebay-605"])
+
+    def test_holo_filtering_rejects_reverse_holo_titles(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="holo",
+        )
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="606")
+        holo = self._sold_comp("Pancham 050/100 Battle Partners Holo Pokemon Card", item_id="607")
+        evaluated = filter_comps(request.price_key, [reverse, holo])
+        reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
+        self.assertEqual(reasons["ebay-606"], "wrong_variant_reverse_holo")
+        self.assertIsNone(reasons["ebay-607"])
+
+    def test_lot_and_bundle_are_rejected_by_filtering_not_query_negatives(self) -> None:
+        query = build_provider_search_query(sample_request(variant="non_holo"))
+        self.assertNotIn("-lot", query.query_text)
+        self.assertNotIn("-bundle", query.query_text)
+
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        lot = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card lot", item_id="608")
+        bundle = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card bundle", item_id="609")
+        evaluated = filter_comps(request.price_key, [lot, bundle])
+        self.assertEqual([item.rejection_reason for item in evaluated], ["likely_bundle_lot", "likely_bundle_lot"])
+
     def test_no_reliable_price_when_only_weak_comps_exist(self) -> None:
         request = sample_request(
             country="AU",
@@ -472,6 +930,112 @@ class EvidenceStrategyTests(unittest.TestCase):
         weak = self._sold_comp("Pancham Pokemon Card", item_id="333")
         evaluated = filter_comps(request.price_key, [weak])
         self.assertFalse(evaluated[0].included_in_estimate)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertIsNone(stats.recommended_price)
+        self.assertEqual(stats.no_reliable_price_reason, "all_comps_rejected")
+
+    def test_early_stop_when_three_clean_comps_are_found(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        provider = EbayBrowserSoldCompsProvider()
+        first_result = self._provider_result(
+            request,
+            [
+                self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="900"),
+                self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="901"),
+                self._sold_comp("Pancham 050/100 Battle Partners JP Pokemon Card", item_id="902"),
+            ],
+        )
+        with patch.object(provider, "_wait_for_request_slot"):
+            with patch.object(provider, "_fetch_with_playwright", return_value=first_result) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(result.raw_metadata["queryStopReason"], "enough_clean_comps")
+        self.assertTrue(result.raw_metadata["earlyStopApplied"])
+        self.assertEqual(result.raw_metadata["cleanIncludedCount"], 3)
+        self.assertEqual(result.raw_metadata["cumulativeIncludedAfterEachAttempt"], [3])
+
+    def test_low_confidence_stop_when_two_clean_comps_and_later_attempts_duplicate_or_noisy(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        clean_a = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="910", sold_price=2.1)
+        clean_b = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="911", sold_price=2.3)
+        duplicate_a = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="910", sold_price=2.1)
+        selector = self._sold_comp("Pancham 050/100 Battle Partners Pick Your Card Japanese Pokemon", item_id="912")
+        provider = EbayBrowserSoldCompsProvider()
+        side_effect = [
+            self._provider_result(request, [clean_a, clean_b], query_used="q1"),
+            self._provider_result(request, [duplicate_a], query_used="q2"),
+            self._provider_result(request, [selector], query_used="q3"),
+        ]
+        with patch.object(provider, "_wait_for_request_slot"):
+            with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual(result.raw_metadata["queryStopReason"], "low_confidence_enough_for_sparse_market")
+        self.assertEqual(result.raw_metadata["lowConfidenceSparseMarketReason"], "two_clean_comps_after_no_new_useful_candidates")
+        self.assertEqual(result.raw_metadata["cleanIncludedCount"], 2)
+        self.assertEqual(result.raw_metadata["selectorRejectedCount"], 1)
+        evaluated = filter_comps(request.price_key, result.comps)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertEqual(stats.confidence, "low")
+        self.assertIn("insufficient_variant_specific_comps", stats.confidence_warnings)
+
+    def test_selector_only_results_stop_with_no_reliable_price(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Lombre",
+            normalized_card_name="lombre",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="022/100",
+            language="jp",
+            variant="non_holo",
+        )
+        provider = EbayBrowserSoldCompsProvider()
+        side_effect = [
+            self._provider_result(
+                request,
+                [self._sold_comp("Lombre 022/100 Battle Partners Japanese Pick Your Card Pokemon", item_id=str(920 + index))],
+                query_used=f"q{index}",
+            )
+            for index in range(4)
+        ]
+        with patch.object(provider, "_wait_for_request_slot"):
+            with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(fetch.call_count, 4)
+        self.assertEqual(result.raw_metadata["queryStopReason"], "only_selector_results")
+        self.assertTrue(result.raw_metadata["earlyStopApplied"])
+        evaluated = filter_comps(request.price_key, result.comps)
+        self.assertTrue(all(item.rejection_reason == "price_range_or_variation_listing" for item in evaluated))
         stats = calculate_pricing_stats(
             evaluated,
             now=datetime(2026, 5, 25, tzinfo=timezone.utc),
@@ -521,6 +1085,7 @@ class EvidenceStrategyTests(unittest.TestCase):
                     headless=True,
                     max_results=30,
                     timeout_seconds=45,
+                    launch_timeout_seconds=45,
                     cooldown_seconds=20,
                     min_seconds_between_requests=20,
                     user_data_dir=Path(tmp) / ".browser_profiles" / "cardscanr",
@@ -534,11 +1099,30 @@ class EvidenceStrategyTests(unittest.TestCase):
                 comps=dedupe_sold_comps([good, bad]),
                 stop_reason="test",
                 query_attempt_limit=2,
+                failed_attempts=[
+                    {
+                        "query_index": 0,
+                        "query_source": "broad_number_unquoted",
+                        "timed_out_stage": "wait_for_result_container",
+                    }
+                ],
+                stage_timings={
+                    "stageDurationsMs": {"run_query_attempt_1": 30000.0},
+                    "timedOutStage": "wait_for_result_container",
+                },
             )
             summary = json.loads((Path(tmp) / "debug" / "debug_summary.json").read_text(encoding="utf-8"))
         self.assertIn("queryAttempts", result.raw_metadata)
         self.assertEqual(result.raw_metadata["queryAttempts"][0]["search_url"], queries[0].search_url)
-        self.assertEqual(summary["query_attempts"][0]["query_source"], "exact")
+        self.assertEqual(result.raw_metadata["failedQueryAttempts"][0]["timed_out_stage"], "wait_for_result_container")
+        self.assertIn("stageTimings", result.raw_metadata)
+        self.assertIn("aggregate", result.raw_metadata["stageTimings"])
+        self.assertIn("evidence_filtering", result.raw_metadata["stageTimings"]["aggregate"]["stageDurationsMs"])
+        self.assertIn("report_writing", result.raw_metadata["stageTimings"]["aggregate"]["stageDurationsMs"])
+        self.assertEqual(summary["query_attempts"][0]["query_source"], "broad_number_unquoted")
+        self.assertIn("early_stop_applied", summary)
+        self.assertEqual(summary["failed_query_attempts"][0]["timed_out_stage"], "wait_for_result_container")
+        self.assertIn("stage_timings", summary)
         self.assertEqual(summary["top_rejected_comps"][0]["rejection_reason"], "price_range_or_variation_listing")
 
 
@@ -769,6 +1353,76 @@ class ParserTests(unittest.TestCase):
         self.assertFalse(evaluated[0].included_in_estimate)
         self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
 
+    def test_generic_opens_title_falls_back_to_raw_snippet_title(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        query = build_provider_search_query(request)
+        comp = parse_candidate_dict(
+            {
+                "source": "fixture",
+                "href": "https://www.ebay.com.au/itm/126",
+                "title": "Opens in a new window or tab",
+                "text": (
+                    "Sold 17 Mar 2026 Battle Partners - All Pokemon - Pick Your Own - Japanese - "
+                    "Postage Discount Opens in a new window or tab\nAU $2.20\nFree postage"
+                ),
+            },
+            request=request,
+            search_query=query,
+            index=0,
+        )
+        self.assertIsNotNone(comp)
+        assert comp is not None
+        self.assertEqual(comp.title, "Battle Partners - All Pokemon - Pick Your Own - Japanese - Postage Discount")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertEqual(evaluated[0].rejection_reason, "price_range_or_variation_listing")
+
+    def test_single_line_sold_snippet_extracts_pancham_title_without_ui_noise(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Pancham",
+            normalized_card_name="pancham",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="050/100",
+            language="jp",
+            variant="non_holo",
+        )
+        query = build_provider_search_query(request)
+        comp = parse_candidate_dict(
+            {
+                "source": "fixture",
+                "href": "https://www.ebay.com.au/itm/127",
+                "title": "Opens in a new window or tab",
+                "text": (
+                    "Sold 14 May 2026 050-100-SV9-B - Pokemon Card - Japanese - Pancham - C "
+                    "Opens in a new window or tab Pre-owned AU $1.54 Buy It Now +AU $4.63 delivery "
+                    "from Japan Free returns View similar active items Sell one like this midorigame "
+                    "99.6% positive (29.7K)"
+                ),
+                "priceText": "AU $1.54",
+                "shippingText": "+AU $4.63 delivery",
+            },
+            request=request,
+            search_query=query,
+            index=0,
+        )
+        self.assertIsNotNone(comp)
+        assert comp is not None
+        self.assertEqual(comp.title, "050-100-SV9-B - Pokemon Card - Japanese - Pancham - C")
+        evaluated = filter_comps(request.price_key, [comp])
+        self.assertTrue(evaluated[0].included_in_estimate)
+
     def test_quality_summary_counts(self) -> None:
         request = sample_request(country="AU", currency="AUD")
         query = build_provider_search_query(request)
@@ -881,6 +1535,89 @@ class ParserTests(unittest.TestCase):
                 {"market": "CA", "currency": "CAD"},
             ],
         )
+
+    def test_card_matrix_default_plan_has_expected_cards(self) -> None:
+        planned = plan_card_matrix()
+        self.assertEqual(len(planned), 9)
+        labels = [f"{item['card_name']} {item['collector_number']} {item['set_name']}" for item in planned]
+        self.assertIn("Pancham 050/100 Battle Partners", labels)
+        self.assertIn("Roxie's Performance 081/086 Chaos Rising", labels)
+
+    def test_card_matrix_plan_reads_external_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "card_plan.json"
+            path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "card_name": "Pancham",
+                            "collector_number": "050/100",
+                            "set_name": "Battle Partners",
+                            "language": "jp",
+                            "variant": "non_holo",
+                            "condition": "raw",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            planned = plan_card_matrix(str(path))
+        self.assertEqual(len(planned), 1)
+        self.assertEqual(planned[0]["card_name"], "Pancham")
+        self.assertEqual(planned[0]["variant"], "non_holo")
+
+    def test_card_matrix_timeout_report_includes_stage_fields_without_live_ebay(self) -> None:
+        import scripts.debug_ebay_browser_card_matrix as card_matrix
+
+        row = {
+            "card_name": "Pancham",
+            "collector_number": "050/100",
+            "set_name": "Battle Partners",
+            "set_code": "",
+            "language": "jp",
+            "variant": "non_holo",
+            "condition": "raw",
+        }
+        args = type(
+            "Args",
+            (),
+            {
+                "max_results": 30,
+                "headed": True,
+                "lookup_timeout_seconds": 30,
+                "browser_launch_timeout_seconds": 120,
+                "per_query_timeout_seconds": 120,
+                "total_card_timeout_seconds": 30,
+            },
+        )()
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact_root = Path(tmp) / "artifacts"
+            artifact_dir = artifact_root / "pancham-050-100-battle-partners" / "au"
+            artifact_dir.mkdir(parents=True)
+            (artifact_dir / "debug_summary.json").write_text(
+                json.dumps(
+                    {
+                        "stage_timings": {
+                            "timedOutStage": "wait_for_result_container",
+                            "stageDurationsMs": {"wait_for_result_container": 30000.0},
+                        },
+                        "failed_query_attempts": [
+                            {"query_index": 0, "timed_out_stage": "wait_for_result_container"}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(card_matrix, "ARTIFACT_ROOT", artifact_root):
+                with patch("scripts.debug_ebay_browser_card_matrix.subprocess.run") as run:
+                    run.side_effect = subprocess.TimeoutExpired(cmd=["python"], timeout=30)
+                    payload = _run_single_lookup(row=row, market="AU", currency="AUD", args=args)
+
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["error_type"], "TimeoutExpired")
+        self.assertEqual(payload["timed_out_stage"], "wait_for_result_container")
+        self.assertEqual(payload["stage_timings"]["stageDurationsMs"]["wait_for_result_container"], 30000.0)
+        self.assertEqual(payload["failed_query_attempts"][0]["timed_out_stage"], "wait_for_result_container")
 
     def test_live_write_smoke_requires_confirmation(self) -> None:
         args = type(
@@ -1468,6 +2205,36 @@ class ParserTests(unittest.TestCase):
                 latest = zip_file.read("reports/ebay_browser_live_worker_batch_latest.json").decode("utf-8")
                 self.assertIn("***REDACTED***", latest)
                 self.assertNotIn("secret", latest)
+
+    def test_card_matrix_upload_bundle_includes_reports_and_redacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reports = root / "reports"
+            reports.mkdir(parents=True)
+            (reports / "ebay_browser_card_matrix_latest.json").write_text('{"apiKey":"secret","status":"partial"}', encoding="utf-8")
+            (reports / "ebay_browser_card_matrix_runs.jsonl").write_text('{"token":"secret"}\n', encoding="utf-8")
+            card_debug = reports / "ebay_browser_debug" / "card_matrix" / "latest" / "pancham-050-100-battle-partners" / "au"
+            card_debug.mkdir(parents=True)
+            (card_debug / "card_qa_report.json").write_text('{"Authorization":"Bearer secret","status":"success"}', encoding="utf-8")
+            (card_debug / "debug_summary.json").write_text('{"cookie":"secret"}', encoding="utf-8")
+            (card_debug / "screenshot.png").write_bytes(b"png")
+
+            bundle = create_bundle(kind="ebay_browser_card_matrix", root=root)
+            with ZipFile(bundle) as zip_file:
+                names = set(zip_file.namelist())
+                self.assertIn("reports/ebay_browser_card_matrix_latest.json", names)
+                self.assertIn(
+                    "reports/ebay_browser_debug/card_matrix/latest/pancham-050-100-battle-partners/au/card_qa_report.json",
+                    names,
+                )
+                latest = zip_file.read("reports/ebay_browser_card_matrix_latest.json").decode("utf-8")
+                report = zip_file.read(
+                    "reports/ebay_browser_debug/card_matrix/latest/pancham-050-100-battle-partners/au/card_qa_report.json"
+                ).decode("utf-8")
+                self.assertIn("***REDACTED***", latest)
+                self.assertIn("***REDACTED***", report)
+                self.assertNotIn("secret", latest)
+                self.assertNotIn("secret", report)
 
     def test_live_scheduler_upload_bundle_excludes_secret_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

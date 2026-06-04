@@ -17,6 +17,7 @@ from cardscanr_market_engine.providers.errors import sanitize_provider_diagnosti
 OUTPUT_DIR = ROOT / "reports" / "chatgpt_uploads"
 SUPPORTED_KINDS = {
     "ebay_browser_market_matrix",
+    "ebay_browser_card_matrix",
     "ebay_browser_debug",
     "ebay_browser_live_write_smoke",
     "ebay_browser_live_worker_batch",
@@ -115,6 +116,19 @@ def _candidate_files(kind: str, *, root: Path, include_html: bool) -> list[Path]
         files.extend(debug_root.glob("**/screenshot.png"))
         if include_html:
             files.extend(debug_root.glob("**/page.html"))
+    elif kind == "ebay_browser_card_matrix":
+        files.extend(
+            [
+                reports / "ebay_browser_card_matrix_latest.json",
+                reports / "ebay_browser_card_matrix_runs.jsonl",
+            ]
+        )
+        debug_root = reports / "ebay_browser_debug" / "card_matrix" / "latest"
+        files.extend(debug_root.glob("**/card_qa_report.json"))
+        files.extend(debug_root.glob("**/debug_summary.json"))
+        files.extend(debug_root.glob("**/screenshot.png"))
+        if include_html:
+            files.extend(debug_root.glob("**/page.html"))
     elif kind == "ebay_browser_debug":
         debug_root = reports / "ebay_browser_debug" / "latest"
         files.extend([debug_root / "debug_summary.json", debug_root / "screenshot.png"])
@@ -163,6 +177,8 @@ def _candidate_files(kind: str, *, root: Path, include_html: bool) -> list[Path]
 def default_output_path(kind: str, *, root: Path) -> Path:
     if kind == "ebay_browser_market_matrix":
         return root / "reports" / "chatgpt_uploads" / "ebay_browser_market_matrix_latest.zip"
+    if kind == "ebay_browser_card_matrix":
+        return root / "reports" / "chatgpt_uploads" / "ebay_browser_card_matrix_latest.zip"
     if kind == "ebay_browser_live_worker_batch":
         return root / "reports" / "chatgpt_uploads" / "ebay_browser_live_worker_batch_latest.zip"
     if kind == "ebay_browser_live_scheduler":
