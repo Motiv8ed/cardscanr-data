@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
@@ -1022,8 +1023,17 @@ def build_query_attempt_summaries(
                 "new_unique_candidates": progress.get("newUniqueCandidatesPerAttempt"),
                 "duplicate_candidates": progress.get("duplicateCandidatesPerAttempt"),
                 "clean_included_count": progress.get("cleanIncludedCount"),
+                "clean_recent_comp_count": progress.get("cleanRecentCompCount"),
+                "clean_stale_comp_count": progress.get("cleanStaleCompCount"),
                 "selector_rejected_count": progress.get("selectorRejectedCount"),
                 "wrong_language_rejected_count": progress.get("wrongLanguageRejectedCount"),
+                "wrong_collector_number_rejected_count": progress.get("wrongCollectorNumberRejectedCount"),
+                "wrong_card_name_rejected_count": progress.get("wrongCardNameRejectedCount"),
+                "wrong_variant_rejected_count": progress.get("wrongVariantRejectedCount"),
+                "dominant_rejection_reason": progress.get("attemptDominantRejectionReason"),
+                "useful_exact_candidate_count": progress.get("usefulExactCandidateCount"),
+                "noisy_result_ratio": progress.get("attemptNoisyResultRatio"),
+                "should_continue_reason": progress.get("shouldContinueReason"),
                 "quality_summary": result.raw_metadata.get("qualitySummary") or {},
                 "parser_error_count": len(result.raw_metadata.get("parserErrors") or []),
             }
@@ -1041,6 +1051,59 @@ def _is_clean_included(item: Any) -> bool:
         and not raw.get("language_rejection")
         and (raw.get("url_quality") == "direct_item" or "/itm/" in item.comp.listing_url)
     )
+
+
+NOISY_IDENTITY_REJECTION_REASONS = {
+    "wrong_collector_number",
+    "wrong_card_name",
+    "wrong_variant",
+    "wrong_variant_holo",
+    "wrong_variant_reverse_holo",
+    "weak_variant_match",
+    "wrong_language",
+}
+
+
+def _is_exact_identity_candidate(item: Any) -> bool:
+    raw = item.comp.raw_metadata
+    return (
+        bool(raw.get("card_name_match"))
+        and bool(raw.get("collector_number_match"))
+        and bool(raw.get("variant_match"))
+        and not raw.get("language_rejection")
+        and (raw.get("url_quality") == "direct_item" or "/itm/" in item.comp.listing_url)
+    )
+
+
+def _dominant_rejection_reason(items: list[Any]) -> str | None:
+    counts = Counter(str(item.rejection_reason) for item in items if item.rejection_reason)
+    if not counts:
+        return None
+    return counts.most_common(1)[0][0]
+
+
+def _rejection_count(items: list[Any], reasons: set[str]) -> int:
+    return sum(1 for item in items if item.rejection_reason in reasons)
+
+
+def _clean_comp_recency_fields(items: list[Any], *, now: datetime | None = None) -> dict[str, Any]:
+    from ..pricing_stats import sold_listing_recency_threshold_days
+
+    threshold_days = sold_listing_recency_threshold_days()
+    current_time = now or datetime.now(timezone.utc)
+    cutoff = current_time - timedelta(days=threshold_days)
+    dates = [item.comp.sold_date for item in items if item.comp.sold_date is not None]
+    recent = [item for item in items if item.comp.sold_date >= cutoff]
+    stale = [item for item in items if item.comp.sold_date < cutoff]
+    return {
+        "cleanRecentCompCount": len(recent),
+        "cleanStaleCompCount": len(stale),
+        "oldestCleanCompDate": utc_iso(min(dates)) if dates else None,
+        "newestCleanCompDate": utc_iso(max(dates)) if dates else None,
+        "soldListingRecencyThresholdDays": threshold_days,
+        "singleCleanCompOnly": len(items) == 1,
+        "staleEvidenceOnly": bool(items) and len(recent) == 0,
+    }
 
 
 def build_attempt_progress_summaries(
@@ -1062,9 +1125,24 @@ def build_attempt_progress_summaries(
         evaluated = filter_comps(request.price_key, cumulative_comps)
         included = [item for item in evaluated if item.included_in_estimate]
         rejected = [item for item in evaluated if not item.included_in_estimate]
+        attempt_evaluated = [item for item in evaluated if _attempt_query_index(item) == search_query.query_index]
+        attempt_rejected = [item for item in attempt_evaluated if not item.included_in_estimate]
+        attempt_included = [item for item in attempt_evaluated if item.included_in_estimate]
         clean_included = [item for item in included if _is_clean_included(item)]
+        clean_recency = _clean_comp_recency_fields(clean_included)
+        exact_identity_candidates = [item for item in evaluated if _is_exact_identity_candidate(item)]
         selector_rejected_count = sum(1 for item in rejected if item.rejection_reason == "price_range_or_variation_listing")
+        wrong_collector_number_count = sum(1 for item in rejected if item.rejection_reason == "wrong_collector_number")
+        wrong_card_name_count = sum(1 for item in rejected if item.rejection_reason == "wrong_card_name")
+        wrong_variant_count = _rejection_count(
+            rejected,
+            {"wrong_variant", "wrong_variant_holo", "wrong_variant_reverse_holo", "weak_variant_match"},
+        )
         wrong_language_rejected_count = sum(1 for item in rejected if item.rejection_reason == "wrong_language")
+        noisy_rejected_count = _rejection_count(rejected, NOISY_IDENTITY_REJECTION_REASONS)
+        noisy_result_ratio = round(noisy_rejected_count / len(rejected), 4) if rejected else 0.0
+        attempt_noisy_count = _rejection_count(attempt_rejected, NOISY_IDENTITY_REJECTION_REASONS)
+        attempt_noisy_ratio = round(attempt_noisy_count / len(attempt_rejected), 4) if attempt_rejected else 0.0
         new_clean_count = sum(1 for item in clean_included if _dedupe_key(item.comp) in new_keys)
         summaries.append(
             {
@@ -1077,9 +1155,21 @@ def build_attempt_progress_summaries(
                 "duplicateCandidatesPerAttempt": duplicate_count,
                 "newCleanIncludedPerAttempt": new_clean_count,
                 "cleanIncludedCount": len(clean_included),
+                "cleanExactCompCount": len(clean_included),
+                **clean_recency,
+                "exactIdentityResultCount": len(exact_identity_candidates),
+                "usefulExactCandidateCount": len([item for item in attempt_evaluated if _is_exact_identity_candidate(item)]),
                 "selectorRejectedCount": selector_rejected_count,
+                "wrongCollectorNumberRejectedCount": wrong_collector_number_count,
+                "wrongCardNameRejectedCount": wrong_card_name_count,
+                "wrongVariantRejectedCount": wrong_variant_count,
                 "wrongLanguageRejectedCount": wrong_language_rejected_count,
+                "noisyResultRatio": noisy_result_ratio,
                 "totalRejectedCount": len(rejected),
+                "attemptIncludedCount": len(attempt_included),
+                "attemptRejectedCount": len(attempt_rejected),
+                "attemptDominantRejectionReason": _dominant_rejection_reason(attempt_rejected),
+                "attemptNoisyResultRatio": attempt_noisy_ratio,
                 "allRejectedReasons": sorted({str(item.rejection_reason) for item in rejected if item.rejection_reason}),
             }
         )
@@ -1102,16 +1192,74 @@ def _early_stop_decision(
     new_unique = int(latest.get("newUniqueCandidatesPerAttempt") or 0)
     duplicate_count = int(latest.get("duplicateCandidatesPerAttempt") or 0)
     new_clean = int(latest.get("newCleanIncludedPerAttempt") or 0)
+    noisy_ratio = float(latest.get("noisyResultRatio") or 0.0)
+    dominant_rejection = str(latest.get("attemptDominantRejectionReason") or "")
+    noisy_dominant = dominant_rejection in NOISY_IDENTITY_REJECTION_REASONS
+    clean_recent_count = int(latest.get("cleanRecentCompCount") or 0)
+    stale_evidence_only = bool(latest.get("staleEvidenceOnly"))
     attempted_count = len(attempts)
     next_query = search_queries[attempted_count] if attempted_count < len(search_queries) else None
+    attempted_sources = {search_query.query_source for search_query, _result in attempts}
+    set_code_attempted = any("set_code" in source for source in attempted_sources)
+    quoted_attempted = any((search_query.diagnostics.get("queryStyle") or "") == "quoted_precision" for search_query, _result in attempts)
+
+    def _next_index_matching(predicate: Any) -> int | None:
+        for index in range(attempted_count, len(search_queries)):
+            if predicate(search_queries[index]):
+                return index
+        return None
 
     if clean_count >= 3:
+        latest["shouldContinueReason"] = "stop_enough_clean_comps"
         return {"stop": True, "reason": "enough_clean_comps", "progress": progress}
-    if attempted_count >= 4 and clean_count == 0 and rejected_count > 0 and selector_count == rejected_count:
+    single_clean_noisy_market = clean_count == 1 and noisy_ratio >= 0.7 and (noisy_dominant or set_code_attempted or quoted_attempted)
+    if single_clean_noisy_market:
+        if not set_code_attempted:
+            next_index = _next_index_matching(lambda query: "set_code" in query.query_source)
+            if next_index is not None:
+                latest["shouldContinueReason"] = "skip_to_set_code_after_single_clean_noisy_broad_results"
+                return {"stop": False, "nextQueryIndex": next_index, "progress": progress}
+        if not quoted_attempted:
+            next_index = _next_index_matching(lambda query: (query.diagnostics.get("queryStyle") or "") == "quoted_precision")
+            if next_index is not None:
+                latest["shouldContinueReason"] = "skip_to_quoted_precision_after_single_clean_noisy_results"
+                return {"stop": False, "nextQueryIndex": next_index, "progress": progress}
+        latest["shouldContinueReason"] = "stop_single_clean_comp_sparse_market"
+        return {
+            "stop": True,
+            "reason": "stale_single_comp_only" if stale_evidence_only or clean_recent_count == 0 else "single_clean_comp_sparse_market",
+            "lowConfidenceSparseMarketReason": "single_clean_comp_with_noisy_results",
+            "progress": progress,
+        }
+    if clean_count == 2 and attempted_count >= 2 and (new_unique == 0 or new_clean == 0 or duplicate_count > 0):
+        latest["shouldContinueReason"] = "stop_sparse_clean_market_evidence"
+        return {
+            "stop": True,
+            "reason": "sparse_clean_market_evidence",
+            "lowConfidenceSparseMarketReason": "two_clean_comps_after_duplicate_or_noisy_evidence",
+            "progress": progress,
+        }
+    if set_code_attempted and clean_count == 0 and rejected_count > 0 and selector_count == rejected_count:
+        latest["shouldContinueReason"] = "stop_only_selector_results"
         return {"stop": True, "reason": "only_selector_results", "progress": progress}
-    if attempted_count >= 4 and clean_count == 0 and int(latest.get("cumulativeRejectedAfterAttempt") or 0) == 0:
+    if clean_count == 0 and rejected_count >= 3 and noisy_ratio >= 0.6:
+        if not set_code_attempted:
+            next_index = _next_index_matching(lambda query: "set_code" in query.query_source)
+            if next_index is not None:
+                latest["shouldContinueReason"] = "skip_to_set_code_after_noisy_broad_results"
+                return {"stop": False, "nextQueryIndex": next_index, "progress": progress}
+        if not quoted_attempted:
+            next_index = _next_index_matching(lambda query: (query.diagnostics.get("queryStyle") or "") == "quoted_precision")
+            if next_index is not None:
+                latest["shouldContinueReason"] = "skip_to_quoted_precision_after_noisy_set_code_results"
+                return {"stop": False, "nextQueryIndex": next_index, "progress": progress}
+        latest["shouldContinueReason"] = "stop_noisy_results_no_exact_comps"
+        return {"stop": True, "reason": "noisy_results_no_exact_comps", "progress": progress}
+    if set_code_attempted and clean_count == 0 and int(latest.get("cumulativeRejectedAfterAttempt") or 0) == 0:
+        latest["shouldContinueReason"] = "stop_no_useful_candidates"
         return {"stop": True, "reason": "no_useful_candidates", "progress": progress}
     if clean_count == 2 and attempted_count >= 3 and (new_unique == 0 or new_clean == 0 or duplicate_count > 0):
+        latest["shouldContinueReason"] = "stop_low_confidence_sparse_market"
         return {
             "stop": True,
             "reason": "low_confidence_enough_for_sparse_market",
@@ -1125,12 +1273,14 @@ def _early_stop_decision(
         and selector_count == 0
         and new_unique == 0
     ):
+        latest["shouldContinueReason"] = "skip_quoted_precision_after_clean_duplicates"
         return {
             "stop": True,
-            "reason": "low_confidence_enough_for_sparse_market" if clean_count == 2 else "all_query_attempts_exhausted",
+            "reason": "sparse_clean_market_evidence" if clean_count == 2 else "all_query_attempts_exhausted",
             "lowConfidenceSparseMarketReason": "quoted_fallback_skipped_after_clean_duplicate_unquoted_results" if clean_count == 2 else None,
             "progress": progress,
         }
+    latest["shouldContinueReason"] = "continue_collecting_evidence"
     return {"stop": False, "progress": progress}
 
 
@@ -1175,7 +1325,9 @@ class EbayBrowserSoldCompsProvider:
         low_confidence_sparse_market_reason: str | None = None
         stop_reason = "all_query_attempts_exhausted"
         try:
-            for search_query in search_queries:
+            query_cursor = 0
+            while query_cursor < len(search_queries):
+                search_query = search_queries[query_cursor]
                 attempt_stage = f"run_query_attempt_{search_query.query_index + 1}"
                 try:
                     with _StageTimer(lookup_timings, attempt_stage):
@@ -1203,6 +1355,7 @@ class EbayBrowserSoldCompsProvider:
                         and _safe_to_try_next_query(search_query)
                         and search_query.query_index + 1 < len(search_queries)
                     ):
+                        query_cursor += 1
                         continue
                     raise
                 tagged_comps = [_tag_comp_with_query(comp, search_query) for comp in result.comps]
@@ -1226,6 +1379,11 @@ class EbayBrowserSoldCompsProvider:
                     stop_reason = str(stop_decision.get("reason") or "all_query_attempts_exhausted")
                     low_confidence_sparse_market_reason = stop_decision.get("lowConfidenceSparseMarketReason")  # type: ignore[assignment]
                     break
+                next_query_index = stop_decision.get("nextQueryIndex")
+                if isinstance(next_query_index, int) and next_query_index > query_cursor:
+                    query_cursor = next_query_index
+                else:
+                    query_cursor += 1
             return self._build_aggregate_result(
                 request=request,
                 attempts=attempts,
@@ -1335,8 +1493,21 @@ class EbayBrowserSoldCompsProvider:
                     item.get("duplicateCandidatesPerAttempt") for item in progress_summaries
                 ],
                 "cleanIncludedCount": latest_progress.get("cleanIncludedCount", 0),
+                "cleanExactCompCount": latest_progress.get("cleanExactCompCount", 0),
+                "cleanRecentCompCount": latest_progress.get("cleanRecentCompCount", 0),
+                "cleanStaleCompCount": latest_progress.get("cleanStaleCompCount", 0),
+                "oldestCleanCompDate": latest_progress.get("oldestCleanCompDate"),
+                "newestCleanCompDate": latest_progress.get("newestCleanCompDate"),
+                "soldListingRecencyThresholdDays": latest_progress.get("soldListingRecencyThresholdDays"),
+                "singleCleanCompOnly": latest_progress.get("singleCleanCompOnly", False),
+                "staleEvidenceOnly": latest_progress.get("staleEvidenceOnly", False),
+                "exactIdentityResultCount": latest_progress.get("exactIdentityResultCount", 0),
+                "wrongCollectorNumberRejectedCount": latest_progress.get("wrongCollectorNumberRejectedCount", 0),
+                "wrongCardNameRejectedCount": latest_progress.get("wrongCardNameRejectedCount", 0),
+                "wrongVariantRejectedCount": latest_progress.get("wrongVariantRejectedCount", 0),
                 "selectorRejectedCount": latest_progress.get("selectorRejectedCount", 0),
                 "wrongLanguageRejectedCount": latest_progress.get("wrongLanguageRejectedCount", 0),
+                "noisyResultRatio": latest_progress.get("noisyResultRatio", 0.0),
                 "lowConfidenceSparseMarketReason": low_confidence_sparse_market_reason,
                 "stageTimings": {
                     **(stage_timings or {}),
@@ -1713,8 +1884,21 @@ class EbayBrowserSoldCompsProvider:
                 "new_unique_candidates_per_attempt": provider_result.raw_metadata.get("newUniqueCandidatesPerAttempt") or [],
                 "duplicate_candidates_per_attempt": provider_result.raw_metadata.get("duplicateCandidatesPerAttempt") or [],
                 "clean_included_count": provider_result.raw_metadata.get("cleanIncludedCount"),
+                "clean_exact_comp_count": provider_result.raw_metadata.get("cleanExactCompCount"),
+                "clean_recent_comp_count": provider_result.raw_metadata.get("cleanRecentCompCount"),
+                "clean_stale_comp_count": provider_result.raw_metadata.get("cleanStaleCompCount"),
+                "oldest_clean_comp_date": provider_result.raw_metadata.get("oldestCleanCompDate"),
+                "newest_clean_comp_date": provider_result.raw_metadata.get("newestCleanCompDate"),
+                "sold_listing_recency_threshold_days": provider_result.raw_metadata.get("soldListingRecencyThresholdDays"),
+                "single_clean_comp_only": provider_result.raw_metadata.get("singleCleanCompOnly"),
+                "stale_evidence_only": provider_result.raw_metadata.get("staleEvidenceOnly"),
+                "exact_identity_result_count": provider_result.raw_metadata.get("exactIdentityResultCount"),
+                "wrong_collector_number_rejected_count": provider_result.raw_metadata.get("wrongCollectorNumberRejectedCount"),
+                "wrong_card_name_rejected_count": provider_result.raw_metadata.get("wrongCardNameRejectedCount"),
+                "wrong_variant_rejected_count": provider_result.raw_metadata.get("wrongVariantRejectedCount"),
                 "selector_rejected_count": provider_result.raw_metadata.get("selectorRejectedCount"),
                 "wrong_language_rejected_count": provider_result.raw_metadata.get("wrongLanguageRejectedCount"),
+                "noisy_result_ratio": provider_result.raw_metadata.get("noisyResultRatio"),
                 "low_confidence_sparse_market_reason": provider_result.raw_metadata.get("lowConfidenceSparseMarketReason"),
                 "stage_timings": provider_result.raw_metadata.get("stageTimings") or {},
                 "result_count": len(provider_result.comps),
@@ -1729,6 +1913,7 @@ class EbayBrowserSoldCompsProvider:
                 "final_price_basis": pricing_stats.price_basis,
                 "recommended_price": pricing_stats.recommended_price,
                 "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "price_reliability": pricing_stats.price_reliability,
                 "top_included_comps": [_compact_evaluated_comp(item) for item in included[:10]],
                 "top_rejected_comps": [_compact_evaluated_comp(item) for item in rejected[:20]],
                 "parser_errors": provider_result.raw_metadata.get("parserErrors") or [],
@@ -1867,6 +2052,12 @@ class EbayBrowserSoldCompsProvider:
                 "final_price_basis": pricing_stats.price_basis,
                 "recommended_price": pricing_stats.recommended_price,
                 "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "price_reliability": pricing_stats.price_reliability,
+                "clean_recent_comp_count": pricing_stats.clean_recent_comp_count,
+                "clean_stale_comp_count": pricing_stats.clean_stale_comp_count,
+                "oldest_clean_comp_date": utc_iso(pricing_stats.oldest_clean_comp_date) if pricing_stats.oldest_clean_comp_date else None,
+                "newest_clean_comp_date": utc_iso(pricing_stats.newest_clean_comp_date) if pricing_stats.newest_clean_comp_date else None,
+                "sold_listing_recency_threshold_days": pricing_stats.sold_listing_recency_threshold_days,
                 "top_included_comps": [_compact_evaluated_comp(item) for item in evaluated if item.included_in_estimate][:5],
                 "top_rejected_comps": [_compact_evaluated_comp(item) for item in evaluated if not item.included_in_estimate][:10],
                 "parser_errors": parser_errors[:50],

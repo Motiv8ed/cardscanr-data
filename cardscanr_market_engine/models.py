@@ -142,3 +142,9 @@ class PricingStats:
     confidence_warnings: tuple[str, ...] = ()
     included_price_distribution: tuple[float, ...] = ()
     no_reliable_price_reason: str | None = None
+    price_reliability: str = "reliable"
+    sold_listing_recency_threshold_days: int | None = None
+    clean_recent_comp_count: int = 0
+    clean_stale_comp_count: int = 0
+    oldest_clean_comp_date: datetime | None = None
+    newest_clean_comp_date: datetime | None = None

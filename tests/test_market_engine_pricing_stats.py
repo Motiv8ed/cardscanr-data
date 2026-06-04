@@ -44,6 +44,7 @@ def evaluated_prices(
     score: float = 0.9,
     reason: str | None = None,
     raw_metadata: dict | None = None,
+    sold_date: datetime | None = None,
 ) -> EvaluatedComp:
     total_price = round(sold_price + shipping_price, 2)
     return EvaluatedComp(
@@ -54,7 +55,7 @@ def evaluated_prices(
             shipping_price=shipping_price,
             total_price=total_price,
             currency="USD",
-            sold_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
+            sold_date=sold_date or datetime(2026, 5, 20, tzinfo=timezone.utc),
             listing_url="https://example.test/listing",
             condition_text="Raw",
             raw_metadata=raw_metadata or {},
@@ -148,6 +149,45 @@ class PricingStatsTests(unittest.TestCase):
         )
         self.assertEqual(stats.confidence, "low")
         self.assertIn("insufficient_variant_specific_comps", stats.confidence_warnings)
+
+    def test_single_recent_clean_comp_is_low_confidence_and_marked(self) -> None:
+        stats = calculate_pricing_stats(
+            [evaluated_prices(2.0, 0.0, raw_metadata={"requested_variant": "non_holo"})],
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=config(),
+        )
+        self.assertEqual(stats.confidence, "low")
+        self.assertEqual(stats.recommended_price, 2.0)
+        self.assertEqual(stats.price_reliability, "single_comp_low_confidence")
+        self.assertIn("single_clean_comp_only", stats.confidence_warnings)
+        self.assertEqual(stats.clean_recent_comp_count, 1)
+        self.assertEqual(stats.clean_stale_comp_count, 0)
+
+    def test_single_stale_clean_comp_is_not_reliable_current_price(self) -> None:
+        stats = calculate_pricing_stats(
+            [
+                evaluated_prices(
+                    1.79,
+                    2.0,
+                    raw_metadata={"requested_variant": "non_holo"},
+                    sold_date=datetime(2025, 5, 18, tzinfo=timezone.utc),
+                )
+            ],
+            now=datetime(2026, 6, 5, tzinfo=timezone.utc),
+            config=config(),
+        )
+        self.assertEqual(stats.confidence, "low")
+        self.assertIsNone(stats.recommended_price)
+        self.assertIsNone(stats.item_recommended_price)
+        self.assertEqual(stats.median_price, 1.79)
+        self.assertEqual(stats.price_reliability, "stale_single_comp")
+        self.assertEqual(stats.no_reliable_price_reason, "stale_single_comp_only")
+        self.assertIn("single_clean_comp_only", stats.confidence_warnings)
+        self.assertIn("stale_single_comp", stats.confidence_warnings)
+        self.assertIn("stale_evidence_only", stats.confidence_warnings)
+        self.assertEqual(stats.clean_recent_comp_count, 0)
+        self.assertEqual(stats.clean_stale_comp_count, 1)
+        self.assertEqual(stats.sold_listing_recency_threshold_days, 180)
 
 
 if __name__ == "__main__":

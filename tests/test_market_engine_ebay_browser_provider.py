@@ -205,9 +205,10 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
             with patch.object(provider, "_fetch_with_playwright", return_value=self._empty_result(request)) as fetch:
                 result = provider.fetch_comps(request)
         self.assertEqual(result.marketplace, "EBAY_AU")
-        self.assertEqual(wait_for_slot.call_count, 3)
-        self.assertEqual(fetch.call_count, 3)
-        self.assertEqual(result.raw_metadata["queryAttemptsUsed"], 3)
+        self.assertEqual(wait_for_slot.call_count, 2)
+        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(result.raw_metadata["queryAttemptsUsed"], 2)
+        self.assertEqual(result.raw_metadata["queryStopReason"], "no_useful_candidates")
 
     def test_japanese_card_name_is_blocked_for_au(self) -> None:
         provider = EbayBrowserSoldCompsProvider()
@@ -471,6 +472,7 @@ class EvidenceStrategyTests(unittest.TestCase):
         query_index: int = 0,
         query_source: str = "exact",
         raw_metadata: dict | None = None,
+        sold_date: datetime | None = None,
     ) -> SoldComp:
         metadata = {
             "url_quality": "direct_item",
@@ -487,7 +489,7 @@ class EvidenceStrategyTests(unittest.TestCase):
             shipping_price=0.0,
             total_price=sold_price,
             currency="AUD",
-            sold_date=datetime(2026, 5, 20, tzinfo=timezone.utc),
+            sold_date=sold_date or datetime(2026, 5, 20, tzinfo=timezone.utc),
             listing_url=f"https://www.ebay.com.au/itm/{item_id}",
             condition_text="Raw",
             raw_metadata=metadata,
@@ -968,7 +970,7 @@ class EvidenceStrategyTests(unittest.TestCase):
         self.assertEqual(result.raw_metadata["cleanIncludedCount"], 3)
         self.assertEqual(result.raw_metadata["cumulativeIncludedAfterEachAttempt"], [3])
 
-    def test_low_confidence_stop_when_two_clean_comps_and_later_attempts_duplicate_or_noisy(self) -> None:
+    def test_pancham_stops_with_sparse_clean_market_evidence_after_two_clean_comps_and_duplicate_evidence(self) -> None:
         request = sample_request(
             country="AU",
             currency="AUD",
@@ -983,21 +985,20 @@ class EvidenceStrategyTests(unittest.TestCase):
         clean_a = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="910", sold_price=2.1)
         clean_b = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="911", sold_price=2.3)
         duplicate_a = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="910", sold_price=2.1)
-        selector = self._sold_comp("Pancham 050/100 Battle Partners Pick Your Card Japanese Pokemon", item_id="912")
         provider = EbayBrowserSoldCompsProvider()
         side_effect = [
             self._provider_result(request, [clean_a, clean_b], query_used="q1"),
             self._provider_result(request, [duplicate_a], query_used="q2"),
-            self._provider_result(request, [selector], query_used="q3"),
         ]
         with patch.object(provider, "_wait_for_request_slot"):
             with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
                 result = provider.fetch_comps(request)
-        self.assertEqual(fetch.call_count, 3)
-        self.assertEqual(result.raw_metadata["queryStopReason"], "low_confidence_enough_for_sparse_market")
-        self.assertEqual(result.raw_metadata["lowConfidenceSparseMarketReason"], "two_clean_comps_after_no_new_useful_candidates")
+        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(result.raw_metadata["queryStopReason"], "sparse_clean_market_evidence")
+        self.assertEqual(result.raw_metadata["lowConfidenceSparseMarketReason"], "two_clean_comps_after_duplicate_or_noisy_evidence")
         self.assertEqual(result.raw_metadata["cleanIncludedCount"], 2)
-        self.assertEqual(result.raw_metadata["selectorRejectedCount"], 1)
+        self.assertEqual(result.raw_metadata["cleanExactCompCount"], 2)
+        self.assertEqual(result.raw_metadata["selectorRejectedCount"], 0)
         evaluated = filter_comps(request.price_key, result.comps)
         stats = calculate_pricing_stats(
             evaluated,
@@ -1006,6 +1007,127 @@ class EvidenceStrategyTests(unittest.TestCase):
         )
         self.assertEqual(stats.confidence, "low")
         self.assertIn("insufficient_variant_specific_comps", stats.confidence_warnings)
+
+    def test_lombre_wrong_number_heavy_results_stop_with_noisy_results_no_exact_comps(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Lombre",
+            normalized_card_name="lombre",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="022/100",
+            language="jp",
+            variant="non_holo",
+        )
+        provider = EbayBrowserSoldCompsProvider()
+        broad_noise = [
+            self._sold_comp("Lombre 45/100 EX Sandstorm Japanese Pokemon", item_id="930"),
+            self._sold_comp("Lombre 37/100 Crystal Guardians Japanese Pokemon", item_id="931"),
+            self._sold_comp("Lombre 045/100 Japanese Pokemon", item_id="932"),
+        ]
+        set_code_noise = [
+            self._sold_comp("Lombre SV9 037 Japanese Pokemon", item_id="933"),
+            self._sold_comp("Camerupt 022/100 Battle Partners Japanese Pokemon", item_id="934"),
+        ]
+        quoted_noise = [
+            self._sold_comp("Lombre 022/100 Battle Partners Japanese Reverse Holo Pokemon", item_id="935"),
+        ]
+        side_effect = [
+            self._provider_result(request, broad_noise, query_used="broad"),
+            self._provider_result(request, set_code_noise, query_used="set-code"),
+            self._provider_result(request, quoted_noise, query_used="quoted"),
+        ]
+        with patch.object(provider, "_wait_for_request_slot"):
+            with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual([item["query_source"] for item in result.raw_metadata["queryAttempts"]], [
+            "language_primary_unquoted",
+            "set_code_language_unquoted",
+            "quoted_precision_fallback",
+        ])
+        self.assertEqual(result.raw_metadata["queryStopReason"], "noisy_results_no_exact_comps")
+        self.assertEqual(result.raw_metadata["cleanExactCompCount"], 0)
+        self.assertEqual(result.raw_metadata["exactIdentityResultCount"], 0)
+        self.assertGreaterEqual(result.raw_metadata["wrongCollectorNumberRejectedCount"], 4)
+        self.assertGreaterEqual(result.raw_metadata["wrongCardNameRejectedCount"], 1)
+        self.assertGreaterEqual(result.raw_metadata["wrongVariantRejectedCount"], 1)
+        self.assertGreaterEqual(result.raw_metadata["noisyResultRatio"], 0.6)
+        evaluated = filter_comps(request.price_key, result.comps)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertIsNone(stats.recommended_price)
+        self.assertEqual(stats.no_reliable_price_reason, "no_clean_exact_comps")
+        self.assertEqual(result.raw_metadata["queryAttempts"][0]["dominant_rejection_reason"], "wrong_collector_number")
+        self.assertEqual(result.raw_metadata["queryAttempts"][1]["dominant_rejection_reason"], "wrong_collector_number")
+        self.assertEqual(result.raw_metadata["queryAttempts"][2]["dominant_rejection_reason"], "wrong_variant_reverse_holo")
+
+    def test_lombre_one_old_clean_comp_plus_noisy_results_stops_and_marks_stale_single_comp(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="Lombre",
+            normalized_card_name="lombre",
+            set_name="Battle Partners",
+            set_code="SV9",
+            collector_number="022/100",
+            language="jp",
+            variant="non_holo",
+        )
+        provider = EbayBrowserSoldCompsProvider()
+        old_clean = self._sold_comp(
+            "Lombre 022/100 SV9 Battle Partners NM Japanese Pokemon TCG",
+            item_id="940",
+            sold_price=1.79,
+            sold_date=datetime(2025, 5, 18, tzinfo=timezone.utc),
+        )
+        broad_noise = [
+            old_clean,
+            self._sold_comp("Lombre 45/100 EX Sandstorm Japanese Pokemon", item_id="941"),
+            self._sold_comp("Lombre 37/100 Crystal Guardians Japanese Pokemon", item_id="942"),
+            self._sold_comp("Camerupt 022/100 Battle Partners Japanese Pokemon", item_id="943"),
+        ]
+        set_code_noise = [
+            self._sold_comp("Battle Partners sv9 Japanese Pokemon Card Singles Non-Holo - Pick Your Card", item_id="944"),
+            self._sold_comp("Lombre SV9 037 Japanese Pokemon", item_id="945"),
+        ]
+        quoted_empty = []
+        side_effect = [
+            self._provider_result(request, broad_noise, query_used="broad"),
+            self._provider_result(request, set_code_noise, query_used="set-code"),
+            self._provider_result(request, quoted_empty, query_used="quoted"),
+        ]
+        with patch.object(provider, "_wait_for_request_slot"):
+            with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
+                result = provider.fetch_comps(request)
+        self.assertEqual(fetch.call_count, 3)
+        self.assertEqual([item["query_source"] for item in result.raw_metadata["queryAttempts"]], [
+            "language_primary_unquoted",
+            "set_code_language_unquoted",
+            "quoted_precision_fallback",
+        ])
+        self.assertEqual(result.raw_metadata["queryStopReason"], "stale_single_comp_only")
+        self.assertEqual(result.raw_metadata["cleanExactCompCount"], 1)
+        self.assertEqual(result.raw_metadata["cleanRecentCompCount"], 0)
+        self.assertEqual(result.raw_metadata["cleanStaleCompCount"], 1)
+        self.assertTrue(result.raw_metadata["singleCleanCompOnly"])
+        self.assertTrue(result.raw_metadata["staleEvidenceOnly"])
+        evaluated = filter_comps(request.price_key, result.comps)
+        stats = calculate_pricing_stats(
+            evaluated,
+            now=datetime(2026, 6, 5, tzinfo=timezone.utc),
+            config=MarketEngineConfig.from_env(require_supabase=False),
+        )
+        self.assertEqual(stats.included_count, 1)
+        self.assertIsNone(stats.recommended_price)
+        self.assertEqual(stats.price_reliability, "stale_single_comp")
+        self.assertEqual(stats.no_reliable_price_reason, "stale_single_comp_only")
+        self.assertIn("single_clean_comp_only", stats.confidence_warnings)
+        self.assertIn("stale_evidence_only", stats.confidence_warnings)
 
     def test_selector_only_results_stop_with_no_reliable_price(self) -> None:
         request = sample_request(

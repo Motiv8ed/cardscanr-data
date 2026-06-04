@@ -39,6 +39,7 @@ def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
 def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
     return {
         "priceBasis": pricing_stats.price_basis,
+        "priceReliability": pricing_stats.price_reliability,
         "landedPriceAvailable": pricing_stats.landed_recommended_price is not None,
         "itemPrice": {
             "median": pricing_stats.item_median_price,
@@ -176,6 +177,12 @@ class MarketPriceJobRunner:
                 "confidence_warnings": list(pricing_stats.confidence_warnings),
                 "included_price_distribution": list(pricing_stats.included_price_distribution),
                 "no_reliable_price_reason": pricing_stats.no_reliable_price_reason,
+                "price_reliability": pricing_stats.price_reliability,
+                "clean_recent_comp_count": pricing_stats.clean_recent_comp_count,
+                "clean_stale_comp_count": pricing_stats.clean_stale_comp_count,
+                "oldest_clean_comp_date": utc_iso(pricing_stats.oldest_clean_comp_date) if pricing_stats.oldest_clean_comp_date else None,
+                "newest_clean_comp_date": utc_iso(pricing_stats.newest_clean_comp_date) if pricing_stats.newest_clean_comp_date else None,
+                "sold_listing_recency_threshold_days": pricing_stats.sold_listing_recency_threshold_days,
                 "query_attempts": provider_result.raw_metadata.get("queryAttempts") or [],
                 "query_attempts_used": provider_result.raw_metadata.get("queryAttemptsUsed"),
                 "query_stop_reason": provider_result.raw_metadata.get("queryStopReason"),
