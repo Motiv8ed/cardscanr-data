@@ -1,224 +1,271 @@
-# cardscanr-data
+# CardScanR Data Engine
 
-Static data / price-cache repository for the **CardScanR** Flutter app.
+CardScanR Data Engine is the data backbone for the CardScanR app.
 
-Deployed to **Cloudflare Pages** using the `public/` folder as the build
-output directory.
+It builds, validates, and publishes app-ready card catalog and pricing datasets, plus optional market-pricing evidence from eBay browser workflows. It is designed to run safely in local-first and CI-assisted modes with strict release guardrails.
 
----
+## What This Program Does
 
-## Repository structure
+At a high level, this repository:
 
-```
-public/                        ← Cloudflare Pages build output
-  _headers                     ← CORS / Cache-Control headers for /v1/*
-  v1/
-    index.json                 ← Dataset manifest (sha256, URLs, versions)
-    app-config.json            ← Feature flags consumed by the Flutter app
-    supported-games.json       ← Enabled card games
-    supported-sources.json     ← Enabled price sources
-    supported-languages.json   ← Language/catalogue/pricing availability manifest
-    supported-markets.json     ← Market/currency/pricing availability manifest
-    prices/
-      pokemon/
-        en/sample.json         ← English Pokémon sample prices (USD, provider-native)
-        jp/sample.json         ← Japanese Pokémon sample prices (pricing unavailable)
-    diagnostics/
-      latest-build.json        ← Build metadata written by the CI job
+- Collects and refreshes Pokemon catalog metadata (primarily via PokeWallet workflows).
+- Builds app-facing static datasets under `public/v1`.
+- Generates current-price datasets for supported game/language/market combinations.
+- Optionally runs market-pricing worker/scheduler jobs against Supabase-backed queues.
+- Produces diagnostics and runtime reports for traceability.
+- Validates outputs and publishes safe, controlled releases.
 
-data/
-  cards_to_track.json          ← Cards the build script generates prices for
-  supported_languages_config.json  ← Curated source of truth for supported-languages.json
-  supported_markets_config.json    ← Curated source of truth for supported-markets.json
+If you need one sentence: this project turns upstream card/provider data into a versioned, app-consumable static API.
 
-tools/
-  build_price_cache.py         ← Builds price files + updates index.json
-  validate_cache.py            ← Validates JSON, sha256, required fields, etc.
+## Core Outputs
 
-.github/workflows/
-  update-price-cache.yml       ← Runs every 12 h (+ manual trigger), commits changes
-  validate-cache.yml           ← Runs on pull requests (+ manual trigger)
-```
+Main app contract outputs are under `public/v1`:
 
----
+- `public/v1/index.json` (manifest and hashes)
+- `public/v1/app-config.json`
+- `public/v1/supported-games.json`
+- `public/v1/supported-sources.json`
+- `public/v1/supported-languages.json`
+- `public/v1/supported-markets.json`
+- `public/v1/catalog/...` (set/card catalogs)
+- `public/v1/prices/current/...` (current prices)
+- `public/v1/images/cache-policy.json`
 
-## Canonical key format
+Contract details are documented in `docs/APP_DATA_CONTRACT.md`.
 
-```
-game|language|setId|collectorNumber|normalizedName|variant|condition
+## Data Flow
+
+```mermaid
+flowchart TD
+    A[Provider Inputs\nPokeWallet and optional market sources] --> B[Pipeline Workers\nPython and PowerShell scripts]
+    B --> C[Build and Normalize\nCatalog + Price + Image metadata]
+    C --> D[Validate\nSchema, hash, integrity checks]
+    D --> E[Publish to public/v1\nStatic app-facing API files]
+    E --> F[Cloudflare Pages\nStatic deployment]
+    B --> G[Reports and Diagnostics\nreports/*.json and *.jsonl]
 ```
 
-Example: `pokemon|en|base1|4|charizard|holo|near_mint`
+## Repository Map
 
----
+- `cardscanr_market_engine/`: market pricing engine logic (job runner, scheduler, filters, providers).
+- `workers/`: worker/scheduler entrypoints.
+- `scripts/`: operational PowerShell helpers (run loops, smoke tests, release, status/watch scripts).
+- `tools/`: pipeline/build/validation utilities.
+- `data/`: tracked configuration and persisted state files.
+- `public/v1/`: app-facing static datasets.
+- `reports/`: latest run diagnostics and historical jsonl logs.
+- `docs/`: detailed workflow and contract documentation.
 
-## Running locally
+## Quick Start
 
-```bash
-# Build the price cache
-python tools/build_price_cache.py
+## 1) Prerequisites
 
-# Build only EN current prices (batch-friendly mode)
-python tools/build_price_cache.py current_prices
+- Windows (PowerShell examples are provided; Python scripts are cross-platform).
+- Python 3.10+.
+- Optional: Google Chrome installed (for eBay browser provider workflows).
+- Optional: Supabase project credentials for worker/scheduler writes.
 
-# Validate the cache
+## 2) Install dependencies
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Current Python dependencies:
+
+- `requests`
+- `playwright`
+
+## 3) Configure Supabase (when using market engine writes)
+
+Copy and fill local config:
+
+- `supabase_env.example.json` -> `supabase_env.local.json`
+
+Then load into session:
+
+```powershell
+. scripts/load_supabase_env.ps1 supabase_env.local.json
+```
+
+Notes:
+
+- Use `SUPABASE_SERVICE_ROLE_KEY` only for worker/scheduler write paths.
+- Keep `supabase_env.local.json` local and uncommitted.
+
+## Main Ways To Run
+
+## A) Full data pipeline (catalog + derived app data)
+
+```powershell
+.\scripts\run_cardscanr_full_data_pipeline.ps1
+```
+
+Common variants:
+
+```powershell
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -NoFetch
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -UntilComplete -MaxRequestsPerHour 90 -MaxRequestsPerDay 900
+.\scripts\run_cardscanr_full_data_pipeline.ps1 -BuildAppCatalogue -DownloadImages -Validate
+```
+
+See: `docs/FULL_DATA_PIPELINE.md`.
+
+## B) Local EN rotating price updater
+
+```powershell
+.\scripts\run_local_price_update.ps1 -BatchSize 20
+```
+
+Long-run variants:
+
+```powershell
+.\scripts\run_local_price_update.ps1 -BatchSize 20 -AllDay
+.\scripts\run_local_price_update.ps1 -BatchSize 20 -UntilComplete
+```
+
+See: `docs/LOCAL_PRICE_UPDATER.md`.
+
+## C) Market price engine (Supabase queue based)
+
+Worker (processes refresh jobs):
+
+```powershell
+.\scripts\run_market_price_worker.ps1 -Once
+```
+
+Scheduler (enqueues stale/missing work):
+
+```powershell
+.\scripts\run_market_price_scheduler.ps1 -Once
+```
+
+Local combined loop (scheduler + worker orchestration):
+
+```powershell
+.\scripts\run_market_price_engine_local.ps1 -Cycles 1 -DryRun
+```
+
+## D) Smoke tests
+
+Mock-safe engine smoke:
+
+```powershell
+.\scripts\run_market_price_engine_smoke.ps1
+```
+
+Guarded live eBay write smoke (requires explicit confirmation env var):
+
+```powershell
+.\scripts\run_ebay_browser_live_write_smoke.ps1
+```
+
+Guarded live eBay scheduler smoke:
+
+```powershell
+.\scripts\run_ebay_browser_live_scheduler_smoke.ps1 -DryRun
+```
+
+## Configuration and Safety Guardrails
+
+This repo is intentionally defensive. Important behavior includes:
+
+- Environment-first secret loading; local fallback file for development.
+- Strict separation of anon key vs service role key usage.
+- Mock-only defaults for local market engine paths unless explicitly enabled.
+- Explicit confirmation flags for live eBay write workflows.
+- Budget-aware request pacing for PokeWallet-related workflows.
+- Controlled release script that only stages approved outputs.
+
+Key scripts and docs:
+
+- `scripts/release_cardscanr_data.ps1`
+- `docs/POKEWALLET_CATALOG_WORKER.md`
+- `docs/POKEWALLET_API_CAPABILITY_INTEGRATION.md`
+
+## Reports and Diagnostics
+
+Most runs write status to `reports/` and selected runtime files under `data/` and `logs/`.
+
+Common report files:
+
+- `reports/market_price_worker_latest.json`
+- `reports/market_price_scheduler_latest.json`
+- `reports/market_price_engine_local_latest.json`
+- `reports/ebay_browser_live_worker_batch_latest.json`
+- `reports/ebay_browser_live_scheduler_latest.json`
+
+For eBay browser debugging, check:
+
+- `reports/ebay_browser_debug/latest/debug_summary.json`
+
+That summary explains:
+
+- query attempts and stop reason
+- included vs rejected comparables
+- confidence and reliability flags
+- parser/selector anomalies
+- stale evidence conditions
+
+## Validation and Release
+
+Run validation:
+
+```powershell
 python tools/validate_cache.py
-
-# Report EN current-price Stage 1 migration progress
-python tools/report_en_current_price_migration.py
-
-# Local-first batch updater (build + validate)
-python tools/run_local_price_update.py --batch-size 10
-
-# Safe long-run EN rotation until completion (budget-aware)
-python tools/run_local_price_update.py --batch-size 10 --until-complete
-
-# All-day mode (sleep when hourly budget is exhausted)
-python tools/run_local_price_update.py --batch-size 10 --all-day
-
-# All-day mode with explicit target budgets
-python tools/run_local_price_update.py --batch-size 10 --all-day --target-hourly-requests 90 --target-daily-requests 990
 ```
 
-No third-party packages are required.  
-Optional environment variables:
-
-| Variable | Purpose |
-|---|---|
-| `POKEMON_TCG_API_KEY` | Pokémon TCG API key (reserved for future live-fetch integration) |
-| `CARDSCANR_MAX_REQUESTS_PER_HOUR` | Hourly request target for updater budgets (default `90`) |
-| `CARDSCANR_MAX_REQUESTS_PER_DAY` | Rolling 24h request target for updater budgets (default `990`) |
-| `CARDSCANR_REQUEST_SAFETY_BUFFER` | Buffer reserved below provider plan limits (default `10`) |
-| `CARDSCANR_WORKER_UNTIL_COMPLETE` | Enables until-complete loop mode for catalog worker when set to true |
-| `POKEWALLET_MAX_REQUESTS_PER_HOUR` | Compatibility alias for hourly request target |
-| `POKEWALLET_MAX_REQUESTS_PER_DAY` | Compatibility alias for rolling 24h request target |
-| `POKEWALLET_REQUEST_SAFETY_BUFFER` | Compatibility alias for request safety buffer |
-
-Recommended local updater settings:
-
-- `CARDSCANR_MAX_REQUESTS_PER_HOUR=90`
-- `CARDSCANR_MAX_REQUESTS_PER_DAY=990`
-- `CARDSCANR_REQUEST_SAFETY_BUFFER=10`
-- `--batch-size 5`
-
-The updater derives `CARDSCANR_CURRENT_PRICE_REQUEST_CAP` automatically from the remaining hourly and daily headroom before each cycle.
-
-## Safe data release workflow
-
-After generating data, run the controlled release command:
+Safe release workflow:
 
 ```powershell
 .\scripts\release_cardscanr_data.ps1
 ```
 
-Dry-run mode validates and summarizes but does not stage, commit, or push:
+Dry run release:
 
 ```powershell
 .\scripts\release_cardscanr_data.ps1 -DryRun
 ```
 
-Push is always explicit:
+Optional push:
 
 ```powershell
 .\scripts\release_cardscanr_data.ps1 -Push
 ```
 
-Optional paths are opt-in only:
+## Deployment
 
-- `-IncludeDocs` to include `docs/` changes.
-- `-IncludeReports` to include `reports/` changes.
+This repository is deployed as static content via Cloudflare Pages.
 
-The release workflow stages only allowed generated paths (`public/v1`, `data/*.json`, and optional docs/reports) and refuses temporary/cache paths, local image binaries, runtime logs/reports, and secret-like files.
+- Build output directory: `public`
+- No runtime build step required for deployment of committed static artifacts
+- `public/_headers` controls CORS/cache behavior
 
----
+## FAQ
 
-## How to upload a clean report to ChatGPT
+### Is this only a static data repo?
 
-After running any major command, create a concise upload bundle:
+It publishes static app data, but it also contains active worker/scheduler logic, budget-aware fetch loops, smoke tests, and release automation.
 
-```powershell
-# Standalone export (any time)
-.\scripts\export_chatgpt_report.ps1
+### Does it run eBay scraping by default?
 
-# After a full pipeline run
-.\scripts\run_cardscanr_full_data_pipeline.ps1 -NoFetch -BuildAppCatalogue -BuildImages -BuildHistory -Validate -ExportChatGPTReport
+No. Live eBay paths are guarded and require explicit enablement and confirmation flags.
 
-# After a release (dry-run safe)
-.\scripts\release_cardscanr_data.ps1 -DryRun -ExportChatGPTReport
-```
+### Are prices converted between currencies?
 
-The export writes to `reports/chatgpt_exports/`:
-- `cardscanr_chatgpt_report_latest.md` — human-readable summary
-- `cardscanr_chatgpt_report_latest.json` — structured data
-- `cardscanr_chatgpt_report_latest.zip` — safe bundle with all supporting files
+Not automatically in the core staged importer path. Source currencies are preserved unless a validated conversion policy is explicitly applied.
 
-Upload the `.zip` or `.md` file directly to ChatGPT. The bundle excludes `.env`, secrets, credentials, local image binaries, and large runtime logs. The export folder is git-ignored and will not dirty the worktree.
+## Related Docs
 
----
+- `docs/APP_DATA_CONTRACT.md`
+- `docs/FULL_DATA_PIPELINE.md`
+- `docs/LOCAL_PRICE_UPDATER.md`
+- `docs/POKEWALLET_CATALOG_WORKER.md`
+- `docs/POKEWALLET_MISSING_PRICE_WORKER.md`
+- `docs/POKEWALLET_API_CAPABILITY_INTEGRATION.md`
 
-## Cloudflare Pages setup
+## License and Usage
 
-1. Set **Build output directory** to `public`.  
-2. Leave the build command empty (this is a static repo — CI commits the files
-   directly).  
-3. The `public/_headers` file applies CORS + cache headers automatically.
-
----
-
-## Supabase configuration (local dev)
-
-### Flutter app convention
-- The Flutter app uses only the Supabase **anon key** (never the service role key).
-- App config files: `supabase_env.json`, `supabase_env.example.json`, `supabase_env.local.json` (local only, not committed).
-- Never commit real keys or secrets to git.
-
-### cardscanr-data convention
-- The worker/scheduler uses the **service role key** (never the anon key for writes).
-- Local config: `supabase_env.local.json` (see `supabase_env.example.json` for format).
-- This file is git-ignored and must never be committed.
-- Example config:
-
-```json
-{
-  "SUPABASE_URL": "https://your-project.supabase.co",
-  "SUPABASE_ANON_KEY": "your-anon-key-used-by-app-only",
-  "SUPABASE_SERVICE_ROLE_KEY": "your-local-worker-service-role-key-do-not-commit"
-}
-```
-
-- The worker loads config in this order:
-  1. **Process environment variables** (highest priority)
-  2. `supabase_env.local.json` (if present, only for missing values)
-- Secrets are never printed or logged.
-
-### How to run the worker/scheduler with local config
-
-```powershell
-# Load env vars for this session (never prints secrets)
-. scripts/load_supabase_env.ps1 supabase_env.local.json
-
-# Then run the worker
-scripts/run_market_price_worker.ps1
-
-# Or the scheduler
-scripts/run_market_price_scheduler.ps1
-```
-
-All market engine scripts will attempt to load the local config if present.
-
-### Safety rules
-- Never commit `supabase_env.local.json`, `.env`, or any real keys.
-- Never put the service role key in the Flutter app or any committed file.
-- Only the worker/scheduler uses the service role key, and only from local env or ignored config.
-- The anon key is safe for app use, but do not commit real values.
-
----
-
-## App-facing data contract
-
-For production app integration rules and stability scope of `public/v1`, see:
-
-- [`docs/APP_DATA_CONTRACT.md`](docs/APP_DATA_CONTRACT.md)
-
-Source IDs in `/v1/supported-sources.json` are canonical lowercase `snake_case`.
-Legacy IDs are exposed through per-source `aliases` for backward-compatible app matching during transition windows.
+No license file is declared in this repository at the time of writing. If this is intended to be open-source, add a `LICENSE` file and update this section accordingly.
