@@ -78,7 +78,7 @@ class SoldComp:
     shipping_price: float
     total_price: float
     currency: str
-    sold_date: datetime
+    sold_date: datetime | None
     listing_url: str
     condition_text: str
     raw_metadata: dict[str, Any] = field(default_factory=dict)

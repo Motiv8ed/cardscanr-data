@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig  # noqa: E402
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config  # noqa: E402
-from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest, ProviderResult, SoldComp  # noqa: E402
+from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob, ProviderRequest, ProviderResult, SoldComp  # noqa: E402
 from cardscanr_market_engine.filters import filter_comps  # noqa: E402
 from cardscanr_market_engine.providers import MockMarketCompsProvider, create_market_comps_provider  # noqa: E402
 from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E402
@@ -121,16 +121,22 @@ class ProviderFactoryTests(unittest.TestCase):
             {
                 "key_id": "key-1",
                 "price_key_id": "price-key-1",
+                "priceKeyId": "price-key-1",
                 "cache_row_id": "cache-1",
+                "cacheRowId": "cache-1",
                 "snapshot_id": "snapshot-1",
+                "snapshotId": "snapshot-1",
                 "api_key": "secret",
                 "authorization": "Bearer secret",
             }
         )
         self.assertEqual(payload["key_id"], "key-1")
         self.assertEqual(payload["price_key_id"], "price-key-1")
+        self.assertEqual(payload["priceKeyId"], "price-key-1")
         self.assertEqual(payload["cache_row_id"], "cache-1")
+        self.assertEqual(payload["cacheRowId"], "cache-1")
         self.assertEqual(payload["snapshot_id"], "snapshot-1")
+        self.assertEqual(payload["snapshotId"], "snapshot-1")
         self.assertEqual(payload["api_key"], "***REDACTED***")
         self.assertEqual(payload["authorization"], "***REDACTED***")
 
@@ -1866,6 +1872,134 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(report["identity"]["fingerprint"], "pokemon|en|sv8pt5|050/131|riolu|reverse_holo|raw|au|aud")
         self.assertEqual(report["market"]["provider_marketplace_id"], "EBAY_AU")
 
+    def test_live_write_smoke_reports_final_completed_job_status_and_run_debug_artifacts(self) -> None:
+        import scripts.smoke_ebay_browser_live_write as smoke
+
+        class FakeClient:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def request_market_price_refresh(self, **_kwargs: object) -> dict:
+                return {
+                    "action": "job_enqueued",
+                    "price_key_id": "key-au",
+                    "job_id": "11111111-1111-1111-1111-111111111111",
+                    "job_status": "queued",
+                }
+
+            def get_refresh_job(self, *, job_id: str) -> MarketPriceRefreshJob:
+                return MarketPriceRefreshJob(
+                    id=job_id,
+                    price_key_id="key-au",
+                    reason="unit",
+                    priority=10,
+                    status="queued",
+                    attempt_count=0,
+                )
+
+            def claim_specific_refresh_job(self, *, job_id: str, worker_id: str) -> MarketPriceRefreshJob:
+                return MarketPriceRefreshJob(
+                    id=job_id,
+                    price_key_id="key-au",
+                    reason=worker_id,
+                    priority=10,
+                    status="running",
+                    attempt_count=1,
+                )
+
+            def get_market_price_bundle(self, **_kwargs: object) -> dict:
+                return {
+                    "state": "existing_fresh_cache",
+                    "cache_state": "fresh",
+                    "refresh_state": "completed",
+                    "current_market_evidence_available": True,
+                    "cache": {
+                        "id": "cache-au",
+                        "current_market_price": 1.89,
+                        "recommended_price": 1.89,
+                        "sample_size": 1,
+                        "confidence": "medium",
+                    },
+                    "latest_snapshot": {
+                        "id": "snapshot-au",
+                        "included_count": 1,
+                        "rejected_count": 0,
+                        "diagnostics_json": {"priceViews": {"itemPrice": {}, "landedPrice": {}}},
+                    },
+                    "sold_listing_evidence": [
+                        {
+                            "included_in_estimate": True,
+                            "sold_date": None,
+                            "raw_json": {"compQuality": {"detected_variant": "reverse_holo"}},
+                        }
+                    ],
+                }
+
+        class FakeRunner:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def run_job(self, job: MarketPriceRefreshJob) -> dict:
+                debug_dir = Path(os.environ["EBAY_BROWSER_DEBUG_ARTIFACT_DIR"])
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                (debug_dir / "debug_summary.json").write_text('{"query_text":"Riolu 050/131 Pokemon"}\n', encoding="utf-8")
+                (debug_dir / "screenshot.png").write_bytes(b"riolu-png")
+                return {"status": "completed", "jobId": job.id, "cacheRowId": "cache-au", "snapshotId": "snapshot-au"}
+
+        fake_config = type(
+            "Config",
+            (),
+            {
+                "supabase_url": "https://example.supabase.co",
+                "supabase_service_role_key": "secret",
+                "worker_id": "worker-test",
+            },
+        )()
+        args = type(
+            "Args",
+            (),
+            {
+                "market": "AU",
+                "currency": "AUD",
+                "card_name": "Riolu",
+                "collector_number": "050/131",
+                "set_name": "Prismatic Evolutions",
+                "set_code": "sv8pt5",
+                "condition": "raw",
+                "variant": "reverse_holo",
+                "force_refresh": True,
+                "dry_run": False,
+            },
+        )()
+        with tempfile.TemporaryDirectory() as tmp:
+            debug_dir = Path(tmp) / "reports" / "ebay_browser_debug" / "live_write" / "latest"
+            global_debug_dir = Path(tmp) / "reports" / "ebay_browser_debug" / "latest"
+            with patch.dict(
+                os.environ,
+                {
+                    "MARKET_LOOKUP_PROVIDER": "ebay_browser",
+                    "ENABLE_EBAY_REAL_LOOKUP": "true",
+                    "CONFIRM_LIVE_EBAY_WRITE": "true",
+                },
+                clear=True,
+            ):
+                with patch.object(smoke, "LIVE_WRITE_DEBUG_DIR", debug_dir):
+                    with patch.object(smoke, "GLOBAL_DEBUG_LATEST_DIR", global_debug_dir):
+                        with patch.object(smoke.MarketEngineConfig, "from_env", return_value=fake_config):
+                            with patch.object(smoke, "SupabaseMarketEngineClient", FakeClient):
+                                with patch.object(smoke, "MarketPriceJobRunner", FakeRunner):
+                                    with patch.object(smoke, "create_market_comps_provider", return_value=object()):
+                                        report = run_live_write_smoke(args)
+
+        self.assertEqual(report["request_market_price_refresh"]["job_status"], "queued")
+        self.assertEqual(report["job_status"], "completed")
+        self.assertEqual(report["worker_result"]["status"], "completed")
+        self.assertEqual(report["bundle_refresh_state"], "completed")
+        self.assertTrue(report["debug_artifacts"]["debug_summary_exists"])
+        self.assertTrue(report["debug_artifacts"]["screenshot_exists"])
+        self.assertTrue(report["debug_artifacts"]["mirrored_to_global_latest"])
+        self.assertEqual(report["top_included_comps"][0]["sold_date"], None)
+
     def test_live_write_smoke_without_force_respects_cooldown(self) -> None:
         flags = _validation_flags(action="cache_fresh", worker_result=None)
         self.assertFalse(flags["live_lookup_performed"])
@@ -2419,6 +2553,32 @@ class ParserTests(unittest.TestCase):
                 latest = zip_file.read("reports/ebay_browser_live_scheduler_latest.json").decode("utf-8")
                 self.assertIn("***REDACTED***", latest)
                 self.assertNotIn("secret", latest)
+
+    def test_live_write_upload_bundle_uses_live_write_debug_artifacts_not_global_latest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reports = root / "reports"
+            live_debug = reports / "ebay_browser_debug" / "live_write" / "latest"
+            stale_global = reports / "ebay_browser_debug" / "latest"
+            live_debug.mkdir(parents=True)
+            stale_global.mkdir(parents=True)
+            (reports / "ebay_browser_live_write_smoke_latest.json").write_text('{"status":"success"}\n', encoding="utf-8")
+            (reports / "ebay_browser_live_write_smoke_runs.jsonl").write_text('{"status":"success"}\n', encoding="utf-8")
+            (live_debug / "debug_summary.json").write_text('{"query_text":"Riolu 050/131 Pokemon"}\n', encoding="utf-8")
+            (live_debug / "screenshot.png").write_bytes(b"riolu-png")
+            (stale_global / "debug_summary.json").write_text('{"query_text":"Lombre 022/100 Japanese Pokemon"}\n', encoding="utf-8")
+            (stale_global / "screenshot.png").write_bytes(b"lombre-png")
+
+            bundle = create_bundle(kind="ebay_browser_live_write_smoke", root=root)
+
+            with ZipFile(bundle) as zip_file:
+                names = set(zip_file.namelist())
+                self.assertIn("reports/ebay_browser_debug/live_write/latest/debug_summary.json", names)
+                self.assertIn("reports/ebay_browser_debug/live_write/latest/screenshot.png", names)
+                self.assertNotIn("reports/ebay_browser_debug/latest/debug_summary.json", names)
+                summary = zip_file.read("reports/ebay_browser_debug/live_write/latest/debug_summary.json").decode("utf-8")
+                self.assertIn("Riolu", summary)
+                self.assertNotIn("Lombre", summary)
 
     def test_live_write_report_summary_includes_item_and_landed_stats(self) -> None:
         summary = _summarize_bundle(

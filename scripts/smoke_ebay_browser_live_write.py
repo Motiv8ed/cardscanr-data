@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 from typing import Any
 
@@ -22,6 +23,8 @@ from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 LATEST_REPORT = ROOT / "reports" / "ebay_browser_live_write_smoke_latest.json"
 RUNS_REPORT = ROOT / "reports" / "ebay_browser_live_write_smoke_runs.jsonl"
+LIVE_WRITE_DEBUG_DIR = ROOT / "reports" / "ebay_browser_debug" / "live_write" / "latest"
+GLOBAL_DEBUG_LATEST_DIR = ROOT / "reports" / "ebay_browser_debug" / "latest"
 
 
 def utc_iso() -> str:
@@ -37,6 +40,36 @@ def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def print_json_report(payload: dict[str, Any]) -> None:
+    print(json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=True))
+
+
+def _reset_debug_dir(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _mirror_debug_artifacts(source_dir: Path, target_dir: Path) -> dict[str, Any]:
+    artifacts = {
+        "debug_artifact_dir": str(source_dir),
+        "debug_summary_path": str(source_dir / "debug_summary.json"),
+        "screenshot_path": str(source_dir / "screenshot.png"),
+        "debug_summary_exists": (source_dir / "debug_summary.json").exists(),
+        "screenshot_exists": (source_dir / "screenshot.png").exists(),
+        "mirrored_to_global_latest": False,
+    }
+    if not artifacts["debug_summary_exists"] and not artifacts["screenshot_exists"]:
+        return artifacts
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("debug_summary.json", "screenshot.png", "page.html"):
+        source = source_dir / name
+        if source.exists():
+            shutil.copy2(source, target_dir / name)
+    artifacts["mirrored_to_global_latest"] = True
+    return artifacts
 
 
 def parse_args() -> argparse.Namespace:
@@ -133,6 +166,7 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
             "collector_number_match_quality": raw.get("collector_number_match_quality"),
             "set_match_quality": raw.get("set_match_quality"),
             "rejection_reason": item.get("rejection_reason"),
+            "sold_date": item.get("sold_date"),
         }
     for item in included:
         variant = str(compact_comp(item).get("detected_variant") or "unknown")
@@ -207,6 +241,21 @@ def _validation_flags(*, action: str, worker_result: dict[str, Any] | None) -> d
     }
 
 
+def _final_job_status(
+    *,
+    refresh: dict[str, Any],
+    worker_result: dict[str, Any] | None,
+    bundle_summary: dict[str, Any],
+) -> str | None:
+    worker_status = str((worker_result or {}).get("status") or "").strip()
+    if worker_status in {"completed", "failed"}:
+        return worker_status
+    bundle_refresh_state = str(bundle_summary.get("bundle_refresh_state") or "").strip()
+    if bundle_refresh_state:
+        return bundle_refresh_state
+    return refresh.get("job_status")
+
+
 def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     started = utc_iso()
     identity = _identity(args)
@@ -249,6 +298,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
 
     _require_flags()
     config = MarketEngineConfig.from_env(require_supabase=True)
+    _reset_debug_dir(LIVE_WRITE_DEBUG_DIR)
+    os.environ["EBAY_BROWSER_DEBUG_ARTIFACT_DIR"] = str(LIVE_WRITE_DEBUG_DIR)
     client = SupabaseMarketEngineClient(
         supabase_url=config.supabase_url,
         service_role_key=config.supabase_service_role_key,
@@ -286,6 +337,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     else:
         raise RuntimeError(f"Unexpected refresh action: {action}")
 
+    bundle_summary = _summarize_bundle(bundle)
+    debug_artifacts = _mirror_debug_artifacts(LIVE_WRITE_DEBUG_DIR, GLOBAL_DEBUG_LATEST_DIR)
     report = {
         "status": "success",
         "startedAtUtc": started,
@@ -295,8 +348,9 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         "force_refresh_requested": force_refresh,
         "key_id": refresh.get("price_key_id"),
         "job_id": job_id or None,
-        "job_status": refresh.get("job_status"),
+        "job_status": _final_job_status(refresh=refresh, worker_result=worker_result, bundle_summary=bundle_summary),
         "worker_result": worker_result,
+        "debug_artifacts": debug_artifacts,
         "market": {
             "market_country": identity["market_country"].upper(),
             "currency": identity["currency"].upper(),
@@ -311,7 +365,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             "cache_is_fresh": refresh.get("cache_is_fresh"),
         },
         **_validation_flags(action=action, worker_result=worker_result),
-        **_summarize_bundle(bundle),
+        **bundle_summary,
         "finishedAtUtc": utc_iso(),
     }
     return sanitize_provider_diagnostics(report)
@@ -332,11 +386,11 @@ def main() -> int:
         )
         write_json(LATEST_REPORT, report)
         append_jsonl(RUNS_REPORT, report)
-        print(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False))
+        print_json_report(report)
         return 1
     write_json(LATEST_REPORT, report)
     append_jsonl(RUNS_REPORT, report)
-    print(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False))
+    print_json_report(report)
     return 0
 
 

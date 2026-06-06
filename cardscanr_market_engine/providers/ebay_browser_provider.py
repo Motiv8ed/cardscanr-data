@@ -886,7 +886,7 @@ def _dedupe_key(comp: SoldComp) -> str:
     if canonical_url:
         return f"url:{canonical_url}"
     normalized_title = _normalise_text(comp.title).lower()
-    sold_date = comp.sold_date.astimezone(timezone.utc).date().isoformat()
+    sold_date = comp.sold_date.astimezone(timezone.utc).date().isoformat() if comp.sold_date is not None else "unknown-date"
     return f"title-price-date:{normalized_title}|{comp.sold_price:.2f}|{sold_date}"
 
 
@@ -981,7 +981,7 @@ def _compact_evaluated_comp(item: Any) -> dict[str, Any]:
         "shipping_price": item.comp.shipping_price,
         "total_price": item.comp.total_price,
         "currency": item.comp.currency,
-        "sold_date": utc_iso(item.comp.sold_date),
+        "sold_date": utc_iso(item.comp.sold_date) if item.comp.sold_date is not None else None,
         "listing_url": item.comp.listing_url or None,
         "item_id": raw.get("item_id"),
         "score": item.match_score,
@@ -1093,8 +1093,8 @@ def _clean_comp_recency_fields(items: list[Any], *, now: datetime | None = None)
     current_time = now or datetime.now(timezone.utc)
     cutoff = current_time - timedelta(days=threshold_days)
     dates = [item.comp.sold_date for item in items if item.comp.sold_date is not None]
-    recent = [item for item in items if item.comp.sold_date >= cutoff]
-    stale = [item for item in items if item.comp.sold_date < cutoff]
+    recent = [item for item in items if item.comp.sold_date is not None and item.comp.sold_date >= cutoff]
+    stale = [item for item in items if item.comp.sold_date is None or item.comp.sold_date < cutoff]
     return {
         "cleanRecentCompCount": len(recent),
         "cleanStaleCompCount": len(stale),

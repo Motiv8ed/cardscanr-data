@@ -214,7 +214,7 @@ class MarketPriceJobRunner:
                     "shipping_price": item.comp.shipping_price,
                     "total_price": item.comp.total_price,
                     "currency": item.comp.currency,
-                    "sold_date": utc_iso(item.comp.sold_date),
+                    "sold_date": utc_iso(item.comp.sold_date) if item.comp.sold_date is not None else None,
                     "listing_url": item.comp.listing_url,
                     "condition_text": item.comp.condition_text,
                     "match_score": item.match_score,

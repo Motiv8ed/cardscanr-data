@@ -5,10 +5,15 @@ from typing import Any
 
 SECRET_FIELD_MARKERS = ("key", "token", "secret", "password", "authorization", "cookie")
 SAFE_IDENTIFIER_FIELDS = {
+    "cacheid",
+    "cacherowid",
+    "jobid",
     "key_id",
     "price_key_id",
+    "pricekeyid",
     "cache_row_id",
     "snapshot_id",
+    "snapshotid",
     "job_id",
 }
 

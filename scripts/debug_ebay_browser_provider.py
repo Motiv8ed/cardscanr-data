@@ -98,7 +98,11 @@ def comp_to_dict(comp: Any) -> dict[str, Any]:
             "shipping_price": comp.shipping_price,
             "total_price": comp.total_price,
             "currency": comp.currency,
-            "sold_date": comp.sold_date.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "sold_date": (
+                comp.sold_date.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                if comp.sold_date is not None
+                else None
+            ),
             "listing_url": comp.listing_url,
             "condition_text": comp.condition_text,
             "raw_metadata": comp.raw_metadata,

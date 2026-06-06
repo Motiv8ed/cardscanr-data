@@ -189,6 +189,33 @@ class PricingStatsTests(unittest.TestCase):
         self.assertEqual(stats.clean_stale_comp_count, 1)
         self.assertEqual(stats.sold_listing_recency_threshold_days, 180)
 
+    def test_missing_sold_date_is_not_treated_as_recent_evidence(self) -> None:
+        comp = SoldComp(
+            source_listing_id="missing-date",
+            title="sample",
+            sold_price=2.0,
+            shipping_price=0.0,
+            total_price=2.0,
+            currency="USD",
+            sold_date=None,
+            listing_url="https://example.test/listing",
+            condition_text="Raw",
+            raw_metadata={"requested_variant": "non_holo"},
+        )
+        stats = calculate_pricing_stats(
+            [EvaluatedComp(comp=comp, included_in_estimate=True, rejection_reason=None, match_score=0.9)],
+            now=datetime(2026, 6, 5, tzinfo=timezone.utc),
+            config=config(),
+        )
+
+        self.assertIsNone(stats.recommended_price)
+        self.assertEqual(stats.price_reliability, "stale_single_comp")
+        self.assertEqual(stats.no_reliable_price_reason, "stale_single_comp_only")
+        self.assertEqual(stats.clean_recent_comp_count, 0)
+        self.assertEqual(stats.clean_stale_comp_count, 1)
+        self.assertIsNone(stats.oldest_clean_comp_date)
+        self.assertIsNone(stats.newest_clean_comp_date)
+
 
 if __name__ == "__main__":
     unittest.main()

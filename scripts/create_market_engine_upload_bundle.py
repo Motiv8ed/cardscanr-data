@@ -141,7 +141,7 @@ def _candidate_files(kind: str, *, root: Path, include_html: bool) -> list[Path]
                 reports / "ebay_browser_live_write_smoke_runs.jsonl",
             ]
         )
-        for debug_root in [reports / "ebay_browser_debug" / "latest"]:
+        for debug_root in [reports / "ebay_browser_debug" / "live_write" / "latest"]:
             files.extend([debug_root / "debug_summary.json", debug_root / "screenshot.png"])
             if include_html:
                 files.append(debug_root / "page.html")

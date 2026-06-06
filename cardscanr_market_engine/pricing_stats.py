@@ -69,8 +69,16 @@ def calculate_pricing_stats(
     recency_threshold_days = sold_listing_recency_threshold_days()
     recency_cutoff = current_time - timedelta(days=recency_threshold_days)
     clean_dates = [item.comp.sold_date for item in included if item.comp.sold_date is not None]
-    recent_included = [item for item in included if item.comp.sold_date >= recency_cutoff]
-    stale_included = [item for item in included if item.comp.sold_date < recency_cutoff]
+    recent_included = [
+        item
+        for item in included
+        if item.comp.sold_date is not None and item.comp.sold_date >= recency_cutoff
+    ]
+    stale_included = [
+        item
+        for item in included
+        if item.comp.sold_date is None or item.comp.sold_date < recency_cutoff
+    ]
     single_clean_comp_only = len(included) == 1
     stale_evidence_only = bool(included) and len(recent_included) == 0
     average_match_score = mean([item.match_score for item in included]) if included else 0.0
