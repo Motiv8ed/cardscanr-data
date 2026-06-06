@@ -4,6 +4,13 @@ from typing import Any
 
 
 SECRET_FIELD_MARKERS = ("key", "token", "secret", "password", "authorization", "cookie")
+SAFE_IDENTIFIER_FIELDS = {
+    "key_id",
+    "price_key_id",
+    "cache_row_id",
+    "snapshot_id",
+    "job_id",
+}
 
 
 def sanitize_provider_diagnostics(value: Any) -> Any:
@@ -11,7 +18,10 @@ def sanitize_provider_diagnostics(value: Any) -> Any:
         clean: dict[str, Any] = {}
         for key, item in value.items():
             key_text = str(key)
-            if any(marker in key_text.lower() for marker in SECRET_FIELD_MARKERS):
+            normalized_key = key_text.lower()
+            if normalized_key in SAFE_IDENTIFIER_FIELDS or normalized_key.endswith("_id"):
+                clean[key_text] = sanitize_provider_diagnostics(item)
+            elif any(marker in normalized_key for marker in SECRET_FIELD_MARKERS):
                 clean[key_text] = "***REDACTED***"
             else:
                 clean[key_text] = sanitize_provider_diagnostics(item)

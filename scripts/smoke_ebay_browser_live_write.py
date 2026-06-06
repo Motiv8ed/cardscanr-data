@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--condition", default="raw")
     parser.add_argument("--variant", default="raw")
     parser.add_argument("--force-refresh", action="store_true")
+    parser.add_argument("--dry-run", action="store_true", help="Plan the one-card request without Supabase writes or browser work.")
     return parser.parse_args()
 
 
@@ -140,6 +141,15 @@ def _summarize_bundle(bundle: dict[str, Any] | None) -> dict[str, Any]:
         if str(item.get("rejection_reason") or "").startswith(("wrong_variant_", "weak_variant_")):
             rejected_variant_mismatch_count += 1
     return {
+        "cache_row_id": cache.get("id"),
+        "snapshot_id": snapshot.get("id"),
+        "recommended_price": cache.get("current_market_price") or cache.get("recommended_price"),
+        "confidence": cache.get("confidence") or snapshot.get("confidence"),
+        "bundle_state": bundle.get("state"),
+        "bundle_cache_state": bundle.get("cache_state"),
+        "bundle_refresh_state": bundle.get("refresh_state"),
+        "current_market_evidence_available": bundle.get("current_market_evidence_available"),
+        "stale_cache_available": bundle.get("stale_cache_available"),
         "cache_price_summary": {
             "current_market_price": cache.get("current_market_price"),
             "recommended_price": cache.get("recommended_price"),
@@ -198,21 +208,52 @@ def _validation_flags(*, action: str, worker_result: dict[str, Any] | None) -> d
 
 
 def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
-    _require_flags()
     started = utc_iso()
-    config = MarketEngineConfig.from_env(require_supabase=True)
     identity = _identity(args)
     market_config = resolve_marketplace_config(
         market_country=identity["market_country"],
         currency=identity["currency"],
         marketplace="ebay",
     )
+    dry_run = bool(getattr(args, "dry_run", False))
+    force_refresh = bool(getattr(args, "force_refresh", False))
+    if dry_run:
+        return sanitize_provider_diagnostics(
+            {
+                "status": "dry_run",
+                "startedAtUtc": started,
+                "finishedAtUtc": utc_iso(),
+                "identity": identity,
+                "requested_variant": identity["variant"],
+                "request_market_price_refresh": {"action": "dry_run_only", "force_refresh": force_refresh},
+                "force_refresh_requested": force_refresh,
+                "key_id": None,
+                "job_id": None,
+                "job_status": "dry_run",
+                "evidence_count": None,
+                "included_count": None,
+                "rejected_count": None,
+                "recommended_price": None,
+                "confidence": None,
+                "cache_row_id": None,
+                "snapshot_id": None,
+                "market": {
+                    "market_country": identity["market_country"].upper(),
+                    "currency": identity["currency"].upper(),
+                    "provider_domain": market_config.provider_domain,
+                    "provider_marketplace_id": market_config.provider_marketplace_id,
+                    "market_scope": os.getenv("EBAY_MARKET_SCOPE", "marketplace").strip().lower() or "marketplace",
+                },
+            }
+        )
+
+    _require_flags()
+    config = MarketEngineConfig.from_env(require_supabase=True)
     client = SupabaseMarketEngineClient(
         supabase_url=config.supabase_url,
         service_role_key=config.supabase_service_role_key,
         timeout_seconds=60,
     )
-    force_refresh = bool(getattr(args, "force_refresh", False))
     refresh = client.request_market_price_refresh(
         **identity,
         reason="live_ebay_write_smoke",
@@ -252,7 +293,9 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         "requested_variant": identity["variant"],
         "request_market_price_refresh": refresh,
         "force_refresh_requested": force_refresh,
+        "key_id": refresh.get("price_key_id"),
         "job_id": job_id or None,
+        "job_status": refresh.get("job_status"),
         "worker_result": worker_result,
         "market": {
             "market_country": identity["market_country"].upper(),

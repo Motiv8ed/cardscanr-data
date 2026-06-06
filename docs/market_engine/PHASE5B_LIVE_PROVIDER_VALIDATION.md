@@ -62,6 +62,12 @@ Each market report includes the provider domain, marketplace id, search URL, sel
 
 The live write smoke processes exactly one selected card/market through the normal request/queue/worker pipeline. It uses `request_market_price_refresh(...)`, so a fresh cache returns `cache_fresh` and no forced refresh is created.
 
+Plan the exact request without Supabase credentials or browser work:
+
+```powershell
+.\scripts\run_ebay_browser_live_write_smoke.ps1 -DryRun -Market AU -Currency AUD -CardName "Riolu" -CollectorNumber "050/131" -SetName "Prismatic Evolutions" -SetCode "sv8pt5" -Variant reverse_holo -Condition raw
+```
+
 ```powershell
 $env:CONFIRM_LIVE_EBAY_WRITE = "true"
 .\scripts\run_ebay_browser_live_write_smoke.ps1 -Market AU -Currency AUD -CardName "Charizard ex" -CollectorNumber "125/197" -SetName "Obsidian Flames"
@@ -88,7 +94,30 @@ Reports are written to:
 - `reports/ebay_browser_live_write_smoke_runs.jsonl`
 - `reports/chatgpt_uploads/ebay_browser_live_write_smoke_<timestamp>.zip`
 
-The report includes the refresh RPC action, job id, worker result, cache summary, evidence counts, included comps, rejected comps, cooldown data, and sanitized market/provider information.
+The report includes the refresh RPC action, key id, job id/status, worker result, evidence counts, included/rejected counts, recommended price, confidence, cache row id, snapshot id, cache summary, included comps, rejected comps, cooldown data, and sanitized market/provider information.
+
+For a current market price to be available, check:
+
+- `current_market_evidence_available = true`
+- `cache_row_id` is non-empty
+- `snapshot_id` is non-empty
+- `included_count > 0`
+- `recommended_price` is non-null
+
+Null `recommended_price` is valid when no current market evidence is reliable. Do not treat provider/static/reference estimates as current market evidence.
+
+## App-Visible State Contract
+
+`request_market_price_refresh(...)` and `get_market_price_bundle(...)` expose explicit state fields so "RPC succeeded" no longer has to imply a price exists:
+
+- `existing_fresh_cache`: current cache is inside cooldown/freshness.
+- `stale_cache_refresh_queued`: stale cache exists and a refresh was queued.
+- `refresh_queued`: no current cache is available yet, but a job is queued.
+- `refresh_running`: a worker has claimed the job.
+- `provider_failed`: the worker/provider failed; inspect `last_error_message` and the failed job.
+- `unsupported_market`: the local provider route is not enabled; no job is queued.
+- `no_evidence_found`: worker completed, but no accepted sold-listing evidence exists.
+- `cache_missing_unexpected`: key exists without cache and without active work; this should be investigated.
 
 ### RPC 404 Troubleshooting
 

@@ -116,6 +116,24 @@ def candidate_from_html_fixture(html: str) -> dict:
 
 
 class ProviderFactoryTests(unittest.TestCase):
+    def test_diagnostic_sanitizer_preserves_row_ids_but_redacts_secrets(self) -> None:
+        payload = sanitize_provider_diagnostics(
+            {
+                "key_id": "key-1",
+                "price_key_id": "price-key-1",
+                "cache_row_id": "cache-1",
+                "snapshot_id": "snapshot-1",
+                "api_key": "secret",
+                "authorization": "Bearer secret",
+            }
+        )
+        self.assertEqual(payload["key_id"], "key-1")
+        self.assertEqual(payload["price_key_id"], "price-key-1")
+        self.assertEqual(payload["cache_row_id"], "cache-1")
+        self.assertEqual(payload["snapshot_id"], "snapshot-1")
+        self.assertEqual(payload["api_key"], "***REDACTED***")
+        self.assertEqual(payload["authorization"], "***REDACTED***")
+
     def test_provider_factory_default_is_mock(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             provider = create_market_comps_provider()
@@ -1821,6 +1839,32 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(FakeClient.last_instance.force_refresh)
         self.assertTrue(report["force_refresh_requested"])
         self.assertFalse(report["pricing_model_validated"])
+
+    def test_live_write_smoke_dry_run_requires_no_confirmation_or_secrets(self) -> None:
+        args = type(
+            "Args",
+            (),
+            {
+                "market": "AU",
+                "currency": "AUD",
+                "card_name": "Riolu",
+                "collector_number": "050/131",
+                "set_name": "Prismatic Evolutions",
+                "set_code": "sv8pt5",
+                "condition": "raw",
+                "variant": "reverse_holo",
+                "force_refresh": False,
+                "dry_run": True,
+            },
+        )()
+        with patch.dict(os.environ, {}, clear=True):
+            report = run_live_write_smoke(args)
+
+        self.assertEqual(report["status"], "dry_run")
+        self.assertEqual(report["job_status"], "dry_run")
+        self.assertEqual(report["request_market_price_refresh"]["action"], "dry_run_only")
+        self.assertEqual(report["identity"]["fingerprint"], "pokemon|en|sv8pt5|050/131|riolu|reverse_holo|raw|au|aud")
+        self.assertEqual(report["market"]["provider_marketplace_id"], "EBAY_AU")
 
     def test_live_write_smoke_without_force_respects_cooldown(self) -> None:
         flags = _validation_flags(action="cache_fresh", worker_result=None)

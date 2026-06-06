@@ -7,7 +7,8 @@ param(
     [string]$SetCode = "sv03",
     [string]$Condition = "raw",
     [string]$Variant = "raw",
-    [switch]$ForceRefresh
+    [switch]$ForceRefresh,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,9 +21,11 @@ if (Test-Path $envLoader) {
     . $envLoader
 }
 
-$confirm = [Environment]::GetEnvironmentVariable("CONFIRM_LIVE_EBAY_WRITE")
-if ([string]::IsNullOrWhiteSpace($confirm) -or $confirm.ToLowerInvariant() -ne "true") {
-    throw "CONFIRM_LIVE_EBAY_WRITE=true is required for the live write smoke."
+if (-not $DryRun) {
+    $confirm = [Environment]::GetEnvironmentVariable("CONFIRM_LIVE_EBAY_WRITE")
+    if ([string]::IsNullOrWhiteSpace($confirm) -or $confirm.ToLowerInvariant() -ne "true") {
+        throw "CONFIRM_LIVE_EBAY_WRITE=true is required for the live write smoke."
+    }
 }
 
 $profileDir = Join-Path $repoRoot ".browser_profiles\cardscanr"
@@ -53,11 +56,22 @@ $argsList = @(
 if ($ForceRefresh) {
     $argsList += "--force-refresh"
 }
+if ($DryRun) {
+    $argsList += "--dry-run"
+}
 
-Write-Host "[market-engine] Running one-card live eBay write smoke with Chrome profile: $profileDir"
+if ($DryRun) {
+    Write-Host "[market-engine] Planning one-card live eBay write smoke; no Supabase or browser work will run."
+} else {
+    Write-Host "[market-engine] Running one-card live eBay write smoke with Chrome profile: $profileDir"
+}
 & $pythonPath @argsList
 if ($LASTEXITCODE -ne 0) {
     throw "smoke_ebay_browser_live_write.py failed with exit code $LASTEXITCODE"
+}
+
+if ($DryRun) {
+    return
 }
 
 try {

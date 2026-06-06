@@ -295,7 +295,7 @@ class MarketPriceJobRunner:
                 snapshot_id=str(snapshot["id"]),
                 refreshed_at=now,
             )
-            self.client.upsert_cache(cache_payload)
+            cache = self.client.upsert_cache(cache_payload)
             self.client.complete_job(
                 job_id=job.id,
                 snapshot_id=str(snapshot["id"]),
@@ -307,6 +307,7 @@ class MarketPriceJobRunner:
                 "jobId": job.id,
                 "priceKeyId": price_key.id,
                 "snapshotId": str(snapshot["id"]),
+                "cacheRowId": str(cache.get("id") or "") or None,
                 "includedCount": pricing_stats.included_count,
                 "rejectedCount": pricing_stats.rejected_count,
                 "confidence": pricing_stats.confidence,

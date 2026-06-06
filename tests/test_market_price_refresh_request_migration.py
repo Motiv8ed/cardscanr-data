@@ -5,18 +5,24 @@ import re
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-MIGRATION = ROOT / "supabase" / "migrations" / "20260528000000_market_price_refresh_request_cooldown.sql"
+STATE_MIGRATION = ROOT / "supabase" / "migrations" / "20260606000000_market_price_refresh_state_cache_rows.sql"
+MIGRATIONS = (
+    ROOT / "supabase" / "migrations" / "20260528000000_market_price_refresh_request_cooldown.sql",
+    STATE_MIGRATION,
+)
 
 
 class MarketPriceRefreshRequestMigrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.sql = MIGRATION.read_text(encoding="utf-8")
+        cls.sql = "\n".join(path.read_text(encoding="utf-8") for path in MIGRATIONS)
+        cls.state_sql = STATE_MIGRATION.read_text(encoding="utf-8")
 
     def test_request_rpc_contract_exists(self) -> None:
         self.assertIn("create or replace function public.request_market_price_refresh", self.sql)
         for field in (
             "'action'",
+            "'state'",
             "'price_key_id'",
             "'job_id'",
             "'job_status'",
@@ -25,6 +31,11 @@ class MarketPriceRefreshRequestMigrationTests(unittest.TestCase):
             "'cooldown_until'",
             "'cooldown_reason'",
             "'cache_is_fresh'",
+            "'cache_state'",
+            "'refresh_state'",
+            "'cache_has_current_price'",
+            "'current_market_evidence_available'",
+            "'stale_cache_available'",
             "'active_refresh_job'",
         ):
             self.assertIn(field, self.sql)
@@ -34,6 +45,49 @@ class MarketPriceRefreshRequestMigrationTests(unittest.TestCase):
         self.assertIn("'active_job_exists'", self.sql)
         self.assertIn("'job_enqueued'", self.sql)
         self.assertRegex(self.sql, re.compile(r"status\s+in\s+\('queued',\s*'running'\)", re.IGNORECASE))
+
+    def test_request_states_cover_app_read_cases(self) -> None:
+        for state in (
+            "'existing_fresh_cache'",
+            "'stale_cache_refresh_queued'",
+            "'refresh_queued'",
+            "'refresh_running'",
+            "'cooldown'",
+            "'provider_failed'",
+            "'unsupported_market'",
+            "'no_evidence_found'",
+            "'cache_missing_unexpected'",
+        ):
+            self.assertIn(state, self.sql)
+
+    def test_enqueue_claim_and_fail_create_cache_state_rows(self) -> None:
+        self.assertIn("create or replace function public.upsert_market_price_refresh_cache_state", self.sql)
+        self.assertRegex(
+            self.sql,
+            re.compile(r"perform\s+public\.upsert_market_price_refresh_cache_state\(", re.IGNORECASE),
+        )
+        self.assertRegex(
+            self.sql,
+            re.compile(r"insert\s+into\s+public\.market_price_cache[\s\S]*?'running'", re.IGNORECASE),
+        )
+        self.assertRegex(
+            self.sql,
+            re.compile(r"insert\s+into\s+public\.market_price_cache[\s\S]*?'failed'", re.IGNORECASE),
+        )
+
+    def test_unsupported_market_does_not_enqueue_job(self) -> None:
+        self.assertIn("create or replace function public.market_price_supported_route", self.sql)
+        unsupported_index = self.state_sql.index("'unsupported_market'")
+        enqueue_index = self.state_sql.index("v_job := public.enqueue_market_price_refresh")
+        self.assertLess(unsupported_index, enqueue_index)
+
+    def test_evidence_url_dedupe_is_scoped_to_snapshot(self) -> None:
+        self.assertIn("drop index if exists public.idx_market_sold_listing_evidence_provider_market_url_unique", self.sql)
+        self.assertIn(
+            "idx_market_sold_listing_evidence_snapshot_provider_market_url_unique",
+            self.sql,
+        )
+        self.assertIn("(snapshot_id, provider, marketplace, listing_url)", self.sql)
 
     def test_force_refresh_is_blocked_for_normal_callers(self) -> None:
         self.assertIn("force_refresh is reserved for service_role", self.sql)

@@ -80,13 +80,14 @@ Queue for refresh requests.
 - Enqueues a queued job with priority.
 - Handles active-job dedupe by returning existing active job on unique violation.
 - If a prior job is already `completed`/`failed`/`cancelled`, a new queued job can be created for the same key.
+- Ensures `market_price_cache` has a row with `refresh_status = 'queued'` for the key. This lets app reads distinguish "refresh queued" from an unexpected missing cache row.
 
 ### `public.claim_market_price_refresh_jobs(worker_id, max_jobs)`
 
 - Claims queued jobs with `FOR UPDATE SKIP LOCKED`.
 - Marks claimed jobs as `running`.
 - Increments `attempt_count` at claim-time to represent a started worker attempt.
-- Updates `market_price_cache.refresh_status` to `running` for claimed keys.
+- Upserts `market_price_cache.refresh_status = 'running'` for claimed keys, including first-time keys that do not have prices yet.
 - Claim ordering is `priority asc, requested_at asc`.
 
 ### `public.complete_market_price_refresh_job(...)`
@@ -98,12 +99,19 @@ Queue for refresh requests.
 
 - Marks running job `failed`.
 - Sets `error_message` and `completed_at`.
-- Updates cache status/error while preserving old cached price values.
+- Upserts cache status/error while preserving old cached price values. If no prior cache exists, it creates a null-price cache row with `refresh_status = 'failed'`.
 
 ### `public.get_market_price_bundle(fingerprint, evidence_limit)`
 
 - Read helper returning key + cache + latest snapshot + sold evidence list + active refresh job.
 - Intended for read-side integration and diagnostics.
+- Also returns state fields: `state`, `cache_state`, `refresh_state`, `cache_has_current_price`, `current_market_evidence_available`, `stale_cache_available`, and `no_reliable_price_reason`.
+
+### `public.request_market_price_refresh(...)`
+
+- App-safe refresh gate that creates/updates the key, checks supported local eBay routes, reuses active jobs, respects cache cooldown, and enqueues one user-priority refresh when needed.
+- Keeps the legacy `action` values (`cache_fresh`, `active_job_exists`, `job_enqueued`) and adds explicit states such as `existing_fresh_cache`, `stale_cache_refresh_queued`, `refresh_queued`, `refresh_running`, `unsupported_market`, and `cache_missing_unexpected`.
+- Unsupported local-provider routes return `action = 'unsupported_market'` and do not enqueue a job.
 
 ## RLS design
 
