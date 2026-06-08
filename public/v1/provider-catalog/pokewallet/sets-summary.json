@@ -1,19 +1,19 @@
 {
   "cardsWrittenByLanguage": {
     "en": 31515,
-    "jp": 24032,
+    "jp": 24150,
     "zh": 6439
   },
   "fullCatalogueAvailable": true,
   "fullCatalogueMode": "metadata_only",
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-23T05:08:26Z",
+  "generatedAtUtc": "2026-06-08T20:31:02Z",
   "languagesSeen": {
     "chn": 58,
     "eng": 335,
-    "jap": 462
+    "jap": 463
   },
-  "latestFullCatalogueRunAtUtc": "2026-05-23T05:08:26Z",
+  "latestFullCatalogueRunAtUtc": "2026-06-08T20:31:02Z",
   "notes": [
     "Pokewallet provider catalogue foundation for CardScanR matching research.",
     "Only safe provider metadata is stored.",
@@ -21,7 +21,7 @@
     "Provider metadata is not official CardScanR canonical data yet.",
     "Production catalogue and pricing integration are separate later steps."
   ],
-  "perSetFilesWritten": 840,
+  "perSetFilesWritten": 841,
   "provider": "pokewallet",
   "schemaVersion": "1.0.0",
   "sets": [
@@ -2657,7 +2657,7 @@
       "cardCount": 124,
       "cardScanRLanguage": "en",
       "providerLanguage": "eng",
-      "providerSetCode": "ME03",
+      "providerSetCode": "POR",
       "providerSetId": "24587",
       "providerSetName": "ME03: Perfect Order",
       "releaseDate": "27th March, 2026"
@@ -2978,7 +2978,7 @@
       "releaseDate": "1st September, 2022"
     },
     {
-      "cardCount": 101,
+      "cardCount": 102,
       "cardScanRLanguage": "en",
       "providerLanguage": "eng",
       "providerSetCode": "BS",
@@ -7199,6 +7199,15 @@
       "releaseDate": "13th March, 2026"
     },
     {
+      "cardCount": 118,
+      "cardScanRLanguage": "jp",
+      "providerLanguage": "jap",
+      "providerSetCode": "m5",
+      "providerSetId": "24711",
+      "providerSetName": "Abyss Eye",
+      "releaseDate": "22nd May, 2026"
+    },
+    {
       "cardCount": 192,
       "cardScanRLanguage": "zh",
       "providerLanguage": "chn",
@@ -7721,7 +7730,7 @@
       "releaseDate": null
     }
   ],
-  "setsFetched": 855,
+  "setsFetched": 856,
   "setsSelectedByLanguage": {
     "en": [
       {
@@ -10356,7 +10365,7 @@
         "cardCount": 124,
         "cardScanRLanguage": "en",
         "providerLanguage": "eng",
-        "providerSetCode": "ME03",
+        "providerSetCode": "POR",
         "providerSetId": "24587",
         "providerSetName": "ME03: Perfect Order",
         "releaseDate": "27th March, 2026"
@@ -10677,7 +10686,7 @@
         "releaseDate": "1st September, 2022"
       },
       {
-        "cardCount": 101,
+        "cardCount": 102,
         "cardScanRLanguage": "en",
         "providerLanguage": "eng",
         "providerSetCode": "BS",
@@ -14898,6 +14907,15 @@
         "providerSetId": "24653",
         "providerSetName": "M4: Ninja Spinner",
         "releaseDate": "13th March, 2026"
+      },
+      {
+        "cardCount": 118,
+        "cardScanRLanguage": "jp",
+        "providerLanguage": "jap",
+        "providerSetCode": "m5",
+        "providerSetId": "24711",
+        "providerSetName": "Abyss Eye",
+        "releaseDate": "22nd May, 2026"
       }
     ],
     "zh": [
@@ -15427,7 +15445,7 @@
   },
   "setsWrittenByLanguage": {
     "en": 331,
-    "jp": 451,
+    "jp": 452,
     "zh": 58
   },
   "statePath": "data/pokewallet_catalog_full_state.json"

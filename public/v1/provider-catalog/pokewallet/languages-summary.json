@@ -1,17 +1,17 @@
 {
   "cardsWrittenByLanguage": {
     "en": 31515,
-    "jp": 24032,
+    "jp": 24150,
     "zh": 6439
   },
   "fullCatalogueAvailable": true,
   "fullCatalogueMode": "metadata_only",
   "game": "pokemon",
-  "generatedAtUtc": "2026-05-23T05:08:26Z",
+  "generatedAtUtc": "2026-06-08T20:31:02Z",
   "languages": [
     {
       "cardScanRLanguage": "en",
-      "cardsFetched": 5,
+      "cardsFetched": 0,
       "cardsWritten": 31515,
       "providerLanguages": [
         "eng"
@@ -22,14 +22,14 @@
     },
     {
       "cardScanRLanguage": "jp",
-      "cardsFetched": 0,
-      "cardsWritten": 24032,
+      "cardsFetched": 5,
+      "cardsWritten": 24150,
       "providerLanguages": [
         "jap"
       ],
-      "selectedSetCount": 462,
-      "setCount": 462,
-      "setsWritten": 451
+      "selectedSetCount": 463,
+      "setCount": 463,
+      "setsWritten": 452
     },
     {
       "cardScanRLanguage": "zh",
@@ -43,7 +43,7 @@
       "setsWritten": 58
     }
   ],
-  "latestFullCatalogueRunAtUtc": "2026-05-23T05:08:26Z",
+  "latestFullCatalogueRunAtUtc": "2026-06-08T20:31:02Z",
   "notes": [
     "Pokewallet provider catalogue foundation for CardScanR matching research.",
     "Only safe provider metadata is stored.",
@@ -51,12 +51,12 @@
     "Provider metadata is not official CardScanR canonical data yet.",
     "Production catalogue and pricing integration are separate later steps."
   ],
-  "perSetFilesWritten": 840,
+  "perSetFilesWritten": 841,
   "provider": "pokewallet",
   "schemaVersion": "1.0.0",
   "setsWrittenByLanguage": {
     "en": 331,
-    "jp": 451,
+    "jp": 452,
     "zh": 58
   },
   "statePath": "data/pokewallet_catalog_full_state.json"
