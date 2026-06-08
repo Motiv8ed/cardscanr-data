@@ -1,0 +1,48 @@
+{
+  "completed_at": "2026-06-08T20:23:58.315454Z",
+  "config": {
+    "poll_seconds": 0,
+    "scheduler_max_enqueues": 50,
+    "scheduler_max_keys": "***REDACTED***",
+    "worker_max_jobs": 50
+  },
+  "cycles_completed": 0,
+  "cycles_requested": 1,
+  "dry_run": false,
+  "env_summary": {
+    "market_lookup_provider": "mock",
+    "market_worker_id": "market-price-worker",
+    "supabase_service_role_key_present": "***REDACTED***",
+    "supabase_url_present": true
+  },
+  "errors": [
+    "cycle=1 scheduler error: enqueue_market_price_refresh returned row missing id/status"
+  ],
+  "market_pricing_worker_summary": {
+    "aggregatesBuilt": 5,
+    "available": true,
+    "evidenceAccepted": 25,
+    "evidenceRejected": 0,
+    "generatedAtUtc": "2026-05-27T01:24:25Z",
+    "liveEbayDisabled": true,
+    "providerEnabled": true,
+    "providerRequested": "mock",
+    "providerResolved": "mock",
+    "workerMode": "write",
+    "workerStatus": "ok"
+  },
+  "scheduler_summaries": [
+    {
+      "cycle": 1,
+      "error": "enqueue_market_price_refresh returned row missing id/status",
+      "status": "error"
+    }
+  ],
+  "started_at": "2026-06-08T20:23:54.621480Z",
+  "supabase_env_present": true,
+  "total_jobs_completed": 0,
+  "total_jobs_enqueued": 0,
+  "total_jobs_failed": 0,
+  "total_jobs_processed": 0,
+  "worker_summaries": []
+}
