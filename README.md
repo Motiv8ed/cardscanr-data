@@ -130,7 +130,15 @@ See: `docs/LOCAL_PRICE_UPDATER.md`.
 
 ## C) Market price engine (Supabase queue based)
 
-Worker (processes refresh jobs):
+Live eBay worker for app scan/refresh price jobs:
+
+```powershell
+.\scripts\run_ebay_price_worker.ps1
+```
+
+This is the normal script to keep running when the app should process queued eBay price updates. It uses the guarded live eBay setup, a dedicated local Chrome profile, and one job at a time by default.
+
+Worker (lower-level queue processor):
 
 ```powershell
 .\scripts\run_market_price_worker.ps1 -Once
