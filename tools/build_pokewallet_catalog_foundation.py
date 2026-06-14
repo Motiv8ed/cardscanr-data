@@ -538,6 +538,17 @@ def string_value(value: Any) -> str:
     return str(value or "").strip()
 
 
+def provider_endpoint_url(endpoint: Any) -> str | None:
+    raw = string_value(endpoint)
+    if not raw:
+        return None
+    if raw.startswith(("http://", "https://")):
+        return raw
+    if raw.startswith("/"):
+        return f"{BASE_URL}{raw}"
+    return f"{BASE_URL}/{raw}"
+
+
 def normalized_key_part(value: Any) -> str:
     text = string_value(value).lower()
     cleaned = []
@@ -599,6 +610,9 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
     rarity = string_value(info.get("rarity") or record.get("rarity"))
     low_endpoint = f"/images/{provider_card_id}?size=low" if provider_card_id else None
     high_endpoint = f"/images/{provider_card_id}?size=high" if provider_card_id else None
+    image_endpoint = f"/images/{provider_card_id}" if provider_card_id else None
+    image_url_small = provider_endpoint_url(low_endpoint)
+    image_url_large = provider_endpoint_url(high_endpoint)
     variants = variant_values(record)
     variant = normalized_key_part(variants[0] if variants else "normal")
     identity_basis = {
@@ -637,7 +651,11 @@ def provider_card_record(record: dict[str, Any], set_item: ProviderSet, set_obj:
         "canonicalImageKey": None,
         "imageCacheKey": cache_key,
         "imageCacheIdentityBasis": identity_basis,
-        "imageEndpoint": f"/images/{provider_card_id}" if provider_card_id else None,
+        "imageUrl": image_url_small or image_url_large or provider_endpoint_url(image_endpoint),
+        "imageUrlSmall": image_url_small,
+        "imageUrlLarge": image_url_large,
+        "providerImageSource": "pokewallet_api_image_endpoint",
+        "imageEndpoint": image_endpoint,
         "imageEndpointLow": low_endpoint,
         "imageEndpointHigh": high_endpoint,
         "imageAvailable": None,

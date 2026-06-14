@@ -2303,6 +2303,8 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
     images = card.get("images") if isinstance(card.get("images"), dict) else {}
     normalized_name = normalize_catalog_name(card.get("name", ""))
     collector_number = str(card.get("number") or "")
+    image_small = images.get("small")
+    image_large = images.get("large")
 
     return {
         "canonicalBaseId": f"pokemon|en|{set_id}|{collector_number}|{normalized_name}",
@@ -2321,9 +2323,13 @@ def build_catalog_card_record(card: dict, set_id: str, set_name: str) -> dict:
         "hp": card.get("hp"),
         "artist": card.get("artist"),
         "illustrator": card.get("artist"),
-        "imageSmall": images.get("small"),
-        "imageLarge": images.get("large"),
+        "imageUrl": image_small or image_large,
+        "imageUrlSmall": image_small,
+        "imageUrlLarge": image_large,
+        "imageSmall": image_small,
+        "imageLarge": image_large,
         "imageSource": SOURCE_ID_POKEMON_TCG_API,
+        "providerImageSource": SOURCE_ID_POKEMON_TCG_API,
         "imageCached": False,
         "providerIds": {
             "pokemonTcgApi": card.get("id"),
@@ -2377,6 +2383,8 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
     for variant_name, is_available in sorted(variants.items()):
         if is_available:
             available_variants.append(variant_name)
+    image_small = build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low")
+    image_large = build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high")
 
     return {
         "canonicalBaseId": f"pokemon|jp|{set_id}|{collector_number}|{normalized_name}",
@@ -2395,9 +2403,13 @@ def build_japanese_catalog_card_record(card: dict, set_id: str, set_name: str, s
         "subtypes": card.get("types") if isinstance(card.get("types"), list) else [],
         "types": card.get("types") if isinstance(card.get("types"), list) else [],
         "hp": card.get("hp"),
-        "imageSmall": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "low"),
-        "imageLarge": build_tcgdex_card_image_url("ja", serie_id, set_id, collector_number, "high"),
+        "imageUrl": image_small or image_large,
+        "imageUrlSmall": image_small,
+        "imageUrlLarge": image_large,
+        "imageSmall": image_small,
+        "imageLarge": image_large,
         "imageSource": SOURCE_ID_TCGDEX,
+        "providerImageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "providerIds": {
             "pokemonTcgApi": None,
@@ -2453,9 +2465,13 @@ def build_japanese_global_card_record(card: dict, set_id: str, set_name: str, lo
         "subtypes": card.get("types") if isinstance(card.get("types"), list) else [],
         "types": card.get("types") if isinstance(card.get("types"), list) else [],
         "hp": card.get("hp"),
+        "imageUrl": image,
+        "imageUrlSmall": image,
+        "imageUrlLarge": image,
         "imageSmall": image,
         "imageLarge": image,
         "imageSource": SOURCE_ID_TCGDEX,
+        "providerImageSource": SOURCE_ID_TCGDEX,
         "imageCached": False,
         "providerIds": {
             "pokemonTcgApi": None,

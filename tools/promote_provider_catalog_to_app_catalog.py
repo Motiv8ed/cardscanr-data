@@ -410,8 +410,14 @@ def build_candidate(
     if not normalized_name or normalized_name == "unknown":
         return None, "missing_name"
 
-    image_small = provider_endpoint_url(card.get("imageEndpointLow") or card.get("imageEndpoint"))
-    image_large = provider_endpoint_url(card.get("imageEndpointHigh") or card.get("imageEndpoint"))
+    image_small = (
+        str(card.get("imageUrlSmall") or "").strip()
+        or provider_endpoint_url(card.get("imageEndpointLow") or card.get("imageEndpoint"))
+    )
+    image_large = (
+        str(card.get("imageUrlLarge") or "").strip()
+        or provider_endpoint_url(card.get("imageEndpointHigh") or card.get("imageEndpoint"))
+    )
     if not image_small or not image_large:
         return None, "missing_image_url"
 
@@ -464,9 +470,13 @@ def build_app_card(candidate: PromotionCandidate) -> dict[str, Any]:
         "normalizedName": candidate.normalized_name,
         "rarity": card.get("rarity"),
         "hp": None,
+        "imageUrl": candidate.image_small or candidate.image_large,
+        "imageUrlSmall": candidate.image_small,
+        "imageUrlLarge": candidate.image_large,
         "imageSmall": candidate.image_small,
         "imageLarge": candidate.image_large,
         "imageSource": PROMOTION_SOURCE,
+        "providerImageSource": card.get("providerImageSource") or PROMOTION_SOURCE,
         "imageCached": False,
         "providerIds": provider_ids,
         "pricingReferences": {
