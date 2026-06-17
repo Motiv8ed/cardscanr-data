@@ -22,6 +22,7 @@ def load_tool_module(name: str):
 build_price_cache = load_tool_module("build_price_cache")
 pokewallet_foundation = load_tool_module("build_pokewallet_catalog_foundation")
 promotion = load_tool_module("promote_provider_catalog_to_app_catalog")
+image_contract_report = load_tool_module("report_app_image_url_contract")
 
 
 def test_english_catalogue_card_exports_image_url_aliases() -> None:
@@ -126,3 +127,29 @@ def test_pokewallet_promotion_preserves_image_url_aliases() -> None:
     assert app_card["imageUrlSmall"] == app_card["imageSmall"]
     assert app_card["imageUrlLarge"] == app_card["imageLarge"]
     assert app_card["providerImageSource"] == "pokewallet_api_image_endpoint"
+
+
+def test_app_facing_catalogue_image_urls_do_not_point_to_provider_metadata() -> None:
+    report = image_contract_report.build_report(sample_limit=2)
+
+    assert report["safeDisplayImageUrls"] is True
+    for summary in report["appCatalogue"].values():
+        assert summary["unsafeDisplayImageUrlCount"] == 0
+    assert report["providerCatalogue"]["jp"]["unsafeDisplayImageUrlCount"] == 0
+
+
+def test_supported_sources_marks_only_ebay_as_app_visible_market_pricing() -> None:
+    payload = build_price_cache.load_json(ROOT / "public" / "v1" / "supported-sources.json")
+    sources = {entry["id"]: entry for entry in payload["sources"]}
+
+    assert sources["ebay_sold_manual"]["appVisible"] is True
+    assert sources["ebay_sold_manual"]["pricingRole"] == "app_visible_market_price"
+    for source_id in (
+        "tcgdex",
+        "tcgdex_tcgplayer",
+        "tcgdex_cardmarket",
+        "pokewallet",
+        "pokemon_tcg_api",
+        "manual_seed",
+    ):
+        assert sources[source_id]["appVisible"] is False

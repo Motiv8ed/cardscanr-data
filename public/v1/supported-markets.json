@@ -7,10 +7,13 @@
       "currency": "USD",
       "ebayDomain": null,
       "enabled": true,
+      "appVisible": false,
       "market": "us",
       "notes": [
-        "Primary market. EN Pokémon pricing available via pokemon_tcg_api in USD."
+        "Legacy/transitional EN PokemonTCG API pricing remains available for migration and diagnostics.",
+        "Normal app UI should not present this as a market estimate; app-visible pricing is eBay sold / Market Price Engine only."
       ],
+      "pricingRole": "legacy_transitional_price_record",
       "pricingStatus": "available",
       "supportedSources": [
         "pokemon_tcg_api"
@@ -23,11 +26,13 @@
       "currency": "AUD",
       "ebayDomain": "ebay.com.au",
       "enabled": false,
+      "appVisible": false,
       "market": "au",
       "notes": [
-        "AU/AUD eBay sold pricing pipeline is not yet implemented.",
+        "AU/AUD eBay sold / Market Price Engine pricing is the intended user-facing pricing direction.",
         "Market is planned but must not be shown to users until pricing is live."
       ],
+      "pricingRole": "planned_app_visible_market_price",
       "pricingStatus": "planned",
       "supportedSources": [
         "ebay_sold_manual"
@@ -40,10 +45,12 @@
       "currency": "JPY",
       "ebayDomain": null,
       "enabled": false,
+      "appVisible": false,
       "market": "jp",
       "notes": [
-        "JP market pricing is not available. No live source is configured for JPY pricing."
+        "JP market pricing is not available. No app-visible eBay sold / Market Price Engine route is live for JPY pricing."
       ],
+      "pricingRole": "not_app_visible",
       "pricingStatus": "planned",
       "supportedSources": [],
       "visibility": "planned"
@@ -54,11 +61,13 @@
       "currency": "EUR",
       "ebayDomain": null,
       "enabled": false,
+      "appVisible": false,
       "market": "eu",
       "notes": [
         "EUR pricing via Cardmarket (tcgdex_cardmarket) is not yet built into the price cache pipeline.",
-        "Market is planned but not yet available."
+        "Cardmarket is internal/reference only for app pricing; normal app UI should use eBay sold / Market Price Engine values only."
       ],
+      "pricingRole": "internal_provider_reference",
       "pricingStatus": "planned",
       "supportedSources": [
         "tcgdex_cardmarket"

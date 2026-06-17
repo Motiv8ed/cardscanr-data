@@ -4,55 +4,86 @@
       "id": "manual_seed",
       "aliases": [],
       "description": "Manually seeded reference prices",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "legacy_reference",
+      "visibility": "internal"
     },
     {
       "id": "tcgdex",
       "aliases": [],
       "description": "TCGdex open card database",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "catalogue_reference",
+      "visibility": "internal"
     },
     {
       "id": "tcgdex_tcgplayer",
       "aliases": [],
       "description": "TCGdex price data via TCGplayer market feed",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "internal_provider_reference",
+      "visibility": "internal"
     },
     {
       "id": "tcgdex_cardmarket",
       "aliases": [],
       "description": "TCGdex price data via Cardmarket market feed",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "internal_provider_reference",
+      "visibility": "internal"
     },
     {
       "id": "pokewallet",
       "aliases": [],
       "description": "PokeWallet price data",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "internal_provider_reference",
+      "visibility": "internal"
     },
     {
       "id": "pokemon_tcg_api",
-      "aliases": ["pokemonTcgApi"],
-      "description": "Pokémon TCG API market prices",
-      "enabled": true
+      "aliases": [
+        "pokemonTcgApi"
+      ],
+      "description": "Pokemon TCG API market prices",
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "legacy_transitional_price_record",
+      "visibility": "legacy"
     },
     {
       "id": "ebay_sold_manual",
-      "aliases": ["ebaySoldListingsManual"],
-      "description": "eBay sold listings (manually curated)",
-      "enabled": true
+      "aliases": [
+        "ebaySoldListingsManual"
+      ],
+      "description": "eBay sold listings / Market Price Engine values",
+      "enabled": true,
+      "appVisible": true,
+      "pricingRole": "app_visible_market_price",
+      "visibility": "planned"
     },
     {
       "id": "manual",
       "aliases": [],
       "description": "Manually entered prices",
-      "enabled": true
+      "enabled": true,
+      "appVisible": false,
+      "pricingRole": "user_inventory_cost",
+      "visibility": "private_user_data"
     },
     {
       "id": "unavailable",
       "aliases": [],
       "description": "Price data not available for this card",
-      "enabled": false
+      "enabled": false,
+      "appVisible": false,
+      "pricingRole": "status_marker",
+      "visibility": "hidden"
     }
   ]
 }

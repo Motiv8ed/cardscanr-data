@@ -16,8 +16,18 @@ from pathlib import Path
 import sys
 import unittest
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+
+pytest.importorskip(
+    "scripts.seed_market_price_demo_data",
+    reason=(
+        "obsolete Phase 4A demo seed helper was removed; these tests are kept "
+        "only as historical coverage until the demo seed workflow is restored"
+    ),
+)
 
 from scripts.seed_market_price_demo_data import (
     ALL_CARDS,

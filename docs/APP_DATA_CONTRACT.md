@@ -82,6 +82,14 @@ Rules:
 - App matching order is: exact canonical `id`, then any `aliases`.
 - During migration, legacy aliases must be retained for at least one app release cycle before removal.
 
+App-visible pricing policy:
+
+- Normal app UI should display only eBay sold / Market Price Engine values.
+- `ebay_sold_manual` is the current canonical source ID for eBay sold-listing values and the Market Price Engine path.
+- `tcgdex`, `tcgdex_tcgplayer`, `tcgdex_cardmarket`, `pokewallet`, `pokemon_tcg_api`, `manual_seed`, and demo prices are internal, diagnostic, historical, reference, or transitional pricing sources. Do not present them as normal app-visible market estimates.
+- `manual` user-entered buy price/cost remains allowed as user inventory data, but it is not a market estimate.
+- Source entries may include additive `appVisible`, `visibility`, and `pricingRole` metadata. Older clients must tolerate these unknown fields.
+
 ## 6) Price status policy
 
 Canonical price statuses:
@@ -114,22 +122,29 @@ Future app-facing price records must include:
 
 Current limitations:
 
-- EN prices mostly return provider/native currency, mostly USD.
-- AU/eBay/local sold pricing is not implemented yet.
+- Existing EN static price records mostly return provider/native currency, mostly USD, from legacy provider/reference sources.
+- These existing EN provider records are retained for migration, diagnostics, and backward compatibility, but are not the normal user-facing market estimate path.
+- AU/eBay/local sold pricing is the intended app-visible direction, but the static public files must keep it planned/beta/unavailable until the pipeline is actually live.
 - JP production pricing is unavailable.
 
 ## 8) Image policy
 
-Current app-facing catalogue image fields use upstream URLs:
+Current app-facing catalogue image fields use upstream URLs and compatibility aliases:
 
+- `imageUrl`
 - `imageSmall`
 - `imageLarge`
+- `imageUrlSmall`
+- `imageUrlLarge`
+- `providerImageSource`
 
 Contract notes:
 
 - No card image binaries are stored in this repository today.
 - `/v1/images/cache-policy.json` is policy metadata only.
-- `provider-catalog` image references are not production image files.
+- `/v1/provider-catalog/**` is experimental/internal metadata. The app must not render `/provider-catalog/**` paths or provider catalogue `.json` files as card images.
+- Provider image endpoints promoted into app-facing catalogue records must be absolute display URLs where intended, including `https://api.pokewallet.io/images/...`, TCGdex asset URLs, and PokemonTCG image URLs.
+- Flutter is responsible for local device image caching; this repo does not bulk-store card image binaries yet.
 
 Planned local image cache path contract (future worker):
 
@@ -138,7 +153,7 @@ Planned local image cache path contract (future worker):
 
 Forward-compatible app guidance:
 
-- Continue consuming `imageSmall` and `imageLarge` upstream URLs today.
+- Continue consuming `imageSmall` and `imageLarge` upstream URLs today, with `imageUrlSmall` / `imageUrlLarge` and `imageUrl` treated as aliases.
 - Future additive fields may include local image URLs (`localImageSmall`, `localImageLarge`) and cache metadata while preserving existing upstream URL fields.
 
 ## 9) Current coverage (known snapshot)
@@ -168,8 +183,10 @@ Recommended app behavior:
 10. Do not overwrite an existing valid local price with missing/error/unavailable values.
 11. For markets where `pricingStatus` is `"planned"` or `"unavailable"`, show "Pricing not available in your region yet" — never show a broken/error state.
 12. If `supported-languages.json` or `supported-markets.json` cannot be fetched, fall back to hardcoded defaults: EN/USD available, all others planned.
-13. Use JP price status as unavailable.
-14. Use `imageSmall` / `imageLarge` directly.
+13. For normal market-price UI, use only sources/markets where `appVisible: true` and `pricingRole` identifies the eBay sold / Market Price Engine path. Do not show TCGdex, PokeWallet, PokemonTCG API, Cardmarket, manual_seed, or demo prices as market estimates.
+14. Use JP price status as unavailable.
+15. Use `imageSmall` / `imageLarge` directly, with image URL aliases as fallback/compatibility fields.
+16. Never render `/v1/provider-catalog/**` or `provider-catalog/*.json` as card image URLs.
 
 ## 11) Near-term contract gaps
 
@@ -276,6 +293,8 @@ Describes which pricing markets are available, planned, or hidden.
 | `currency` | string | ISO 4217 code |
 | `enabled` | boolean | Whether the app should allow users to select this market |
 | `visibility` | string | `"public"` \| `"beta"` \| `"planned"` \| `"hidden"` |
+| `appVisible` | boolean | Whether this market is intended for normal app market-price display |
+| `pricingRole` | string | Editorial role such as `"planned_app_visible_market_price"` or `"legacy_transitional_price_record"` |
 | `pricingStatus` | string | `"available"` \| `"partial"` \| `"unavailable"` \| `"planned"` |
 | `supportedSources` | array | Canonical `id` values from `supported-sources.json` |
 | `ebayDomain` | string \| null | eBay region domain when applicable, else `null` |
