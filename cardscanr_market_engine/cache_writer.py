@@ -27,7 +27,7 @@ def build_cache_payload(
     stale_after_iso = utc_iso(pricing_stats.stale_after)
     refreshed_at_iso = utc_iso(refreshed_at)
     raw_market_country = provider_result.raw_metadata.get("marketCountry")
-    raw_currency = provider_result.raw_metadata.get("currency")
+    raw_currency = provider_result.raw_metadata.get("displayCurrency") or provider_result.raw_metadata.get("currency")
     return {
         "price_key_id": price_key.id,
         "current_market_price": pricing_stats.recommended_price,

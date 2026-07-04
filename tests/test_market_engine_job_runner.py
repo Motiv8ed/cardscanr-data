@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from dataclasses import replace
 from pathlib import Path
 import sys
 import unittest
@@ -345,6 +346,168 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertIn("Unsupported eBay market route", result["error"])
         self.assertEqual(client.failed, {"job_id": "job-unsupported", "error_message": result["error"]})
+
+    def test_job_runner_uses_home_market_before_international_fallback(self) -> None:
+        class FallbackClient(FakeClient):
+            def get_price_key(self, price_key_id: str) -> MarketPriceKey:
+                key = sample_key()
+                return MarketPriceKey(
+                    **{
+                        **key.__dict__,
+                        "market_country": "au",
+                        "currency": "aud",
+                        "fingerprint": "pokemon|en|base1|4|charizard|raw|near_mint|au|aud",
+                    }
+                )
+
+        class FallbackProvider:
+            marketplace_name = "ebay"
+
+            def __init__(self) -> None:
+                self.attempts: list[str] = []
+
+            def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+                self.attempts.append(request.provider_marketplace_id)
+                comps: list[SoldComp] = []
+                if request.provider_marketplace_id == "EBAY_US":
+                    comps = [
+                        SoldComp(
+                            source_listing_id=f"us-{index}",
+                            title="Charizard Base Set 4 raw",
+                            sold_price=price,
+                            shipping_price=1.0,
+                            total_price=price + 1.0,
+                            currency="USD",
+                            sold_date=datetime(2026, 5, 20 - index, tzinfo=timezone.utc),
+                            listing_url=f"https://example.test/us-{index}",
+                            condition_text="Raw",
+                        )
+                        for index, price in enumerate([10.0, 12.0, 14.0])
+                    ]
+                return ProviderResult(
+                    provider_name="mock",
+                    marketplace=request.provider_marketplace_id,
+                    provider_fingerprint=f"mock:{request.provider_marketplace_id}",
+                    query_used="charizard base set 4",
+                    comps=comps,
+                    raw_metadata={
+                        "marketCountry": request.market_country,
+                        "currency": request.currency,
+                        "providerMarketplaceId": request.provider_marketplace_id,
+                    },
+                )
+
+        provider = FallbackProvider()
+        client = FallbackClient()
+        config = replace(
+            fixed_config(),
+            ebay_fallback_marketplaces=("EBAY_US", "EBAY_GB"),
+            currency_rates={"USD:AUD": 1.5},
+            currency_rate_source="unit_test_rate",
+        )
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=provider,
+            config=config,
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-fallback",
+                price_key_id="key-1",
+                reason="user_refresh",
+                priority=10,
+                status="running",
+                attempt_count=1,
+            )
+        )
+
+        self.assertEqual(provider.attempts, ["EBAY_AU", "EBAY_US"])
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["requestedMarketplace"], "EBAY_AU")
+        self.assertEqual(result["marketplace"], "EBAY_US")
+        self.assertEqual(result["fallbackLevel"], 1)
+        self.assertEqual(result["evidenceType"], "completed_sale")
+        self.assertEqual(result["currency"], "AUD")
+        self.assertEqual(result["sourceCurrency"], "USD")
+        self.assertEqual(client.cache_payload["current_market_price"], 18.0)
+        self.assertEqual(client.cache_payload["currency"], "AUD")
+        diagnostics = client.snapshot_payload["diagnostics_json"]
+        self.assertEqual(diagnostics["requestedMarketplace"], "EBAY_AU")
+        self.assertEqual(diagnostics["marketplaceActuallyUsed"], "EBAY_US")
+        self.assertEqual(diagnostics["fallbackLevel"], 1)
+        self.assertEqual(diagnostics["originalCurrency"], "USD")
+        self.assertEqual(diagnostics["displayCurrency"], "AUD")
+        self.assertEqual(diagnostics["currencyConversion"]["rate"], 1.5)
+        self.assertEqual(diagnostics["currencyConversion"]["rateSource"], "unit_test_rate")
+
+    def test_job_runner_persists_terminal_no_evidence_state(self) -> None:
+        class AuClient(FakeClient):
+            def get_price_key(self, price_key_id: str) -> MarketPriceKey:
+                key = sample_key()
+                return MarketPriceKey(
+                    **{
+                        **key.__dict__,
+                        "market_country": "au",
+                        "currency": "aud",
+                        "fingerprint": "pokemon|en|base1|4|charizard|raw|near_mint|au|aud",
+                    }
+                )
+
+        class EmptyProvider:
+            marketplace_name = "ebay"
+
+            def __init__(self) -> None:
+                self.attempts: list[str] = []
+
+            def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+                self.attempts.append(request.provider_marketplace_id)
+                return ProviderResult(
+                    provider_name="mock",
+                    marketplace=request.provider_marketplace_id,
+                    provider_fingerprint=f"mock:{request.provider_marketplace_id}",
+                    query_used="charizard base set 4",
+                    comps=[],
+                    raw_metadata={
+                        "marketCountry": request.market_country,
+                        "currency": request.currency,
+                    },
+                )
+
+        provider = EmptyProvider()
+        client = AuClient()
+        config = replace(
+            fixed_config(),
+            ebay_fallback_marketplaces=("EBAY_US",),
+            currency_rates={"USD:AUD": 1.5},
+        )
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=provider,
+            config=config,
+            now_func=lambda: datetime(2026, 5, 25, tzinfo=timezone.utc),
+            logger=lambda *_args, **_kwargs: None,
+        )
+
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-no-evidence",
+                price_key_id="key-1",
+                reason="user_refresh",
+                priority=10,
+                status="running",
+                attempt_count=1,
+            )
+        )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(provider.attempts, ["EBAY_AU", "EBAY_US"])
+        self.assertIsNone(client.cache_payload["current_market_price"])
+        self.assertEqual(client.cache_payload["sample_size"], 0)
+        self.assertEqual(client.snapshot_payload["diagnostics_json"]["no_reliable_price_reason"], "no_comps_parsed")
+        self.assertEqual(client.snapshot_payload["diagnostics_json"]["fallbackLevel"], 0)
 
     def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:
         runner = MarketPriceJobRunner(

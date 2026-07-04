@@ -1,6 +1,7 @@
 from .base import MarketCompsProvider
 from .errors import (
     ProviderBlockedError,
+    ProviderAuthenticationRequiredError,
     ProviderDisabledError,
     ProviderError,
     ProviderIdentityUnavailableError,
@@ -17,6 +18,7 @@ __all__ = [
     "MarketCompsProvider",
     "MockMarketCompsProvider",
     "ProviderBlockedError",
+    "ProviderAuthenticationRequiredError",
     "ProviderDisabledError",
     "ProviderError",
     "ProviderIdentityUnavailableError",

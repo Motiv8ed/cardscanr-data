@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from dataclasses import replace
 from typing import Any
 
 from .cache_writer import build_cache_payload
 from .config import MarketEngineConfig
+from .currency_conversion import CurrencyConversion, resolve_currency_conversion
 from .filters import filter_comps
-from .marketplaces import resolve_marketplace_config
+from .marketplaces import LocalMarketConfig, ebay_marketplace_fallback_order
 from .models import (
     EvaluatedComp,
     MarketPriceKey,
@@ -16,7 +18,12 @@ from .models import (
     ProviderResult,
 )
 from .pricing_stats import calculate_pricing_stats
-from .providers.errors import ProviderError, sanitize_provider_diagnostics
+from .providers.errors import (
+    ProviderAuthenticationRequiredError,
+    ProviderBlockedError,
+    ProviderError,
+    sanitize_provider_diagnostics,
+)
 
 
 def utc_now() -> datetime:
@@ -64,6 +71,32 @@ def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
             "current_market_price": "item_recommended_price",
         },
     }
+
+
+def convert_pricing_stats(pricing_stats: PricingStats, conversion: CurrencyConversion) -> PricingStats:
+    if conversion.rate == 1:
+        return pricing_stats
+    return replace(
+        pricing_stats,
+        median_price=conversion.amount(pricing_stats.median_price),
+        average_price=conversion.amount(pricing_stats.average_price),
+        low_price=conversion.amount(pricing_stats.low_price),
+        high_price=conversion.amount(pricing_stats.high_price),
+        recommended_price=conversion.amount(pricing_stats.recommended_price),
+        item_median_price=conversion.amount(pricing_stats.item_median_price),
+        item_average_price=conversion.amount(pricing_stats.item_average_price),
+        item_low_price=conversion.amount(pricing_stats.item_low_price),
+        item_high_price=conversion.amount(pricing_stats.item_high_price),
+        item_recommended_price=conversion.amount(pricing_stats.item_recommended_price),
+        landed_median_price=conversion.amount(pricing_stats.landed_median_price),
+        landed_average_price=conversion.amount(pricing_stats.landed_average_price),
+        landed_low_price=conversion.amount(pricing_stats.landed_low_price),
+        landed_high_price=conversion.amount(pricing_stats.landed_high_price),
+        landed_recommended_price=conversion.amount(pricing_stats.landed_recommended_price),
+        included_price_distribution=tuple(
+            value for value in (conversion.amount(price) for price in pricing_stats.included_price_distribution) if value is not None
+        ),
+    )
 
 
 def classify_comp_quality(item: EvaluatedComp, *, pricing_stats: PricingStats) -> dict[str, Any]:
@@ -124,6 +157,134 @@ class MarketPriceJobRunner:
         self.now_func = now_func
         self.logger = logger
 
+    def marketplace_attempts(self, price_key: MarketPriceKey, provider_marketplace: str) -> tuple[LocalMarketConfig, ...]:
+        return ebay_marketplace_fallback_order(
+            requested_market_country=price_key.market_country,
+            requested_currency=price_key.currency,
+            marketplace=provider_marketplace,
+            configured_order=self.config.ebay_fallback_marketplaces,
+        )
+
+    def build_provider_request(
+        self,
+        *,
+        price_key: MarketPriceKey,
+        market_config: LocalMarketConfig,
+    ) -> ProviderRequest:
+        return ProviderRequest(
+            price_key=price_key,
+            market_country=market_config.market_country,
+            currency=market_config.currency,
+            marketplace=market_config.marketplace,
+            provider_marketplace_id=market_config.provider_marketplace_id,
+            provider_domain=market_config.provider_domain,
+            search_locale=market_config.search_locale,
+            display_name=market_config.display_name,
+            market_config=market_config,
+        )
+
+    def fetch_fallback_result(
+        self,
+        *,
+        price_key: MarketPriceKey,
+        provider_marketplace: str,
+        now: datetime,
+    ) -> tuple[ProviderRequest, ProviderResult, list[EvaluatedComp], PricingStats, PricingStats, CurrencyConversion, list[dict[str, Any]]]:
+        attempts: list[dict[str, Any]] = []
+        first_error: Exception | None = None
+        first_no_evidence_result: tuple[
+            ProviderRequest,
+            ProviderResult,
+            list[EvaluatedComp],
+            PricingStats,
+            PricingStats,
+            CurrencyConversion,
+            list[dict[str, Any]],
+        ] | None = None
+        for fallback_level, market_config in enumerate(self.marketplace_attempts(price_key, provider_marketplace)):
+            provider_key = replace(
+                price_key,
+                market_country=market_config.market_country.lower(),
+                currency=market_config.currency.lower(),
+            )
+            provider_request = self.build_provider_request(
+                price_key=provider_key,
+                market_config=market_config,
+            )
+            try:
+                provider_result = self.provider.fetch_comps(provider_request)
+                evaluated_comps = filter_comps(provider_key, provider_result.comps)
+                source_stats = calculate_pricing_stats(evaluated_comps, now=now, config=self.config)
+                attempts.append(
+                    {
+                        "fallbackLevel": fallback_level,
+                        "providerMarketplaceId": provider_request.provider_marketplace_id,
+                        "marketCountry": provider_request.market_country,
+                        "currency": provider_request.currency,
+                        "acceptedComparableCount": source_stats.included_count,
+                        "rejectedComparableCount": source_stats.rejected_count,
+                        "recommendedPriceAvailable": source_stats.recommended_price is not None,
+                        "confidence": source_stats.confidence,
+                        "noReliablePriceReason": source_stats.no_reliable_price_reason,
+                    }
+                )
+                if source_stats.included_count <= 0:
+                    if first_no_evidence_result is None:
+                        conversion = resolve_currency_conversion(
+                            source_currency=provider_request.currency,
+                            target_currency=price_key.currency,
+                            rates=self.config.currency_rates,
+                            rate_source=self.config.currency_rate_source,
+                            now=now,
+                        )
+                        first_no_evidence_result = (
+                            provider_request,
+                            provider_result,
+                            evaluated_comps,
+                            source_stats,
+                            source_stats,
+                            conversion,
+                            list(attempts),
+                        )
+                    continue
+                conversion = resolve_currency_conversion(
+                    source_currency=provider_request.currency,
+                    target_currency=price_key.currency,
+                    rates=self.config.currency_rates,
+                    rate_source=self.config.currency_rate_source,
+                    now=now,
+                )
+                display_stats = convert_pricing_stats(source_stats, conversion)
+                return (
+                    provider_request,
+                    provider_result,
+                    evaluated_comps,
+                    source_stats,
+                    display_stats,
+                    conversion,
+                    attempts,
+                )
+            except (ProviderBlockedError, ProviderAuthenticationRequiredError):
+                raise
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+                attempts.append(
+                    {
+                        "fallbackLevel": fallback_level,
+                        "providerMarketplaceId": market_config.provider_marketplace_id,
+                        "marketCountry": market_config.market_country,
+                        "currency": market_config.currency,
+                        "error": str(exc),
+                    }
+                )
+                continue
+        if first_no_evidence_result is not None:
+            return first_no_evidence_result
+        if first_error is not None:
+            raise first_error
+        raise ValueError("Currently no eBay pricing available")
+
     def claim_jobs(self, *, max_jobs: int | None = None) -> list[MarketPriceRefreshJob]:
         limit = max_jobs or self.config.max_jobs_per_run
         return self.client.claim_jobs(worker_id=self.config.worker_id, max_jobs=limit)
@@ -137,7 +298,23 @@ class MarketPriceJobRunner:
         evaluated_comps: list[EvaluatedComp],
         pricing_stats: PricingStats,
         now: datetime,
+        requested_price_key: MarketPriceKey | None = None,
+        source_pricing_stats: PricingStats | None = None,
+        currency_conversion: CurrencyConversion | None = None,
+        fallback_attempts: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        requested_key = requested_price_key or price_key
+        source_stats = source_pricing_stats or pricing_stats
+        conversion = currency_conversion or resolve_currency_conversion(
+            source_currency=provider_request.currency,
+            target_currency=requested_key.currency,
+            rates=self.config.currency_rates,
+            rate_source=self.config.currency_rate_source,
+            now=now,
+        )
+        fallback_level = 0
+        if fallback_attempts:
+            fallback_level = int(fallback_attempts[-1].get("fallbackLevel") or 0)
         return {
             "price_key_id": price_key.id,
             "provider": provider_result.provider_name,
@@ -156,6 +333,20 @@ class MarketPriceJobRunner:
                 "providerFingerprint": provider_result.provider_fingerprint,
                 "pricingAsOf": utc_iso(now),
                 "staleAfter": utc_iso(pricing_stats.stale_after),
+                "pricingPolicy": "ebay_first_backend_marketplace_fallback",
+                "evidenceType": "completed_sale",
+                "requestedMarketplace": f"EBAY_{requested_key.market_country.upper()}",
+                "marketplaceActuallyUsed": provider_request.provider_marketplace_id,
+                "fallbackLevel": fallback_level,
+                "fallbackAttempts": fallback_attempts or [],
+                "originalCurrency": provider_request.currency,
+                "displayCurrency": requested_key.currency.upper(),
+                "sourcePriceViews": build_price_view_diagnostics(source_stats),
+                "currencyConversion": conversion.metadata(
+                    source_amount=source_stats.recommended_price,
+                    converted_amount=pricing_stats.recommended_price,
+                ),
+                "shippingTreatment": "total_cost_including_shipping_where_available; item_value_excluding_shipping_displayed_separately",
                 "priceViews": build_price_view_diagnostics(pricing_stats),
                 "fetchedCount": len(provider_result.comps),
                 "marketCountry": provider_request.market_country,
@@ -251,25 +442,22 @@ class MarketPriceJobRunner:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
-            market_config = resolve_marketplace_config(
-                market_country=price_key.market_country,
-                currency=price_key.currency,
-                marketplace=provider_marketplace,
-            )
-            provider_request = ProviderRequest(
+            (
+                provider_request,
+                provider_result,
+                evaluated_comps,
+                source_pricing_stats,
+                pricing_stats,
+                currency_conversion,
+                fallback_attempts,
+            ) = self.fetch_fallback_result(
                 price_key=price_key,
-                market_country=market_config.market_country,
-                currency=market_config.currency,
-                marketplace=market_config.marketplace,
-                provider_marketplace_id=market_config.provider_marketplace_id,
-                provider_domain=market_config.provider_domain,
-                search_locale=market_config.search_locale,
-                display_name=market_config.display_name,
-                market_config=market_config,
+                provider_marketplace=provider_marketplace,
+                now=now,
             )
-            provider_result = self.provider.fetch_comps(provider_request)
-            evaluated_comps = filter_comps(price_key, provider_result.comps)
-            pricing_stats = calculate_pricing_stats(evaluated_comps, now=now, config=self.config)
+            provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
+            provider_result.raw_metadata["requestedMarketplace"] = f"EBAY_{price_key.market_country.upper()}"
+            provider_result.raw_metadata["marketplaceActuallyUsed"] = provider_request.provider_marketplace_id
             snapshot_payload = self.build_snapshot_payload(
                 price_key=price_key,
                 provider_request=provider_request,
@@ -277,6 +465,10 @@ class MarketPriceJobRunner:
                 evaluated_comps=evaluated_comps,
                 pricing_stats=pricing_stats,
                 now=now,
+                requested_price_key=price_key,
+                source_pricing_stats=source_pricing_stats,
+                currency_conversion=currency_conversion,
+                fallback_attempts=fallback_attempts,
             )
             snapshot = self.client.insert_snapshot(snapshot_payload)
             evidence_rows = self.build_evidence_rows(
@@ -312,9 +504,13 @@ class MarketPriceJobRunner:
                 "rejectedCount": pricing_stats.rejected_count,
                 "confidence": pricing_stats.confidence,
                 "recommendedPrice": pricing_stats.recommended_price,
+                "requestedMarketplace": f"EBAY_{price_key.market_country.upper()}",
                 "marketCountry": provider_request.market_country,
-                "currency": provider_request.currency,
+                "sourceCurrency": provider_request.currency,
+                "currency": price_key.currency.upper(),
                 "marketplace": provider_request.provider_marketplace_id,
+                "fallbackLevel": int(fallback_attempts[-1].get("fallbackLevel") or 0) if fallback_attempts else 0,
+                "evidenceType": "completed_sale",
                 "status": "completed",
             }
         except Exception as exc:

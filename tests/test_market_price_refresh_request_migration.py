@@ -9,6 +9,7 @@ STATE_MIGRATION = ROOT / "supabase" / "migrations" / "20260606000000_market_pric
 MIGRATIONS = (
     ROOT / "supabase" / "migrations" / "20260528000000_market_price_refresh_request_cooldown.sql",
     STATE_MIGRATION,
+    ROOT / "supabase" / "migrations" / "20260704000000_jp_market_price_identity_payload.sql",
 )
 
 
@@ -106,8 +107,32 @@ class MarketPriceRefreshRequestMigrationTests(unittest.TestCase):
             "p_currency text",
             "p_fingerprint text",
             "p_condition text",
+            "p_canonical_name_en text",
+            "p_original_name_ja text",
+            "p_aliases jsonb",
         ):
             self.assertIn(arg, self.sql)
+
+    def test_japanese_source_identity_columns_are_present(self) -> None:
+        for field in (
+            "canonical_name_en text",
+            "original_name_ja text",
+            "aliases jsonb",
+        ):
+            self.assertIn(field, self.sql)
+
+    def test_japanese_identity_migration_removes_ambiguous_legacy_overloads(self) -> None:
+        migration = MIGRATIONS[-1].read_text(encoding="utf-8")
+        self.assertIn("drop function if exists public.request_market_price_refresh", migration)
+        self.assertIn(
+            "text, text, text, text, text, text, text, text, text, text, text, text, text, boolean",
+            migration,
+        )
+        self.assertIn("drop function if exists public.get_or_create_market_price_key", migration)
+        self.assertIn(
+            "text, text, text, text, text, text, text, text, text, text, text, text, timestamptz",
+            migration,
+        )
 
 
 if __name__ == "__main__":

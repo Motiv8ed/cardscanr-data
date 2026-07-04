@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from dataclasses import dataclass
+import json
 import os
 from pathlib import Path
 
@@ -18,6 +19,13 @@ DEFAULT_EBAY_BROWSER_PROFILE_NAME = "cardscanr"
 DEFAULT_EBAY_BROWSER_USER_DATA_DIR = ROOT / ".browser_profiles" / DEFAULT_EBAY_BROWSER_PROFILE_NAME
 
 
+def supabase_secret_key_from_env() -> str:
+    return (
+        os.getenv("SUPABASE_SECRET_KEY", "").strip()
+        or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    )
+
+
 def _parse_positive_int(name: str, default: int) -> int:
     raw = os.getenv(name, str(default)).strip()
     value = int(raw)
@@ -29,6 +37,24 @@ def _parse_positive_int(name: str, default: int) -> int:
 def _parse_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name, "true" if default else "false").strip().lower()
     return raw in {"1", "true", "yes", "y", "on"}
+
+
+def _parse_csv(name: str, default: str) -> tuple[str, ...]:
+    raw = os.getenv(name, default)
+    return tuple(item.strip().upper() for item in raw.split(",") if item.strip())
+
+
+def _parse_json_object(name: str) -> dict[str, float]:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return {}
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object")
+    parsed: dict[str, float] = {}
+    for key, rate in value.items():
+        parsed[str(key).strip().upper()] = float(rate)
+    return parsed
 
 
 def _parse_browser_user_data_dir() -> str:
@@ -69,6 +95,9 @@ class MarketEngineConfig:
     ebay_browser_user_data_dir: str | None
     provider_max_requests_per_minute: int
     provider_max_requests_per_day: int
+    ebay_fallback_marketplaces: tuple[str, ...]
+    currency_rates: dict[str, float]
+    currency_rate_source: str
     enable_live_ebay_scheduler: bool
     confirm_live_ebay_scheduler: bool
     live_ebay_scheduler_markets: str
@@ -86,12 +115,12 @@ class MarketEngineConfig:
     @classmethod
     def from_env(cls, *, require_supabase: bool = True) -> "MarketEngineConfig":
         supabase_url = os.getenv("SUPABASE_URL", "").strip()
-        supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        supabase_service_role_key = supabase_secret_key_from_env()
         if require_supabase:
             if not supabase_url:
                 raise ValueError("SUPABASE_URL is required")
             if not supabase_service_role_key:
-                raise ValueError("SUPABASE_SERVICE_ROLE_KEY is required")
+                raise ValueError("SUPABASE_SECRET_KEY is required")
         provider_name = os.getenv("MARKET_LOOKUP_PROVIDER", "mock").strip().lower() or "mock"
         worker_id = os.getenv("MARKET_WORKER_ID", "market-price-worker")
         reports_dir = REPORTS_DIR
@@ -126,6 +155,13 @@ class MarketEngineConfig:
             ebay_browser_user_data_dir=_parse_browser_user_data_dir(),
             provider_max_requests_per_minute=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE", 2),
             provider_max_requests_per_day=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_DAY", 200),
+            ebay_fallback_marketplaces=_parse_csv(
+                "MARKET_EBAY_FALLBACK_MARKETPLACES",
+                "EBAY_AU,EBAY_US,EBAY_GB,EBAY_CA",
+            ),
+            currency_rates=_parse_json_object("MARKET_CURRENCY_RATES_JSON"),
+            currency_rate_source=os.getenv("MARKET_CURRENCY_RATE_SOURCE", "configured_static_rates").strip()
+            or "configured_static_rates",
             enable_live_ebay_scheduler=_parse_bool("ENABLE_LIVE_EBAY_SCHEDULER", False),
             confirm_live_ebay_scheduler=_parse_bool("CONFIRM_LIVE_EBAY_SCHEDULER", False),
             live_ebay_scheduler_markets=os.getenv("LIVE_EBAY_SCHEDULER_MARKETS", "AU").strip() or "AU",

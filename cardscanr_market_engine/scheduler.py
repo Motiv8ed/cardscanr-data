@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from .config import REPORTS_DIR
+from .config import REPORTS_DIR, supabase_secret_key_from_env
 from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
 
@@ -95,12 +95,12 @@ class MarketSchedulerConfig:
     @classmethod
     def from_env(cls, *, require_supabase: bool = True) -> "MarketSchedulerConfig":
         supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
-        supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        supabase_service_role_key = supabase_secret_key_from_env()
         if require_supabase:
             if not supabase_url:
                 raise ValueError("SUPABASE_URL is required")
             if not supabase_service_role_key:
-                raise ValueError("SUPABASE_SERVICE_ROLE_KEY is required")
+                raise ValueError("SUPABASE_SECRET_KEY is required")
         return cls(
             supabase_url=supabase_url,
             supabase_service_role_key=supabase_service_role_key,

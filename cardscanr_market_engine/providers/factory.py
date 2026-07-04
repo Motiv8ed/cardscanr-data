@@ -18,9 +18,11 @@ def create_market_comps_provider(provider_name: str | None = None) -> MarketComp
     if selected == "mock":
         return MockMarketCompsProvider()
     if selected == "ebay_browser":
-        if not _env_bool("ENABLE_EBAY_REAL_LOOKUP", False):
+        if _env_bool("EBAY_BROWSER_KILL_SWITCH", False):
+            raise ProviderDisabledError("EBAY_BROWSER_KILL_SWITCH=true disables the eBay browser provider")
+        if not (_env_bool("EBAY_BROWSER_ENABLED", False) or _env_bool("ENABLE_EBAY_REAL_LOOKUP", False)):
             raise ProviderDisabledError(
-                "MARKET_LOOKUP_PROVIDER=ebay_browser requires ENABLE_EBAY_REAL_LOOKUP=true"
+                "MARKET_LOOKUP_PROVIDER=ebay_browser requires EBAY_BROWSER_ENABLED=true"
             )
         return EbayBrowserSoldCompsProvider()
     raise ProviderPermanentError(f"Unknown MARKET_LOOKUP_PROVIDER '{selected}'. Supported providers: mock, ebay_browser.")

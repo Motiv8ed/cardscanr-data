@@ -34,7 +34,7 @@ def _jwt_payload(token: str) -> dict[str, object] | None:
 
 def _check_supabase_env() -> None:
     supabase_url = _require_env("SUPABASE_URL").rstrip("/")
-    service_role_key = _require_env("SUPABASE_SERVICE_ROLE_KEY")
+    service_role_key = os.getenv("SUPABASE_SECRET_KEY", "").strip() or _require_env("SUPABASE_SERVICE_ROLE_KEY")
     parsed = urlparse(supabase_url)
     if parsed.scheme != "https" or not parsed.netloc:
         raise RuntimeError("SUPABASE_URL must be an https URL")
@@ -48,7 +48,7 @@ def _check_supabase_env() -> None:
     payload = _jwt_payload(service_role_key)
     if payload is not None and payload.get("role") not in {None, "service_role"}:
         raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY JWT role is not service_role")
-    print("[live-ebay-config] Supabase URL/service role env: ok")
+    print("[live-ebay-config] Supabase URL/secret env: ok")
 
 
 def _check_worker_env() -> None:

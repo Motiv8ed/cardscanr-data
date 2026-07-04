@@ -27,6 +27,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     EbayBrowserSoldCompsProvider,
     appears_to_be_personal_chrome_profile,
     build_quality_summary,
+    classify_browser_page_state,
     contains_block_marker,
     count_candidate_selectors,
     dedupe_sold_comps,
@@ -39,6 +40,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
 )
 from cardscanr_market_engine.providers.identity_guard import evaluate_english_market_identity  # noqa: E402
 from cardscanr_market_engine.providers.errors import (  # noqa: E402
+    ProviderBlockedError,
     ProviderDisabledError,
     ProviderIdentityUnavailableError,
     sanitize_provider_diagnostics,
@@ -254,7 +256,7 @@ class ProviderFactoryTests(unittest.TestCase):
             os.environ,
             {
                 "MARKET_LOOKUP_PROVIDER": "ebay_browser",
-                "ENABLE_EBAY_REAL_LOOKUP": "true",
+                "EBAY_BROWSER_ENABLED": "true",
                 "EBAY_BROWSER_COOLDOWN_SECONDS": "1",
                 "EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS": "1",
             },
@@ -264,6 +266,38 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertIsInstance(provider, EbayBrowserSoldCompsProvider)
         self.assertEqual(provider.config.engine, "chrome")
         self.assertEqual(provider.config.channel, "chrome")
+
+    def test_ebay_browser_legacy_enable_flag_still_supported(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "MARKET_LOOKUP_PROVIDER": "ebay_browser",
+                "ENABLE_EBAY_REAL_LOOKUP": "true",
+                "EBAY_BROWSER_COOLDOWN_SECONDS": "1",
+                "EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS": "1",
+            },
+            clear=True,
+        ):
+            provider = create_market_comps_provider()
+        self.assertIsInstance(provider, EbayBrowserSoldCompsProvider)
+
+    def test_ebay_browser_kill_switch_wins_over_enable_flag(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "MARKET_LOOKUP_PROVIDER": "ebay_browser",
+                "EBAY_BROWSER_ENABLED": "true",
+                "EBAY_BROWSER_KILL_SWITCH": "true",
+            },
+            clear=True,
+        ):
+            with self.assertRaises(ProviderDisabledError):
+                create_market_comps_provider()
+
+    def test_ebay_browser_rejects_parallel_concurrency_config(self) -> None:
+        with patch.dict(os.environ, {"EBAY_BROWSER_MAX_CONCURRENCY": "2"}, clear=True):
+            with self.assertRaises(ProviderDisabledError):
+                EbayBrowserProviderConfig.from_env()
 
     def test_default_profile_name_is_cardscanr(self) -> None:
         with patch.dict(os.environ, {"LIVE_EBAY_SCHEDULER_MAX_KEYS_SCANNED_PER_RUN": "25"}, clear=True):
@@ -422,24 +456,57 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertEqual(
             [query.query_source for query in queries],
             [
-                "language_primary_unquoted",
-                "language_variant_unquoted",
-                "broad_number_unquoted",
-                "set_code_language_unquoted",
+                "japanese_canonical_set_number",
+                "japanese_canonical_set_code_number",
                 "quoted_precision_fallback",
             ],
         )
-        self.assertEqual(queries[0].query_text, "Pancham 050/100 Japanese Pokemon")
-        self.assertEqual(queries[1].query_text, "Pancham 050/100 Japanese non holo Pokemon")
-        self.assertEqual(queries[2].query_text, "Pancham 050/100 Pokemon")
-        self.assertEqual(queries[3].query_text, "Pancham SV9 050 Japanese Pokemon")
-        self.assertEqual(queries[4].query_text, '"Pancham" "050/100" Japanese Pokemon')
+        self.assertEqual(
+            queries[0].query_text,
+            "Pancham Japanese Battle Partners 050/100 non holo Pokemon card",
+        )
+        self.assertEqual(
+            queries[1].query_text,
+            "Pancham JP SV9 050/100 non holo Pokemon card",
+        )
+        self.assertEqual(queries[2].query_text, '"Pancham" "050/100" Japanese Pokemon')
         self.assertEqual(queries[0].diagnostics["queryStyle"], "unquoted_discovery")
-        self.assertEqual(queries[4].diagnostics["queryStyle"], "quoted_precision")
+        self.assertEqual(queries[2].diagnostics["queryStyle"], "quoted_precision")
         self.assertEqual(queries[0].diagnostics["queryPolicy"], "simple_discovery_filter_after")
         self.assertEqual(queries[0].diagnostics["appliedNegativeTerms"], [])
         self.assertEqual(queries[0].diagnostics["rejectionPolicy"], "post_parse_only")
         self.assertEqual(queries[0].diagnostics["primaryQueryReason"], "simple_human_search_terms")
+
+    def test_japanese_query_ladder_uses_original_name_only_as_bounded_fallback(self) -> None:
+        request = sample_request(
+            card_name="Umbreon ex",
+            normalized_card_name="umbreon_ex",
+            set_name="Terastal Festival ex",
+            set_code="SV8a",
+            collector_number="217/187",
+            language="jp",
+            raw={"original_card_name": "\u30d6\u30e9\u30c3\u30ad\u30fcex"},
+        )
+
+        queries = build_provider_search_queries(request)
+
+        self.assertEqual(
+            queries[0].query_text,
+            "Umbreon ex Japanese Terastal Festival ex 217/187 Pokemon card",
+        )
+        self.assertEqual(
+            queries[1].query_text,
+            "Umbreon ex JP SV8A 217/187 Pokemon card",
+        )
+        self.assertEqual(
+            queries[2].query_text,
+            "\u30d6\u30e9\u30c3\u30ad\u30fcex Terastal Festival ex 217/187 Pokemon card",
+        )
+        self.assertEqual(queries[2].query_source, "japanese_original_name_fallback")
+        self.assertEqual(
+            queries[0].diagnostics["originalSourceNames"],
+            ["\u30d6\u30e9\u30c3\u30ad\u30fcex"],
+        )
 
     def test_query_ladder_for_lombre_uses_english_alias(self) -> None:
         request = sample_request(
@@ -456,17 +523,21 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertEqual(
             [query.query_source for query in queries],
             [
-                "language_primary_unquoted",
-                "language_variant_unquoted",
-                "broad_number_unquoted",
-                "set_code_language_unquoted",
+                "japanese_canonical_set_number",
+                "japanese_canonical_set_code_number",
                 "quoted_precision_fallback",
             ],
         )
         self.assertTrue(all("Lombre" in query.query_text for query in queries))
         self.assertFalse(any("ハスブレロ" in query.query_text for query in queries))
-        self.assertEqual(queries[0].query_text, "Lombre 022/100 Japanese Pokemon")
-        self.assertEqual(queries[1].query_text, "Lombre 022/100 Japanese non holo Pokemon")
+        self.assertEqual(
+            queries[0].query_text,
+            "Lombre Japanese Battle Partners 022/100 non holo Pokemon card",
+        )
+        self.assertEqual(
+            queries[1].query_text,
+            "Lombre JP SV9 022/100 non holo Pokemon card",
+        )
 
     def test_multi_word_card_has_unquoted_and_quoted_fallback(self) -> None:
         request = sample_request(
@@ -573,15 +644,20 @@ class QueryBuilderTests(unittest.TestCase):
             variant="non_holo",
         )
         queries = build_provider_search_queries(request)
-        self.assertEqual(queries[0].query_text, "Pancham 050/100 Japanese Pokemon")
-        self.assertEqual(queries[1].query_text, "Pancham 050/100 Japanese non holo Pokemon")
-        self.assertEqual(queries[2].query_text, "Pancham 050/100 Pokemon")
+        self.assertEqual(
+            queries[0].query_text,
+            "Pancham Japanese Battle Partners 050/100 non holo Pokemon card",
+        )
+        self.assertEqual(
+            queries[1].query_text,
+            "Pancham JP SV9 050/100 non holo Pokemon card",
+        )
         self.assertNotIn("-holo", queries[0].query_text)
         self.assertNotIn("-reverse", queries[0].query_text)
         self.assertNotIn("-lot", queries[0].query_text)
         self.assertNotIn("-bundle", queries[0].query_text)
-        self.assertEqual(queries[0].query_source, "language_primary_unquoted")
-        self.assertEqual(queries[1].query_source, "language_variant_unquoted")
+        self.assertEqual(queries[0].query_source, "japanese_canonical_set_number")
+        self.assertEqual(queries[1].query_source, "japanese_canonical_set_code_number")
         self.assertEqual(queries[0].diagnostics["variantQueryMode"], "broad_non_holo_filter_later")
 
 
@@ -649,8 +725,8 @@ class EvidenceStrategyTests(unittest.TestCase):
             collector_number="050/100",
             language="jp",
         )
-        exact = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card", item_id="222")
-        fallback = self._sold_comp("Pancham 050 SV9 Pokemon Card", item_id="223", query_source="set_code_fallback")
+        exact = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="222")
+        fallback = self._sold_comp("Pancham 050 SV9 Japanese Pokemon Card", item_id="223", query_source="set_code_fallback")
         evaluated = filter_comps(request.price_key, [exact, fallback])
         scores = {item.comp.source_listing_id: item.match_score for item in evaluated}
         self.assertGreater(scores["ebay-222"], scores["ebay-223"])
@@ -702,9 +778,9 @@ class EvidenceStrategyTests(unittest.TestCase):
             language="jp",
             variant="non_holo",
         )
-        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="601")
-        holo = self._sold_comp("Pancham 050/100 Battle Partners Holo Pokemon Card", item_id="602")
-        regular = self._sold_comp("Pancham 050/100 Battle Partners Non Holo Pokemon Card", item_id="603")
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Japanese Reverse Holo Pokemon Card", item_id="601")
+        holo = self._sold_comp("Pancham 050/100 Battle Partners Japanese Holo Pokemon Card", item_id="602")
+        regular = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="603")
         evaluated = filter_comps(request.price_key, [reverse, holo, regular])
         reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
         self.assertEqual(reasons["ebay-601"], "wrong_variant_reverse_holo")
@@ -994,8 +1070,8 @@ class EvidenceStrategyTests(unittest.TestCase):
             language="jp",
             variant="reverse_holo",
         )
-        regular = self._sold_comp("Pancham 050/100 Battle Partners Non Holo Pokemon Card", item_id="604")
-        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="605")
+        regular = self._sold_comp("Pancham 050/100 Battle Partners Japanese Non Holo Pokemon Card", item_id="604")
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Japanese Reverse Holo Pokemon Card", item_id="605")
         evaluated = filter_comps(request.price_key, [regular, reverse])
         reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
         self.assertEqual(reasons["ebay-604"], "weak_variant_match")
@@ -1013,8 +1089,8 @@ class EvidenceStrategyTests(unittest.TestCase):
             language="jp",
             variant="holo",
         )
-        reverse = self._sold_comp("Pancham 050/100 Battle Partners Reverse Holo Pokemon Card", item_id="606")
-        holo = self._sold_comp("Pancham 050/100 Battle Partners Holo Pokemon Card", item_id="607")
+        reverse = self._sold_comp("Pancham 050/100 Battle Partners Japanese Reverse Holo Pokemon Card", item_id="606")
+        holo = self._sold_comp("Pancham 050/100 Battle Partners Japanese Holo Pokemon Card", item_id="607")
         evaluated = filter_comps(request.price_key, [reverse, holo])
         reasons = {item.comp.source_listing_id: item.rejection_reason for item in evaluated}
         self.assertEqual(reasons["ebay-606"], "wrong_variant_reverse_holo")
@@ -1036,8 +1112,8 @@ class EvidenceStrategyTests(unittest.TestCase):
             language="jp",
             variant="non_holo",
         )
-        lot = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card lot", item_id="608")
-        bundle = self._sold_comp("Pancham 050/100 Battle Partners Pokemon Card bundle", item_id="609")
+        lot = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card lot", item_id="608")
+        bundle = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card bundle", item_id="609")
         evaluated = filter_comps(request.price_key, [lot, bundle])
         self.assertEqual([item.rejection_reason for item in evaluated], ["likely_bundle_lot", "likely_bundle_lot"])
 
@@ -1061,7 +1137,7 @@ class EvidenceStrategyTests(unittest.TestCase):
             config=MarketEngineConfig.from_env(require_supabase=False),
         )
         self.assertIsNone(stats.recommended_price)
-        self.assertEqual(stats.no_reliable_price_reason, "all_comps_rejected")
+        self.assertEqual(stats.no_reliable_price_reason, "no_clean_exact_comps")
 
     def test_early_stop_when_three_clean_comps_are_found(self) -> None:
         request = sample_request(
@@ -1166,8 +1242,8 @@ class EvidenceStrategyTests(unittest.TestCase):
                 result = provider.fetch_comps(request)
         self.assertEqual(fetch.call_count, 3)
         self.assertEqual([item["query_source"] for item in result.raw_metadata["queryAttempts"]], [
-            "language_primary_unquoted",
-            "set_code_language_unquoted",
+            "japanese_canonical_set_number",
+            "japanese_canonical_set_code_number",
             "quoted_precision_fallback",
         ])
         self.assertEqual(result.raw_metadata["queryStopReason"], "noisy_results_no_exact_comps")
@@ -1229,8 +1305,8 @@ class EvidenceStrategyTests(unittest.TestCase):
                 result = provider.fetch_comps(request)
         self.assertEqual(fetch.call_count, 3)
         self.assertEqual([item["query_source"] for item in result.raw_metadata["queryAttempts"]], [
-            "language_primary_unquoted",
-            "set_code_language_unquoted",
+            "japanese_canonical_set_number",
+            "japanese_canonical_set_code_number",
             "quoted_precision_fallback",
         ])
         self.assertEqual(result.raw_metadata["queryStopReason"], "stale_single_comp_only")
@@ -1276,7 +1352,7 @@ class EvidenceStrategyTests(unittest.TestCase):
         with patch.object(provider, "_wait_for_request_slot"):
             with patch.object(provider, "_fetch_with_playwright", side_effect=side_effect) as fetch:
                 result = provider.fetch_comps(request)
-        self.assertEqual(fetch.call_count, 4)
+        self.assertEqual(fetch.call_count, 2)
         self.assertEqual(result.raw_metadata["queryStopReason"], "only_selector_results")
         self.assertTrue(result.raw_metadata["earlyStopApplied"])
         evaluated = filter_comps(request.price_key, result.comps)
@@ -1729,6 +1805,28 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(contains_block_marker(title="Verify yourself", body_text="Are you a robot?"))
         self.assertTrue(contains_block_marker(title="", body_text="Access denied"))
         self.assertFalse(contains_block_marker(title="Charizard listings", body_text="Sold results"))
+
+    def test_browser_page_state_classification(self) -> None:
+        self.assertEqual(
+            classify_browser_page_state(title="Verify yourself", body_text="Are you a robot?")["outcome"],
+            "challenge_detected",
+        )
+        self.assertEqual(
+            classify_browser_page_state(title="", body_text="Access denied")["outcome"],
+            "access_blocked",
+        )
+        self.assertEqual(
+            classify_browser_page_state(title="", body_text="Sign in to continue")["outcome"],
+            "authentication_required",
+        )
+        self.assertEqual(
+            classify_browser_page_state(title="", body_text="No exact matches found")["outcome"],
+            "no_results",
+        )
+        self.assertEqual(
+            classify_browser_page_state(title="Charizard listings", body_text="Sold items", selector_counts={".s-item": 2})["outcome"],
+            "success",
+        )
 
     def test_provider_diagnostics_redacts_secrets(self) -> None:
         clean = sanitize_provider_diagnostics(

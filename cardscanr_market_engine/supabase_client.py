@@ -157,6 +157,9 @@ class SupabaseMarketEngineClient:
         market_country: str,
         currency: str,
         fingerprint: str,
+        canonical_name_en: str | None = None,
+        original_name_ja: str | None = None,
+        aliases: list[str] | None = None,
     ) -> str:
         key_id = self._rpc(
             "get_or_create_market_price_key",
@@ -173,6 +176,9 @@ class SupabaseMarketEngineClient:
                 "p_market_country": market_country,
                 "p_currency": currency,
                 "p_fingerprint": fingerprint,
+                "p_canonical_name_en": canonical_name_en,
+                "p_original_name_ja": original_name_ja,
+                "p_aliases": aliases or [],
             },
         )
         if not key_id:
@@ -224,6 +230,9 @@ class SupabaseMarketEngineClient:
         fingerprint: str,
         reason: str = "live_ebay_write_smoke",
         force_refresh: bool = False,
+        canonical_name_en: str | None = None,
+        original_name_ja: str | None = None,
+        aliases: list[str] | None = None,
     ) -> dict[str, Any]:
         result = self._rpc(
             "request_market_price_refresh",
@@ -242,6 +251,9 @@ class SupabaseMarketEngineClient:
                 "p_fingerprint": fingerprint,
                 "p_reason": reason,
                 "p_force_refresh": force_refresh,
+                "p_canonical_name_en": canonical_name_en,
+                "p_original_name_ja": original_name_ja,
+                "p_aliases": aliases or [],
             },
         )
         if not isinstance(result, dict):

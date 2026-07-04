@@ -64,6 +64,11 @@ class ProviderBlockedError(ProviderError):
     retryable = True
 
 
+class ProviderAuthenticationRequiredError(ProviderError):
+    error_code = "provider_authentication_required"
+    retryable = True
+
+
 class ProviderUnsupportedMarketError(ProviderError):
     error_code = "provider_unsupported_market"
 

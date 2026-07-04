@@ -16,6 +16,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 from ..config import DEFAULT_EBAY_BROWSER_PROFILE_NAME, DEFAULT_EBAY_BROWSER_USER_DATA_DIR, ROOT, MarketEngineConfig
 from ..models import ProviderRequest, ProviderResult, SoldComp
 from .errors import (
+    ProviderAuthenticationRequiredError,
     ProviderBlockedError,
     ProviderDisabledError,
     ProviderError,
@@ -29,7 +30,21 @@ from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_englis
 from .query_builder import ProviderSearchQuery, build_provider_search_queries
 
 
-BLOCK_TEXT_MARKERS = ("captcha", "verify", "robot", "unusual traffic", "access denied", "blocked")
+CHALLENGE_TEXT_MARKERS = (
+    "captcha",
+    "verify you are human",
+    "verify yourself",
+    "are you a robot",
+    "security challenge",
+    "robot check",
+)
+ACCESS_BLOCK_TEXT_MARKERS = ("access denied", "unusual traffic", "temporarily blocked", "blocked from using")
+AUTH_TEXT_MARKERS = ("sign in to continue", "please sign in", "session expired", "log in to continue")
+CONSENT_TEXT_MARKERS = ("accept all", "cookie consent", "privacy preferences")
+MAINTENANCE_TEXT_MARKERS = ("technical difficulties", "temporarily unavailable", "site maintenance")
+NO_RESULTS_TEXT_MARKERS = ("0 results", "no exact matches found", "no results for", "we looked everywhere")
+RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category")
+BLOCK_TEXT_MARKERS = CHALLENGE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
 DEFAULT_SOLD_DATE = datetime(1970, 1, 1, tzinfo=timezone.utc)
 SUPPORTED_MARKET_ROUTES = {("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")}
 DEBUG_REPORTS_DIR = ROOT / "reports" / "ebay_browser_debug"
@@ -81,6 +96,15 @@ SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer b
 SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
 DEFAULT_MAX_QUERY_ATTEMPTS = 5
 RESULT_CONTAINER_SELECTOR = 'li.s-item, .srp-results, a[href*="/itm/"]'
+DIAGNOSTIC_STAGES = (
+    "cache_check",
+    "browser_launch",
+    "marketplace_attempt",
+    "results_loaded",
+    "comparables_filtered",
+    "estimate_normalized",
+    "complete",
+)
 MARKET_COUNTRY_NAMES = {
     "AU": ("australia", "australian"),
     "US": ("united states", "usa", "us "),
@@ -163,6 +187,33 @@ def normalize_ebay_listing_url(href: str, *, provider_domain: str) -> dict[str, 
 def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
     haystack = f"{title}\n{body_text}".lower()
     return any(marker in haystack for marker in BLOCK_TEXT_MARKERS)
+
+
+def classify_browser_page_state(
+    *,
+    title: str = "",
+    body_text: str = "",
+    selector_counts: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    haystack = f"{title}\n{body_text}".lower()
+    selectors = selector_counts or {}
+    result_count = sum(int(value or 0) for value in selectors.values())
+    matched = lambda markers: next((marker for marker in markers if marker in haystack), None)
+    if marker := matched(CHALLENGE_TEXT_MARKERS):
+        return {"outcome": "challenge_detected", "reason": marker, "retryable": True}
+    if marker := matched(ACCESS_BLOCK_TEXT_MARKERS):
+        return {"outcome": "access_blocked", "reason": marker, "retryable": True}
+    if marker := matched(AUTH_TEXT_MARKERS):
+        return {"outcome": "authentication_required", "reason": marker, "retryable": True}
+    if marker := matched(MAINTENANCE_TEXT_MARKERS):
+        return {"outcome": "provider_unavailable", "reason": marker, "retryable": True}
+    if result_count <= 0 and (marker := matched(CONSENT_TEXT_MARKERS)):
+        return {"outcome": "provider_unavailable", "reason": f"interstitial:{marker}", "retryable": True}
+    if marker := matched(NO_RESULTS_TEXT_MARKERS):
+        return {"outcome": "no_results", "reason": marker, "retryable": False}
+    if result_count > 0 or matched(RESULT_TEXT_MARKERS):
+        return {"outcome": "success", "reason": "results_page", "retryable": False}
+    return {"outcome": "parsing_failure", "reason": "unknown_page_state", "retryable": True}
 
 
 def _looks_like_non_price_number(text: str, *, start: int, end: int) -> bool:
@@ -535,6 +586,15 @@ class EbayBrowserProviderConfig:
     user_data_dir: Path
     debug_artifact_dir: Path | None
     market_scope: str
+    enabled: bool = False
+    kill_switch: bool = False
+    max_concurrency: int = 1
+    challenge_stop: bool = True
+    cache_first: bool = True
+    max_requests_per_hour: int = 20
+    max_requests_per_day: int = 100
+    provider_error_cache_hours: int = 1
+    challenge_cache_hours: int = 12
 
     @classmethod
     def from_env(cls) -> "EbayBrowserProviderConfig":
@@ -557,17 +617,33 @@ class EbayBrowserProviderConfig:
             timeout_seconds=_parse_positive_int("EBAY_BROWSER_TIMEOUT_SECONDS", 45),
             launch_timeout_seconds=_parse_positive_int("EBAY_BROWSER_LAUNCH_TIMEOUT_SECONDS", 45),
             cooldown_seconds=_parse_positive_int("EBAY_BROWSER_COOLDOWN_SECONDS", 20),
-            min_seconds_between_requests=_parse_positive_int("EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS", 20),
+            min_seconds_between_requests=_parse_positive_int(
+                "EBAY_BROWSER_MIN_DELAY_SECONDS",
+                _parse_positive_int("EBAY_BROWSER_MIN_SECONDS_BETWEEN_REQUESTS", 20),
+            ),
             user_data_dir=user_data_dir,
             debug_artifact_dir=Path(os.getenv("EBAY_BROWSER_DEBUG_ARTIFACT_DIR", "").strip())
             if os.getenv("EBAY_BROWSER_DEBUG_ARTIFACT_DIR", "").strip()
             else None,
             market_scope=os.getenv("EBAY_MARKET_SCOPE", "marketplace").strip().lower() or "marketplace",
+            enabled=_parse_bool("EBAY_BROWSER_ENABLED", _parse_bool("ENABLE_EBAY_REAL_LOOKUP", False)),
+            kill_switch=_parse_bool("EBAY_BROWSER_KILL_SWITCH", False),
+            max_concurrency=_parse_positive_int("EBAY_BROWSER_MAX_CONCURRENCY", 1),
+            challenge_stop=_parse_bool("EBAY_BROWSER_CHALLENGE_STOP", True),
+            cache_first=_parse_bool("EBAY_BROWSER_CACHE_FIRST", True),
+            max_requests_per_hour=_parse_positive_int("EBAY_BROWSER_MAX_REQUESTS_PER_HOUR", 20),
+            max_requests_per_day=_parse_positive_int("EBAY_BROWSER_MAX_REQUESTS_PER_DAY", 100),
+            provider_error_cache_hours=_parse_positive_int("MARKET_CACHE_PROVIDER_ERROR_HOURS", 1),
+            challenge_cache_hours=_parse_positive_int("MARKET_CACHE_PROVIDER_CHALLENGE_HOURS", 12),
         )
         config.validate()
         return config
 
     def validate(self) -> None:
+        if self.kill_switch:
+            raise ProviderDisabledError("EBAY_BROWSER_KILL_SWITCH=true disables the eBay browser provider")
+        if self.max_concurrency != 1:
+            raise ProviderDisabledError("EBAY_BROWSER_MAX_CONCURRENCY must be 1 for the MVP browser provider.")
         if self.engine != "chrome":
             raise ProviderDisabledError(
                 "EBAY_BROWSER_ENGINE must be 'chrome'. Bundled Chromium fallback is intentionally disabled."
@@ -595,7 +671,7 @@ class EbayBrowserProviderConfig:
                 "engine": self.engine,
                 "channel": self.channel,
                 "profileName": self.profile_name,
-                "userDataDir": str(self.user_data_dir),
+                "userDataDir": "<dedicated-cardscanr-profile>",
                 "headless": self.headless,
                 "maxResults": self.max_results,
                 "timeoutSeconds": self.timeout_seconds,
@@ -604,6 +680,15 @@ class EbayBrowserProviderConfig:
                 "minSecondsBetweenRequests": self.min_seconds_between_requests,
                 "debugArtifactDir": str(self.debug_artifact_dir) if self.debug_artifact_dir else None,
                 "marketScope": self.market_scope,
+                "enabled": self.enabled,
+                "killSwitch": self.kill_switch,
+                "maxConcurrency": self.max_concurrency,
+                "challengeStop": self.challenge_stop,
+                "cacheFirst": self.cache_first,
+                "maxRequestsPerHour": self.max_requests_per_hour,
+                "maxRequestsPerDay": self.max_requests_per_day,
+                "providerErrorCacheHours": self.provider_error_cache_hours,
+                "challengeCacheHours": self.challenge_cache_hours,
             }
         )
 
@@ -1289,6 +1374,7 @@ class EbayBrowserSoldCompsProvider:
     marketplace_name = "ebay"
 
     _request_lock = threading.Lock()
+    _lookup_lock = threading.Lock()
     _last_request_monotonic = 0.0
 
     def __init__(self, *, config: EbayBrowserProviderConfig | None = None) -> None:
@@ -1304,6 +1390,10 @@ class EbayBrowserSoldCompsProvider:
             self.__class__._last_request_monotonic = time.monotonic()
 
     def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+        with self._lookup_lock:
+            return self._fetch_comps_serial(request)
+
+    def _fetch_comps_serial(self, request: ProviderRequest) -> ProviderResult:
         lookup_timings = StageTimings()
         route = (request.market_country.upper(), request.currency.upper())
         if route not in SUPPORTED_MARKET_ROUTES:
@@ -1479,6 +1569,8 @@ class EbayBrowserSoldCompsProvider:
                 "queryAttemptsUsed": len(attempts),
                 "queryAttemptLimit": query_attempt_limit,
                 "queryStopReason": stop_reason,
+                "providerOutcome": "success" if comps else "no_results",
+                "diagnosticStages": DIAGNOSTIC_STAGES if comps else (*DIAGNOSTIC_STAGES[:-2], "no_price", "complete"),
                 "earlyStopApplied": stop_reason != "all_query_attempts_exhausted",
                 "cumulativeIncludedAfterEachAttempt": [
                     item.get("cumulativeIncludedAfterAttempt") for item in progress_summaries
@@ -1597,22 +1689,94 @@ class EbayBrowserSoldCompsProvider:
                     title = _safe_page_title(page)
                     body_text = _safe_body_text(page)
                     selector_counts = count_candidate_selectors(page)
+                    page_state = classify_browser_page_state(
+                        title=title,
+                        body_text=body_text,
+                        selector_counts=selector_counts,
+                    )
                     self._write_debug_artifacts(
                         page=page,
                         request=request,
                         search_query=search_query,
                         title=title,
                         body_text=body_text,
-                        detected_block=contains_block_marker(title=title, body_text=body_text),
+                        detected_block=page_state["outcome"] in {"challenge_detected", "access_blocked"},
                         selector_counts=selector_counts,
                         comps=[],
-                        parser_errors=[{"errorType": "TimeoutError", "stage": "wait_for_result_container"}],
+                        parser_errors=[
+                            {
+                                "errorType": "TimeoutError",
+                                "stage": "wait_for_result_container",
+                                "browserOutcome": page_state["outcome"],
+                                "browserReason": page_state["reason"],
+                            }
+                        ],
                         stage_timings=stage_timings.snapshot(),
                     )
+                    if page_state["outcome"] == "no_results":
+                        return ProviderResult(
+                            provider_name=self.provider_name,
+                            marketplace=search_query.provider_marketplace_id,
+                            provider_fingerprint=self._provider_fingerprint(search_query),
+                            query_used=search_query.query_text,
+                            comps=[],
+                            raw_metadata=sanitize_provider_diagnostics(
+                                {
+                                    "providerDomain": search_query.provider_domain,
+                                    "providerMarketplaceId": search_query.provider_marketplace_id,
+                                    "marketCountry": search_query.market_country,
+                                    "currency": search_query.currency,
+                                    "searchUrl": search_query.search_url,
+                                    "queryIndex": search_query.query_index,
+                                    "querySource": search_query.query_source,
+                                    "resultCount": 0,
+                                    "providerOutcome": "no_results",
+                                    "browserPageState": page_state,
+                                    "diagnosticStages": ["browser_launch", "marketplace_attempt", "results_loaded", "no_price"],
+                                    "browserConfig": self.config.safe_diagnostics(),
+                                    "candidateSelectorCounts": selector_counts,
+                                    "stageTimings": stage_timings.snapshot(),
+                                }
+                            ),
+                        )
+                    if page_state["outcome"] == "challenge_detected":
+                        raise ProviderBlockedError(
+                            "eBay returned a verification challenge; captcha bypass is not attempted",
+                            diagnostics={
+                                "providerOutcome": "challenge_detected",
+                                "browserPageState": page_state,
+                                "providerDomain": search_query.provider_domain,
+                                "searchUrlHost": urlparse(search_query.search_url).netloc,
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        ) from exc
+                    if page_state["outcome"] == "access_blocked":
+                        raise ProviderBlockedError(
+                            "eBay returned an access-block page; retry loop stopped",
+                            diagnostics={
+                                "providerOutcome": "access_blocked",
+                                "browserPageState": page_state,
+                                "providerDomain": search_query.provider_domain,
+                                "searchUrlHost": urlparse(search_query.search_url).netloc,
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        ) from exc
+                    if page_state["outcome"] == "authentication_required":
+                        raise ProviderAuthenticationRequiredError(
+                            "eBay browser session requires sign-in before pricing can continue",
+                            diagnostics={
+                                "providerOutcome": "authentication_required",
+                                "browserPageState": page_state,
+                                "providerDomain": search_query.provider_domain,
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        ) from exc
                     raise ProviderTemporaryError(
                         "Timed out waiting for eBay result container",
                         diagnostics={
                             "errorType": type(exc).__name__,
+                            "providerOutcome": "timeout",
+                            "browserPageState": page_state,
                             "timedOutStage": "wait_for_result_container",
                             "stageTimings": stage_timings.snapshot(),
                             "candidateSelectorCounts": selector_counts,
@@ -1623,8 +1787,13 @@ class EbayBrowserSoldCompsProvider:
                 title = page.title()
                 body_text = page.locator("body").inner_text(timeout=5000)
                 selector_counts = count_candidate_selectors(page)
-                detected_block = contains_block_marker(title=title, body_text=body_text)
-                if detected_block:
+                page_state = classify_browser_page_state(
+                    title=title,
+                    body_text=body_text,
+                    selector_counts=selector_counts,
+                )
+                detected_block = page_state["outcome"] in {"challenge_detected", "access_blocked"}
+                if page_state["outcome"] in {"challenge_detected", "access_blocked", "authentication_required"}:
                     self._write_debug_artifacts(
                         page=page,
                         request=request,
@@ -1635,13 +1804,28 @@ class EbayBrowserSoldCompsProvider:
                         selector_counts=selector_counts,
                         comps=[],
                         parser_errors=[],
+                        stage_timings=stage_timings.snapshot(),
                     )
+                    if page_state["outcome"] == "authentication_required":
+                        raise ProviderAuthenticationRequiredError(
+                            "eBay browser session requires sign-in before pricing can continue",
+                            diagnostics={
+                                "providerOutcome": "authentication_required",
+                                "browserPageState": page_state,
+                                "providerDomain": search_query.provider_domain,
+                                "searchUrlHost": urlparse(search_query.search_url).netloc,
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        )
                     raise ProviderBlockedError(
                         "eBay returned a block or verification page; captcha bypass is not attempted",
                         diagnostics={
+                            "providerOutcome": page_state["outcome"],
+                            "browserPageState": page_state,
                             "pageTitle": title,
                             "providerDomain": search_query.provider_domain,
                             "searchUrlHost": urlparse(search_query.search_url).netloc,
+                            "stageTimings": stage_timings.snapshot(),
                         },
                     )
 
@@ -1688,6 +1872,9 @@ class EbayBrowserSoldCompsProvider:
                             "queryIndex": search_query.query_index,
                             "querySource": search_query.query_source,
                             "resultCount": len(comps),
+                            "providerOutcome": "success" if comps else "no_results",
+                            "browserPageState": page_state,
+                            "diagnosticStages": DIAGNOSTIC_STAGES,
                             "maxResults": self.config.max_results,
                             "browserConfig": self.config.safe_diagnostics(),
                             "queryDiagnostics": search_query.diagnostics,

@@ -214,6 +214,8 @@ def _language_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | 
     if requested == "jp":
         if korean or chinese or english:
             return "wrong_language"
+        if not japanese:
+            return "wrong_language"
     elif requested == "kr":
         if japanese or chinese or english:
             return "wrong_language"
@@ -519,7 +521,10 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "sealed_product_for_single_card_request"
     if not _collector_number_matches(price_key, normalized_identity):
         return "wrong_collector_number"
-    if _set_code_conflicts(price_key, normalized_identity):
+    set_info = _set_identity_match_info(price_key, normalized_identity)
+    if set_info["conflict"]:
+        return "wrong_set"
+    if _language_family(price_key.language) == "jp" and not set_info["matches"]:
         return "wrong_set"
     if not _card_name_matches(price_key, normalized_identity):
         return "wrong_card_name"

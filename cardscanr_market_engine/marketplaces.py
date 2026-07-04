@@ -97,6 +97,10 @@ _EBAY_MARKETS: dict[tuple[str, str], LocalMarketConfig] = {
     ),
 }
 
+_EBAY_MARKETS_BY_ID: dict[str, LocalMarketConfig] = {
+    config.provider_marketplace_id: config for config in _EBAY_MARKETS.values()
+}
+
 
 def normalize_market_country(value: object) -> str:
     country = str(value or "").strip().upper()
@@ -138,3 +142,38 @@ def resolve_marketplace_config(
             f"Supported routes: {supported}. No fallback is applied."
         )
     return config
+
+
+def resolve_ebay_marketplace_id(provider_marketplace_id: object) -> LocalMarketConfig:
+    normalized = str(provider_marketplace_id or "").strip().upper()
+    config = _EBAY_MARKETS_BY_ID.get(normalized)
+    if config is None:
+        supported = ", ".join(sorted(_EBAY_MARKETS_BY_ID))
+        raise UnsupportedMarketError(
+            f"Unsupported eBay marketplace '{normalized or provider_marketplace_id}'. "
+            f"Supported marketplaces: {supported}."
+        )
+    return config
+
+
+def ebay_marketplace_fallback_order(
+    *,
+    requested_market_country: object,
+    requested_currency: object,
+    marketplace: object,
+    configured_order: tuple[str, ...],
+) -> tuple[LocalMarketConfig, ...]:
+    home = resolve_marketplace_config(
+        market_country=requested_market_country,
+        currency=requested_currency,
+        marketplace=marketplace,
+    )
+    ordered: list[LocalMarketConfig] = [home]
+    seen = {home.provider_marketplace_id}
+    for marketplace_id in configured_order:
+        config = resolve_ebay_marketplace_id(marketplace_id)
+        if config.provider_marketplace_id in seen:
+            continue
+        ordered.append(config)
+        seen.add(config.provider_marketplace_id)
+    return tuple(ordered)

@@ -7,7 +7,7 @@ from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.filters import filter_comps
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob, ProviderRequest, ProviderResult, SoldComp
-from cardscanr_market_engine.providers.errors import ProviderTemporaryError, ProviderUnsupportedMarketError
+from cardscanr_market_engine.providers.errors import ProviderBlockedError, ProviderTemporaryError, ProviderUnsupportedMarketError
 
 
 def _config() -> MarketEngineConfig:
@@ -132,6 +132,18 @@ class _FailingProvider:
         raise self.exc
 
 
+class _CountingFailingProvider(_FailingProvider):
+    marketplace_name = "ebay"
+
+    def __init__(self, exc: Exception) -> None:
+        super().__init__(exc)
+        self.calls: list[str] = []
+
+    def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
+        self.calls.append(request.provider_marketplace_id)
+        raise self.exc
+
+
 class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
     def test_supported_au_aud_job_creates_cache_snapshot_and_evidence(self) -> None:
         client = _FakeClient(_riolu_key())
@@ -201,6 +213,29 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
         self.assertIn("provider timeout", client.failed_jobs[0]["error_message"])
         self.assertEqual(client.cache_payloads, [])
 
+    def test_provider_block_stops_marketplace_fallback(self) -> None:
+        client = _FakeClient(_riolu_key())
+        provider = _CountingFailingProvider(
+            ProviderBlockedError(
+                "challenge detected",
+                diagnostics={"providerOutcome": "challenge_detected"},
+            )
+        )
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=provider,
+            config=_config(),
+            now_func=lambda: datetime(2026, 6, 1, tzinfo=timezone.utc),
+            logger=lambda _message: None,
+        )
+
+        result = runner.run_job(_job())
+
+        self.assertEqual(provider.calls, ["EBAY_AU"])
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["providerDiagnostics"]["providerErrorCode"], "provider_blocked")
+        self.assertEqual(result["providerDiagnostics"]["diagnostics"]["providerOutcome"], "challenge_detected")
+
     def test_unsupported_market_provider_failure_is_reported(self) -> None:
         client = _FakeClient(_riolu_key(market_country="de", currency="eur"))
         runner = MarketPriceJobRunner(
@@ -220,13 +255,13 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
     def test_evidence_normalization_rejects_bad_listings(self) -> None:
         key = _riolu_key()
         comps = [
-            _sold_comp(title="Pikachu 050/131 Prismatic Evolutions Reverse Holo Pokemon", listing_id="wrong-card"),
-            _sold_comp(title="Riolu 051/131 Prismatic Evolutions Reverse Holo Pokemon", listing_id="wrong-number"),
-            _sold_comp(title="Riolu 050/131 SV9 Reverse Holo Pokemon", listing_id="wrong-set"),
+            _sold_comp(title="Pikachu 050/131 Prismatic Evolutions Japanese Reverse Holo Pokemon", listing_id="wrong-card"),
+            _sold_comp(title="Riolu 051/131 Prismatic Evolutions Japanese Reverse Holo Pokemon", listing_id="wrong-number"),
+            _sold_comp(title="Riolu 050/131 SV9 Japanese Reverse Holo Pokemon", listing_id="wrong-set"),
             _sold_comp(title="Riolu 050/131 English Prismatic Evolutions Reverse Holo Pokemon", listing_id="wrong-language"),
-            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Reverse Holo booster pack sealed", listing_id="sealed"),
-            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Reverse Holo lot of 10 cards", listing_id="lot"),
-            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Reverse Holo PSA 10 graded", listing_id="graded"),
+            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Japanese Reverse Holo booster pack sealed", listing_id="sealed"),
+            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Japanese Reverse Holo lot of 10 cards", listing_id="lot"),
+            _sold_comp(title="Riolu 050/131 Prismatic Evolutions Japanese Reverse Holo PSA 10 graded", listing_id="graded"),
         ]
         jp_key = MarketPriceKey(**{**key.__dict__, "language": "jp"})
 

@@ -7,7 +7,11 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cardscanr_market_engine.marketplaces import UnsupportedMarketError, resolve_marketplace_config
+from cardscanr_market_engine.marketplaces import (
+    UnsupportedMarketError,
+    ebay_marketplace_fallback_order,
+    resolve_marketplace_config,
+)
 from cardscanr_market_engine.fingerprints import build_market_price_fingerprint
 
 
@@ -64,6 +68,32 @@ class MarketplacesTests(unittest.TestCase):
         self.assertEqual(
             {config.provider_marketplace_id for config in configs},
             {"EBAY_AU", "EBAY_US", "EBAY_GB"},
+        )
+
+    def test_home_market_is_attempted_before_configured_fallbacks(self) -> None:
+        order = ebay_marketplace_fallback_order(
+            requested_market_country="AU",
+            requested_currency="AUD",
+            marketplace="ebay",
+            configured_order=("EBAY_US", "EBAY_GB", "EBAY_CA"),
+        )
+
+        self.assertEqual(
+            [config.provider_marketplace_id for config in order],
+            ["EBAY_AU", "EBAY_US", "EBAY_GB", "EBAY_CA"],
+        )
+
+    def test_configurable_fallback_order_is_preserved_after_home(self) -> None:
+        order = ebay_marketplace_fallback_order(
+            requested_market_country="AU",
+            requested_currency="AUD",
+            marketplace="ebay",
+            configured_order=("EBAY_GB", "EBAY_CA", "EBAY_US"),
+        )
+
+        self.assertEqual(
+            [config.provider_marketplace_id for config in order],
+            ["EBAY_AU", "EBAY_GB", "EBAY_CA", "EBAY_US"],
         )
 
 

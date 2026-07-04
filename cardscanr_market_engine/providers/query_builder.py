@@ -73,6 +73,35 @@ def _language_is_japanese(value: object) -> bool:
     return str(value or "").strip().lower() in {"jp", "ja", "japanese"}
 
 
+def _original_name_candidates(raw: dict[str, object]) -> tuple[str, ...]:
+    candidates: list[object] = []
+    for field in (
+        "original_card_name",
+        "originalCardName",
+        "source_name",
+        "sourceName",
+        "original_name",
+        "originalName",
+        "name_ja",
+        "nameJa",
+        "ja_name",
+        "jaName",
+    ):
+        if field in raw:
+            candidates.append(raw.get(field))
+    aliases = raw.get("aliases")
+    if isinstance(aliases, dict):
+        for field in ("ja", "jp", "JA", "JP", "original", "source"):
+            if aliases.get(field):
+                candidates.append(aliases.get(field))
+    names: list[str] = []
+    for candidate in candidates:
+        name = _clean(candidate)
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)
+
+
 def _variant_phrase(variant: str) -> str:
     return {
         "non_holo": "non holo",
@@ -152,61 +181,56 @@ def build_provider_search_queries(
     quoted_base_name = _quote_query_term(search_card_name)
     quoted_full_number = _quote_query_term(collector_full)
     pokemon = "Pokemon"
+    pokemon_card = "Pokemon card"
     language_is_jp = _language_is_japanese(key.language)
+    jp_set_identity = readable_set or set_code_text
+    jp_original_names = _original_name_candidates(key.raw)
+    common_diagnostics["canonicalEnglishName"] = search_card_name
+    common_diagnostics["originalSourceNames"] = list(jp_original_names)
 
     if language_is_jp:
         attempts.append(
             (
-                "language_primary_unquoted",
-                [base_name, full_number, "Japanese Pokemon"],
+                "japanese_canonical_set_number",
+                [base_name, "Japanese", jp_set_identity, full_number, *variant_terms, pokemon_card],
                 {
                     "queryStyle": "unquoted_discovery",
-                    "usesSetName": False,
-                    "usesSetCode": False,
+                    "usesSetName": bool(readable_set),
+                    "usesSetCode": bool(set_code_text and not readable_set),
                     "usesFullCollectorNumber": bool(collector_full),
                     "usesLanguage": True,
+                    "usesVariantTerm": bool(variant_terms),
                     "primaryDiscoveryQuery": True,
                 },
             )
         )
-        if variant_terms:
+        if set_code_text:
             attempts.append(
                 (
-                    "language_variant_unquoted",
-                    [base_name, full_number, "Japanese", *variant_terms, pokemon],
-                    {
-                        "queryStyle": "unquoted_discovery",
-                        "usesSetName": False,
-                        "usesSetCode": False,
-                        "usesFullCollectorNumber": bool(collector_full),
-                        "usesLanguage": True,
-                        "usesVariantTerm": True,
-                    },
-                )
-            )
-        attempts.append(
-            (
-                "broad_number_unquoted",
-                [base_name, full_number, pokemon],
-                {
-                    "queryStyle": "unquoted_discovery",
-                    "usesSetName": False,
-                    "usesSetCode": False,
-                    "usesFullCollectorNumber": bool(collector_full),
-                },
-            )
-        )
-        if set_code_text and short_number:
-            attempts.append(
-                (
-                    "set_code_language_unquoted",
-                    [base_name, set_code_text, short_number, "Japanese Pokemon"],
+                    "japanese_canonical_set_code_number",
+                    [base_name, "JP", set_code_text, full_number, *variant_terms, pokemon_card],
                     {
                         "queryStyle": "unquoted_discovery",
                         "usesSetName": False,
                         "usesSetCode": True,
-                        "usesFullCollectorNumber": False,
+                        "usesFullCollectorNumber": bool(collector_full),
                         "usesLanguage": True,
+                        "usesVariantTerm": bool(variant_terms),
+                    },
+                )
+            )
+        for original_name in jp_original_names[:1]:
+            attempts.append(
+                (
+                    "japanese_original_name_fallback",
+                    [_unquoted_query_term(original_name), jp_set_identity, full_number, pokemon_card],
+                    {
+                        "queryStyle": "unquoted_discovery",
+                        "usesSetName": bool(readable_set),
+                        "usesSetCode": bool(set_code_text and not readable_set),
+                        "usesFullCollectorNumber": bool(collector_full),
+                        "usesOriginalSourceName": True,
+                        "fallbackQuery": True,
                     },
                 )
             )
@@ -214,7 +238,7 @@ def build_provider_search_queries(
             attempts.append(
                 (
                     "quoted_precision_fallback",
-                    [quoted_base_name, quoted_full_number, "Japanese Pokemon"],
+                    [quoted_base_name, quoted_full_number, "Japanese", pokemon],
                     {
                         "queryStyle": "quoted_precision",
                         "usesSetName": False,

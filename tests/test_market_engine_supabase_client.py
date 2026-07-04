@@ -50,6 +50,9 @@ class SupabaseClientRpcTests(unittest.TestCase):
             fingerprint="fingerprint",
             reason="live_ebay_write_smoke",
             force_refresh=False,
+            canonical_name_en="Charizard ex",
+            original_name_ja=None,
+            aliases=["Charizard ex"],
         )
 
         self.assertEqual(result["action"], "cache_fresh")
@@ -58,6 +61,8 @@ class SupabaseClientRpcTests(unittest.TestCase):
         self.assertEqual(
             sorted(payload.keys()),
             [
+                "p_aliases",
+                "p_canonical_name_en",
                 "p_card_name",
                 "p_collector_number",
                 "p_condition",
@@ -68,12 +73,16 @@ class SupabaseClientRpcTests(unittest.TestCase):
                 "p_language",
                 "p_market_country",
                 "p_normalized_card_name",
+                "p_original_name_ja",
                 "p_reason",
                 "p_set_code",
                 "p_set_name",
                 "p_variant",
             ],
         )
+        self.assertEqual(payload["p_canonical_name_en"], "Charizard ex")
+        self.assertEqual(payload["p_original_name_ja"], None)
+        self.assertEqual(payload["p_aliases"], ["Charizard ex"])
         self.assertNotIn("card_name", payload)
         self.assertNotIn("market_country", payload)
         self.assertTrue(str(session.posts[0]["url"]).endswith("/rest/v1/rpc/request_market_price_refresh"))
