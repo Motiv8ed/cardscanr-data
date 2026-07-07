@@ -1,0 +1,86 @@
+{
+  "classification": "PASS",
+  "generatedAtUtc": "2026-07-07T22:35:40Z",
+  "migrationResult": "applied",
+  "migrationSha256": "45685b808201f6d0ca360f40ccaadcba96ef9a5081881704f7314b0abae3b513",
+  "combinedMigrationSha256": "da882c90b03228cb692a823c3b67db3dd2b9090fe652ad7d03d868d9079b0840",
+  "tableVerification": "passed",
+  "bucketVerification": "passed",
+  "sampleManifestPath": "reports\\runtime\\image_pipeline_stage2_sample_100.json",
+  "sampleManifestSha256": "768a0dae92e6f6480a1e2282037ed2b22a7d44fdb2bfe4cd32be17f840beb0bd",
+  "attemptedCount": 100,
+  "downloadedCount": 100,
+  "uploadedCount": 100,
+  "verifiedCount": 100,
+  "skippedCount": 0,
+  "failedCount": 0,
+  "ambiguousCount": 0,
+  "providerBreakdown": {
+    "tcgdex": 20,
+    "pokewallet": 38,
+    "pokemon_tcg_api": 42
+  },
+  "languageBreakdown": {
+    "jp": 46,
+    "en": 54
+  },
+  "totalSourceBytes": 34424693,
+  "totalThumbBytes": 1300890,
+  "totalDisplayBytes": 11771656,
+  "estimatedStorageAllCardsBytes": 9749209050,
+  "estimatedStorageMatchableCardsBytes": 4776952950,
+  "catalogueTotalCards": 74578,
+  "matchableCards": 36542,
+  "idempotentRerun": {
+    "passed": true,
+    "downloadedCount": 0,
+    "uploadedCount": 0,
+    "skippedCount": 100,
+    "attemptedCount": 100
+  },
+  "testResult": {
+    "passed": true,
+    "testsRun": 20,
+    "failures": 0,
+    "errors": 0
+  },
+  "contactSheetPath": "D:\\cardscanr-data\\reports\\runtime\\image_pipeline_stage2_contact_sheet.png",
+  "coverageReportPath": "D:\\cardscanr-data\\reports\\runtime\\image_pipeline_stage2_coverage.json",
+  "idempotentRerunPath": "D:\\cardscanr-data\\reports\\runtime\\image_pipeline_stage2_idempotent_rerun.json",
+  "fullImportRun": false,
+  "unresolvedDefects": [],
+  "migrationDetails": {
+    "primaryMigrationSha256": "45685b808201f6d0ca360f40ccaadcba96ef9a5081881704f7314b0abae3b513",
+    "migrationSha256": "da882c90b03228cb692a823c3b67db3dd2b9090fe652ad7d03d868d9079b0840",
+    "tableReadableByServiceRole": true,
+    "marketPricingIntact": true,
+    "bucketPublicReadWorks": true,
+    "anonymousUploadRejected": true,
+    "authenticatedUploadRejected": true,
+    "storagePolicyEvidence": {
+      "pokemonBucketPublicReadOnlyPolicy": true,
+      "policies": [
+        {
+          "policyname": "pokemon_card_images_public_read",
+          "cmd": "SELECT",
+          "roles": [
+            "public"
+          ]
+        }
+      ]
+    },
+    "serviceRoleUploadWorks": true,
+    "serviceRoleUploadStatus": 200,
+    "anonymousUploadStatus": 400,
+    "authenticatedUploadStatus": 400,
+    "sampleManifestPath": "reports\\runtime\\image_pipeline_stage2_sample_100.json",
+    "sampleManifestSha256": "768a0dae92e6f6480a1e2282037ed2b22a7d44fdb2bfe4cd32be17f840beb0bd"
+  },
+  "verificationSummary": {
+    "passed": true,
+    "verifiedCount": 100,
+    "issueCount": 0
+  },
+  "jsonReportPath": "D:\\cardscanr-data\\reports\\runtime\\image_pipeline_stage2_final_report.json",
+  "markdownReportPath": "D:\\cardscanr-data\\reports\\runtime\\image_pipeline_stage2_final_report.md"
+}

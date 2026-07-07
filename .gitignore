@@ -227,7 +227,10 @@ __marimo__/
 # CardScanR build staging
 .cache_build_tmp/
 .cache/cardscanr-images/
+.cache/pokemon-card-images/
 public/v1/images/cards/
+reports/image_pipeline_*_latest.json
+reports/image_pipeline_*_latest.md
 
 # Local updater runtime artifacts
 logs/
@@ -245,6 +248,7 @@ data/scheduled_price_refresh_state.json.tmp
 *.tmp
 
 # Local runtime worker reports
+reports/runtime/.stage2_anon_key
 reports/latest_pokewallet_worker_cycle.json
 reports/latest_pokewallet_worker_cycle.md
 reports/latest_full_data_pipeline.json

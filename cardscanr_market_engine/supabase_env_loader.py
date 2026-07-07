@@ -26,4 +26,6 @@ def load_supabase_env(local_path: str = "supabase_env.local.json") -> None:
             os.environ["SUPABASE_SECRET_KEY"] = configured_secret
         if not os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
             os.environ["SUPABASE_SERVICE_ROLE_KEY"] = configured_secret
+    if not os.getenv("SUPABASE_ANON_KEY") and config.get("SUPABASE_ANON_KEY"):
+        os.environ["SUPABASE_ANON_KEY"] = config["SUPABASE_ANON_KEY"]
     # Never print or log secrets

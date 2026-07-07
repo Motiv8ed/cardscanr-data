@@ -1,0 +1,27 @@
+{
+  "primaryMigrationSha256": "45685b808201f6d0ca360f40ccaadcba96ef9a5081881704f7314b0abae3b513",
+  "migrationSha256": "da882c90b03228cb692a823c3b67db3dd2b9090fe652ad7d03d868d9079b0840",
+  "tableReadableByServiceRole": true,
+  "marketPricingIntact": true,
+  "bucketPublicReadWorks": true,
+  "anonymousUploadRejected": true,
+  "authenticatedUploadRejected": true,
+  "storagePolicyEvidence": {
+    "pokemonBucketPublicReadOnlyPolicy": true,
+    "policies": [
+      {
+        "policyname": "pokemon_card_images_public_read",
+        "cmd": "SELECT",
+        "roles": [
+          "public"
+        ]
+      }
+    ]
+  },
+  "serviceRoleUploadWorks": true,
+  "serviceRoleUploadStatus": 200,
+  "anonymousUploadStatus": 400,
+  "authenticatedUploadStatus": 400,
+  "sampleManifestPath": "reports\\runtime\\image_pipeline_stage2_sample_100.json",
+  "sampleManifestSha256": "768a0dae92e6f6480a1e2282037ed2b22a7d44fdb2bfe4cd32be17f840beb0bd"
+}

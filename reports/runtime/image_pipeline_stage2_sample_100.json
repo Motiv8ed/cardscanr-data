@@ -1,0 +1,1017 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-07T20:55:16Z",
+  "seed": 20260708,
+  "cardCount": 100,
+  "buckets": {
+    "en_tcgdex": 25,
+    "en_pokemon_tcg_api": 15,
+    "en_pokewallet": 10,
+    "jp_tcgdex": 20,
+    "jp_pokewallet": 25
+  },
+  "edgeCaseCount": 5,
+  "entries": [
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": "leading_zero_collector",
+      "canonicalBaseId": "pokemon|jp|SV10|001|クヌギダマ",
+      "language": "jp",
+      "setId": "SV10",
+      "collectorNumber": "001",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": "fraction_collector_number",
+      "canonicalBaseId": "pokemon|jp|23598|001/073|tropius_001_073",
+      "language": "jp",
+      "setId": "23598",
+      "collectorNumber": "001/073",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": "promotion_provider_set_id",
+      "canonicalBaseId": "pokemon|en|1430|1/130|dialga",
+      "language": "en",
+      "setId": "1430",
+      "collectorNumber": "1/130",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": "duplicate_name_charizard",
+      "canonicalBaseId": "pokemon|en|base1|4|charizard",
+      "language": "en",
+      "setId": "base1",
+      "collectorNumber": "4",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": "jp_pokewallet_only",
+      "canonicalBaseId": "pokemon|jp|23598|002/073|foongus",
+      "language": "jp",
+      "setId": "23598",
+      "collectorNumber": "002/073",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|xyp|XY17|charizard_ex",
+      "language": "en",
+      "setId": "xyp",
+      "collectorNumber": "XY17",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|base5|28|dark_magneton",
+      "language": "en",
+      "setId": "base5",
+      "collectorNumber": "28",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm5|48|luxray",
+      "language": "en",
+      "setId": "sm5",
+      "collectorNumber": "48",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|gym1|33|rocket_s_snorlax",
+      "language": "en",
+      "setId": "gym1",
+      "collectorNumber": "33",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh2|57|electrode",
+      "language": "en",
+      "setId": "swsh2",
+      "collectorNumber": "57",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|dp2|48|gabite",
+      "language": "en",
+      "setId": "dp2",
+      "collectorNumber": "48",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|bw10|93|g_scope",
+      "language": "en",
+      "setId": "bw10",
+      "collectorNumber": "93",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm6|107|fossil_excavation_map",
+      "language": "en",
+      "setId": "sm6",
+      "collectorNumber": "107",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|ex11|32|swellow",
+      "language": "en",
+      "setId": "ex11",
+      "collectorNumber": "32",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm4|84a|regigigas",
+      "language": "en",
+      "setId": "sm4",
+      "collectorNumber": "84a",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|ecard2|H3|ariados",
+      "language": "en",
+      "setId": "ecard2",
+      "collectorNumber": "H3",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh7|221|aroma_lady",
+      "language": "en",
+      "setId": "swsh7",
+      "collectorNumber": "221",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh5|52|yamper",
+      "language": "en",
+      "setId": "swsh5",
+      "collectorNumber": "52",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm10|76|mew",
+      "language": "en",
+      "setId": "sm10",
+      "collectorNumber": "76",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh10|214|temple_of_sinnoh",
+      "language": "en",
+      "setId": "swsh10",
+      "collectorNumber": "214",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|xy1|78|yveltal",
+      "language": "en",
+      "setId": "xy1",
+      "collectorNumber": "78",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|col1|68|pineco",
+      "language": "en",
+      "setId": "col1",
+      "collectorNumber": "68",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm5|61|cosmoem",
+      "language": "en",
+      "setId": "sm5",
+      "collectorNumber": "61",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|ex10|58|gloom",
+      "language": "en",
+      "setId": "ex10",
+      "collectorNumber": "58",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|dp3|121|pluspower",
+      "language": "en",
+      "setId": "dp3",
+      "collectorNumber": "121",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|base4|114|pok_mon_center",
+      "language": "en",
+      "setId": "base4",
+      "collectorNumber": "114",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|bw4|21|reshiram",
+      "language": "en",
+      "setId": "bw4",
+      "collectorNumber": "21",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|bw4|17|darumaka",
+      "language": "en",
+      "setId": "bw4",
+      "collectorNumber": "17",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh9|8|torterra",
+      "language": "en",
+      "setId": "swsh9",
+      "collectorNumber": "8",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv3pt5|148|dragonair",
+      "language": "en",
+      "setId": "sv3pt5",
+      "collectorNumber": "148",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv3pt5|199|charizard_ex",
+      "language": "en",
+      "setId": "sv3pt5",
+      "collectorNumber": "199",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|swsh12pt5|48|eelektrik",
+      "language": "en",
+      "setId": "swsh12pt5",
+      "collectorNumber": "48",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv4pt5|69|noivern_ex",
+      "language": "en",
+      "setId": "sv4pt5",
+      "collectorNumber": "69",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|rsv10pt5|135|terrakion",
+      "language": "en",
+      "setId": "rsv10pt5",
+      "collectorNumber": "135",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv4pt5|14|charcadet",
+      "language": "en",
+      "setId": "sv4pt5",
+      "collectorNumber": "14",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv3pt5|121|starmie",
+      "language": "en",
+      "setId": "sv3pt5",
+      "collectorNumber": "121",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv6|73|tadbulb",
+      "language": "en",
+      "setId": "sv6",
+      "collectorNumber": "73",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sm75|39|flygon",
+      "language": "en",
+      "setId": "sm75",
+      "collectorNumber": "39",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv3|198|gloom",
+      "language": "en",
+      "setId": "sv3",
+      "collectorNumber": "198",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|me1|82|nacli",
+      "language": "en",
+      "setId": "me1",
+      "collectorNumber": "82",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|me3|46|hawlucha",
+      "language": "en",
+      "setId": "me3",
+      "collectorNumber": "46",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|sv2|224|orthworm",
+      "language": "en",
+      "setId": "sv2",
+      "collectorNumber": "224",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|base6|3|charizard",
+      "language": "en",
+      "setId": "base6",
+      "collectorNumber": "3",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|me2pt5|112|riolu",
+      "language": "en",
+      "setId": "me2pt5",
+      "collectorNumber": "112",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|23821|011/131|hydrapple_ex",
+      "language": "en",
+      "setId": "23821",
+      "collectorNumber": "011/131",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|2585|006/202|whimsicott",
+      "language": "en",
+      "setId": "2585",
+      "collectorNumber": "006/202",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|3118|080/196|mimikyu",
+      "language": "en",
+      "setId": "3118",
+      "collectorNumber": "080/196",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|1543|4/10|latias",
+      "language": "en",
+      "setId": "1543",
+      "collectorNumber": "4/10",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|23228|006/197|surskit",
+      "language": "en",
+      "setId": "23228",
+      "collectorNumber": "006/197",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|24325|149/086|tranquill_149_086",
+      "language": "en",
+      "setId": "24325",
+      "collectorNumber": "149/086",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|2948|024/172|chimchar",
+      "language": "en",
+      "setId": "2948",
+      "collectorNumber": "024/172",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|1576|73/98|faded_town",
+      "language": "en",
+      "setId": "1576",
+      "collectorNumber": "73/98",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|en|23529|068/064|duskull_068_064",
+      "language": "en",
+      "setId": "23529",
+      "collectorNumber": "068/064",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|S12a|094|コイル",
+      "language": "jp",
+      "setId": "S12a",
+      "collectorNumber": "094",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|S9a|093|コトブキムラ",
+      "language": "jp",
+      "setId": "S9a",
+      "collectorNumber": "093",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV7a|069|ハルクジラ",
+      "language": "jp",
+      "setId": "SV7a",
+      "collectorNumber": "069",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV2P|055|ミミズズ",
+      "language": "jp",
+      "setId": "SV2P",
+      "collectorNumber": "055",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV2a|097|スリーパー",
+      "language": "jp",
+      "setId": "SV2a",
+      "collectorNumber": "097",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV5a|031|ズピカ",
+      "language": "jp",
+      "setId": "SV5a",
+      "collectorNumber": "031",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV2a|185|リザードンex",
+      "language": "jp",
+      "setId": "SV2a",
+      "collectorNumber": "185",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV3|012|ヒトカゲ",
+      "language": "jp",
+      "setId": "SV3",
+      "collectorNumber": "012",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SVLN|012|テラスタルオーブ",
+      "language": "jp",
+      "setId": "SVLN",
+      "collectorNumber": "012",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV4a|118|ヤミカラス",
+      "language": "jp",
+      "setId": "SV4a",
+      "collectorNumber": "118",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV5a|005|アリアドス",
+      "language": "jp",
+      "setId": "SV5a",
+      "collectorNumber": "005",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV6|046|ピクシー",
+      "language": "jp",
+      "setId": "SV6",
+      "collectorNumber": "046",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV2D|060|リキキリン",
+      "language": "jp",
+      "setId": "SV2D",
+      "collectorNumber": "060",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV4a|123|キリキザン",
+      "language": "jp",
+      "setId": "SV4a",
+      "collectorNumber": "123",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV1S|057|キリキザン",
+      "language": "jp",
+      "setId": "SV1S",
+      "collectorNumber": "057",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV5a|086|ゴヨウ",
+      "language": "jp",
+      "setId": "SV5a",
+      "collectorNumber": "086",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|S9|073|フカマル",
+      "language": "jp",
+      "setId": "S9",
+      "collectorNumber": "073",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|SV2a|205|ミュウex",
+      "language": "jp",
+      "setId": "SV2a",
+      "collectorNumber": "205",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_tcgdex",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|S12|036|アンノーンvstar",
+      "language": "jp",
+      "setId": "S12",
+      "collectorNumber": "036",
+      "imageSource": "tcgdex",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24038|002/014|combee",
+      "language": "jp",
+      "setId": "24038",
+      "collectorNumber": "002/014",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23819|016/032|snorlax",
+      "language": "jp",
+      "setId": "23819",
+      "collectorNumber": "016/032",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23842|006/020|manaphy",
+      "language": "jp",
+      "setId": "23842",
+      "collectorNumber": "006/020",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24024|005/080|yanmega_005_080",
+      "language": "jp",
+      "setId": "24024",
+      "collectorNumber": "005/080",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23895|012/066|volcarona",
+      "language": "jp",
+      "setId": "23895",
+      "collectorNumber": "012/066",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23628|050/100|whimsicott_vstar_050_100",
+      "language": "jp",
+      "setId": "23628",
+      "collectorNumber": "050/100",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24090|029/068|vulpix_delta_species",
+      "language": "jp",
+      "setId": "24090",
+      "collectorNumber": "029/068",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24148|009/020|kidds_weavile_009_020",
+      "language": "jp",
+      "setId": "24148",
+      "collectorNumber": "009/020",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23636|082/070|klara_082_070",
+      "language": "jp",
+      "setId": "23636",
+      "collectorNumber": "082/070",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23641|058/071|ambipom",
+      "language": "jp",
+      "setId": "23641",
+      "collectorNumber": "058/071",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24099|012/075|charmeleon",
+      "language": "jp",
+      "setId": "24099",
+      "collectorNumber": "012/075",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24116|002/015|magcargo",
+      "language": "jp",
+      "setId": "24116",
+      "collectorNumber": "002/015",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23985|002/049|fennekin",
+      "language": "jp",
+      "setId": "23985",
+      "collectorNumber": "002/049",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|m4|005/083|chespin_005_083",
+      "language": "jp",
+      "setId": "m4",
+      "collectorNumber": "005/083",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24036|004/015|pikachu",
+      "language": "jp",
+      "setId": "24036",
+      "collectorNumber": "004/015",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23624|026/070|haunter",
+      "language": "jp",
+      "setId": "23624",
+      "collectorNumber": "026/070",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24128|001/054|grimer",
+      "language": "jp",
+      "setId": "24128",
+      "collectorNumber": "001/054",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23619|061/100|hoopa",
+      "language": "jp",
+      "setId": "23619",
+      "collectorNumber": "061/100",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24600|015/080|salandit",
+      "language": "jp",
+      "setId": "24600",
+      "collectorNumber": "015/080",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23681|030/050|buzzwole_gx_030_050",
+      "language": "jp",
+      "setId": "23681",
+      "collectorNumber": "030/050",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23604|007/064|pansear",
+      "language": "jp",
+      "setId": "23604",
+      "collectorNumber": "007/064",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|24125|009/019|vibrava_009_019",
+      "language": "jp",
+      "setId": "24125",
+      "collectorNumber": "009/019",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": null,
+      "canonicalBaseId": "pokemon|jp|23600|007/062|mantyke_007_062",
+      "language": "jp",
+      "setId": "23600",
+      "collectorNumber": "007/062",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_tcgdex",
+      "edgeCaseTag": "duplicate_name_charizard",
+      "canonicalBaseId": "pokemon|en|xy12|11|charizard",
+      "language": "en",
+      "setId": "xy12",
+      "collectorNumber": "11",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "tcgdex"
+    },
+    {
+      "bucket": "en_pokemon_tcg_api",
+      "edgeCaseTag": "alpha_collector_number",
+      "canonicalBaseId": "pokemon|en|swsh45sv|SV001|rowlet",
+      "language": "en",
+      "setId": "swsh45sv",
+      "collectorNumber": "SV001",
+      "imageSource": "pokemon_tcg_api",
+      "provider": "pokemon_tcg_api"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": "fraction_collector_number",
+      "canonicalBaseId": "pokemon|en|1430|3/130|electivire",
+      "language": "en",
+      "setId": "1430",
+      "collectorNumber": "3/130",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "en_pokewallet",
+      "edgeCaseTag": "promotion_provider_set_id",
+      "canonicalBaseId": "pokemon|en|1430|2/130|dusknoir",
+      "language": "en",
+      "setId": "1430",
+      "collectorNumber": "2/130",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    },
+    {
+      "bucket": "jp_pokewallet",
+      "edgeCaseTag": "jp_pokewallet_only",
+      "canonicalBaseId": "pokemon|jp|23598|003/073|amoonguss",
+      "language": "jp",
+      "setId": "23598",
+      "collectorNumber": "003/073",
+      "imageSource": "pokewallet",
+      "provider": "pokewallet"
+    }
+  ],
+  "sha256": "ca1312ec329eb9f4bf0b292cdff00e2d8101fe38e312e4ce8cda643d571091ed"
+}

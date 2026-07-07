@@ -1,0 +1,13 @@
+{
+  "generatedAtUtc": "2026-07-07T20:10:36Z",
+  "migrationFilename": "20260708000000_pokemon_card_image_pipeline.sql",
+  "migrationSha256": "45685b808201f6d0ca360f40ccaadcba96ef9a5081881704f7314b0abae3b513",
+  "gitCommit": "d351981978f46c378b438c59a8d3fe6ca95d0981",
+  "gitStatus": "M .gitignore\n M requirements.txt\n?? cardscanr_image_pipeline/\n?? scripts/run_image_pipeline_audit.ps1\n?? scripts/run_image_pipeline_import.ps1\n?? scripts/run_image_pipeline_report.ps1\n?? scripts/run_image_pipeline_sample.ps1\n?? scripts/run_image_pipeline_verify.ps1\n?? supabase/migrations/20260708000000_pokemon_card_image_pipeline.sql\n?? tests/test_image_pipeline.py\n?? tools/image_pipeline.py\n?? tools/image_pipeline_stage2.py",
+  "catalogueCounts": {
+    "en": 46417,
+    "jp": 28161,
+    "total": 74578
+  },
+  "note": "Remote migration/table/bucket state must be checked separately against Supabase."
+}
