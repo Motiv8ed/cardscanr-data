@@ -76,6 +76,18 @@ class PublicationHelpersTest(unittest.TestCase):
             issues = assert_pages_publish_safe(public_dir, root=root)
             self.assertTrue(any("oversized_tracked_search_index_asset" in issue for issue in issues))
 
+    def test_refuses_oversized_tracked_public_assets_outside_search(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            public_dir = root / "public"
+            blocked = public_dir / "v1" / "images" / "cards-manifest.json"
+            blocked.parent.mkdir(parents=True)
+            blocked.write_bytes(b"x" * (PAGES_MAX_ASSET_BYTES + 1))
+            subprocess.run(["git", "init"], cwd=root, capture_output=True, check=False)
+            subprocess.run(["git", "add", "public"], cwd=root, capture_output=True, check=False)
+            issues = assert_pages_publish_safe(public_dir, root=root)
+            self.assertTrue(any("oversized_tracked_pages_asset" in issue for issue in issues))
+
     def test_refuses_manifest_publication_before_r2_object_verification(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

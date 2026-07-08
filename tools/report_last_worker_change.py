@@ -10,10 +10,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
 ROOT = Path(__file__).resolve().parent.parent
 V1 = ROOT / "public" / "v1"
 PROVIDER_STATUS = V1 / "provider-catalog" / "pokewallet" / "status.json"
-IMAGE_MANIFEST = V1 / "images" / "cards-manifest.json"
+IMAGE_MANIFEST = IMAGE_CARDS_MANIFEST_PATH
 PRICES_CURRENT = V1 / "prices" / "current" / "pokemon"
 CYCLE_REPORT = ROOT / "reports" / "latest_pokewallet_worker_cycle.json"
 

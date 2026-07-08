@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH, IMAGE_CARDS_MANIFEST_PUBLIC_URL
 
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_DIR = ROOT / "public"
@@ -107,6 +108,7 @@ def dataset_entry(
     language: str | None = None,
     schema_version: str | None = SCHEMA_VERSION,
     extra: dict[str, Any] | None = None,
+    public_url: str | None = None,
 ) -> dict[str, Any]:
     previous = existing.get(dataset_id, {})
     digest = sha256_file(path)
@@ -116,7 +118,7 @@ def dataset_entry(
 
     entry: dict[str, Any] = {
         "id": dataset_id,
-        "url": file_url(path),
+        "url": public_url or file_url(path),
         "sha256": digest,
         "type": previous.get("type") or dataset_type,
         "description": previous.get("description") or description,
@@ -136,7 +138,10 @@ def dataset_entry(
 
 def maybe_add(entries: list[dict[str, Any]], **kwargs: Any) -> None:
     path = kwargs.get("path")
+    public_url = kwargs.get("public_url")
     if isinstance(path, Path) and path.exists():
+        if public_url is None and path == IMAGE_CARDS_MANIFEST_PATH:
+            kwargs = {**kwargs, "public_url": IMAGE_CARDS_MANIFEST_PUBLIC_URL}
         entries.append(dataset_entry(**kwargs))
 
 
@@ -215,7 +220,7 @@ def build_entries(ts: str, existing: dict[str, dict[str, Any]]) -> list[dict[str
         ),
         (
             "images_cards_manifest",
-            V1_DIR / "images" / "cards-manifest.json",
+            IMAGE_CARDS_MANIFEST_PATH,
             "image_manifest",
             "CardScanR card image URL/cache manifest",
             None,

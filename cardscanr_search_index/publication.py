@@ -425,12 +425,15 @@ def assert_pages_publish_safe(public_dir: Path, *, root: Path | None = None) -> 
             issues.append(f"blocked_pages_asset_tracked:{path.relative_to(public_dir).as_posix()}")
 
     for path in sorted(tracked_files):
-        if not path.is_file() or not path.is_relative_to(search_dir):
+        if not path.is_file():
             continue
         size = path.stat().st_size
         rel = path.relative_to(public_dir).as_posix()
         if size > PAGES_MAX_ASSET_BYTES:
-            issues.append(f"oversized_tracked_search_index_asset:{rel}:{size}")
+            if path.is_relative_to(search_dir):
+                issues.append(f"oversized_tracked_search_index_asset:{rel}:{size}")
+            else:
+                issues.append(f"oversized_tracked_pages_asset:{rel}:{size}")
     return issues
 
 

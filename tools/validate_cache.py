@@ -33,6 +33,11 @@ from pathlib import Path
 # Paths
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH, IMAGE_CARDS_MANIFEST_PUBLIC_URL
+
 PUBLIC_DIR = ROOT / "public"
 V1_DIR = PUBLIC_DIR / "v1"
 INDEX_PATH = V1_DIR / "index.json"
@@ -825,6 +830,27 @@ def check_all_json_syntax() -> None:
 # ---------------------------------------------------------------------------
 # Check 2 + 3 + 4: index.json integrity
 # ---------------------------------------------------------------------------
+def redirects_map() -> dict[str, str]:
+    path = PUBLIC_DIR / "_redirects"
+    if not path.exists():
+        return {}
+    mapping: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = stripped.split()
+        if len(parts) >= 2:
+            mapping[parts[0]] = parts[1]
+    return mapping
+
+
+def dataset_source_path(dataset_id: str, rel_url: str) -> Path:
+    if dataset_id == "images_cards_manifest":
+        return IMAGE_CARDS_MANIFEST_PATH
+    return PUBLIC_DIR / rel_url.lstrip("/")
+
+
 def check_index() -> list[dict]:
     """Returns the parsed list of dataset entries (may be empty on error)."""
     print("\n[2] index.json required fields")
@@ -885,17 +911,33 @@ def check_index() -> list[dict]:
     print("\n[3] Dataset URL existence check")
     print("\n[4] SHA-256 integrity check")
     valid_datasets = []
+    redirect_targets = redirects_map()
     for ds in datasets:
         rel_url: str = ds["url"]
-        # Convert URL path to local file path
-        local_path = PUBLIC_DIR / rel_url.lstrip("/")
+        ds_id = str(ds.get("id") or "")
+        source_path = dataset_source_path(ds_id, rel_url)
+        public_path = PUBLIC_DIR / rel_url.lstrip("/")
 
-        if not local_path.exists():
-            err(f"Dataset '{ds['id']}' URL {rel_url} does not exist on disk ({local_path.relative_to(ROOT)})")
+        if source_path.exists():
+            ok(f"Dataset '{ds_id}' source exists: {source_path.relative_to(ROOT)}")
+            if ds_id == "images_cards_manifest":
+                redirect_target = redirect_targets.get(IMAGE_CARDS_MANIFEST_PUBLIC_URL)
+                if not redirect_target:
+                    err(
+                        f"Dataset '{ds_id}' requires a Pages redirect at {IMAGE_CARDS_MANIFEST_PUBLIC_URL} in public/_redirects"
+                    )
+                else:
+                    ok(f"Dataset '{ds_id}' redirect configured in public/_redirects")
+        elif public_path.exists():
+            ok(f"Dataset '{ds_id}' file exists: {public_path.relative_to(ROOT)}")
+            source_path = public_path
+        else:
+            err(
+                f"Dataset '{ds_id}' URL {rel_url} does not exist on disk ({public_path.relative_to(ROOT)})"
+            )
             continue
-        ok(f"Dataset '{ds['id']}' file exists: {local_path.relative_to(ROOT)}")
 
-        actual_hash = sha256_file(local_path)
+        actual_hash = sha256_file(source_path)
         expected_hash = ds["sha256"]
         if actual_hash != expected_hash:
             err(
@@ -2197,9 +2239,9 @@ def validate_image_manifest_data(data: object, label: str = "images/cards-manife
 
 def check_image_manifest() -> None:
     print("\n[6k] Image manifest check")
-    path = V1_DIR / "images" / "cards-manifest.json"
+    path = IMAGE_CARDS_MANIFEST_PATH
     if not path.exists():
-        warn("No image manifest found at public/v1/images/cards-manifest.json")
+        warn(f"No image manifest found at {path.relative_to(ROOT)}")
         return
     data = load_json_file(path)
     validate_image_manifest_data(data, "images/cards-manifest.json", ROOT)
@@ -2898,6 +2940,18 @@ def check_history() -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+def check_pages_deploy_safety() -> None:
+    print("\n[6l] Pages deploy safety check")
+    from cardscanr_search_index.publication import assert_pages_publish_safe
+
+    issues = assert_pages_publish_safe(V1_DIR.parent, root=ROOT)
+    if issues:
+        for issue in issues:
+            err(issue)
+    else:
+        ok("No tracked public assets exceed Cloudflare Pages size limits")
+
+
 def main() -> None:
     global QUIET
     QUIET = "--quiet" in sys.argv[1:] or parse_bool_env("CARDSCANR_VALIDATE_QUIET")
@@ -2923,6 +2977,7 @@ def main() -> None:
     check_pokewallet_provider_catalog()
     check_image_cache_policy()
     check_image_manifest()
+    check_pages_deploy_safety()
     check_api_manifest()
     check_api_notes()
     check_schemas()

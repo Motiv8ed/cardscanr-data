@@ -9,6 +9,8 @@ from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build_image_cache as image_cache  # noqa: E402
@@ -201,8 +203,9 @@ def test_bad_manifest_fails_validation() -> None:
 
 def test_coverage_report_runs() -> None:
     with TemporaryDirectory() as tmp_dir:
-        v1_dir = Path(tmp_dir) / "public" / "v1"
-        manifest_path = v1_dir / "images" / "cards-manifest.json"
+        root = Path(tmp_dir)
+        v1_dir = root / "public" / "v1"
+        manifest_path = root / "data" / "images" / "cards-manifest.json"
         write_sample_catalog(v1_dir)
         write_sample_price(v1_dir)
         manifest = image_cache.build_manifest(v1_dir=v1_dir, game="pokemon", language="en")

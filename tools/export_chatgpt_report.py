@@ -28,7 +28,9 @@ ROOT = Path(__file__).resolve().parent.parent
 EXPORT_DIR = ROOT / "reports" / "chatgpt_exports"
 CURRENT_PRICE_ROOT = ROOT / "public" / "v1" / "prices" / "current" / "pokemon"
 APP_CATALOG_ROOT = ROOT / "public" / "v1" / "catalog" / "pokemon"
-IMAGE_MANIFEST_PATH = ROOT / "public" / "v1" / "images" / "cards-manifest.json"
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
+IMAGE_MANIFEST_PATH = IMAGE_CARDS_MANIFEST_PATH
 
 # Safe files to always include in zip (relative to ROOT)
 ZIP_FILES_DEFAULT: list[str] = [
@@ -995,7 +997,7 @@ def _collect_app_catalogue_counts() -> dict[str, int]:
 
 
 def _collect_image_manifest_counts() -> dict[str, int]:
-    manifest = _load_json("public/v1/images/cards-manifest.json")
+    manifest = _load_json(str(IMAGE_MANIFEST_PATH))
     if not isinstance(manifest, dict):
         return {}
 

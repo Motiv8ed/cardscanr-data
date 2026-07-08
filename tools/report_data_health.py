@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 from typing import Any
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -115,7 +116,7 @@ def app_catalogue_counts() -> dict[str, int]:
 
 
 def image_counts() -> tuple[dict[str, int], int]:
-    manifest = try_load_json(V1_DIR / "images" / "cards-manifest.json")
+    manifest = try_load_json(IMAGE_CARDS_MANIFEST_PATH)
     records = manifest.get("records") if isinstance(manifest, dict) else []
     counts: Counter[str] = Counter()
     cached_files = 0

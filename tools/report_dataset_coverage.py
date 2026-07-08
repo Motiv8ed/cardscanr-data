@@ -8,10 +8,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 V1_DIR = ROOT / "public" / "v1"
-MANIFEST_PATH = V1_DIR / "images" / "cards-manifest.json"
+MANIFEST_PATH = IMAGE_CARDS_MANIFEST_PATH
 
 
 def load_json(path: Path) -> Any:

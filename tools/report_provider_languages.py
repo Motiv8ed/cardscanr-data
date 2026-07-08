@@ -15,7 +15,9 @@ SUPPORTED_LANGUAGES_PATH = ROOT / "public" / "v1" / "supported-languages.json"
 APP_CATALOG_ROOT = ROOT / "public" / "v1" / "catalog" / "pokemon"
 PRICE_STATUS_ROOT = ROOT / "public" / "v1" / "prices" / "current" / "pokemon"
 PIPELINE_REPORT_PATH = ROOT / "reports" / "latest_full_data_pipeline.json"
-IMAGE_MANIFEST_PATH = ROOT / "public" / "v1" / "images" / "cards-manifest.json"
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
+IMAGE_MANIFEST_PATH = IMAGE_CARDS_MANIFEST_PATH
 REPORT_JSON_PATH = ROOT / "reports" / "provider_languages_latest.json"
 REPORT_MD_PATH = ROOT / "reports" / "provider_languages_latest.md"
 

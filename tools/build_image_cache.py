@@ -22,10 +22,11 @@ from typing import Any
 
 import requests
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
 
 ROOT = Path(__file__).resolve().parent.parent
 V1_DIR = ROOT / "public" / "v1"
-MANIFEST_PATH = V1_DIR / "images" / "cards-manifest.json"
+MANIFEST_PATH = IMAGE_CARDS_MANIFEST_PATH
 DEFAULT_OUTPUT_ROOT = ROOT / ".cache" / "cardscanr-images"
 POKEWALLET_PROVIDER_ROOT = V1_DIR / "provider-catalog" / "pokewallet" / "cards"
 POKEWALLET_API_BASE = "https://api.pokewallet.io"

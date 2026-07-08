@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_V1 = ROOT / "public" / "v1"
 
@@ -44,7 +46,7 @@ def app_catalogue_counts() -> dict[str, int]:
 
 
 def image_manifest_counts() -> tuple[dict[str, int], int]:
-    path = PUBLIC_V1 / "images" / "cards-manifest.json"
+    path = IMAGE_CARDS_MANIFEST_PATH
     payload = try_load_json(path)
     records = payload.get("records") if isinstance(payload, dict) else []
     if not isinstance(records, list):

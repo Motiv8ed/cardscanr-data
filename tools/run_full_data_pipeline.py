@@ -18,6 +18,8 @@ import time
 from typing import Any
 
 
+from cardscanr_data_paths import IMAGE_CARDS_MANIFEST_PATH
+
 ROOT = Path(__file__).resolve().parent.parent
 PUBLIC_DIR = ROOT / "public"
 V1_DIR = PUBLIC_DIR / "v1"
@@ -436,7 +438,7 @@ def build_counts() -> dict[str, Any]:
         if isinstance(payload, dict):
             app_counts[path.parent.name] = int(payload.get("cardCount") or 0)
 
-    image_manifest = try_load_json(V1_DIR / "images" / "cards-manifest.json")
+    image_manifest = try_load_json(IMAGE_CARDS_MANIFEST_PATH)
     image_records = image_manifest.get("records") if isinstance(image_manifest, dict) else []
     image_counts: Counter[str] = Counter()
     cached_image_files = 0
