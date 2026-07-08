@@ -249,6 +249,8 @@ data/scheduled_price_refresh_state.json.tmp
 
 # Local runtime worker reports
 reports/runtime/.stage2_anon_key
+public/v1/catalog/pokemon/search/*.tmp
+public/v1/catalog/pokemon/search/*.sqlite.tmp
 reports/latest_pokewallet_worker_cycle.json
 reports/latest_pokewallet_worker_cycle.md
 reports/latest_full_data_pipeline.json
@@ -285,3 +287,5 @@ reports/chatgpt_exports/
 *.secrets.json
 pokewallet_env.json
 pokewallet_env.local.json
+public/v1/catalog/pokemon/search/catalog_search_v1.sqlite
+public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite

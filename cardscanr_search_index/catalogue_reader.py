@@ -1,0 +1,251 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from collections.abc import Iterator
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from .constants import DEFAULT_CATALOGUE_ROOT, SUPPORTED_LANGUAGES
+from .normalization import (
+    build_search_aliases,
+    normalize_collector_number,
+    normalize_search_text,
+    normalize_set_name,
+)
+
+
+@dataclass(frozen=True)
+class SetRecord:
+    set_id: str
+    language: str
+    name: str
+    normalized_set_name: str
+    total: int | None
+    printed_total: int | None
+    release_date: str | None
+    ptcgo_code: str | None
+    series: str | None
+
+
+@dataclass(frozen=True)
+class CardRecord:
+    schema_version: str
+    generated_at: str
+    canonical_base_id: str
+    canonical_english_name: str | None
+    localized_name: str | None
+    normalized_canonical_name: str
+    normalized_localized_name: str
+    search_aliases: list[str]
+    language: str
+    set_id: str
+    set_name: str
+    normalized_set_name: str
+    provider_set_codes: list[str]
+    collector_number: str
+    normalized_collector_number: str
+    local_number: str | None
+    set_total: int | None
+    rarity: str | None
+    thumbnail_url: str | None
+    large_image_url: str | None
+    image_source: str | None
+    image_cached: bool
+    provider_ids_json: str
+    promotion_provider_set_id: str | None
+    release_date: str | None
+    set_release_date: str | None
+    set_ptcgo_code: str | None
+
+
+@dataclass
+class CatalogueSnapshot:
+    source_hashes: dict[str, str] = field(default_factory=dict)
+    per_language_counts: dict[str, int] = field(default_factory=dict)
+    total_cards: int = 0
+
+
+def load_json(path: Path) -> Any:
+    with open(path, encoding="utf-8-sig") as handle:
+        return json.load(handle)
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_local_number(collector_number: str) -> str | None:
+    normalized = normalize_collector_number(collector_number)
+    if "/" in normalized:
+        return normalized.split("/", 1)[0]
+    return normalized or None
+
+
+def _provider_set_codes(card: dict[str, Any], set_meta: SetRecord) -> list[str]:
+    codes: set[str] = set()
+    promo = card.get("promotionMetadata")
+    if isinstance(promo, dict):
+        for key in ("providerSetId", "providerSetCode"):
+            value = promo.get(key)
+            if value:
+                codes.add(str(value).strip())
+    if set_meta.ptcgo_code:
+        codes.add(set_meta.ptcgo_code.strip())
+    codes.add(set_meta.set_id)
+    return sorted(code for code in codes if code)
+
+
+def _card_to_record(
+    card: dict[str, Any],
+    *,
+    set_meta: SetRecord,
+    file_generated_at: str,
+    file_schema_version: str,
+) -> CardRecord | None:
+    canonical_base_id = str(card.get("canonicalBaseId") or "").strip()
+    if not canonical_base_id:
+        return None
+    language = str(card.get("language") or set_meta.language).strip().lower()
+    set_id = str(card.get("setId") or set_meta.set_id).strip()
+    collector_number = str(card.get("collectorNumber") or "").strip()
+    name = str(card.get("name") or "").strip()
+    normalized_name = str(card.get("normalizedName") or normalize_search_text(name)).strip()
+    display_name = str(card.get("displayName") or "").strip() or None
+    original_name = str(card.get("originalName") or "").strip() or None
+    localized_name = original_name or (display_name if language != "en" else None) or name
+    canonical_english_name = name if language == "en" else (display_name if display_name else None)
+    promo = card.get("promotionMetadata") if isinstance(card.get("promotionMetadata"), dict) else {}
+    provider_set_id = promo.get("providerSetId")
+    provider_set_id = str(provider_set_id).strip() if provider_set_id else None
+    provider_ids = card.get("providerIds") if isinstance(card.get("providerIds"), dict) else {}
+    aliases = build_search_aliases(
+        name=name,
+        normalized_name=normalized_name,
+        localized_name=localized_name,
+        display_name=display_name,
+        original_name=original_name,
+        set_name=set_meta.name,
+        set_code=set_meta.ptcgo_code,
+        provider_set_id=provider_set_id,
+        collector_number=collector_number,
+    )
+    return CardRecord(
+        schema_version=file_schema_version,
+        generated_at=file_generated_at,
+        canonical_base_id=canonical_base_id,
+        canonical_english_name=canonical_english_name,
+        localized_name=localized_name,
+        normalized_canonical_name=normalize_search_text(normalized_name or name),
+        normalized_localized_name=normalize_search_text(localized_name or name),
+        search_aliases=aliases,
+        language=language,
+        set_id=set_id,
+        set_name=set_meta.name,
+        normalized_set_name=set_meta.normalized_set_name,
+        provider_set_codes=_provider_set_codes(card, set_meta),
+        collector_number=collector_number,
+        normalized_collector_number=normalize_collector_number(collector_number),
+        local_number=_parse_local_number(collector_number),
+        set_total=_optional_int(card.get("setTotal")) or set_meta.total,
+        rarity=str(card.get("rarity") or "").strip() or None,
+        thumbnail_url=str(card.get("imageSmall") or card.get("imageUrlSmall") or "").strip() or None,
+        large_image_url=str(card.get("imageLarge") or card.get("imageUrlLarge") or "").strip() or None,
+        image_source=str(card.get("imageSource") or card.get("providerImageSource") or "").strip() or None,
+        image_cached=bool(card.get("imageCached")),
+        provider_ids_json=json.dumps(provider_ids, ensure_ascii=False, sort_keys=True),
+        promotion_provider_set_id=provider_set_id,
+        release_date=set_meta.release_date,
+        set_release_date=set_meta.release_date,
+        set_ptcgo_code=set_meta.ptcgo_code,
+    )
+
+
+def iter_set_records(catalogue_root: Path, *, language: str) -> list[SetRecord]:
+    sets_path = catalogue_root / "catalog" / "pokemon" / language / "sets.json"
+    payload = load_json(sets_path)
+    records: list[SetRecord] = []
+    for item in payload.get("sets") or []:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        name = str(item.get("name") or item.get("id")).strip()
+        records.append(
+            SetRecord(
+                set_id=str(item["id"]).strip(),
+                language=language,
+                name=name,
+                normalized_set_name=normalize_set_name(name),
+                total=_optional_int(item.get("total")),
+                printed_total=_optional_int(item.get("printedTotal")),
+                release_date=str(item.get("releaseDate") or "").strip() or None,
+                ptcgo_code=str(item.get("ptcgoCode") or "").strip() or None,
+                series=str(item.get("series") or "").strip() or None,
+            )
+        )
+    return records
+
+
+def iter_catalogue_cards(
+    catalogue_root: Path = DEFAULT_CATALOGUE_ROOT,
+    *,
+    languages: tuple[str, ...] = SUPPORTED_LANGUAGES,
+) -> Iterator[CardRecord]:
+    for language in languages:
+        set_index = {item.set_id: item for item in iter_set_records(catalogue_root, language=language)}
+        cards_dir = catalogue_root / "catalog" / "pokemon" / language / "cards"
+        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            payload = load_json(path)
+            if not isinstance(payload, dict):
+                continue
+            set_id = str(payload.get("setId") or path.stem)
+            set_meta = set_index.get(set_id) or SetRecord(
+                set_id=set_id,
+                language=language,
+                name=str(payload.get("setName") or set_id),
+                normalized_set_name=normalize_set_name(str(payload.get("setName") or set_id)),
+                total=None,
+                printed_total=None,
+                release_date=None,
+                ptcgo_code=None,
+                series=None,
+            )
+            file_generated_at = str(payload.get("generatedAtUtc") or "")
+            file_schema_version = str(payload.get("schemaVersion") or "1.0.0")
+            for card in payload.get("cards") or []:
+                if not isinstance(card, dict):
+                    continue
+                record = _card_to_record(
+                    card,
+                    set_meta=set_meta,
+                    file_generated_at=file_generated_at,
+                    file_schema_version=file_schema_version,
+                )
+                if record is not None:
+                    yield record
+
+
+def collect_catalogue_snapshot(catalogue_root: Path = DEFAULT_CATALOGUE_ROOT) -> CatalogueSnapshot:
+    snapshot = CatalogueSnapshot()
+    for language in SUPPORTED_LANGUAGES:
+        sets_path = catalogue_root / "catalog" / "pokemon" / language / "sets.json"
+        snapshot.source_hashes[f"catalog/pokemon/{language}/sets.json"] = sha256_file(sets_path)
+        cards_dir = catalogue_root / "catalog" / "pokemon" / language / "cards"
+        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+            rel = f"catalog/pokemon/{language}/cards/{path.name}"
+            snapshot.source_hashes[rel] = sha256_file(path)
+    counts = {language: 0 for language in SUPPORTED_LANGUAGES}
+    for record in iter_catalogue_cards(catalogue_root):
+        counts[record.language] = counts.get(record.language, 0) + 1
+        snapshot.total_cards += 1
+    snapshot.per_language_counts = counts
+    return snapshot

@@ -1,0 +1,121 @@
+{
+  "build_time_seconds": null,
+  "database_bytes": 180699136,
+  "manifest_bytes": 97344,
+  "queries": [
+    {
+      "label": "en_exact_name_charizard",
+      "query": "charizard",
+      "language": "en",
+      "setId": null,
+      "coldLatencyMs": 2.654,
+      "warmMedianLatencyMs": 0.445,
+      "resultCount": 25
+    },
+    {
+      "label": "en_partial_pika",
+      "query": "pika",
+      "language": "en",
+      "setId": null,
+      "coldLatencyMs": 67.296,
+      "warmMedianLatencyMs": 73.18,
+      "resultCount": 25
+    },
+    {
+      "label": "en_collector_base1_4",
+      "query": "4",
+      "language": "en",
+      "setId": "base1",
+      "coldLatencyMs": 0.682,
+      "warmMedianLatencyMs": 0.067,
+      "resultCount": 1
+    },
+    {
+      "label": "en_set_name_base",
+      "query": "base charizard",
+      "language": "en",
+      "setId": null,
+      "coldLatencyMs": 11.083,
+      "warmMedianLatencyMs": 6.983,
+      "resultCount": 5
+    },
+    {
+      "label": "jp_printed_kunugidama",
+      "query": "クヌギダマ",
+      "language": "jp",
+      "setId": null,
+      "coldLatencyMs": 1.057,
+      "warmMedianLatencyMs": 0.252,
+      "resultCount": 5
+    },
+    {
+      "label": "jp_partial_pika",
+      "query": "ピカ",
+      "language": "jp",
+      "setId": null,
+      "coldLatencyMs": 91.814,
+      "warmMedianLatencyMs": 75.6,
+      "resultCount": 16
+    },
+    {
+      "label": "duplicate_name_charizard",
+      "query": "charizard",
+      "language": "en",
+      "setId": "xy12",
+      "coldLatencyMs": 1.866,
+      "warmMedianLatencyMs": 0.181,
+      "resultCount": 1
+    },
+    {
+      "label": "alpha_collector",
+      "query": "H3",
+      "language": "en",
+      "setId": "ecard2",
+      "coldLatencyMs": 0.914,
+      "warmMedianLatencyMs": 0.322,
+      "resultCount": 1
+    },
+    {
+      "label": "slash_collector",
+      "query": "001/081",
+      "language": "jp",
+      "setId": null,
+      "coldLatencyMs": 42.968,
+      "warmMedianLatencyMs": 44.671,
+      "resultCount": 2
+    },
+    {
+      "label": "zero_results",
+      "query": "zzznomatch999",
+      "language": "en",
+      "setId": null,
+      "coldLatencyMs": 1.084,
+      "warmMedianLatencyMs": 0.126,
+      "resultCount": 0
+    },
+    {
+      "label": "broad_pokemon",
+      "query": "pokemon",
+      "language": "en",
+      "setId": null,
+      "coldLatencyMs": 15.564,
+      "warmMedianLatencyMs": 14.891,
+      "resultCount": 25
+    },
+    {
+      "label": "en_set_filter_sv10",
+      "query": "ethan",
+      "language": "en",
+      "setId": "sv10",
+      "coldLatencyMs": 1.386,
+      "warmMedianLatencyMs": 0.577,
+      "resultCount": 16
+    }
+  ],
+  "cold_median_ms": 2.260100001876708,
+  "cold_p95_ms": 67.29629999608733,
+  "cold_p99_ms": 91.81429999443935,
+  "warm_median_ms": 0.5603499994322192,
+  "warm_p95_ms": 81.78069999848958,
+  "warm_p99_ms": 92.8291000018362
+}
