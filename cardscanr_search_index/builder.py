@@ -321,27 +321,37 @@ def build_search_index(
 
     manifest_path = output_dir / MANIFEST_BASENAME
     previous_manifest = _load_previous_manifest(manifest_path)
+    integrity_report = {
+        "generatedAt": utc_now_iso(),
+        "contentFingerprint": content_fingerprint,
+        "generatorVersion": GENERATOR_VERSION,
+        "gitCommit": git_commit(root),
+        "sourceCatalogueHashes": snapshot.source_hashes,
+    }
+    integrity_path = output_dir / "catalog_search_v1.integrity.json"
+    integrity_tmp = integrity_path.with_suffix(".json.tmp")
+    integrity_tmp.write_text(json.dumps(integrity_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(integrity_tmp, integrity_path)
+
     manifest = {
         "catalogueSchemaVersion": CATALOGUE_SCHEMA_VERSION,
         "searchIndexSchemaVersion": SEARCH_INDEX_SCHEMA_VERSION,
         "generatedAt": utc_now_iso(),
-        "generatorVersion": GENERATOR_VERSION,
-        "gitCommit": git_commit(root),
         "databaseFilename": DATABASE_BASENAME,
         "databaseUrl": f"/v1/catalog/pokemon/search/{DATABASE_BASENAME}",
         "sha256": sha256,
         "byteSize": published_db.stat().st_size,
-        "contentFingerprint": content_fingerprint,
         "supportedLanguages": list(SUPPORTED_LANGUAGES),
         "totalCardCount": snapshot.total_cards,
         "perLanguageCounts": snapshot.per_language_counts,
         "minimumCompatibleAppVersion": MINIMUM_COMPATIBLE_APP_VERSION,
-        "minimumCompatibleAppVersionStatus": MINIMUM_COMPATIBLE_APP_VERSION_STATUS,
         "previousDatabaseUrl": previous_manifest.get("databaseUrl") if previous_manifest else None,
         "previousSha256": previous_manifest.get("sha256") if previous_manifest else previous_sha256,
-        "sourceCatalogueHashes": snapshot.source_hashes,
-        "updatePolicy": "atomic_replace_with_manifest_and_sha256_sidecar",
-        "rollbackPolicy": "restore catalog_search_v1.previous.sqlite and prior manifest metadata",
+        "updatePolicy": "download_verified_immutable_r2_object_then_atomic_activate",
+        "rollbackPolicy": (
+            "if current database activation fails checksum or schema validation, "
+            "download previousDatabaseUrl and activate that immutable object"
+        ),
     }
     manifest_tmp = manifest_path.with_suffix(".json.tmp")
     manifest_tmp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

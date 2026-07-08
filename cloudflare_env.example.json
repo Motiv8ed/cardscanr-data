@@ -1,0 +1,11 @@
+{
+  "accountId": "your-cloudflare-account-id",
+  "r2Bucket": "cardscanr-catalog",
+  "r2S3Endpoint": "https://your-cloudflare-account-id.r2.cloudflarestorage.com",
+  "r2PublicDevUrl": "https://pub-your-bucket-id.r2.dev",
+  "r2PublicBaseUrl": "https://pub-your-bucket-id.r2.dev",
+  "pagesBaseUrl": "https://cardscanr-cache.pages.dev",
+  "cloudflareApiToken": "optional-cloudflare-api-token-with-r2-read-if-available",
+  "r2AccessKeyId": "bucket-scoped-r2-access-key-id",
+  "r2SecretAccessKey": "bucket-scoped-r2-secret-access-key"
+}

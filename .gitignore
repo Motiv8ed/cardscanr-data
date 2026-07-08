@@ -60,7 +60,8 @@ cover/
 local_settings.py
 
 # Supabase/secret config (do not commit)
-supabase_env.local.json
+cloudflare_env.local.json
+cloudflare_env.json
 *.secrets.json
 .env
 .env.local
@@ -289,3 +290,7 @@ pokewallet_env.json
 pokewallet_env.local.json
 public/v1/catalog/pokemon/search/catalog_search_v1.sqlite
 public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite
+public/v1/catalog/pokemon/search/catalog_search_v1.sqlite-shm
+public/v1/catalog/pokemon/search/catalog_search_v1.sqlite-wal
+public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite-shm
+public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite-wal
