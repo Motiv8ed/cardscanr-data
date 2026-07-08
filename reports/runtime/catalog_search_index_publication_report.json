@@ -1,0 +1,28 @@
+{
+  "classification": "PASS",
+  "r2Bucket": "cardscanr-catalog",
+  "publicReadPolicyResult": "bucket_accessible:cardscanr-catalog",
+  "immutableCurrentObjectKey": "v1/catalog/pokemon/search/catalog_search_v1.31d57a2dd445157d3fcd675115d2e298598fdd6688adea336c7005fdf38214f9.sqlite",
+  "immutablePreviousObjectKey": "v1/catalog/pokemon/search/catalog_search_v1.d2f8e5b678cb649ef1a042d276e4d2328af9a5060cd465573bbead2d22aac833.sqlite",
+  "pagesManifestUrl": "https://cardscanr-cache.pages.dev/v1/catalog/pokemon/search/catalog_search_v1.manifest.json",
+  "r2DatabaseUrl": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v1/catalog/pokemon/search/catalog_search_v1.31d57a2dd445157d3fcd675115d2e298598fdd6688adea336c7005fdf38214f9.sqlite",
+  "sha256": "31d57a2dd445157d3fcd675115d2e298598fdd6688adea336c7005fdf38214f9",
+  "byteSize": 180699136,
+  "r2ContentType": "application/vnd.sqlite3",
+  "r2CacheControl": "public, max-age=31536000, immutable",
+  "rangeRequestResult": "supported",
+  "completeDownloadChecksumResult": "passed",
+  "sqliteHealthResult": "passed",
+  "pagesDeploymentResult": "pages_contract_files_written_locally_push_required_for_live_pages",
+  "testsResult": "passed",
+  "rollbackResult": "idempotent_existing_object:verified_existing_object",
+  "filesAddedOrChanged": [
+    "public\\v1\\catalog\\pokemon\\search\\catalog_search_v1.manifest.json",
+    "public\\v1\\catalog\\pokemon\\search\\catalog_search_v1.sha256",
+    "public\\v1\\catalog\\pokemon\\search\\catalog_search_v1.integrity.json"
+  ],
+  "unresolvedIssues": [],
+  "flutterModified": false,
+  "fullImageImportRun": false,
+  "dryRun": false
+}

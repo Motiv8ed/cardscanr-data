@@ -8,7 +8,12 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SECRET_KEYS = {"cloudflareApiToken", "r2AccessKeyId", "r2SecretAccessKey"}
+SECRET_KEYS = {
+    "cloudflareApiToken",
+    "cloudflarePagesApiToken",
+    "r2AccessKeyId",
+    "r2SecretAccessKey",
+}
 
 
 def is_s3_endpoint(value: str | None) -> bool:
