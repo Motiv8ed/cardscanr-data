@@ -687,6 +687,12 @@ def verify_remote_sqlite(
     )
 
 
+def _cors_allows_any_origin(value: str | None) -> bool:
+    if not value:
+        return False
+    return any(part.strip() == "*" for part in value.split(","))
+
+
 def verify_manifest_url(url: str, *, expected_manifest: Mapping[str, Any]) -> list[str]:
     issues: list[str] = []
     try:
@@ -701,7 +707,7 @@ def verify_manifest_url(url: str, *, expected_manifest: Mapping[str, Any]) -> li
     cache_control = headers.get("cache-control") or ""
     if "max-age=300" not in cache_control:
         issues.append(f"manifest_cache_control:{cache_control}")
-    if headers.get("access-control-allow-origin") != "*":
+    if not _cors_allows_any_origin(headers.get("access-control-allow-origin")):
         issues.append("manifest_cors_missing")
     if not headers.get("etag"):
         issues.append("manifest_etag_missing")
