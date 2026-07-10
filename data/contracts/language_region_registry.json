@@ -1,0 +1,492 @@
+{
+  "schemaVersion": "1.0.0",
+  "contract": "BCP-47-compatible language plus separate release region",
+  "languages": [
+    {
+      "language": "en",
+      "englishName": "English",
+      "nativeName": "English",
+      "defaultRegion": "GLOBAL",
+      "releaseTerritories": [],
+      "legacyAliases": [
+        "eng"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "en"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "ja",
+      "englishName": "Japanese",
+      "nativeName": "日本語",
+      "defaultRegion": "JP",
+      "releaseTerritories": [
+        "JP"
+      ],
+      "legacyAliases": [
+        "jp",
+        "jap"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "ja"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "zh-Hans",
+      "englishName": "Chinese (Simplified)",
+      "nativeName": "简体中文",
+      "defaultRegion": "CN",
+      "releaseTerritories": [
+        "CN"
+      ],
+      "legacyAliases": [
+        "zh-cn",
+        "chs"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "zh-cn"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "zh-Hant",
+      "englishName": "Chinese (Traditional)",
+      "nativeName": "繁體中文",
+      "defaultRegion": "MULTI",
+      "releaseTerritories": [
+        "TW",
+        "HK"
+      ],
+      "legacyAliases": [
+        "zh-tw",
+        "cht"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "zh-tw"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": [
+        "TCGdex does not distinguish Taiwan and Hong Kong release territories; region remains MULTI."
+      ]
+    },
+    {
+      "language": "ko",
+      "englishName": "Korean",
+      "nativeName": "한국어",
+      "defaultRegion": "KR",
+      "releaseTerritories": [
+        "KR"
+      ],
+      "legacyAliases": [
+        "kr",
+        "kor"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "ko"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "th",
+      "englishName": "Thai",
+      "nativeName": "ไทย",
+      "defaultRegion": "TH",
+      "releaseTerritories": [
+        "TH"
+      ],
+      "legacyAliases": [],
+      "providerCodes": {
+        "tcgdex": [
+          "th"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "id",
+      "englishName": "Indonesian",
+      "nativeName": "Bahasa Indonesia",
+      "defaultRegion": "ID",
+      "releaseTerritories": [
+        "ID"
+      ],
+      "legacyAliases": [],
+      "providerCodes": {
+        "tcgdex": [
+          "id"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "fr",
+      "englishName": "French",
+      "nativeName": "Français",
+      "defaultRegion": "FR",
+      "releaseTerritories": [
+        "FR"
+      ],
+      "legacyAliases": [
+        "fre",
+        "fra"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "fr"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "de",
+      "englishName": "German",
+      "nativeName": "Deutsch",
+      "defaultRegion": "DE",
+      "releaseTerritories": [
+        "DE"
+      ],
+      "legacyAliases": [
+        "ger",
+        "deu"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "de"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "it",
+      "englishName": "Italian",
+      "nativeName": "Italiano",
+      "defaultRegion": "IT",
+      "releaseTerritories": [
+        "IT"
+      ],
+      "legacyAliases": [
+        "ita"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "it"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "es",
+      "englishName": "Spanish (Spain)",
+      "nativeName": "Español",
+      "defaultRegion": "ES",
+      "releaseTerritories": [
+        "ES"
+      ],
+      "legacyAliases": [
+        "spa"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "es"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "es-419",
+      "englishName": "Spanish (Latin America)",
+      "nativeName": "Español (Latinoamérica)",
+      "defaultRegion": "LATAM",
+      "releaseTerritories": [],
+      "legacyAliases": [
+        "es-mx",
+        "es-latam"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "es-mx"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": [
+        "TCGdex labels this catalogue es-mx while its status page describes Latin America."
+      ]
+    },
+    {
+      "language": "pt-BR",
+      "englishName": "Portuguese (Brazil)",
+      "nativeName": "Português (Brasil)",
+      "defaultRegion": "BR",
+      "releaseTerritories": [
+        "BR"
+      ],
+      "legacyAliases": [
+        "pt-br",
+        "por-br"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "pt-br"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "pt-PT",
+      "englishName": "Portuguese (Portugal)",
+      "nativeName": "Português (Portugal)",
+      "defaultRegion": "PT",
+      "releaseTerritories": [
+        "PT"
+      ],
+      "legacyAliases": [
+        "pt-pt",
+        "por-pt"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "pt-pt"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": [
+        "Registered even when a provider currently exposes zero records."
+      ]
+    },
+    {
+      "language": "nl",
+      "englishName": "Dutch",
+      "nativeName": "Nederlands",
+      "defaultRegion": "NL",
+      "releaseTerritories": [
+        "NL"
+      ],
+      "legacyAliases": [
+        "dut",
+        "nld"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "nl"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "pl",
+      "englishName": "Polish",
+      "nativeName": "Polski",
+      "defaultRegion": "PL",
+      "releaseTerritories": [
+        "PL"
+      ],
+      "legacyAliases": [
+        "pol"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "pl"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    },
+    {
+      "language": "ru",
+      "englishName": "Russian",
+      "nativeName": "Русский",
+      "defaultRegion": "RU",
+      "releaseTerritories": [
+        "RU"
+      ],
+      "legacyAliases": [
+        "rus"
+      ],
+      "providerCodes": {
+        "tcgdex": [
+          "ru"
+        ]
+      },
+      "officiallyPrinted": true,
+      "notes": []
+    }
+  ],
+  "reversibleAliasMigration": [
+    {
+      "legacyValue": "chs",
+      "canonicalLanguage": "zh-Hans",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "cht",
+      "canonicalLanguage": "zh-Hant",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "deu",
+      "canonicalLanguage": "de",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "dut",
+      "canonicalLanguage": "nl",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "eng",
+      "canonicalLanguage": "en",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "es-latam",
+      "canonicalLanguage": "es-419",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "es-mx",
+      "canonicalLanguage": "es-419",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "fra",
+      "canonicalLanguage": "fr",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "fre",
+      "canonicalLanguage": "fr",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "ger",
+      "canonicalLanguage": "de",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "ita",
+      "canonicalLanguage": "it",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "jap",
+      "canonicalLanguage": "ja",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "jp",
+      "canonicalLanguage": "ja",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "kor",
+      "canonicalLanguage": "ko",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "kr",
+      "canonicalLanguage": "ko",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "nld",
+      "canonicalLanguage": "nl",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "pol",
+      "canonicalLanguage": "pl",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "por-br",
+      "canonicalLanguage": "pt-BR",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "por-pt",
+      "canonicalLanguage": "pt-PT",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "pt-br",
+      "canonicalLanguage": "pt-BR",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "pt-pt",
+      "canonicalLanguage": "pt-PT",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "rus",
+      "canonicalLanguage": "ru",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "spa",
+      "canonicalLanguage": "es",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "zh-cn",
+      "canonicalLanguage": "zh-Hans",
+      "migration": "alias_only_no_destructive_rewrite"
+    },
+    {
+      "legacyValue": "zh-tw",
+      "canonicalLanguage": "zh-Hant",
+      "migration": "alias_only_no_destructive_rewrite"
+    }
+  ],
+  "ambiguousLegacyValues": [
+    {
+      "value": "chi",
+      "reason": "Legacy bibliographic Chinese code does not identify script or release territory.",
+      "automaticMapping": null
+    },
+    {
+      "value": "chn",
+      "reason": "PokéWallet chn does not prove Simplified versus Traditional Chinese.",
+      "automaticMapping": null
+    },
+    {
+      "value": "pt",
+      "reason": "Portuguese without a region does not distinguish Brazil from Portugal.",
+      "automaticMapping": null
+    },
+    {
+      "value": "zh",
+      "reason": "Legacy zh combines scripts and regions; inspect providerLanguage or source provenance.",
+      "automaticMapping": null
+    },
+    {
+      "value": "zho",
+      "reason": "ISO Chinese macrolanguage code does not identify script or release territory.",
+      "automaticMapping": null
+    }
+  ]
+}

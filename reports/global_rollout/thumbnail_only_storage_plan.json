@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-10T23:58:06Z",
+  "classification": "PASS_WITH_GATES",
+  "measuredThumbnails": {
+    "count": 591,
+    "actualAverageBytes": 12823.11,
+    "source": "591 checksum-verified existing Supabase thumb.webp objects"
+  },
+  "tiers": {
+    "tier1": {
+      "asset": "thumb.webp",
+      "uses": [
+        "Manual Add",
+        "search results",
+        "collection grids"
+      ],
+      "maximumDimension": "approximately 245x337",
+      "format": "optimized WebP"
+    },
+    "tier2": {
+      "asset": "display.webp",
+      "uses": [
+        "details screen"
+      ],
+      "includedInInitialRollout": false,
+      "gate": "separate provider-terms and cost approval"
+    }
+  },
+  "scenarios": {
+    "allExactPhysicalPrintings": {
+      "objects": 0,
+      "writes": 0,
+      "bytes": 0,
+      "decimalGB": 0.0
+    },
+    "allImageCandidates": {
+      "objects": 92817,
+      "writes": 92817,
+      "bytes": 1190202285,
+      "decimalGB": 1.1902
+    },
+    "existing591Migration": {
+      "objects": 331,
+      "writes": 331,
+      "bytes": 4244448,
+      "decimalGB": 0.0042
+    },
+    "coverage10PercentUnresolved": {
+      "objects": 9282,
+      "writes": 9282,
+      "bytes": 119024075,
+      "decimalGB": 0.119
+    },
+    "coverage25PercentUnresolved": {
+      "objects": 23204,
+      "writes": 23204,
+      "bytes": 297547366,
+      "decimalGB": 0.2975
+    },
+    "coverage50PercentUnresolved": {
+      "objects": 46408,
+      "writes": 46408,
+      "bytes": 595094731,
+      "decimalGB": 0.5951
+    }
+  },
+  "byLanguage": {
+    "de": {
+      "objects": 14436,
+      "bytes": 185114367
+    },
+    "en": {
+      "objects": 21738,
+      "bytes": 278748691
+    },
+    "es": {
+      "objects": 14121,
+      "bytes": 181075088
+    },
+    "es-419": {
+      "objects": 1293,
+      "bytes": 16580277
+    },
+    "fr": {
+      "objects": 18085,
+      "bytes": 231905883
+    },
+    "id": {
+      "objects": 1152,
+      "bytes": 14772219
+    },
+    "it": {
+      "objects": 14227,
+      "bytes": 182434338
+    },
+    "ja": {
+      "objects": 3297,
+      "bytes": 42277782
+    },
+    "ko": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "nl": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "pl": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "pt-BR": {
+      "objects": 1098,
+      "bytes": 14079771
+    },
+    "pt-PT": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "ru": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "th": {
+      "objects": 1224,
+      "bytes": 15695482
+    },
+    "zh-Hans": {
+      "objects": 0,
+      "bytes": 0
+    },
+    "zh-Hant": {
+      "objects": 2146,
+      "bytes": 27518387
+    }
+  },
+  "byProvider": {
+    "tcgdex": {
+      "objects": 92817,
+      "bytes": 1190202285
+    }
+  },
+  "r2": {
+    "freeStorageDecimalGB": 10,
+    "freeClassAWrites": 1000000,
+    "pricePerGBMonthAboveFree": 0.015,
+    "costAtStoredGB": {
+      "10": 0.0,
+      "15": 0.075,
+      "25": 0.225,
+      "50": 0.6
+    }
+  },
+  "suggestedDefault": {
+    "objects": 0,
+    "reason": "No exact physical printings and provider mirroring permission pending; therefore safely below free tier."
+  },
+  "r2WritesPerformed": 0
+}

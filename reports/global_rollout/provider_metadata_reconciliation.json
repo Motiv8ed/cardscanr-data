@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-10T21:16:52Z",
+  "classification": "PARTIAL",
+  "canonicalSourceFetchedThisRun": "tcgdex",
+  "preservedExistingSourcesReconciled": [
+    "pokemon_tcg_api",
+    "pokewallet",
+    "tcgdex"
+  ],
+  "newAuthenticatedPokewalletRequests": 0,
+  "newPokemonTcgApiRequests": 0,
+  "rationale": {
+    "pokemon_tcg_api": "Existing English catalogue provider IDs were reconciled to TCGdex by identical stable card ID. No name-only match was used.",
+    "pokewallet": "Existing locally preserved provider IDs were crosswalked only when the containing app record already had an exact TCGdex or identical Pokémon TCG API identity.",
+    "tcgdex": "Fetched resumably for every provider language in the registry."
+  },
+  "providers": [
+    {
+      "provider": "pokemon_tcg_api",
+      "mappedCrosswalkRows": 14385,
+      "mappedCanonicalPrintingGroups": 14385,
+      "unresolvedProviderIds": 5974,
+      "evidence": {
+        "identical_stable_provider_card_id": 14385
+      }
+    },
+    {
+      "provider": "pokewallet",
+      "mappedCrosswalkRows": 0,
+      "mappedCanonicalPrintingGroups": 0,
+      "unresolvedProviderIds": 47973,
+      "evidence": {}
+    },
+    {
+      "provider": "tcgdex",
+      "mappedCrosswalkRows": 117665,
+      "mappedCanonicalPrintingGroups": 117665,
+      "unresolvedProviderIds": 0,
+      "evidence": {
+        "direct_source_record": 117665
+      }
+    }
+  ],
+  "unresolvedReasons": {
+    "duplicate_provider_set_index_id": 1,
+    "language_or_region_ambiguous": 6439,
+    "provider_set_card_list_empty": 518,
+    "provider_set_crosswalk_or_variant_evidence_missing": 53947
+  },
+  "productionPublished": false
+}

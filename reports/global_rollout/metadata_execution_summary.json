@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-10T21:19:00Z",
+  "classification": "PARTIAL",
+  "provider": "tcgdex",
+  "sourceLanguagesRequested": 17,
+  "sourceSetIndexRows": 1496,
+  "uniqueProviderSets": 1495,
+  "cachedProviderObjects": 1512,
+  "networkRequestsThisRun": 1516,
+  "downloadedBytesThisRun": 11851182,
+  "paidApiCostUsd": 0,
+  "r2Writes": 0,
+  "attempts": [
+    {
+      "state": "interrupted_transient_local_file_lock",
+      "networkRequests": 349,
+      "downloadedBytes": 2852237,
+      "cachedSetsAtLastCheckpoint": 327,
+      "falsePermanent404s": 5,
+      "remediation": "Added atomic replace retries and percent-encoded reserved set IDs."
+    },
+    {
+      "state": "completed_from_cache",
+      "networkRequests": 1167,
+      "downloadedBytes": 8998945,
+      "cacheHits": 346,
+      "permanentProviderFailures": 0
+    },
+    {
+      "state": "deterministic_cache_reconciliation",
+      "networkRequests": 0,
+      "cacheHits": 1512,
+      "permanentProviderFailures": 0
+    }
+  ],
+  "sourceAnomalies": [
+    {
+      "language": "zh-Hans",
+      "providerLanguage": "zh-cn",
+      "providerSetId": "CSV1C",
+      "state": "duplicate_provider_set_index_id",
+      "candidateCount": 2
+    }
+  ],
+  "canonicalPrintingGroups": 117665,
+  "canonicalSets": 1495,
+  "permanentProviderFailures": 0,
+  "productionPublished": false
+}

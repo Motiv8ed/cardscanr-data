@@ -17,16 +17,9 @@ class PokemonTcgApiImageProvider:
         if identity.image_source == "pokewallet":
             return None
 
-        if identity.image_source == "pokemon_tcg_api" and identity.catalogue_image_small and identity.catalogue_image_large:
-            return ProviderImageCandidate(
-                provider=self.provider_id,
-                source_url_thumb=identity.catalogue_image_small,
-                source_url_display=identity.catalogue_image_large,
-                provider_card_id=_pokemon_tcg_api_card_id(identity),
-                provider_set_id=identity.set_id,
-                match_basis="catalogue_pokemon_tcg_api_urls",
-            )
-
+        # Prefer immutable pokemontcg.io URLs derived from exact provider card IDs.
+        # Catalogue rows may point at mirror hosts (e.g. images.scrydex.com); those are not
+        # accepted as the Pokémon TCG API image host for thumbnail ingestion.
         provider_card_id = _pokemon_tcg_api_card_id(identity)
         if provider_card_id:
             parsed = _parse_pokemon_tcg_api_id(provider_card_id)
@@ -36,15 +29,18 @@ class PokemonTcgApiImageProvider:
                     return _candidate_from_set_number(identity, provider_card_id, set_id, number, "provider_card_id")
 
         if identity.image_source == "pokemon_tcg_api" and identity.catalogue_image_small and identity.catalogue_image_large:
-            if _catalogue_urls_match_identity(identity):
-                return ProviderImageCandidate(
-                    provider=self.provider_id,
-                    source_url_thumb=identity.catalogue_image_small,
-                    source_url_display=identity.catalogue_image_large,
-                    provider_card_id=provider_card_id,
-                    provider_set_id=identity.set_id,
-                    match_basis="catalogue_pokemon_tcg_api_urls",
-                )
+            if _is_pokemon_tcg_image_host(identity.catalogue_image_small) and _is_pokemon_tcg_image_host(
+                identity.catalogue_image_large
+            ):
+                if _catalogue_urls_match_identity(identity):
+                    return ProviderImageCandidate(
+                        provider=self.provider_id,
+                        source_url_thumb=identity.catalogue_image_small,
+                        source_url_display=identity.catalogue_image_large,
+                        provider_card_id=provider_card_id,
+                        provider_set_id=identity.set_id,
+                        match_basis="catalogue_pokemon_tcg_api_urls",
+                    )
 
         for local_id in local_card_number_candidates(identity.local_card_number):
             if not _identity_matches_pokemon_tcg_api(identity, set_id=identity.set_id, number=local_id):
@@ -55,6 +51,14 @@ class PokemonTcgApiImageProvider:
             return _candidate_from_set_number(identity, synthetic_id, identity.set_id, local_id, "set_local_number")
         return None
 
+
+def _is_pokemon_tcg_image_host(url: str | None) -> bool:
+    if not url:
+        return False
+    from urllib.parse import urlparse
+
+    host = (urlparse(url).hostname or "").lower()
+    return host == "images.pokemontcg.io"
 
 def _pokemon_tcg_api_card_id(identity: CardImageIdentity) -> str | None:
     value = identity.provider_ids.get("pokemonTcgApi") or identity.provider_ids.get("pokemonTcgApiId")

@@ -47,7 +47,7 @@ class ProcessedImageVariant:
 @dataclass(frozen=True)
 class ProcessedCardImages:
     thumb: ProcessedImageVariant
-    display: ProcessedImageVariant
+    display: ProcessedImageVariant | None
     content_hash_sha256: str
     primary_provider: str
     fallback_provider: str | None
@@ -55,6 +55,7 @@ class ProcessedCardImages:
     source_image_url_display: str
     provider_card_id: str | None
     provider_image_set_id: str | None
+    import_display: bool = False
 
 
 @dataclass(frozen=True)

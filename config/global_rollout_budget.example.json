@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "currency": "USD",
+  "maximumPaidProviderSpend": 0,
+  "maximumUnexpectedCloudflareSpend": 0,
+  "allowPaidApiSubscription": false,
+  "allowProviderOverage": false,
+  "allowOriginalSourceImageArchive": false,
+  "initialImageBatchSize": 500,
+  "canaryCardsPerLanguage": 100,
+  "r2": {
+    "maximumWritesBeforeApproval": 0,
+    "maximumNewStorageBytesBeforeApproval": 0
+  },
+  "notes": [
+    "Raise limits only after a written user approval.",
+    "Metadata caching from an approved free provider does not consume this image/R2 budget."
+  ]
+}

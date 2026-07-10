@@ -1,0 +1,271 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T00:00:00Z",
+  "programmePolicy": {
+    "metadataLicenceDoesNotGrantArtworkRights": true,
+    "fullImageArchiveRequiresApprovedImageRehostingStatus": true,
+    "paidProviderSpendUsdWithoutApproval": 0
+  },
+  "providers": [
+    {
+      "provider": "tcgdex",
+      "officialDocumentationUrl": "https://tcgdex.dev/",
+      "termsUrl": "https://github.com/tcgdex/cards-database",
+      "supportedLanguages": [
+        "en",
+        "ja",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "th",
+        "id",
+        "fr",
+        "de",
+        "it",
+        "es",
+        "es-419",
+        "pt-BR",
+        "pt-PT",
+        "nl",
+        "pl",
+        "ru"
+      ],
+      "supportedRegions": [
+        "GLOBAL",
+        "JP",
+        "CN",
+        "MULTI:TW,HK",
+        "KR",
+        "TH",
+        "ID",
+        "FR",
+        "DE",
+        "IT",
+        "ES",
+        "LATAM",
+        "BR",
+        "PT",
+        "NL",
+        "PL",
+        "RU"
+      ],
+      "metadataCoverage": "multilingual cards, sets, series, release dates, collector numbers; completion varies",
+      "imageCoverage": "provider-hosted low/high card assets where contributed",
+      "authenticationMethod": "none",
+      "requiredEnvironmentVariables": [],
+      "freePlanLimits": "Free; no published hard request limit. Provider asks bulk users to cache responses.",
+      "paidPlanRequirements": "none",
+      "requestLimits": "No published hard limit; CardScanR uses serial conservative pacing.",
+      "pagination": "optional REST filtering/pagination; list endpoints are unpaginated by default",
+      "bulkExportCapability": "complete list endpoints plus set details; persistent source cache required",
+      "stableProviderIds": true,
+      "imageHostBehaviour": "assets.tcgdex.net; explicit low/high and WebP/PNG/JPEG variants",
+      "cachingPolicy": "FAQ explicitly recommends local response caching for bulk data",
+      "selfHostingOrRehostingPolicy": "Card metadata repository is MIT; artwork redistribution is not expressly licensed.",
+      "attributionRequirements": "No explicit API attribution requirement found; preserve provenance.",
+      "commercialUseStatus": "metadata appears permitted by MIT database license; artwork rights remain third-party",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "pending_human_review",
+      "metadataTermsStatus": "approved_with_conditions",
+      "imageRehostingStatus": "pending_human_review",
+      "adapterImplementationStatus": "implemented_global_metadata_and_public_image_preflight",
+      "notes": [
+        "An open-source metadata licence is not treated as permission to redistribute Pokémon artwork.",
+        "Traditional Chinese provider data does not distinguish Taiwan from Hong Kong."
+      ]
+    },
+    {
+      "provider": "pokemon_tcg_api",
+      "officialDocumentationUrl": "https://docs.pokemontcg.io/",
+      "termsUrl": "https://dev.pokemontcg.io/terms",
+      "supportedLanguages": [
+        "en"
+      ],
+      "supportedRegions": [
+        "GLOBAL"
+      ],
+      "metadataCoverage": "English cards and sets",
+      "imageCoverage": "English small and large image URLs",
+      "authenticationMethod": "optional X-Api-Key; anonymous access allowed at lower limits",
+      "requiredEnvironmentVariables": [
+        "POKEMON_TCG_API_KEY"
+      ],
+      "freePlanLimits": "Anonymous: 1,000 requests/day and 30/minute. Free API key: 20,000/day by default.",
+      "paidPlanRequirements": "none documented for default keyed access",
+      "requestLimits": "Key-dependent; 429 responses must be respected",
+      "pagination": "page/pageSize, maximum documented pageSize 250",
+      "bulkExportCapability": "paginated card and set endpoints",
+      "stableProviderIds": true,
+      "imageHostBehaviour": "images.pokemontcg.io; known honest 404s for some recently indexed cards",
+      "cachingPolicy": "API documentation encourages economical request use; no explicit artwork archive grant found",
+      "selfHostingOrRehostingPolicy": "not expressly documented for the complete artwork archive",
+      "attributionRequirements": "not expressly documented; preserve provenance and third-party ownership notices",
+      "commercialUseStatus": "API use allowed subject to acceptable-use terms; artwork redistribution remains unclear",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "pending_human_review",
+      "metadataTermsStatus": "approved_with_conditions",
+      "imageRehostingStatus": "pending_human_review",
+      "adapterImplementationStatus": "existing_english_adapter_and_catalogue"
+    },
+    {
+      "provider": "pokewallet",
+      "officialDocumentationUrl": "https://www.pokewallet.io/api-docs",
+      "termsUrl": "https://www.pokewallet.io/terms-conditions",
+      "supportedLanguages": [
+        "en",
+        "ja",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "fr",
+        "de",
+        "it",
+        "es",
+        "pt-BR"
+      ],
+      "supportedRegions": [
+        "GLOBAL",
+        "JP",
+        "CN",
+        "TW",
+        "HK",
+        "KR",
+        "FR",
+        "DE",
+        "IT",
+        "ES",
+        "BR"
+      ],
+      "metadataCoverage": "50,000+ cards with stable card/set IDs; local cache currently contains EN/JP/ZH",
+      "imageCoverage": "authenticated low/high endpoints and selected localized European images",
+      "authenticationMethod": "X-API-Key",
+      "requiredEnvironmentVariables": [
+        "POKEWALLET_API_KEY"
+      ],
+      "freePlanLimits": "100 requests/hour, 1,000 requests/day, $0/month",
+      "paidPlanRequirements": "Pro is €20/month for 5,000/hour and 50,000/day; never auto-upgrade",
+      "requestLimits": "plan-specific hourly and daily limits",
+      "pagination": "set detail pages; search limits documented",
+      "bulkExportCapability": "no single bulk archive; resumable set-by-set export",
+      "stableProviderIds": true,
+      "imageHostBehaviour": "authenticated binary endpoint; some provider records return permanent 404",
+      "cachingPolicy": "image responses advertise long immutable caching; terms do not expressly grant archive redistribution",
+      "selfHostingOrRehostingPolicy": "commercial service use is licensed, but complete image rehosting is not explicit",
+      "attributionRequirements": "preserve provenance and third-party ownership; no removal of notices",
+      "commercialUseStatus": "limited revocable commercial service-use licence",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "pending_human_review",
+      "metadataTermsStatus": "approved_with_conditions",
+      "imageRehostingStatus": "pending_human_review",
+      "adapterImplementationStatus": "existing_metadata_image_adapter_and_global_rate_limiter",
+      "notes": [
+        "Terms prohibit automated systems without explicit permission while API docs invite programmatic API use.",
+        "Bulk image mirroring therefore requires written clarification or explicit human acceptance of the risk."
+      ]
+    },
+    {
+      "provider": "scrydex",
+      "officialDocumentationUrl": "https://scrydex.com/docs",
+      "termsUrl": "https://scrydex.com/terms",
+      "supportedLanguages": [
+        "en",
+        "ja"
+      ],
+      "supportedRegions": [
+        "GLOBAL",
+        "JP"
+      ],
+      "metadataCoverage": "English and Japanese cards/expansions, translations where available",
+      "imageCoverage": "high-fidelity image URLs",
+      "authenticationMethod": "X-Api-Key plus X-Team-ID",
+      "requiredEnvironmentVariables": [
+        "SCRYDEX_API_KEY",
+        "SCRYDEX_TEAM_ID"
+      ],
+      "freePlanLimits": "No $0 catalogue plan found on the current pricing page.",
+      "paidPlanRequirements": "Starter: US$29/month, 5,000 credits, US$0.006 per overage credit",
+      "requestLimits": "100 requests/second documented; requests consume credits",
+      "pagination": "page/page_size and query filtering",
+      "bulkExportCapability": "paginated card and expansion endpoints; credit-metered",
+      "stableProviderIds": true,
+      "imageHostBehaviour": "images.scrydex.com; image access advertised for application UI",
+      "cachingPolicy": "caching recommended, but terms restrict mirroring and wholesale competing data use",
+      "selfHostingOrRehostingPolicy": "terms prohibit redistribution or mirroring of the Services without prior written authorization",
+      "attributionRequirements": "third-party rights remain with their owners",
+      "commercialUseStatus": "paid commercial API subject to anti-redistribution and fair-use restrictions",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "prohibited",
+      "metadataTermsStatus": "pending_human_review",
+      "imageRehostingStatus": "prohibited_without_written_authorization",
+      "adapterImplementationStatus": "credential_preflight_prepared_no_paid_requests_executed"
+    },
+    {
+      "provider": "ximilar",
+      "officialDocumentationUrl": "https://docs.ximilar.com/collectibles/recognition",
+      "termsUrl": "https://www.ximilar.com/",
+      "supportedLanguages": [
+        "recognition_not_catalogue_source"
+      ],
+      "supportedRegions": [],
+      "metadataCoverage": "recognition result only; not a canonical catalogue source",
+      "imageCoverage": "none licensed for catalogue ingestion",
+      "authenticationMethod": "Authorization: Token",
+      "requiredEnvironmentVariables": [
+        "XIMILAR_API_TOKEN"
+      ],
+      "freePlanLimits": "1,000 credits/month; TCG identification currently costs 10 credits",
+      "paidPlanRequirements": "paid credit plans/packs for scale; never auto-purchase",
+      "requestLimits": "credit-metered",
+      "pagination": "not applicable to recognition-only use",
+      "bulkExportCapability": "none",
+      "stableProviderIds": false,
+      "imageHostBehaviour": "accepts user-supplied image URLs or bytes for recognition",
+      "cachingPolicy": "not applicable to artwork acquisition",
+      "selfHostingOrRehostingPolicy": "not an artwork source",
+      "attributionRequirements": "subject to Ximilar account terms",
+      "commercialUseStatus": "recognition only, subject to credits and account terms",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "approved_with_conditions",
+      "metadataTermsStatus": "prohibited_as_catalogue_source",
+      "imageRehostingStatus": "not_applicable",
+      "adapterImplementationStatus": "credential_preflight_only_recognition_reserved"
+    },
+    {
+      "provider": "official_regional_pokemon_catalogues",
+      "officialDocumentationUrl": "https://www.pokemon.com/",
+      "termsUrl": "provider_and_region_specific",
+      "supportedLanguages": [
+        "regional_web_catalogues"
+      ],
+      "supportedRegions": [
+        "CN",
+        "TW",
+        "HK",
+        "KR",
+        "TH",
+        "ID",
+        "JP"
+      ],
+      "metadataCoverage": "varies by regional consumer website",
+      "imageCoverage": "consumer-site images",
+      "authenticationMethod": "no documented developer API discovered",
+      "requiredEnvironmentVariables": [],
+      "freePlanLimits": "not applicable",
+      "paidPlanRequirements": "not applicable",
+      "requestLimits": "not documented for developer ingestion",
+      "pagination": "not documented",
+      "bulkExportCapability": "none documented",
+      "stableProviderIds": false,
+      "imageHostBehaviour": "consumer-facing websites only",
+      "cachingPolicy": "no documented redistribution permission found",
+      "selfHostingOrRehostingPolicy": "unclear",
+      "attributionRequirements": "official intellectual-property notices apply",
+      "commercialUseStatus": "unclear",
+      "termsReviewDate": "2026-07-11",
+      "termsStatus": "pending_human_review",
+      "metadataTermsStatus": "pending_human_review",
+      "imageRehostingStatus": "pending_human_review",
+      "adapterImplementationStatus": "not_implemented_no_scraping_or_browser_automation"
+    }
+  ]
+}

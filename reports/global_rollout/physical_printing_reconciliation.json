@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "2.0.0",
+  "generatedAtUtc": "2026-07-10T23:58:04Z",
+  "classification": "PARTIAL",
+  "policy": "No promotion from a provider card record to a physical printing without variant evidence; names are never identity evidence.",
+  "totals": {
+    "exactPhysicalPrintings": 0,
+    "probablePrintings": 0,
+    "baseIdentityOnly": 0,
+    "unresolvedVariants": 117665,
+    "providerDuplicates": 0,
+    "identityConflicts": 0,
+    "quarantined": 0,
+    "total": 117665
+  },
+  "byLanguage": {
+    "de": 19542,
+    "en": 23323,
+    "es": 15172,
+    "es-419": 1329,
+    "fr": 21434,
+    "id": 2788,
+    "it": 15234,
+    "ja": 6246,
+    "ko": 239,
+    "pt-BR": 1124,
+    "th": 2921,
+    "zh-Hans": 877,
+    "zh-Hant": 7436
+  },
+  "byRegion": {
+    "BR": 1124,
+    "CN": 877,
+    "DE": 19542,
+    "ES": 15172,
+    "FR": 21434,
+    "GLOBAL": 23323,
+    "ID": 2788,
+    "IT": 15234,
+    "JP": 6246,
+    "KR": 239,
+    "LATAM": 1329,
+    "MULTI": 7436,
+    "TH": 2921
+  },
+  "recordIndex": "reports/global_rollout/physical_printing_reconciliation.csv",
+  "recordIndexColumns": "The CSV contains the requested per-record classification and evidence fields for all provisional groups."
+}

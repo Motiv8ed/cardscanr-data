@@ -9,7 +9,9 @@ T = TypeVar("T")
 
 
 class RetryableError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, wait_seconds: float | None = None) -> None:
+        super().__init__(message)
+        self.wait_seconds = wait_seconds
 
 
 def retry_call(
@@ -28,6 +30,9 @@ def retry_call(
             is_retryable = retryable(exc) if retryable else isinstance(exc, (RetryableError, TimeoutError))
             if not is_retryable or attempt > max_retries:
                 raise
-            delay = base_seconds * (2 ** (attempt - 1))
-            delay += random.uniform(0, min(0.5, delay * 0.1))
+            if isinstance(exc, RetryableError) and exc.wait_seconds is not None:
+                delay = float(exc.wait_seconds)
+            else:
+                delay = base_seconds * (2 ** (attempt - 1))
+                delay += random.uniform(0, min(0.5, delay * 0.1))
             time.sleep(delay)

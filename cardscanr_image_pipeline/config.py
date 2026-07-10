@@ -27,6 +27,7 @@ IMAGE_RECORD_STATUSES = frozenset(
         "failed",
         "skipped",
         "verified",
+        "provider_image_unavailable",
     }
 )
 
@@ -48,6 +49,8 @@ class ImagePipelineConfig:
     languages: tuple[str, ...] = ("en", "jp")
     execute: bool = False
     timeout_seconds: int = 30
+    # Thumbnail rollout: import thumb.webp only; never upload display.webp unless explicitly enabled.
+    import_display: bool = False
 
     @classmethod
     def from_env(
@@ -57,6 +60,7 @@ class ImagePipelineConfig:
         execute: bool = False,
         sample_limit: int | None = None,
         languages: tuple[str, ...] | None = None,
+        import_display: bool = False,
     ) -> ImagePipelineConfig:
         supabase_url = os.getenv("SUPABASE_URL", "").strip()
         secret = (os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
@@ -73,4 +77,5 @@ class ImagePipelineConfig:
             execute=execute,
             sample_limit=sample_limit,
             languages=languages or ("en", "jp"),
+            import_display=import_display,
         )

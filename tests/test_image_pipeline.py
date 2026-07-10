@@ -55,8 +55,13 @@ class ImagePipelinePathTests(unittest.TestCase):
             catalogue_image_small="https://images.pokemontcg.io/base1/4.png",
             catalogue_image_large="https://images.pokemontcg.io/base1/4_hires.png",
         )
-        thumb_path, display_path = build_storage_paths(identity, content_hash_sha256=sha256_hex(b"display"))
+        thumb_path, display_path = build_storage_paths(
+            identity,
+            content_hash_sha256=sha256_hex(b"display"),
+            import_display=True,
+        )
         self.assertTrue(thumb_path.endswith("/thumb.webp"))
+        assert display_path is not None
         self.assertTrue(display_path.endswith("/display.webp"))
         self.assertIn("/v/", thumb_path)
         self.assertIn("pokemon/en/base1/4/", thumb_path)

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-10T20:59:48Z",
+  "classification": "PARTIAL",
+  "provider": "tcgdex",
+  "canonicalPrintingGroups": 117665,
+  "canonicalSets": 1495,
+  "providerCrosswalkRows": 132050,
+  "unresolvedRows": 60905,
+  "conflictRows": 0,
+  "identityCaveat": "TCGdex set responses expose card-level printing groups but not complete physical finish evidence; cardVariant remains unspecified and every record is provisional.",
+  "outputs": {
+    "cards.jsonl": {
+      "sha256": "c041069e20545e93faa7405742685cb053ee95d8057c596b92293d757f262b93",
+      "rows": 117665
+    },
+    "sets.jsonl": {
+      "sha256": "b0c820b0c6bdb6a5ae5031403c36b9d1b024664728e541e6c7e547ba00ecc9aa",
+      "rows": 1495
+    },
+    "provider_crosswalk.jsonl": {
+      "sha256": "fac8ff98236f6d15b7174362032f1b7f7a73c1cd0676963c7cc06aff84b8e451",
+      "rows": 132050
+    },
+    "unresolved.jsonl": {
+      "sha256": "1e8d6a6d39c83e8d422dbc62967a164151c6d80d8d588a7b7c81d02652edd071",
+      "rows": 60905
+    },
+    "conflicts.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rows": 0
+    }
+  },
+  "productionPublished": false,
+  "flutterModified": false
+}

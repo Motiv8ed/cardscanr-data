@@ -111,6 +111,7 @@ class ImageIngestionPipeline:
                 timeout_seconds=self.config.timeout_seconds,
                 max_retries=self.config.max_retries,
                 retry_base_seconds=self.config.retry_base_seconds,
+                import_display=self.config.import_display,
             )
         except (ImageValidationError, requests.RequestException) as exc:
             retry_count = int(existing.get("retry_count") or 0) + 1 if existing else 1
@@ -120,6 +121,7 @@ class ImageIngestionPipeline:
             identity,
             content_hash_sha256=processed.content_hash_sha256,
             bucket_name=self.config.bucket_name,
+            import_display=self.config.import_display,
         )
 
         if existing and existing.get("content_hash_sha256") == processed.content_hash_sha256:
@@ -153,15 +155,19 @@ class ImageIngestionPipeline:
             retry_base_seconds=self.config.retry_base_seconds,
             dry_run=self.config.dry_run,
         )
-        display_status = self.storage.upload_if_absent(
-            display_path,
-            processed.display.data,
-            content_type=processed.display.content_type,
-            cache_control=self.config.cache_control,
-            max_retries=self.config.max_retries,
-            retry_base_seconds=self.config.retry_base_seconds,
-            dry_run=self.config.dry_run,
-        )
+        display_status = "skipped_thumb_only"
+        if self.config.import_display:
+            if processed.display is None or not display_path:
+                raise ImageValidationError("import_display enabled but display variant missing")
+            display_status = self.storage.upload_if_absent(
+                display_path,
+                processed.display.data,
+                content_type=processed.display.content_type,
+                cache_control=self.config.cache_control,
+                max_retries=self.config.max_retries,
+                retry_base_seconds=self.config.retry_base_seconds,
+                dry_run=self.config.dry_run,
+            )
 
         self.db.upsert_record(
             self.db.build_record_payload(

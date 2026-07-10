@@ -22,15 +22,14 @@ def version_directory_name(content_hash_sha256: str) -> str:
     return digest[:16]
 
 
-def build_storage_paths(
+def build_storage_base(
     identity: CardImageIdentity,
     *,
     content_hash_sha256: str,
-    bucket_name: str = "pokemon-card-images",
-) -> tuple[str, str]:
+) -> str:
     version = version_directory_name(content_hash_sha256)
     collector_segment = safe_path_segment(identity.collector_number)
-    base = "/".join(
+    return "/".join(
         [
             safe_path_segment(identity.game),
             safe_path_segment(identity.language),
@@ -40,9 +39,36 @@ def build_storage_paths(
             version,
         ]
     )
-    thumb_path = f"{base}/thumb.webp"
-    display_path = f"{base}/display.webp"
-    return thumb_path, display_path
+
+
+def build_thumb_storage_path(
+    identity: CardImageIdentity,
+    *,
+    content_hash_sha256: str,
+) -> str:
+    return f"{build_storage_base(identity, content_hash_sha256=content_hash_sha256)}/thumb.webp"
+
+
+def build_display_storage_path(
+    identity: CardImageIdentity,
+    *,
+    content_hash_sha256: str,
+) -> str:
+    return f"{build_storage_base(identity, content_hash_sha256=content_hash_sha256)}/display.webp"
+
+
+def build_storage_paths(
+    identity: CardImageIdentity,
+    *,
+    content_hash_sha256: str,
+    bucket_name: str = "pokemon-card-images",
+    import_display: bool = True,
+) -> tuple[str, str | None]:
+    del bucket_name  # reserved for callers that pass bucket context
+    thumb_path = build_thumb_storage_path(identity, content_hash_sha256=content_hash_sha256)
+    if not import_display:
+        return thumb_path, None
+    return thumb_path, build_display_storage_path(identity, content_hash_sha256=content_hash_sha256)
 
 
 def public_storage_url(supabase_url: str, bucket_name: str, object_path: str) -> str:

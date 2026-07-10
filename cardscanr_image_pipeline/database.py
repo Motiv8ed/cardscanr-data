@@ -100,10 +100,10 @@ class SupabaseImageRecordClient:
                     "display_storage_path": display_path,
                     "thumb_width": processed.thumb.width,
                     "thumb_height": processed.thumb.height,
-                    "display_width": processed.display.width,
-                    "display_height": processed.display.height,
+                    "display_width": processed.display.width if processed.display else None,
+                    "display_height": processed.display.height if processed.display else None,
                     "thumb_bytes": len(processed.thumb.data),
-                    "display_bytes": len(processed.display.data),
+                    "display_bytes": len(processed.display.data) if processed.display else None,
                     "processed_at": now,
                 }
             )

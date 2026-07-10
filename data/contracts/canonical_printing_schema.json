@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://data.cardscanr.app/schemas/canonical-pokemon-printing-v1.json",
+  "title": "CardScanR canonical Pokémon TCG printing",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "canonicalPrintingId",
+    "canonicalBaseId",
+    "canonicalArtworkId",
+    "game",
+    "language",
+    "region",
+    "releaseTerritories",
+    "canonicalSetId",
+    "providerSetIds",
+    "nativeSetName",
+    "englishSetName",
+    "printedCollectorNumber",
+    "normalizedCollectorNumber",
+    "officialSetTotal",
+    "cardVariant",
+    "rarity",
+    "releaseDate",
+    "nativeCardName",
+    "englishCardName",
+    "searchAliases",
+    "providerCardIds",
+    "regulationMark",
+    "designations",
+    "imageProvenance",
+    "metadataProvenance",
+    "verificationState",
+    "sourceRecordHash"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "canonicalPrintingId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonicalBaseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonicalArtworkId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "game": {
+      "const": "pokemon"
+    },
+    "language": {
+      "enum": [
+        "en",
+        "ja",
+        "zh-Hans",
+        "zh-Hant",
+        "ko",
+        "th",
+        "id",
+        "fr",
+        "de",
+        "it",
+        "es",
+        "es-419",
+        "pt-BR",
+        "pt-PT",
+        "nl",
+        "pl",
+        "ru"
+      ]
+    },
+    "region": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_-]*$"
+    },
+    "releaseTerritories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_-]*$"
+      },
+      "uniqueItems": true
+    },
+    "canonicalSetId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "providerSetIds": {
+      "$ref": "#/$defs/providerIdMap"
+    },
+    "nativeSetName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "englishSetName": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "printedCollectorNumber": {
+      "type": "string",
+      "minLength": 1
+    },
+    "normalizedCollectorNumber": {
+      "type": "string",
+      "minLength": 1
+    },
+    "officialSetTotal": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cardVariant": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rarity": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "releaseDate": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nativeCardName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "englishCardName": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "searchAliases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "providerCardIds": {
+      "$ref": "#/$defs/providerIdMap"
+    },
+    "regulationMark": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "designations": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "promo",
+          "stamped",
+          "reverse_holo",
+          "holo",
+          "non_holo",
+          "first_edition",
+          "unlimited",
+          "other"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "imageProvenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "provider",
+          "sourceUrl",
+          "state",
+          "rehostPermission"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "state": {
+            "enum": [
+              "verified_r2",
+              "verified_public_provider",
+              "provider_auth_required",
+              "provider_rate_limited",
+              "provider_unavailable",
+              "source_http_404",
+              "source_http_401",
+              "source_http_403",
+              "identity_ambiguous",
+              "missing_image",
+              "pending_review",
+              "rejected_mismatch",
+              "legal_review_required"
+            ]
+          },
+          "rehostPermission": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "metadataProvenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "provider",
+          "providerCardId",
+          "providerSetId"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerCardId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerSetId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "verificationState": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceRecordHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "providerIdMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "classification": "PASS",
+  "generatedAtUtc": "2026-07-10T20:59:07Z",
+  "provider": "tcgdex",
+  "languages": [
+    "en",
+    "ja",
+    "zh-cn",
+    "zh-tw",
+    "ko",
+    "th",
+    "id",
+    "fr",
+    "de",
+    "it",
+    "es",
+    "es-mx",
+    "pt-br",
+    "pt-pt",
+    "nl",
+    "pl",
+    "ru"
+  ],
+  "setDetailRequestsTotal": 1495,
+  "sourceSetIndexRows": 1496,
+  "duplicateProviderSetIndexIds": [
+    {
+      "sourceLanguage": "zh-cn",
+      "providerSetId": "CSV1C",
+      "candidateCount": 2
+    }
+  ],
+  "setDetailRequestsMissingFromCache": 0,
+  "expectedNetworkRequests": 0,
+  "requestIntervalSeconds": 0.2,
+  "minimumExpectedDurationSeconds": 0.0,
+  "expectedApiCostUsd": 0,
+  "expectedR2Writes": 0,
+  "expectedR2StorageBytes": 0,
+  "providerQuota": "No published hard limit; serial conservative pacing and persistent cache enabled.",
+  "paidUsageActivated": false
+}

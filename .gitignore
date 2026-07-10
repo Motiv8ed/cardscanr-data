@@ -289,6 +289,7 @@ reports/chatgpt_exports/
 *.secrets.json
 pokewallet_env.json
 pokewallet_env.local.json
+config/provider_credentials.local.json
 public/v1/catalog/pokemon/search/catalog_search_v1.sqlite
 public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite
 public/v1/catalog/pokemon/search/catalog_search_v1.sqlite-shm
@@ -296,3 +297,12 @@ public/v1/catalog/pokemon/search/catalog_search_v1.sqlite-wal
 public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite-shm
 public/v1/catalog/pokemon/search/catalog_search_v1.previous.sqlite-wal
 supabase_env.local.json
+
+# Global catalogue resumable provider cache and canary scratch data
+data/global/source_cache/
+data/global/image_canary_cache/
+reports/global_rollout/checkpoints/
+
+# Reproducible global catalogue materializations (regenerate from audit tooling)
+data/global/catalogue/*.jsonl
+reports/global_rollout/physical_printing_reconciliation.json.tmp

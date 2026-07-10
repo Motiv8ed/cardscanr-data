@@ -129,15 +129,20 @@ class Stage2Runner:
                     identity,
                     content_hash_sha256=placeholder_hash,
                     bucket_name=self.config.bucket_name,
+                    import_display=self.config.import_display,
                 )
                 report.content_hash_sha256 = placeholder_hash
                 report.thumb_storage_path = thumb_path
                 report.display_storage_path = display_path
                 report.thumb_public_url = public_storage_url(self.config.supabase_url, self.config.bucket_name, thumb_path)
-                report.display_public_url = public_storage_url(
-                    self.config.supabase_url, self.config.bucket_name, display_path
+                report.display_public_url = (
+                    public_storage_url(self.config.supabase_url, self.config.bucket_name, display_path)
+                    if display_path
+                    else None
                 )
                 for path in (thumb_path, display_path):
+                    if not path:
+                        continue
                     if path in duplicate_paths and duplicate_paths[path] != identity.canonical_base_id:
                         stop_reasons.append(f"duplicate_path:{path}")
                     duplicate_paths[path] = identity.canonical_base_id
@@ -236,6 +241,7 @@ class Stage2Runner:
                     fallback_provider=fallback_provider,
                     thumb_max_px=self.config.thumb_max_px,
                     display_max_px=self.config.display_max_px,
+                    import_display=self.config.import_display,
                 )
                 self._apply_processed(report, identity, processed, existing)
                 report.elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -296,21 +302,23 @@ class Stage2Runner:
             identity,
             content_hash_sha256=processed.content_hash_sha256,
             bucket_name=self.config.bucket_name,
+            import_display=self.config.import_display,
         )
         report.content_hash_sha256 = processed.content_hash_sha256
         report.thumb_width = processed.thumb.width
         report.thumb_height = processed.thumb.height
-        report.display_width = processed.display.width
-        report.display_height = processed.display.height
+        report.display_width = processed.display.width if processed.display else None
+        report.display_height = processed.display.height if processed.display else None
         report.thumb_byte_count = len(processed.thumb.data)
-        report.display_byte_count = len(processed.display.data)
+        report.display_byte_count = len(processed.display.data) if processed.display else None
         report.thumb_storage_path = thumb_path
         report.display_storage_path = display_path
         report.thumb_public_url = public_storage_url(self.config.supabase_url, self.config.bucket_name, thumb_path)
-        report.display_public_url = public_storage_url(self.config.supabase_url, self.config.bucket_name, display_path)
+        report.display_public_url = (
+            public_storage_url(self.config.supabase_url, self.config.bucket_name, display_path) if display_path else None
+        )
 
         thumb_exists_before = self.storage.object_exists(thumb_path)
-        display_exists_before = self.storage.object_exists(display_path)
         thumb_status = self.storage.upload_if_absent(
             thumb_path,
             processed.thumb.data,
@@ -320,19 +328,24 @@ class Stage2Runner:
             retry_base_seconds=self.config.retry_base_seconds,
             dry_run=False,
         )
-        display_status = self.storage.upload_if_absent(
-            display_path,
-            processed.display.data,
-            content_type=processed.display.content_type,
-            cache_control=self.config.cache_control,
-            max_retries=self.config.max_retries,
-            retry_base_seconds=self.config.retry_base_seconds,
-            dry_run=False,
-        )
         if thumb_exists_before and thumb_status == "uploaded":
             raise ImageValidationError("immutable thumb object would have been overwritten")
-        if display_exists_before and display_status == "uploaded":
-            raise ImageValidationError("immutable display object would have been overwritten")
+
+        if self.config.import_display:
+            if processed.display is None or not display_path:
+                raise ImageValidationError("import_display enabled but display variant missing")
+            display_exists_before = self.storage.object_exists(display_path)
+            display_status = self.storage.upload_if_absent(
+                display_path,
+                processed.display.data,
+                content_type=processed.display.content_type,
+                cache_control=self.config.cache_control,
+                max_retries=self.config.max_retries,
+                retry_base_seconds=self.config.retry_base_seconds,
+                dry_run=False,
+            )
+            if display_exists_before and display_status == "uploaded":
+                raise ImageValidationError("immutable display object would have been overwritten")
 
         self.db.upsert_record(
             self.db.build_record_payload(
@@ -441,20 +454,22 @@ class Stage2Runner:
                 if not record:
                     card_report["issues"].append("missing_database_record")
                 else:
-                    for field in (
+                    required_fields = (
                         "thumb_storage_path",
-                        "display_storage_path",
                         "content_hash_sha256",
                         "thumb_bytes",
-                        "display_bytes",
-                    ):
+                    )
+                    if self.config.import_display:
+                        required_fields = required_fields + ("display_storage_path", "display_bytes")
+                    for field in required_fields:
                         if not record.get(field):
                             card_report["issues"].append(f"missing_{field}")
                     provider_key = f"{record.get('primary_provider')}|{record.get('provider_card_id')}"
                     if provider_key in provider_identity_owner and provider_identity_owner[provider_key] != canonical_id:
                         card_report["issues"].append("duplicate_provider_identity")
                     provider_identity_owner[provider_key] = canonical_id
-                    for label in ("thumb", "display"):
+                    labels = ("thumb", "display") if self.config.import_display else ("thumb",)
+                    for label in labels:
                         path = record.get(f"{label}_storage_path")
                         if not path:
                             continue

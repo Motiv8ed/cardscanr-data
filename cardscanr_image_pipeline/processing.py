@@ -40,6 +40,21 @@ def download_image_bytes(
             timeout=timeout_seconds,
             headers=pokewallet_request_headers(url),
         )
+        if response.status_code == 429 and "api.pokewallet.io" in url:
+            # Prefer a long cooldown over burning remaining hourly quota with rapid retries.
+            wait_s = 65.0
+            try:
+                payload = response.json()
+                message = str(payload.get("message") or "")
+                hourly = ((payload.get("limits") or {}).get("hourly") or {})
+                remaining = hourly.get("remaining")
+                if "Hourly" in message or remaining == 0:
+                    wait_s = 3600.0
+                elif "Daily" in message:
+                    wait_s = 7200.0
+            except Exception:
+                wait_s = 300.0
+            raise RetryableError(f"retryable HTTP 429 for {url}", wait_seconds=wait_s)
         if response.status_code in {408, 425, 429, 500, 502, 503, 504}:
             raise RetryableError(f"retryable HTTP {response.status_code} for {url}")
         response.raise_for_status()
@@ -107,11 +122,17 @@ def process_downloaded_image(
     fallback_provider: str | None,
     thumb_max_px: int,
     display_max_px: int,
+    import_display: bool = False,
 ) -> ProcessedCardImages:
-    display_image = decode_and_validate_card_image(source_bytes)
-    display_variant = resize_to_webp(display_image, max_px=display_max_px, label="display")
-    thumb_variant = resize_to_webp(display_image, max_px=thumb_max_px, label="thumb")
-    content_hash = sha256_hex(display_variant.data)
+    source_image = decode_and_validate_card_image(source_bytes)
+    thumb_variant = resize_to_webp(source_image, max_px=thumb_max_px, label="thumb")
+    display_variant: ProcessedImageVariant | None = None
+    if import_display:
+        display_variant = resize_to_webp(source_image, max_px=display_max_px, label="display")
+        content_hash = sha256_hex(display_variant.data)
+    else:
+        # Thumb-only rollout versions immutable paths from the thumbnail bytes.
+        content_hash = sha256_hex(thumb_variant.data)
     return ProcessedCardImages(
         thumb=thumb_variant,
         display=display_variant,
@@ -122,6 +143,7 @@ def process_downloaded_image(
         source_image_url_display=candidate.source_url_display,
         provider_card_id=candidate.provider_card_id,
         provider_image_set_id=candidate.provider_set_id,
+        import_display=import_display,
     )
 
 
@@ -135,21 +157,39 @@ def process_provider_candidate(
     timeout_seconds: int,
     max_retries: int,
     retry_base_seconds: float,
+    import_display: bool = False,
 ) -> ProcessedCardImages:
-    display_raw, _ = download_image_bytes(
-        session,
-        candidate.source_url_display,
-        timeout_seconds=timeout_seconds,
-        max_retries=max_retries,
-        retry_base_seconds=retry_base_seconds,
-    )
-    return process_downloaded_image(
-        display_raw,
-        candidate,
-        fallback_provider=fallback_provider,
-        thumb_max_px=thumb_max_px,
-        display_max_px=display_max_px,
-    )
+    # Prefer the smaller thumb URL when available for thumb-only imports.
+    preferred = candidate.source_url_thumb if not import_display and candidate.source_url_thumb else candidate.source_url_display
+    fallback = candidate.source_url_display if preferred == candidate.source_url_thumb else candidate.source_url_thumb
+    last_error: Exception | None = None
+    for url in (preferred, fallback):
+        if not url:
+            continue
+        try:
+            source_raw, _ = download_image_bytes(
+                session,
+                url,
+                timeout_seconds=timeout_seconds,
+                max_retries=max_retries,
+                retry_base_seconds=retry_base_seconds,
+            )
+            return process_downloaded_image(
+                source_raw,
+                candidate,
+                fallback_provider=fallback_provider,
+                thumb_max_px=thumb_max_px,
+                display_max_px=display_max_px,
+                import_display=import_display,
+            )
+        except (ImageValidationError, requests.RequestException) as exc:
+            last_error = exc
+            if "404" in str(exc):
+                continue
+            raise
+    if last_error:
+        raise last_error
+    raise ImageValidationError("no downloadable source URL")
 
 
 def validate_existing_record_dimensions(record: dict[str, Any]) -> list[str]:
