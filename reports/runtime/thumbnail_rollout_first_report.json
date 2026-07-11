@@ -1,0 +1,55 @@
+{
+  "classification": "PARTIAL",
+  "validatedMatchableTotal": 36542,
+  "usablePublicUrlTotalEstimate": 20359,
+  "providerFailureTotals": {
+    "http_404": 25,
+    "auth_401_403": 25
+  },
+  "proposed500CardEnglishBatchManifest": "reports\\runtime\\thumbnail_rollout_en_500_manifest.json",
+  "proposed500CardEnglishBatchSha256": "2e84741b1921388baac2346387040f65a7dbea0acf11924076809d7ec2438f5e",
+  "estimatedThumbnailStorage": {
+    "avgThumbBytesObservedStage2": 13009,
+    "estimated500BatchBytes": 6504500,
+    "estimatedFullEnglishMatchableBytes": 304085375,
+    "estimatedFullCatalogueMatchableBytes": 475374878,
+    "estimatedFullCatalogueAllCardsBytes": 970185202
+  },
+  "dryRun": {
+    "cardCount": 500,
+    "ambiguousCount": 0,
+    "shouldStop": false,
+    "stopReasons": [],
+    "providerTotals": {
+      "pokemon_tcg_api": 400,
+      "pokewallet": 100
+    },
+    "importDisplay": false
+  },
+  "filesChanged": [
+    "cardscanr_image_pipeline/config.py",
+    "cardscanr_image_pipeline/models.py",
+    "cardscanr_image_pipeline/paths.py",
+    "cardscanr_image_pipeline/processing.py",
+    "cardscanr_image_pipeline/database.py",
+    "cardscanr_image_pipeline/pipeline.py",
+    "cardscanr_image_pipeline/stage2_runner.py",
+    "cardscanr_image_pipeline/thumbnail_rollout.py",
+    "tools/thumbnail_rollout.py",
+    "tests/test_thumbnail_rollout.py"
+  ],
+  "tests": "tests/test_thumbnail_rollout.py + existing tests/test_image_pipeline.py",
+  "exactUnresolvedRisks": [
+    "PokeWallet catalogue URLs require authentication; Manual Add still shows placeholders until Supabase thumbs are wired.",
+    "38,036 unresolved cards remain outside the validated provider chain.",
+    "Do not auto-proceed from 500-card batch to full English import.",
+    "Catalogue wiring, search-index rebuild, and Flutter checks are deferred until English thumbnail batch approval.",
+    "Ambiguous PokeWallet identities: 7246"
+  ],
+  "fullDisplayImageImportRun": false,
+  "flutterModified": false,
+  "fullEnglishImportRun": false,
+  "catalogueWiringRun": false,
+  "searchIndexRebuildRun": false,
+  "stopGate": "Stopped after planning and 500-card dry run. Awaiting approval before execute."
+}

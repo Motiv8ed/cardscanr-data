@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardscanr.app/contracts/image_identity_eligibility_schema.json",
+  "title": "CardScanR layered image identity eligibility",
+  "type": "object",
+  "required": ["canonicalPrintingId", "catalogueIdentityState", "physicalVariantState", "imageIdentityState", "imageSafe", "evidenceUsed", "unresolvedFields"],
+  "properties": {
+    "canonicalPrintingId": {"type": "string", "minLength": 1},
+    "catalogueIdentityState": {"enum": ["exact_catalogue_record", "probable_catalogue_record", "ambiguous_catalogue_record", "provider_duplicate", "conflicting_catalogue_record"]},
+    "physicalVariantState": {"enum": ["exact_physical_variant", "shared_front_variant_unresolved", "variant_specific_unresolved", "physical_variant_not_applicable", "physical_variant_conflict"]},
+    "imageIdentityState": {"enum": ["exact_variant_image", "exact_card_front_image", "shared_front_image", "image_candidate_unverified", "image_variant_ambiguous", "image_identity_conflict", "missing_image"]},
+    "imageSafe": {"type": "boolean"},
+    "evidenceUsed": {"type": "object"},
+    "unresolvedFields": {"type": "array", "items": {"type": "string"}},
+    "blockingReason": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}

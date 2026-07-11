@@ -1,0 +1,69 @@
+{
+  "classification": "PARTIAL",
+  "generatedAtUtc": "2026-07-10T03:04:19Z",
+  "originalManifestPath": "reports/runtime/thumbnail_rollout_en_500_manifest.json",
+  "originalManifestSha256": "2e84741b1921388baac2346387040f65a7dbea0acf11924076809d7ec2438f5e",
+  "gateA": {
+    "attempted": 400,
+    "skipped": 1,
+    "uploaded": 390,
+    "verified": 391,
+    "failed": 9,
+    "existingSupabaseOverlapCount": 1,
+    "totalSourceBytes": 279882297,
+    "storedThumbnailBytes": 5067414,
+    "contactSheetPath": "reports\\runtime\\thumbnail_rollout_gate_a_contact_sheet.png",
+    "idempotentPassed": true,
+    "classification": "PARTIAL"
+  },
+  "pokewalletCredentialAvailability": "present",
+  "gateB": {
+    "canary": null,
+    "canaryAttempted": false,
+    "canaryUploaded": 0,
+    "canaryVerified": 0,
+    "canaryFailed": 0,
+    "remaining75": null,
+    "remaining75Attempted": false,
+    "contactSheetPath": null,
+    "classification": "BLOCKED",
+    "reason": "Gate A was PARTIAL (9 failures); Gate B not started per stop gate."
+  },
+  "combinedVerifiedThumbnailCountInSupabase": 490,
+  "providerBreakdown": {
+    "tcgdex": 20,
+    "pokewallet": 38,
+    "pokemon_tcg_api": 432
+  },
+  "exactFailuresAndReasons": [
+    "gate_a_partial_9_pokemontcg_io_404_on_me3_me2pt5",
+    "gate_b_blocked_because_gate_a_not_pass",
+    "pokemon|en|me3|19|dewgong: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me3/19.png",
+    "pokemon|en|me2pt5|256|boss_s_orders: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/256.png",
+    "pokemon|en|me2pt5|92|rotom: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/92.png",
+    "pokemon|en|me2pt5|214|urbain: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/214.png",
+    "pokemon|en|me2pt5|123|gastly: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/123.png",
+    "pokemon|en|me3|59|klefki: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me3/59.png",
+    "pokemon|en|me3|67|furfrou: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me3/67.png",
+    "pokemon|en|me2pt5|253|mega_audino_ex: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/253.png",
+    "pokemon|en|me2pt5|77|team_rocket_s_exeggcute: 404 Client Error: Not Found for url: https://images.pokemontcg.io/me2pt5/77.png"
+  ],
+  "unresolvedEnglishCards": 23042,
+  "projectedEnglishThumbnailStorageBytes": 303711375,
+  "actualBatchAverageThumbBytes": 12993,
+  "tests": {
+    "passed": true,
+    "testsRun": 28,
+    "failures": 0,
+    "errors": 0
+  },
+  "jsonReportPath": "D:\\cardscanr-data\\reports\\runtime\\thumbnail_rollout_execution_report.json",
+  "markdownReportPath": "D:\\cardscanr-data\\reports\\runtime\\thumbnail_rollout_execution_report.md",
+  "tcgdexDiagnosticPath": "D:\\cardscanr-data\\reports\\runtime\\thumbnail_rollout_tcgdex_diagnostic.json",
+  "fullDisplayImageImportRun": false,
+  "publicCatalogueUrlsChanged": false,
+  "searchIndexRebuilt": false,
+  "flutterModified": false,
+  "fullEnglishImportRun": false,
+  "tcgdexIncluded": false
+}

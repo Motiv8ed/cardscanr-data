@@ -1,0 +1,33 @@
+{
+  "gate": "B_remaining75",
+  "classification": "PARTIAL",
+  "attempted": 75,
+  "uploaded": 63,
+  "skipped": 5,
+  "failed": 7,
+  "providerImageUnavailable": 7,
+  "verified": 68,
+  "exhaustedIds": [
+    "pokemon|en|24326|034/086|galvantula_poke_ball_pattern",
+    "pokemon|en|24326|053/086|mienshao_poke_ball_pattern",
+    "pokemon|en|1528|076/131|snorlax_ex_prismatic_evolution_stamped",
+    "pokemon|en|2069|2/30|lightning_energy_2",
+    "pokemon|en|1533|7/30|metal_energy_7",
+    "pokemon|en|1536|2/30|grass_energy_2",
+    "pokemon|en|24326|041/086|gothita_poke_ball_pattern"
+  ],
+  "idempotent": {
+    "passed": true,
+    "uploaded": 0,
+    "skipped": 68,
+    "totalSourceBytes": 0
+  },
+  "rateLimit": {
+    "generatedAtUtc": "2026-07-10T09:18:28Z",
+    "eventCount": 0,
+    "totalWaitSeconds": 15.4,
+    "events": []
+  },
+  "contactSheetPath": "reports\\runtime\\thumbnail_rollout_gate_b_full_contact_sheet.png",
+  "importDisplay": false
+}

@@ -1,0 +1,2058 @@
+{
+  "generated_at_utc": "2026-07-10T01:16:28Z",
+  "total_cards": 74578,
+  "by_language": {
+    "en": 46417,
+    "jp": 28161
+  },
+  "catalogue_url_host_counts": {
+    "pokewallet": 47973,
+    "pokemon_tcg_api": 19818,
+    "other": 541,
+    "tcgdex": 6246
+  },
+  "pokewallet_auth_required_urls": 47973,
+  "tcgdex_urls_requiring_normalization": 103,
+  "supabase_stored_completed": 100,
+  "matchable_chain_total": 36542,
+  "matchable_by_provider": {
+    "tcgdex": 6246,
+    "pokemon_tcg_api": 20359,
+    "pokewallet": 9937
+  },
+  "matchable_by_language": {
+    "en": 23375,
+    "jp": 13167
+  },
+  "provider_capability": {
+    "tcgdex": 6246,
+    "pokemon_tcg_api": 20359,
+    "pokewallet": 9937
+  },
+  "verified_public_sibling_mapping": 0,
+  "unresolved": 38036,
+  "ambiguous": 7246,
+  "live_http_samples": {
+    "resolvedProviderCandidates": {
+      "seed": 20260710,
+      "perProvider": 25,
+      "providers": {
+        "tcgdex": {
+          "sampled": 25,
+          "usable": 0,
+          "authRequired": 0,
+          "notFound": 25,
+          "otherFailures": 0,
+          "usableRate": 0.0,
+          "probes": [
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/012/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|012|magikarp",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/120/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|120|dugtrio",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/040/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|040|カダブラ",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/004/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|004|エカン",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/125/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|125|clefable",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/015/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|015|コルサラ",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/003/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|003|キャタピー",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/020/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|020|ディグレット",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/105/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|105|rapidash",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/064/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|064|ワープポイント",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/049/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|049|エルム教授のトレーニング方法",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/117/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|117|ジェンガー",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/106/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|106|染色",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/063/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|063|模倣",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/043/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|043|砂利",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/036/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|036|poliwhirl",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/024/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|024|幼虫",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/113/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|113|ライチュ",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/033/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|033|メタポッド",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/044/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|044|hitmonlee",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/127/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|127|タイラニター",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/030/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|030|タウロス",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/027/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|027|槍",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/051/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|051|エネルギー電荷",
+              "provider": "tcgdex"
+            },
+            {
+              "url": "https://assets.tcgdex.net/ja/e/E1/029/low.webp",
+              "status": 404,
+              "contentType": "text/html",
+              "contentLength": 299,
+              "usable": false,
+              "authRequired": false,
+              "notFound": true,
+              "error": null,
+              "canonicalBaseId": "pokemon|jp|E1|029|meowth",
+              "provider": "tcgdex"
+            }
+          ]
+        },
+        "pokemon_tcg_api": {
+          "sampled": 25,
+          "usable": 25,
+          "authRequired": 0,
+          "notFound": 0,
+          "otherFailures": 0,
+          "usableRate": 100.0,
+          "probes": [
+            {
+              "url": "https://images.pokemontcg.io/base1/90.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 137313,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|90|super_potion",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/20.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 160693,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|20|electabuzz",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/14.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 161165,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|14|raichu",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/85.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 150395,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|85|pok_mon_center",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/81.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 137517,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|81|energy_retrieval",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/11.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 165771,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|11|nidoking",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/39.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 154534,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|39|porygon",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/26.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 144359,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|26|dratini",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/10.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 156231,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|10|mewtwo",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/75.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 140246,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|75|lass",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/15.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 157955,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|15|venusaur",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/51.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 154809,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|51|koffing",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/56.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 166416,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|56|onix",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/28.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 149901,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|28|growlithe",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/12.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 158493,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|12|ninetales",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/68.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 152015,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|68|vulpix",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/92.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 135991,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|92|energy_removal",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/34.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 169118,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|34|machoke",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/72.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 143803,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|72|devolution_spray",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/62.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 160394,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|62|sandshrew",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/77.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 150191,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|77|pok_mon_trader",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/1.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 159773,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|1|alakazam",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/27.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 156914,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|27|farfetch_d",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/4.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 160824,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|4|charizard",
+              "provider": "pokemon_tcg_api"
+            },
+            {
+              "url": "https://images.pokemontcg.io/base1/7.png",
+              "status": 200,
+              "contentType": "image/png",
+              "contentLength": 149723,
+              "usable": true,
+              "authRequired": false,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|base1|7|hitmonchan",
+              "provider": "pokemon_tcg_api"
+            }
+          ]
+        },
+        "pokewallet": {
+          "sampled": 25,
+          "usable": 0,
+          "authRequired": 25,
+          "notFound": 0,
+          "otherFailures": 0,
+          "usableRate": 0.0,
+          "probes": [
+            {
+              "url": "https://api.pokewallet.io/images/pk_acc9f208ad738f974beba9905157b43b96257b08ce547c484edf1247015f48f62ea83652da3833c5f4b21cf32a?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|088/165|pidgeotto",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_7525fb80fc7cfe5aa0dd9f1c62080f043b463b8d855588399e803461dce7794bf938fc7add9763d8d0f6bf8ec9?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|030/165|venusaur_30",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_8e478bd90fe76e874c7708f0193272a95966405e1c0521288f7d92241343371950c7404975d3e7f48b4093ab?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|002/165|ampharos_2",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_0df1225abe9167763d8082c2b80297f9d95c0756564c9260f03e12c28e2472cd1b4eb32a172978cdcdffbae6a2?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|019/165|mew_19",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_a2c8b153e033b6854439961ba295dfa6abe478acf33f79fb39682984ed2808d3d4d961eae3c54284238ae6d839?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|078/165|gloom",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_bf0a43eec7bd287bc7c159053f13e362fd1715cf540a9a8eea53a41f3536451075ed2099dc9e89d63fd8c0f00f?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|091/165|quilava",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_bd151a7b7c7fb0d14555f63441db2a560e254d143a315eb70d0593355edfc0e9bf7b5ea2ef35bc4d996bc94e84?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|017/165|magby_17",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_83b31ae70bf4d0aba94ff6cea7989cf68f31a820ad06e16d7b936e8c6a01a2b9368af30751c1587f9fbd77ca2f?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|093/165|abra",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_2398813f1cf5f5159b28792c29b88c15051b7f102237260579abe9e2390fe256cfc3de869aebd84b883b9191b7?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|039/165|charizard_39",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_5a4eac4945b0e7e24bfbc329ccab90d22527f99afafd4e45c024cddac02020b6ef6b629addf5b0380fa646388d?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|094/165|bulbasaur_94",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_20bac8b3351d6bfd686673dd784eaf7e1551ff93419d0e921da1ba6f670fc8704d7caaa9e50800de89ab53cfa1?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|048/165|gengar_48",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_04df6bf9ec051d8c7d9262eb2e13d3ee45f165609e8e02448b83d72d5a004e1538f12a4668d7a986c57143c512?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|033/165|alakazam_33",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_e86a8b21f29807a250d20c5ac62abb78e1fdf7bdf724fb644429aa56ee8e6acb57b6890c13f6330a1bad337199?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|059/165|pidgeot_59",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_bba33baa22f7b95265f21d91ae2622cafabebe717536f0aba7dababf45bd2d3f97352669906913bc85e6fcb27a?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|068/165|venusaur_68",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_61d3ce45964ee90e96dd2ee2500c29112b57739c8a1f97987a207c1b3a1459e134889a9b64bcc718b4d613e067?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|098/165|charmander_98",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_077c3e2a4dfecae0f41ca3ae6473e89882e85c07df3b6e756dd50da0fd597ff4d69ca10a0cd42017100f8ea609?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|072/165|chansey",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_22fa2156d3fde9c8b48fa5e48f381ddd13cceac75bfe32135a6598b4f47520ff4b8245f898a31e529df6dbd3?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|004/165|blastoise_4",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_8bf4f091990b74603868ab06da89da6e270002657b1df1d3628d18e53b1f8f5453d48e9367ac07d701d34f959c?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|029/165|tyranitar_29",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_f8f392cd08760847421305169daba6b6c0b4968b91805ad9794b86175317d2145ee87060d3572cdc8fc349b228?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|073/165|charmeleon",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_48f090d284027da98b4d3a01b0eb469a2af12995cf99dad996ba56fddbc5bf78ee04bd7877bed803efddf85bbe?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|015/165|kingler_15",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_d32dfeab6a0b4bee46cfd60867a7a32d70763c483359680fc237ffa3301847162c16ed419f19ae632867898eb7?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|084/165|kadabra",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_75a350112ea5b29a4b2863a074fc9bbdad4cb02e82072d2b015487b751e959b34b1039e778e40e79375890da2e?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|027/165|skarmory_27",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_fcd6831620d9cce8516a31932b9f7b723f68649526451361052d616500cb9840c28ea28abcf7130f59816416ad?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|014/165|golem_14",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_8517e69203e6cd7e524d6c98ba845e7af22e4b6140dd2a9ac9b4af50f50ed21a3b5733341820d8024b041e93bd?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|054/165|meganium_54",
+              "provider": "pokewallet"
+            },
+            {
+              "url": "https://api.pokewallet.io/images/pk_5a2839d33df4053e43f4ff9336edb8a8fcbdab6dc7aca319b84edcef74dd47dcd0224d6aa4e8b0ac8f51a49244?size=low",
+              "status": 401,
+              "contentType": "application/json",
+              "contentLength": 129,
+              "usable": false,
+              "authRequired": true,
+              "notFound": false,
+              "error": null,
+              "canonicalBaseId": "pokemon|en|1375|090/165|pupitar",
+              "provider": "pokewallet"
+            }
+          ]
+        }
+      }
+    },
+    "catalogueUrlsByHost": {
+      "tcgdex": {
+        "sampled": 25,
+        "usable": 0,
+        "authRequired": 0,
+        "notFound": 25,
+        "otherFailures": 0,
+        "usableRate": 0.0,
+        "probes": [
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/104/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/109/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/116/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/126/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/105/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/125/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/126/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/101/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/101/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/012/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/001/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/109/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/105/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/001/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/013/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/011/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/015/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/100/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/104/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/117/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/107/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/118/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/108/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/122/high.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          },
+          {
+            "url": "https://assets.tcgdex.net/ja/e/E1/114/low.webp",
+            "status": 404,
+            "contentType": "text/html",
+            "contentLength": 299,
+            "usable": false,
+            "authRequired": false,
+            "notFound": true,
+            "error": null
+          }
+        ]
+      },
+      "pokemon_tcg_api": {
+        "sampled": 25,
+        "usable": 25,
+        "authRequired": 0,
+        "notFound": 0,
+        "otherFailures": 0,
+        "usableRate": 100.0,
+        "probes": [
+          {
+            "url": "https://images.pokemontcg.io/base1/16.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 157216,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/11_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 878106,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/31.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 160284,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/39_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 858479,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/36.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 156540,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/35_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 1016566,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/38_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 910274,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/30.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 160863,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/17.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 173020,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/3.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 155103,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/102.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 125648,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/36_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 844539,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/32_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 897579,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/39.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 154534,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/14_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 825075,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/20_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 857375,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/29_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 884285,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/38.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 168506,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/14.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 161165,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/22.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 158840,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/35.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 164511,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/10_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 822887,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/101.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 132867,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/16_hires.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 797398,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.pokemontcg.io/base1/12.png",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 158493,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          }
+        ]
+      },
+      "pokewallet": {
+        "sampled": 25,
+        "usable": 0,
+        "authRequired": 25,
+        "notFound": 0,
+        "otherFailures": 0,
+        "usableRate": 0.0,
+        "probes": [
+          {
+            "url": "https://api.pokewallet.io/images/pk_ef8e54cc7647c46e337506a987e4b049a38a4f7fdf15171c9082eb63f9f8e31b9140900e3af70d437784083f?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_8e478bd90fe76e874c7708f0193272a95966405e1c0521288f7d92241343371950c7404975d3e7f48b4093ab?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_2fb69ce401d9c4c2bd87680137b76bc0589475ac7eabf282fc3252c76df971f491433544fc9e360be3a2a80d?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_9e91ceceb499b63cf664df1faeb1dad385fef265f2b3dc1706be89a06132b701bde5b4b3c640e422f20413d52c?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_27e70c609ad31d02e2bd30a804111ccedbd46939eaf00cc3326ba9226d16f6ef3d945f01fb75c0a18c71df72f7?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_c6c5cbe7163d6fa4e7351b3d4a0604ffed0d0793435644e21189e2b7457df3350ddc51951088316b1ce51ca1ac?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_9e91ceceb499b63cf664df1faeb1dad385fef265f2b3dc1706be89a06132b701bde5b4b3c640e422f20413d52c?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_e4243c0dfda7539f0c987d051f06751b421e3749f340aac10700d177495a7580e9de1ef3d0e3b7e1fd8786021c?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_04df6bf9ec051d8c7d9262eb2e13d3ee45f165609e8e02448b83d72d5a004e1538f12a4668d7a986c57143c512?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_499f7db78a8c9596724023a075a97b4937193339da99209cca18e441aef33aa16fc08226f03885d131093c7f86?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_455938353636e83bc973cdab94ac577e183a4bef86a89377463bc48b8f128620e7b852ff65e166e195efe83d?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_6e79c2a791b0518d444b8deadf28a030b02c16a102e7a31f378379bdaab839344efa81e6cfc35d168f7826dfd4?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_8bf4f091990b74603868ab06da89da6e270002657b1df1d3628d18e53b1f8f5453d48e9367ac07d701d34f959c?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_8cf85c6b94146c399ac672466fd3b569bc489db3e9ec7037b8b23022a9bb5d5820b185d962276dde66ad270c0c?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_93716c01cc9748434d01418f91a6e1c266f573e84edf09c9a6813f2df19eaa9bd79d1f363a7e4f2d13df51d7a1?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_48f090d284027da98b4d3a01b0eb469a2af12995cf99dad996ba56fddbc5bf78ee04bd7877bed803efddf85bbe?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_99c6ec53732709fe7f8ba783f20e8c46c62f3e2b2c1c37649d9b62f3a17fdd4b68b6d3207e2ec77eab7ff35c66?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_bd151a7b7c7fb0d14555f63441db2a560e254d143a315eb70d0593355edfc0e9bf7b5ea2ef35bc4d996bc94e84?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_ef8e54cc7647c46e337506a987e4b049a38a4f7fdf15171c9082eb63f9f8e31b9140900e3af70d437784083f?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_c267145a5ce04b0e3fa54103f6c85ad95ed693acba82813c459d719ebdd2bc0af09c8ed3b8eeecf71611f5dba3?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_a9902e3f3ba48d5aa9eb9d6c1a383bd7fb1fd926de5efbcd32ec8f0bbfe8ed6ec875f95a45543b6711b94c303f?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_00bbe7c8f5eca8a06b340cce2c9ec415361fa6c33314f637b24765f7b9cdc8987d3a88760119bda3e632da239a?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_455938353636e83bc973cdab94ac577e183a4bef86a89377463bc48b8f128620e7b852ff65e166e195efe83d?size=high",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_8bf4f091990b74603868ab06da89da6e270002657b1df1d3628d18e53b1f8f5453d48e9367ac07d701d34f959c?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://api.pokewallet.io/images/pk_272f179e790646f7fc72b425820a06aa28f5f74dfa820b42b8ee2a72377c5cf90f17b1f539462a76e94a2099?size=low",
+            "status": 401,
+            "contentType": "application/json",
+            "contentLength": 129,
+            "usable": false,
+            "authRequired": true,
+            "notFound": false,
+            "error": null
+          }
+        ]
+      },
+      "other": {
+        "sampled": 25,
+        "usable": 25,
+        "authRequired": 0,
+        "notFound": 0,
+        "otherFailures": 0,
+        "usableRate": 100.0,
+        "probes": [
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-20/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-31/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-10/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-12/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-16/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-3/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-6/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-30/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-29/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-25/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-11/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-13/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-3/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-31/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-37/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-8/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-21/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-10/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-22/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-32/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-27/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-36/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-23/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-7/small",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          },
+          {
+            "url": "https://images.scrydex.com/pokemon/me2pt5-19/large",
+            "status": 200,
+            "contentType": "image/png",
+            "contentLength": 0,
+            "usable": true,
+            "authRequired": false,
+            "notFound": false,
+            "error": null
+          }
+        ]
+      }
+    }
+  },
+  "usable_public_url_estimate": {
+    "method": "extrapolate_live_http_sample_rates_onto_chain_matchable_counts",
+    "byProvider": {
+      "tcgdex": {
+        "sampled": 25,
+        "usable": 0,
+        "matchable": 6246,
+        "estimatedUsable": 0,
+        "publicWithoutAuth": true
+      },
+      "pokemon_tcg_api": {
+        "sampled": 25,
+        "usable": 25,
+        "matchable": 20359,
+        "estimatedUsable": 20359,
+        "publicWithoutAuth": true
+      },
+      "pokewallet": {
+        "sampled": 25,
+        "usable": 0,
+        "matchable": 9937,
+        "estimatedUsable": 0,
+        "publicWithoutAuth": false
+      }
+    },
+    "estimatedUsableMatchableTotal": 20359,
+    "note": "Having a catalogue URL is not counted as usable. Estimates apply only to chain-matchable cards."
+  },
+  "known_public_404_estimate": {
+    "estimatedKnownPublic404s": 6246,
+    "basis": "extrapolated from deterministic catalogue URL samples for tcgdex and pokemon_tcg_api hosts"
+  },
+  "provider_failure_totals": {
+    "http_404": 25,
+    "auth_401_403": 25
+  },
+  "notes": [
+    "Usable image requires live HTTP 200 with image body; catalogue URL presence alone is insufficient.",
+    "PokeWallet api.pokewallet.io URLs require authentication and are not public CDN assets.",
+    "Supabase currently stores the Stage 2 100-card sample (thumb+display); thumbnail rollout will not import display.webp.",
+    "Matchable totals reused from Stage 2 reconciliation (unique chain-matchable canonicalBaseIds).",
+    "Validated chain matchable total: 36542."
+  ]
+}

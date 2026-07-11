@@ -1,0 +1,93 @@
+{
+  "gate": "A",
+  "classification": "PASS",
+  "generatedAtUtc": "2026-07-10T06:41:03Z",
+  "originalVerifiedCount": 391,
+  "replacementVerifiedCount": 9,
+  "reconciledVerifiedSampleCount": 400,
+  "providerUnavailableCount": 9,
+  "providerUnavailableIds": [
+    "pokemon|en|me3|19|dewgong",
+    "pokemon|en|me2pt5|256|boss_s_orders",
+    "pokemon|en|me2pt5|92|rotom",
+    "pokemon|en|me2pt5|214|urbain",
+    "pokemon|en|me2pt5|123|gastly",
+    "pokemon|en|me3|59|klefki",
+    "pokemon|en|me3|67|furfrou",
+    "pokemon|en|me2pt5|253|mega_audino_ex",
+    "pokemon|en|me2pt5|77|team_rocket_s_exeggcute"
+  ],
+  "replacementManifestPath": "reports\\runtime\\thumbnail_rollout_gate_a_replacements_9.json",
+  "replacementManifestSha256": "5780595eff5722342dd5066d99ebd327806f8f835d1cf957bed5bad982843e6e",
+  "replacements": {
+    "attempted": 9,
+    "skipped": 0,
+    "uploaded": 9,
+    "failed": 0,
+    "ambiguous": 0,
+    "totalSourceBytes": 5737746,
+    "totalThumbBytes": 114102,
+    "displayPathsPresent": 0
+  },
+  "replacementVerification": {
+    "generatedAtUtc": "2026-07-10T06:35:30Z",
+    "verifiedCount": 9,
+    "issueCount": 0,
+    "issues": [],
+    "cards": [
+      {
+        "canonicalBaseId": "pokemon|en|sv4|205|yveltal",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|sm10|205|gardevoir_sylveon_gx",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|sv8|174|drayton",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|ex15|67|totodile",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|dp1|128|fighting_energy",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|svp|41|paldean_wooper",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|bw6|16|maractus",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|xy3|8|shelmet",
+        "issues": []
+      },
+      {
+        "canonicalBaseId": "pokemon|en|bwp|BW68|meloetta",
+        "issues": []
+      }
+    ],
+    "passed": true
+  },
+  "idempotent": {
+    "passed": true,
+    "downloadedCount": 0,
+    "uploadedCount": 0,
+    "skippedCount": 9,
+    "attemptedCount": 9
+  },
+  "contactSheetPath": "reports\\runtime\\thumbnail_rollout_gate_a_reconciled_contact_sheet.png",
+  "tests": {
+    "passed": true,
+    "testsRun": 28,
+    "failures": 0,
+    "errors": 0
+  },
+  "importDisplay": false,
+  "scrydexUsed": false
+}
