@@ -2,7 +2,7 @@
 
 Classification: **PARTIAL**
 
-- Current phase: Phase 6 source-gap research; Flutter global-index QA complete on emulator
+- Current phase: all autonomous safe phases complete; awaiting production/direct-delivery approval
 - Data branch / HEAD: `main` / `73b75eaf`
 - Flutter branch / HEAD: `codex/global-catalogue-qa` / `76aa467`
 - Languages: de, en, es, es-419, fr, id, it, ja, ko, nl, pl, pt-BR, ru, th, zh-Hans, zh-Hant
@@ -24,6 +24,7 @@ Classification: **PARTIAL**
 - Projected R2 storage is 12.584 GB, above the 10 GB-month free tier; estimated rounded storage cost is US$0.045/month, while the configured unexpected-spend budget is US$0.
 - Scrydex requires a paid Starter plan and its terms prohibit mirroring without prior written authorization.
 - Production publication and R2 image writes require explicit approval.
+- Official Pokémon Asia terms prohibit external reuse of site Data without permission; regional catalogues remain reference-only.
 
 ## Safety
 

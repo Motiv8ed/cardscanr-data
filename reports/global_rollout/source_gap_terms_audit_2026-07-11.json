@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0.0",
+  "reviewedAtUtc": "2026-07-11T06:10:00Z",
+  "classification": "PASS_WITH_EXTERNAL_APPROVAL_GATES",
+  "scope": "Remaining official regional metadata and artwork source gaps",
+  "sources": [
+    {
+      "source": "tcgdex_database",
+      "url": "https://github.com/tcgdex/cards-database",
+      "evidence": "Repository identifies the database as MIT licensed and separately documents multilingual card data.",
+      "metadataDecision": "approved_for_existing_catalogue_metadata_with_attribution",
+      "artworkDecision": "not_covered_by_database_license",
+      "reason": "TCGdex documentation states card images are hosted separately from card data; no explicit artwork redistribution grant was located."
+    },
+    {
+      "source": "tcgdex_assets",
+      "url": "https://tcgdex.dev/faq",
+      "evidence": "Images are separately hosted, community contributed assets; direct URL construction and use are documented.",
+      "metadataDecision": "not_applicable",
+      "artworkDecision": "direct_delivery_canary_approved_mirroring_pending_written_permission",
+      "reason": "Technical public access is established, but redistribution or rehosting rights are not."
+    },
+    {
+      "source": "pokemon_asia_trainers_websites",
+      "url": "https://asia.pokemon-card.com/ph/policy/",
+      "coverageEvidence": [
+        "https://asia.pokemon-card.com/id/card-search/list/",
+        "https://asia.pokemon-card.com/th/card-search/list/",
+        "https://asia.pokemon-card.com/tw/card-search/"
+      ],
+      "observedCoverage": {
+        "id": "official searchable catalogue; 12150 current results observed",
+        "th": "official searchable catalogue; 9480 current results observed",
+        "zh-Hant": "official searchable catalogue with product, rarity, regulation and card detail fields"
+      },
+      "metadataDecision": "do_not_ingest_without_written_permission",
+      "artworkDecision": "prohibited_without_written_permission",
+      "reason": "Current Terms Article 7 prohibits copying, duplicating, modifying, publishing, displaying, transmitting or distributing site Data and states Data may not be used outside the Services; Article 11 also prohibits business/profit use."
+    },
+    {
+      "source": "pokemon_com_card_database",
+      "url": "https://www.pokemon.com/us/pokemon-tcg/pokemon-cards/",
+      "evidence": "Official English and localized card search remains available, with official set checklists and individual card records.",
+      "metadataDecision": "reference_only_pending_written_permission",
+      "artworkDecision": "do_not_mirror_without_written_permission",
+      "reason": "Official availability proves reference coverage but does not grant bulk commercial reuse or artwork redistribution."
+    }
+  ],
+  "coverageDecision": {
+    "safeAutonomousIngestionAdded": false,
+    "reason": "Every newly identified official source lacks a reuse grant or expressly prohibits external reuse.",
+    "existingCataloguePreserved": true,
+    "directProviderDeliveryPreserved": true,
+    "providerImageMirroringPerformed": false
+  },
+  "remainingLanguageGaps": {
+    "zeroCardRows": ["nl", "pl", "pt-PT", "ru"],
+    "sparseCardRows": ["ko"],
+    "decision": "retain explicit zero/sparse coverage states; do not fabricate or cross-language clone records"
+  },
+  "approvalGates": [
+    "Written permission for TCGdex artwork rehosting, or acceptance of direct-provider delivery as the production image model.",
+    "Written permission from The Pokemon Company for external commercial ingestion/use of official regional catalogue Data.",
+    "Explicit production catalogue manifest publication approval.",
+    "Explicit approval for any paid storage or provider plan above the configured zero-dollar unexpected-spend budget."
+  ]
+}

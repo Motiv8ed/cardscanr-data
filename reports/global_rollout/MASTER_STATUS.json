@@ -2,14 +2,14 @@
   "schemaVersion": "1.0.0",
   "updatedAtUtc": "2026-07-11T05:38:00Z",
   "classification": "PARTIAL",
-  "currentPhase": "Phase 6 source-gap research; Flutter global-index QA complete on emulator",
+  "currentPhase": "all autonomous safe phases complete; awaiting production/direct-delivery approval",
   "phaseCompletion": {
     "phase1CurrentStateAudit": "complete",
     "phase2LanguageRegionContract": "complete",
     "phase3CanonicalIdentityContract": "complete_provisional_variant_evidence",
     "phase4ProviderLedger": "complete_terms_gate_open",
     "phase5CredentialPreflight": "complete",
-    "phase6PublicMetadataIngestion": "complete_tcgdex_all_accessible_languages",
+    "phase6PublicMetadataIngestion": "complete_tcgdex_all_accessible_languages_official_regional_sources_rejected_by_terms",
     "phase7CoverageReconciliation": "complete",
     "phase8ImageAcquisitionModel": "implemented",
     "phase9ProviderSafeDownloads": "implemented_and_tested_no_global_download",
@@ -592,9 +592,9 @@
     },
     {
       "provider": "official_regional_pokemon_catalogues",
-      "termsStatus": "pending_human_review",
-      "imageRehostingStatus": "pending_human_review",
-      "reason": "unclear"
+      "termsStatus": "external_reuse_prohibited_without_written_permission",
+      "imageRehostingStatus": "prohibited_without_written_permission",
+      "reason": "Published Trainers Website Terms Article 7 prohibits copying, publishing, transmitting, distributing, or using Data outside the Services; Article 11 prohibits business/profit use."
     }
   ],
   "unresolvedIdentityCount": 60905,
@@ -707,8 +707,9 @@
     "Projected R2 storage is 12.584 GB, above the 10 GB-month free tier; estimated rounded storage cost is US$0.045/month, while the configured unexpected-spend budget is US$0.",
     "Scrydex requires a paid Starter plan and its terms prohibit mirroring without prior written authorization.",
     "Production publication and R2 image writes require explicit approval."
+    ,"Official Pokemon Asia catalogues prohibit external reuse of site Data without written permission."
   ],
-  "nextSafeAction": "Review/accept an artwork rehosting basis for TCGdex and resolve physical variant evidence; optionally configure only approved provider credentials.",
+  "nextSafeAction": "Obtain production approval for the verified v2 catalogue and direct-provider image delivery model, or provide written artwork/reuse permission before enabling mirroring or official-regional ingestion.",
   "exactNextCommand": "python tools/global_rollout.py status",
   "resumeCommand": "python tools/global_rollout.py resume"
 }
