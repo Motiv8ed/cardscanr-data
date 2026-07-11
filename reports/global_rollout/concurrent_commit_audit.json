@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T03:19:36Z",
+  "commit": "ce3de47f11e7c37495125c2ce56f546e9f8a4995",
+  "parent": "9b85b4599ff3c925a660e348aba10ad020cd7ba1",
+  "author": "Motiv8ed <33737442+Motiv8ed@users.noreply.github.com>",
+  "authorTimestamp": "2026-07-11T12:22:50+10:00",
+  "changedFileCount": 59,
+  "classification": "overlapping_but_consistent",
+  "containsGeneratedRuntimeArtifacts": true,
+  "containsSecrets": false,
+  "unrelatedChanges": "56 runtime report/contact-sheet artefacts were unrelated to the layered contract; they are generated audit evidence, not source inputs.",
+  "overlapWithLayeredCommit": [
+    "tests/test_layered_identity.py"
+  ],
+  "conflictFound": false,
+  "suspicious": false,
+  "processAttribution": "Git metadata cannot identify Cursor processes. Timing and the shared-worktree partial contract commit are consistent with parallel work, but this cannot be proven.",
+  "reproducibilityImpact": "Runtime artefacts increase repository size but do not change catalogue inputs; contract/schema/tests are deterministic source changes.",
+  "historyRewritten": false
+}

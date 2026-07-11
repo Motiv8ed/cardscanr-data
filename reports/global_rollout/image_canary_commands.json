@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T03:19:47Z",
+  "classification": "PREPARED_NOT_EXECUTED",
+  "defaultDryRun": true,
+  "commands": [
+    "python tools/global_rollout.py image-canary --provider tcgdex --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language ja --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language zh-Hant --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language th --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language id --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language fr --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language de --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language it --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language es --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language es-419 --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider tcgdex --language pt-BR --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider pokemontcg --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet",
+    "python tools/global_rollout.py image-canary --provider pokewallet --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet"
+  ],
+  "guardRequirements": [
+    "approved permission with evidence",
+    "exact catalogue identity",
+    "safe image identity",
+    "valid required credentials",
+    "write/byte budget",
+    "valid R2 credentials for non-dry-run",
+    "production publication forbidden"
+  ],
+  "executionPerformed": false
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T03:19:43Z",
+  "classification": "PASS",
+  "totalRecordsScanned": 117665,
+  "auditedRecords": 1500,
+  "sampleTargets": {
+    "en": 200,
+    "ja": 200,
+    "zh-Hant": 100,
+    "zh-Hans": 100,
+    "ko": 100,
+    "th": 100,
+    "id": 100,
+    "fr": 100,
+    "de": 100,
+    "it": 100,
+    "es": 100,
+    "es-419": 100,
+    "pt-BR": 100
+  },
+  "confirmedExact": 1500,
+  "downgradedProbable": 0,
+  "downgradedAmbiguous": 0,
+  "exactRecordsAfterAudit": 117665,
+  "duplicateProviderIdConflicts": 0,
+  "rawProviderIdsReusedAcrossLanguages": 25680,
+  "rawReuseInterpretation": "Expected TCGdex translation-key reuse; provider IDs are scoped by language and are not cross-language identities.",
+  "duplicateCatalogueIdentityConflicts": 0,
+  "regionalMergeConflicts": 0,
+  "providerConflicts": 0,
+  "setTotalConflicts": 0,
+  "releaseDateConflicts": 0,
+  "scriptAndRegionSeparation": {
+    "zh-Hans_vs_zh-Hant": true,
+    "es_vs_es-419": true,
+    "pt-BR_vs_pt-PT": true
+  },
+  "sampleIndex": "reports/global_rollout/adversarial_identity_audit.csv"
+}

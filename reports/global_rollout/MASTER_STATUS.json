@@ -1,90 +1,64 @@
 {
-  "schemaVersion": "3.0.0",
-  "generatedAtUtc": "2026-07-11T02:24:01Z",
-  "classification": "IDENTITY_READY_PERMISSION_BLOCKED",
+  "schemaVersion": "4.0.0",
+  "generatedAtUtc": "2026-07-11T03:19:47Z",
+  "classification": "AUDIT_PASS_PERMISSION_BLOCKED",
   "branch": "main",
-  "startingCommit": "9b85b4599ff3c925a660e348aba10ad020cd7ba1",
+  "startingCommit": "e60ac3a67b771aa45b31c80708ea67a127bba0e0",
   "finalCommit": "SELF (resolve with git rev-parse HEAD)",
-  "totalCatalogueRecords": 117665,
-  "exactCatalogueRecordCount": 117665,
-  "probableCatalogueRecordCount": 0,
-  "ambiguousCatalogueRecordCount": 0,
-  "exactPhysicalVariantCount": 0,
-  "sharedFrontVariantUnresolvedCount": 117665,
-  "variantSpecificUnresolvedCount": 0,
-  "imageSafeCount": 92817,
-  "imageSafeByLanguage": {
-    "de": 14436,
-    "en": 21738,
-    "es": 14121,
-    "es-419": 1293,
-    "fr": 18085,
-    "id": 1152,
-    "it": 14227,
-    "ja": 3297,
-    "pt-BR": 1098,
-    "th": 1224,
-    "zh-Hant": 2146
+  "concurrentCommitAuditResult": "overlapping_but_consistent",
+  "totalRecords": 117665,
+  "exactRecordsAfterAdversarialAudit": 117665,
+  "probableRecords": 0,
+  "ambiguousRecords": 0,
+  "duplicateProviderConflicts": 0,
+  "regionalIdentityConflicts": 0,
+  "providerPermissionRequestPaths": [
+    "reports/global_rollout/provider_permission_requests/tcgdex.md",
+    "reports/global_rollout/provider_permission_requests/pokemon_tcg_api.md",
+    "reports/global_rollout/provider_permission_requests/pokewallet.md"
+  ],
+  "providerContactPath": "reports/global_rollout/provider_permission_contact_details.md",
+  "providerStatuses": {
+    "tcgdex": "pending",
+    "pokemon_tcg_api": "pending",
+    "pokewallet": "pending"
   },
-  "permissionBlockedImageSafeCount": 92817,
-  "credentialBlockedImageSafeCount": 0,
-  "missingImageCount": 24848,
-  "existing591ImageSafeCount": 331,
-  "remainingUnresolvedExistingThumbnails": 260,
-  "executableCanaryCountsByLanguage": {
-    "en": 0,
-    "ja": 0,
-    "zh-Hant": 0,
-    "th": 0,
-    "id": 0,
-    "fr": 0,
-    "de": 0,
-    "it": 0,
-    "es": 0,
-    "es-419": 0,
-    "pt-BR": 0
+  "existing260ResolvedExact": 0,
+  "existing260StillUnresolved": 260,
+  "missingImageCountByLanguage": {
+    "de": 5106,
+    "en": 1585,
+    "es": 1051,
+    "es-419": 36,
+    "fr": 3349,
+    "id": 1636,
+    "it": 1007,
+    "ja": 2949,
+    "ko": 239,
+    "pt-BR": 26,
+    "th": 1697,
+    "zh-Hans": 877,
+    "zh-Hant": 5290
   },
-  "identityReadyCanaryCountsByLanguage": {
-    "en": 100,
-    "ja": 100,
-    "zh-Hant": 100,
-    "th": 100,
-    "id": 100,
-    "fr": 100,
-    "de": 100,
-    "it": 100,
-    "es": 100,
-    "es-419": 100,
-    "pt-BR": 100
+  "executableCommandsPrepared": 13,
+  "currentlyExecutableCommands": 0,
+  "tests": {
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests/test_global_rollout.py tests/test_layered_identity.py tests/test_permissions_and_adversarial.py tests/test_image_pipeline.py tests/test_thumbnail_rollout.py",
+    "result": "65 passed in 3.88s"
   },
-  "projectedThumbnailStorage": {
-    "eligibleIdentitySafeCandidates": 92817,
-    "currentlyExecutable": 0,
-    "objects": 92817,
-    "writes": 92817,
-    "bytes": 1190202601,
-    "decimalGB": 1.1902
-  },
-  "providerPermissionStatus": {
-    "tcgdex": "pending_human_review",
-    "pokemon_tcg_api": "pending_human_review",
-    "pokewallet": "pending_human_review"
-  },
+  "filesChanged": "Concurrent audit, adversarial sample/index, permission pack/tracker/validator, 260-resolution, missing-image inventory, guarded command plans, tests, and master reports.",
   "safety": {
+    "imageBodiesDownloaded": 0,
     "r2Writes": 0,
-    "bulkImageDownloads": 0,
     "productionPublished": false,
     "flutterModified": false
   },
-  "tests": {
-    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests/test_global_rollout.py tests/test_layered_identity.py tests/test_image_pipeline.py tests/test_thumbnail_rollout.py",
-    "result": "59 passed in 3.10s"
-  },
-  "filesChanged": "Layered identity contract/schema/tests were committed in concurrent commit ce3de47f; 18 reconciliation/report/plan files are in the focused commit containing this report.",
   "exactBlockers": [
-    "Written mirroring permission is pending for all three current image providers.",
-    "260 existing thumbnails lack exact catalogue identity.",
-    "24,848 catalogue records have no image candidate."
+    "Written mirroring permission with evidence is pending for all three providers.",
+    "Configured unexpected-spend and R2-write budgets remain zero.",
+    "260 existing thumbnails remain identity-unresolved.",
+    "24,848 catalogue records lack an image candidate."
   ],
-  "exactNextCommand": "Record written provider response in reports/global_rollout/provider_permission_tracker.json, then regenerate eligibility."
+  "exactNextHumanAction": "Review and send one provider permission email from reports/global_rollout/provider_permission_requests, then save the written response as an evidence file and update provider_permission_tracker.json.",
+  "exactResumeCommandAfterPermissionApproval": "python tools/global_rollout.py permissions-status && python tools/global_rollout.py image-canary --provider tcgdex --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet"
 }

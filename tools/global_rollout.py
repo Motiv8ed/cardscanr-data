@@ -34,6 +34,7 @@ from cardscanr_global_catalogue.reconciliation import (
     validate_global_catalogue_schema,
 )
 from cardscanr_global_catalogue.status import build_master_status
+from cardscanr_global_catalogue.permissions import image_canary_guard, permissions_status
 
 
 REPORT_DIR = ROOT / "reports" / "global_rollout"
@@ -238,6 +239,25 @@ def command_status(_args: argparse.Namespace) -> int:
     return 0
 
 
+def command_permissions_status(_args: argparse.Namespace) -> int:
+    payload=permissions_status(); _print_json(payload)
+    return 0 if payload["classification"]=="PASS" else 1
+
+
+def command_image_canary(args: argparse.Namespace) -> int:
+    provider="pokemon_tcg_api" if args.provider=="pokemontcg" else args.provider
+    errors=image_canary_guard(provider,dry_run=args.dry_run,credentials_valid=False,
+        budget_writes=args.max_writes,requested_writes=args.limit,budget_bytes=args.max_bytes,
+        requested_bytes=args.limit*13000,language=args.language,r2_valid=False,
+        production_publish=False)
+    payload={"classification":"BLOCKED" if errors else "DRY_RUN_READY","provider":provider,"language":args.language,
+        "limit":args.limit,"dryRun":args.dry_run,"resume":args.resume,"batchSize":args.batch_size,
+        "maxWrites":args.max_writes,"maxBytes":args.max_bytes,"providerRate":args.provider_rate,
+        "stopOnMismatch":args.stop_on_mismatch,"contactSheet":args.contact_sheet,"errors":errors,
+        "downloadsPerformed":False,"r2WritesPerformed":0}
+    _print_json(payload); return 2 if errors else 0
+
+
 def command_resume(args: argparse.Namespace) -> int:
     write_contract_artifacts()
     write_provider_ledger()
@@ -333,6 +353,23 @@ def build_parser() -> argparse.ArgumentParser:
     status = subparsers.add_parser("status")
     status.set_defaults(func=command_status)
 
+    permissions_parser=subparsers.add_parser("permissions-status")
+    permissions_parser.set_defaults(func=command_permissions_status)
+
+    image_canary=subparsers.add_parser("image-canary")
+    image_canary.add_argument("--provider",required=True,choices=["tcgdex","pokemontcg","pokewallet"])
+    image_canary.add_argument("--language",required=True)
+    image_canary.add_argument("--limit",type=int,default=100)
+    image_canary.add_argument("--dry-run",action=argparse.BooleanOptionalAction,default=True)
+    image_canary.add_argument("--resume",action="store_true")
+    image_canary.add_argument("--batch-size",type=int,default=100)
+    image_canary.add_argument("--max-writes",type=int,default=0)
+    image_canary.add_argument("--max-bytes",type=int,default=0)
+    image_canary.add_argument("--provider-rate",type=float,default=1.0)
+    image_canary.add_argument("--stop-on-mismatch",action=argparse.BooleanOptionalAction,default=True)
+    image_canary.add_argument("--contact-sheet",action="store_true")
+    image_canary.set_defaults(func=command_image_canary)
+
     resume = subparsers.add_parser("resume")
     resume.add_argument("--max-network-requests", type=int)
     resume.add_argument("--request-interval-seconds", type=float, default=0.20)
@@ -350,4 +387,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,9 +1,14 @@
-Subject: Written permission request for CardScanR metadata and thumbnail use
+# Permission request
+
+Subject: CardScanR written permission request — metadata and card thumbnails
 
 Hello TCGdex team,
 
-CardScanR is a commercial or potentially monetized mobile card-catalogue app. Please confirm in writing whether CardScanR may: retrieve metadata from your API; retain normalized metadata indefinitely; download returned card images; resize them into optimized WebP thumbnails (about 245 × 337 maximum); store those thumbnails indefinitely in Cloudflare R2; serve them publicly in the app; preserve source attribution; honour takedown requests; continue serving already-cached thumbnails if API access later ends; and do this for every language your service exposes.
+CardScanR is a mobile card-catalogue application that may be commercial or monetized. We request written permission to retain normalized card metadata; download card images returned for provider card records; resize them into optimized WebP thumbnails; store thumbnails indefinitely in Cloudflare R2; serve those thumbnails publicly in CardScanR; continue serving already stored thumbnails if API access later ends; preserve required attribution; comply with takedown requests; and process current and future language catalogues.
 
-Please specify required attribution, permitted caching duration, redistribution conditions, commercial-use limits, deletion/takedown requirements, rate limits, whether a paid plan is required, and whether approval covers both existing and future images. Please also distinguish permission you control from rights that must be obtained from Pokémon/Nintendo/Creatures or another rights holder.
+Please specify permitted languages, exact attribution wording, caching duration, public redistribution limits, commercial-use limits, subscription requirements, deletion requirements, obligations after API cancellation, image-source restrictions, safe bulk-ingestion rate limits, and whether approval covers future newly added cards. Please distinguish rights you can grant from third-party rights requiring separate permission.
 
-No mirroring will begin unless the answer expressly authorizes it.
+We will not mirror images unless written approval expressly covers image download, resizing, R2 storage, public serving, commercial/mobile-app use, retention, and cancellation handling.
+
+Regards,
+CardScanR
