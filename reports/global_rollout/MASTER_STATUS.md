@@ -3,7 +3,8 @@
 Classification: **PARTIAL**
 
 - Current phase: Phase 6 source-gap research; Flutter global-index QA complete on emulator
-- Branch / HEAD: `main` / `d4294041` plus verified pending evidence commit
+- Data branch / HEAD: `main` / `73b75eaf`
+- Flutter branch / HEAD: `codex/global-catalogue-qa` / `76aa467`
 - Languages: de, en, es, es-419, fr, id, it, ja, ko, nl, pl, pt-BR, ru, th, zh-Hans, zh-Hant
 - Canonical printing groups: 117665
 - Canonical sets: 1495
