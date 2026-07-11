@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T02:24:01Z",
+  "classification": "RESEARCH_ONLY",
+  "priorityGaps": [
+    "zh-Hans",
+    "ko",
+    "zh-Hant",
+    "ja",
+    "th",
+    "id",
+    "nl",
+    "pl",
+    "ru",
+    "pt-PT"
+  ],
+  "sources": [
+    {
+      "sourceName": "TCGdex",
+      "supportedLanguage": "17 registered languages; current images strongest in en/ja/zh-Hant/th/id and European languages",
+      "supportedRegion": "provider language catalogue; zh-Hant region is MULTI",
+      "metadataAvailability": "documented multilingual REST API, completion varies",
+      "imageAvailability": "low/high card image URLs where present",
+      "documentedApi": true,
+      "authentication": "none",
+      "pricing": "free",
+      "stableIdentifiers": "provider set and card IDs",
+      "mirroringTerms": "written permission pending",
+      "commercialUseStatus": "unconfirmed",
+      "confidence": "high for identity structure",
+      "integrationRecommendation": "retain; ingest metadata, mirror only after written permission"
+    },
+    {
+      "sourceName": "Pokémon TCG API",
+      "supportedLanguage": "English",
+      "supportedRegion": "international English catalogue",
+      "metadataAvailability": "documented REST API and public data repository",
+      "imageAvailability": "small/large URLs",
+      "documentedApi": true,
+      "authentication": "optional key, lower anonymous limits",
+      "pricing": "free access; rate limits depend on key",
+      "stableIdentifiers": "set-card IDs",
+      "mirroringTerms": "written permission pending",
+      "commercialUseStatus": "unconfirmed",
+      "confidence": "high for English identity",
+      "integrationRecommendation": "retain as English corroboration; no mirroring yet"
+    },
+    {
+      "sourceName": "Pokémon China official card mini-program",
+      "supportedLanguage": "zh-Hans",
+      "supportedRegion": "CN",
+      "metadataAvailability": "official card search described",
+      "imageAvailability": "card fronts visible in mini-program",
+      "documentedApi": false,
+      "authentication": "WeChat/mini-program context",
+      "pricing": "not stated",
+      "stableIdentifiers": "product/card identifiers visible but no integration contract",
+      "mirroringTerms": "not published for API/rehosting",
+      "commercialUseStatus": "unclear",
+      "confidence": "high as official reference, low as integration source",
+      "integrationRecommendation": "manual provenance research only; do not scrape or integrate"
+    },
+    {
+      "sourceName": "PikaQian API",
+      "supportedLanguage": "zh-Hans",
+      "supportedRegion": "CN",
+      "metadataAvailability": "documented third-party API; 13,000+ cards claimed",
+      "imageAvailability": "public CDN URL claimed",
+      "documentedApi": true,
+      "authentication": "X-API-Key required",
+      "pricing": "requires provider confirmation",
+      "stableIdentifiers": "API card/set records; must validate against official numbering",
+      "mirroringTerms": "unclear",
+      "commercialUseStatus": "unclear",
+      "confidence": "medium",
+      "integrationRecommendation": "request terms and identity sample; do not integrate until verified"
+    }
+  ],
+  "scrapingPerformed": false,
+  "accessControlsBypassed": false
+}

@@ -1,19 +1,19 @@
-# CardScanR global catalogue — master status
+# CardScanR global catalogue — layered identity status
 
-Classification: **PARTIAL**
+Classification: **IDENTITY_READY_PERMISSION_BLOCKED**
 
-- Branch / starting commit: `main` / `1aec8965c644c41eb17713d675f0b7ec00ecc1a0`
-- Final commit: this report's containing commit (`git rev-parse HEAD`; self-hashes cannot be embedded in a Git commit)
-- Exact / probable physical printings: 0 / 0
-- Variant unresolved: 117,665
-- Existing exact provider-ID mappings / unresolved: 331 / 260
-- Thumbnail-only all-candidate projection: 1.1902 GB, 92,817 writes; fits the 10 GB free storage allowance: **true**
-- Providers pending permission: TCGdex, Pokémon TCG API, PokéWallet
-- Refined executable image canaries: 0
-- Scrydex: do not purchase; unique value unquantified and mirroring unauthorized
-- R2 writes / bulk image downloads / production publications: 0 / 0 / 0
-- Tests: 51 passed in 3.87s using the repository virtual environment
+- Catalogue records / exact: 117,665 / 117,665
+- Exact physical variants / shared-front unresolved: 0 / 117,665
+- Identity-safe images: 92,817; permission-blocked: 92,817
+- Missing images: 24,848
+- Existing 591 image-safe / unresolved: 331 / 260
+- Identity-ready canaries: 1100; executable while permission pending: 0
+- Projected thumbnails: 1.1902 GB, 92,817 writes
+- Providers: TCGdex, Pokémon TCG API, PokéWallet all pending human review
+- R2 writes / bulk downloads / production publications: 0 / 0 / 0
 
-Blockers: physical variant evidence, 260 unresolved identities, and written provider permissions.
+Tests: 59 passed in 3.10s (global catalogue, layered identity, image pipeline, and thumbnail rollout)
 
-Exact next command: `python tools/global_rollout.py status`
+Files changed: layered identity contract/schema/tests are in concurrent commit `ce3de47f`; 18 reconciliation, report, and execution-plan files are in this report's focused commit.
+
+Exact next command: `Record written provider response in reports/global_rollout/provider_permission_tracker.json, then regenerate eligibility.`

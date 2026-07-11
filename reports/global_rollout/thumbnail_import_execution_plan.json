@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-11T02:24:01Z",
+  "classification": "BLOCKED_PERMISSION",
+  "eligibility": {
+    "catalogueState": "exact_catalogue_record",
+    "imageStates": [
+      "exact_card_front_image",
+      "exact_variant_image",
+      "shared_front_image"
+    ],
+    "technicallyReachable": true,
+    "mirroringPermission": "approved",
+    "credentials": "configured where required"
+  },
+  "batches": {
+    "canarySizePerProviderLanguage": 100,
+    "postApprovalBatchSize": 500,
+    "checkpointAfterEveryBatch": true
+  },
+  "controls": {
+    "globalProviderRateLimiter": true,
+    "permanentFailureRegistry": true,
+    "repeatKnown404": false,
+    "r2ObjectVerification": true,
+    "immutableHashPaths": true,
+    "displayImages": false,
+    "resumable": true
+  },
+  "projected": {
+    "eligibleIdentitySafeCandidates": 92817,
+    "currentlyExecutable": 0,
+    "objects": 92817,
+    "writes": 92817,
+    "bytes": 1190202601,
+    "decimalGB": 1.1902
+  },
+  "r2WritesPerformed": 0
+}

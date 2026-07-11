@@ -1,3 +1,8 @@
+import json
+from pathlib import Path
+
+import jsonschema
+
 from cardscanr_global_catalogue.layered_identity import catalogue_identity, image_identity, image_safe, layered_classification, physical_variant, validate_assignment
 
 
@@ -38,3 +43,9 @@ def test_permission_is_independent_of_identity():
 def test_canary_eligibility_uses_image_safe_state():
     assert image_safe("exact_catalogue_record","shared_front_image")
     assert not image_safe("probable_catalogue_record","shared_front_image")
+
+
+def test_layered_record_validates_against_contract_schema():
+    schema=json.loads((Path(__file__).parents[1]/"data/contracts/image_identity_eligibility_schema.json").read_text(encoding="utf-8"))
+    value={"canonicalPrintingId":"card:1",**layered_classification(record())}
+    jsonschema.Draft202012Validator(schema).validate(value)
