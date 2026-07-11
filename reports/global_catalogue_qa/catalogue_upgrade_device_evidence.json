@@ -1,0 +1,60 @@
+{
+  "classification": "PASS",
+  "device": "emulator-5554",
+  "package": "com.example.card_scanner_app.qa",
+  "sourceVersion": {
+    "schemaVersion": "1.0.0",
+    "byteSize": 180699136,
+    "sha256": "31d57a2dd445",
+    "validBeforeUpgrade": true
+  },
+  "targetVersion": {
+    "schemaVersion": "2.0.0",
+    "cardCount": 117665,
+    "byteSize": 305750016,
+    "sha256": "a914580a1ed5b821d4c3b05f23acf17726089d2cf6603e8d8df8aed2217b14c9",
+    "compressedByteSize": 33428868,
+    "compressedSha256": "f3a08ea1ad9557619ff6ef5165277eb42df2d3276e5611fa4a3d96025e5950e8"
+  },
+  "upgrade": {
+    "partialBytesPreservedAcrossForceStop": true,
+    "rangeResumeObserved": true,
+    "compressedTransferCompleted": true,
+    "compressedChecksumPassed": true,
+    "nativeStreamingGzipExtractionPassed": true,
+    "uncompressedChecksumPassed": true,
+    "sqliteHealthAndMetadataPassed": true,
+    "fullVerificationMs": 20385,
+    "checksumMs": 19753,
+    "sqliteHealthMs": 372,
+    "atomicActivationMs": 990,
+    "activeBytesAfterActivation": 305750016,
+    "previousBytesAfterActivation": 180699136,
+    "v1RetainedForRollback": true
+  },
+  "relaunch": {
+    "forceStopRelaunchPassed": true,
+    "trustedActivationRecordUsed": true,
+    "trustedFastPathMs": 4683,
+    "fullChecksumRepeated": false,
+    "secondCatalogueDownload": false
+  },
+  "failureSafety": {
+    "schemaV1SidecarNotAppliedToSchemaV2": true,
+    "failedV2AttemptPreservedV1": true,
+    "wrongCompressedChecksumRejected": true,
+    "corruptGzipRejected": true,
+    "wrongSqliteChecksumRejected": true,
+    "insufficientSpaceBlocksDownloadAndPreservesActive": true,
+    "atomicActivationRollbackPreservesPrevious": true,
+    "secondUpgradeToV2Supported": true,
+    "deviceRollbackToV1Sha256": "31d57a2dd445157d3fcd675115d2e298598fdd6688adea336c7005fdf38214f9",
+    "deviceSecondUpgradeToV2Sha256": "a914580a1ed5b821d4c3b05f23acf17726089d2cf6603e8d8df8aed2217b14c9",
+    "deviceSecondUpgradeVerificationMs": 39244,
+    "deviceSecondUpgradeActivationMs": 1687,
+    "deviceSecondUpgradePreviousV1Bytes": 180699136,
+    "deviceSecondUpgradeRemoteDownloadRepeated": false
+  },
+  "productionManifestChanged": false,
+  "providerImageWrites": 0
+}

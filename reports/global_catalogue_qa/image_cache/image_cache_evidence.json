@@ -1,0 +1,50 @@
+{
+  "classification": "PASS",
+  "device": "emulator-5554",
+  "package": "com.example.card_scanner_app.qa",
+  "query": "sv06 010",
+  "language": "de",
+  "region": "DE",
+  "imageUrl": "https://assets.tcgdex.net/de/sv/sv06/010/low.webp",
+  "imageHost": "assets.tcgdex.net",
+  "cache": {
+    "implementation": "flutter_cache_manager via cached_network_image",
+    "stableBodyFile": "27f48fc0-7d0a-11f1-b812-37b5bcc7789c.webp",
+    "bodyFileCount": 1,
+    "bodyBytes": 14278,
+    "databaseBytes": 16384
+  },
+  "cold": {
+    "localRows": 1,
+    "textResultMs": 13279,
+    "thumbnailRenderMs": 19892,
+    "thumbnailAfterTextMs": 6613,
+    "artworkLoaded": true
+  },
+  "warm": {
+    "localRows": 1,
+    "textResultMs": 20301,
+    "thumbnailRenderMs": 24813,
+    "thumbnailAfterTextMs": 4512,
+    "artworkLoaded": true,
+    "bodyFileUnchanged": true,
+    "thumbnailAfterTextImprovementPercent": 31.77
+  },
+  "offlineCached": {
+    "networkProof": "airplane=1; eth0=down; wlan0=down; ping=network_unreachable",
+    "trustedV2FastPathPassed": true,
+    "localRows": 1,
+    "artworkLoaded": true,
+    "remoteCardSearchFallback": false
+  },
+  "offlineUncached": {
+    "query": "hgss1 100",
+    "localRows": 1,
+    "textResultMs": 3533,
+    "artworkState": "card_artwork_unavailable",
+    "failureReason": "all_candidates_failed",
+    "bodyFileCountAfter": 1,
+    "remoteCardSearchFallback": false
+  },
+  "networkRestored": true
+}
