@@ -128,7 +128,7 @@ def main() -> int:
                     "searches": [
                         card["nativeCardName"],
                         card["printedCollectorNumber"],
-                        card["nativeSetName"],
+                        f'{card["canonicalSetId"].rsplit(":", 1)[-1]} {card["printedCollectorNumber"]}',
                     ],
                 }
             )
@@ -148,6 +148,39 @@ def main() -> int:
     }
     (REPORT_DIR / "multilingual_device_matrix.json").write_text(
         json.dumps(matrix_report, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    selected_rows = []
+    for sample in matrix:
+        row = sqlite_rows[sample["canonicalPrintingId"]]
+        selected_rows.append(
+            {
+                "canonicalPrintingId": sample["canonicalPrintingId"],
+                "language": row.get("language"),
+                "region": row.get("region"),
+                "setId": row.get("canonical_set_id"),
+                "setName": row.get("native_set_name"),
+                "collectorNumber": row.get("printed_collector_number"),
+                "normalizedCollectorNumber": row.get(
+                    "normalized_collector_number"
+                ),
+                "localizedName": row.get("native_card_name"),
+                "thumbnailUrl": row.get("thumbnail_url"),
+                "imageState": row.get("image_state"),
+            }
+        )
+    (REPORT_DIR / "multilingual_selected_sqlite_rows.json").write_text(
+        json.dumps(
+            {
+                "classification": "PASS",
+                "database": str(DATABASE),
+                "rowCount": len(selected_rows),
+                "rows": selected_rows,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     matrix_lines = [

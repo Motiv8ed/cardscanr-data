@@ -1,0 +1,112 @@
+{
+  "classification": "PASS",
+  "deviceSerial": "emulator-5554",
+  "package": "com.example.card_scanner_app.qa",
+  "languages": 1,
+  "sampleResults": 3,
+  "launches": [
+    {
+      "language": "en",
+      "classification": "PASS",
+      "sampleResults": 3,
+      "elapsedMs": 137076,
+      "renderedStatus": "PASS — 3 samples",
+      "fatal": null,
+      "screenshot": "reports\\global_catalogue_qa\\android_matrix_en_recheck\\matrix_en.png",
+      "uiTree": "reports\\global_catalogue_qa\\android_matrix_en_recheck\\matrix_en.xml",
+      "log": "reports\\global_catalogue_qa\\android_matrix_en_recheck\\matrix_en.log"
+    }
+  ],
+  "results": [
+    {
+      "canonicalPrintingId": "pokemon|en|GLOBAL|set:41fc68b7bbfa2cd4|100|unspecified",
+      "language": "en",
+      "region": "GLOBAL",
+      "role": "ordinary_set_card",
+      "passed": true,
+      "elapsedMs": 30318,
+      "imageExpected": "image",
+      "imageUrl": "https://assets.tcgdex.net/en/base/base1/100/low.webp",
+      "checks": [
+        {
+          "query": "Lightning Energy",
+          "passed": true,
+          "hitCount": 40,
+          "source": "local"
+        },
+        {
+          "query": "100",
+          "passed": true,
+          "hitCount": 117,
+          "source": "local"
+        },
+        {
+          "query": "base1 100",
+          "passed": true,
+          "hitCount": 1,
+          "source": "local"
+        }
+      ]
+    },
+    {
+      "canonicalPrintingId": "pokemon|en|GLOBAL|set:0383a4a788e8de97|THREE|unspecified",
+      "language": "en",
+      "region": "GLOBAL",
+      "role": "unusual_collector_or_promo",
+      "passed": true,
+      "elapsedMs": 11685,
+      "imageExpected": "image",
+      "imageUrl": "https://assets.tcgdex.net/en/hgss/hgss3/THREE/low.webp",
+      "checks": [
+        {
+          "query": "Alph Lithograph",
+          "passed": true,
+          "hitCount": 4,
+          "source": "local"
+        },
+        {
+          "query": "THREE",
+          "passed": true,
+          "hitCount": 1,
+          "source": "local"
+        },
+        {
+          "query": "hgss3 THREE",
+          "passed": true,
+          "hitCount": 1,
+          "source": "local"
+        }
+      ]
+    },
+    {
+      "canonicalPrintingId": "pokemon|en|GLOBAL|set:9d2d40149890dc2c|9|unspecified",
+      "language": "en",
+      "region": "GLOBAL",
+      "role": "recent_or_high_rarity",
+      "passed": true,
+      "elapsedMs": 14355,
+      "imageExpected": "placeholder",
+      "imageUrl": null,
+      "checks": [
+        {
+          "query": "Arboliva",
+          "passed": true,
+          "hitCount": 4,
+          "source": "local"
+        },
+        {
+          "query": "009",
+          "passed": true,
+          "hitCount": 189,
+          "source": "local"
+        },
+        {
+          "query": "B2a 009",
+          "passed": true,
+          "hitCount": 1,
+          "source": "local"
+        }
+      ]
+    }
+  ]
+}
