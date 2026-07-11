@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAtUtc": "2026-07-11T05:00:49Z",
+  "updatedAtUtc": "2026-07-11T05:38:00Z",
   "classification": "PARTIAL",
-  "currentPhase": "Phase 6 source-gap research and Phase 9 Flutter QA integration in progress",
+  "currentPhase": "Phase 6 source-gap research; Flutter global-index QA complete on emulator",
   "phaseCompletion": {
     "phase1CurrentStateAudit": "complete",
     "phase2LanguageRegionContract": "complete",
@@ -21,11 +21,11 @@
     "phase12SupabaseMigrationPlan": "complete_execution_blocked",
     "phase13ProductionWiring": "not_started",
     "phase14GlobalSearchIndex": "complete_non_production_canary_v2",
-    "phase15FlutterQa": "not_started_flutter_unchanged"
+    "phase15FlutterQa": "pass_android_emulator_english_and_japanese"
   },
   "repository": {
     "branch": "main",
-    "head": "93ade8925786d843f835b96df6ce795878692e8b",
+    "head": "d4294041 plus verified pending evidence commit",
     "commitCreated": false
   },
   "languagesDiscovered": [
@@ -404,8 +404,8 @@
     "schemaVersion": "2.0.0",
     "classification": "PASS",
     "path": "D:/cardscanr-data/reports/global_rollout/artifacts/global_catalogue_canary_v2.sqlite",
-    "sizeBytes": 118620160,
-    "sha256": "fe9f83b7b110ca52322849548d8980fc3aafbf021fba9e5a66d5e15644bfc041",
+    "sizeBytes": 305750016,
+    "sha256": "a914580a1ed5b821d4c3b05f23acf17726089d2cf6603e8d8df8aed2217b14c9",
     "records": 117665,
     "perLanguageCounts": {
       "de": 19542,
@@ -448,6 +448,20 @@
     },
     "productionManifestReplaced": false,
     "productionIndexPreserved": true,
+    "canaryPublication": {
+      "classification": "PASS",
+      "databaseUploaded": true,
+      "databaseVerified": true,
+      "productionManifestReplaced": false,
+      "r2ImageWrites": 0
+    },
+    "androidQa": {
+      "classification": "PASS",
+      "package": "com.example.card_scanner_app.qa",
+      "englishLocalRows": 20,
+      "japaneseLocalRows": 13,
+      "remoteFallbackUsed": false
+    },
     "rollbackManifest": {
       "action": "delete_non_production_canary_only",
       "productionChangeRequired": false
@@ -663,11 +677,11 @@
     "generatedAtUtc": "2026-07-10T21:21:30Z",
     "classification": "PASS",
     "command": ".\\.venv\\Scripts\\python.exe -m pytest -q",
-    "passed": 523,
+    "passed": 540,
     "skipped": 31,
     "subtestsPassed": 19,
     "failed": 0,
-    "durationSeconds": 22.26,
+    "durationSeconds": 18.47,
     "catalogueSchemaValidation": {
       "classification": "PASS",
       "rowsValidated": 117665,
@@ -680,7 +694,7 @@
   "productionPublication": {
     "cataloguePublished": false,
     "searchManifestReplaced": false,
-    "flutterModified": false,
+    "flutterModified": true,
     "supabaseAssetsDeleted": false,
     "r2AssetsDeleted": false
   },

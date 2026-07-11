@@ -2,8 +2,8 @@
 
 Classification: **PARTIAL**
 
-- Current phase: Phase 6 source-gap research and Phase 9 Flutter QA integration in progress
-- Branch / HEAD: `main` / `93ade8925786d843f835b96df6ce795878692e8b`
+- Current phase: Phase 6 source-gap research; Flutter global-index QA complete on emulator
+- Branch / HEAD: `main` / `d4294041` plus verified pending evidence commit
 - Languages: de, en, es, es-419, fr, id, it, ja, ko, nl, pl, pt-BR, ru, th, zh-Hans, zh-Hant
 - Canonical printing groups: 117665
 - Canonical sets: 1495
@@ -27,7 +27,8 @@ Classification: **PARTIAL**
 ## Safety
 
 - Production catalogue/index publication: **not performed**
-- Flutter repository modification: **not performed**
+- Flutter repository modification: **performed on `codex/global-catalogue-qa`; production defaults preserved**
+- Non-production catalogue canary upload: **verified; production manifest untouched**
 - R2 image writes/deletes: **not performed**
 - Supabase deletes: **not performed**
 
