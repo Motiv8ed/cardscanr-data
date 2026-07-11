@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "2.0.0",
+  "classification": "PASS",
+  "path": "D:/cardscanr-data/reports/global_rollout/artifacts/global_catalogue_canary_v2.sqlite",
+  "sizeBytes": 118620160,
+  "sha256": "fe9f83b7b110ca52322849548d8980fc3aafbf021fba9e5a66d5e15644bfc041",
+  "records": 117665,
+  "perLanguageCounts": {
+    "de": 19542,
+    "en": 23323,
+    "es": 15172,
+    "es-419": 1329,
+    "fr": 21434,
+    "id": 2788,
+    "it": 15234,
+    "ja": 6246,
+    "ko": 239,
+    "pt-BR": 1124,
+    "th": 2921,
+    "zh-Hans": 877,
+    "zh-Hant": 7436
+  },
+  "deterministicRebuild": true,
+  "verification": {
+    "classification": "PASS",
+    "records": 117665,
+    "ftsRecords": 117665,
+    "duplicateCanonicalPrintingIds": 0,
+    "authenticatedUrls": 0,
+    "perLanguageCounts": {
+      "de": 19542,
+      "en": 23323,
+      "es": 15172,
+      "es-419": 1329,
+      "fr": 21434,
+      "id": 2788,
+      "it": 15234,
+      "ja": 6246,
+      "ko": 239,
+      "pt-BR": 1124,
+      "th": 2921,
+      "zh-Hans": 877,
+      "zh-Hant": 7436
+    },
+    "issues": []
+  },
+  "productionManifestReplaced": false,
+  "productionIndexPreserved": true,
+  "rollbackManifest": {
+    "action": "delete_non_production_canary_only",
+    "productionChangeRequired": false
+  }
+}
