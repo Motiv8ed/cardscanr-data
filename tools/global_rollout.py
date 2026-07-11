@@ -15,9 +15,11 @@ from cardscanr_global_catalogue.artifacts import write_contract_artifacts
 from cardscanr_global_catalogue.audit import audit_repository
 from cardscanr_global_catalogue.contracts import write_json_atomic
 from cardscanr_global_catalogue.images import (
+    build_direct_image_catalogue,
     create_multilingual_canary_plan,
     plan_supabase_to_r2_migration,
     run_public_image_preflight,
+    run_direct_image_canaries,
 )
 from cardscanr_global_catalogue.metadata import (
     RequestBudgetExhausted,
@@ -191,6 +193,20 @@ def command_image_preflight(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_build_direct_images(_args: argparse.Namespace) -> int:
+    _print_json(build_direct_image_catalogue())
+    return 0
+
+
+def command_direct_image_canary(args: argparse.Namespace) -> int:
+    payload = run_direct_image_canaries(
+        sample_size=args.limit,
+        request_interval_seconds=args.request_interval_seconds,
+    )
+    _print_json({key: payload[key] for key in ("classification", "tested", "stateCounts", "byLanguage", "contactSheets")})
+    return 0 if payload["classification"] != "FAIL" else 1
+
+
 def command_plan_canaries(args: argparse.Namespace) -> int:
     payload = create_multilingual_canary_plan(sample_size=args.sample_size)
     _print_json(
@@ -341,6 +357,14 @@ def build_parser() -> argparse.ArgumentParser:
     preflight.add_argument("--samples-per-language", type=int, default=3)
     preflight.add_argument("--request-interval-seconds", type=float, default=0.25)
     preflight.set_defaults(func=command_image_preflight)
+
+    direct_catalogue = subparsers.add_parser("build-direct-images")
+    direct_catalogue.set_defaults(func=command_build_direct_images)
+
+    direct_canary = subparsers.add_parser("direct-image-canary")
+    direct_canary.add_argument("--limit", type=int, default=100)
+    direct_canary.add_argument("--request-interval-seconds", type=float, default=0.20)
+    direct_canary.set_defaults(func=command_direct_image_canary)
 
     canaries = subparsers.add_parser("plan-canaries")
     canaries.add_argument("--sample-size", type=int, default=100)

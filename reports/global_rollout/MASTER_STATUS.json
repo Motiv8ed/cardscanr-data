@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAtUtc": "2026-07-11T04:40:30Z",
+  "updatedAtUtc": "2026-07-11T04:59:51Z",
   "classification": "PARTIAL",
-  "currentPhase": "Phase 10D planned; stopped before image canary execution",
+  "currentPhase": "Phase 6 source-gap research and Phase 9 Flutter QA integration in progress",
   "phaseCompletion": {
     "phase1CurrentStateAudit": "complete",
     "phase2LanguageRegionContract": "complete",
@@ -15,15 +15,17 @@
     "phase9ProviderSafeDownloads": "implemented_and_tested_no_global_download",
     "phase10PublicPreflight": "complete",
     "phase10MultilingualCanaryPlans": "complete",
-    "phase10CanaryExecution": "blocked_terms_identity_and_r2_write_gate",
+    "phase10R2MirrorCanaryExecution": "blocked_terms_identity_and_r2_write_gate",
+    "briefPhase4DirectImageCatalogue": "complete",
+    "briefPhase5DirectImageCanaries": "pass_human_visual_review_pending",
     "phase12SupabaseMigrationPlan": "complete_execution_blocked",
     "phase13ProductionWiring": "not_started",
-    "phase14GlobalSearchIndex": "not_started",
+    "phase14GlobalSearchIndex": "complete_non_production_canary_v2",
     "phase15FlutterQa": "not_started_flutter_unchanged"
   },
   "repository": {
     "branch": "main",
-    "head": "9f4dce12ecb254c8c783c1c1144a530e1050a83a",
+    "head": "9cd9618656896f4c7228bb2bbc5a25fa4b507c5d",
     "commitCreated": false
   },
   "languagesDiscovered": [
@@ -291,6 +293,166 @@
     }
   },
   "publicFreeImageCandidates": 92817,
+  "directImageCatalogue": {
+    "schemaVersion": "1.0.0",
+    "generatedAtUtc": "2026-07-11T04:42:29Z",
+    "classification": "PASS",
+    "records": 92817,
+    "byLanguage": {
+      "de": 14436,
+      "en": 21738,
+      "es": 14121,
+      "es-419": 1293,
+      "fr": 18085,
+      "id": 1152,
+      "it": 14227,
+      "ja": 3297,
+      "pt-BR": 1098,
+      "th": 1224,
+      "zh-Hant": 2146
+    },
+    "byState": {
+      "direct_ready_permission_to_mirror_pending": 92817
+    },
+    "path": "data/global/catalogue/direct_images.jsonl",
+    "sha256": "79540e999535ad3f39ba95a343de31d289d78949b4d2744d1cd37a3e6e7472fc",
+    "authenticatedUrlsExposedToFlutter": false,
+    "r2Writes": 0,
+    "currentSha256": "8f02dc32115f7c404162a6e0bfcbe4330a43b238c91a3b071b8af16afda5fe6b",
+    "lastValidationTimestamp": "2026-07-11T04:55:53Z",
+    "validatedDirectUrls": 1094,
+    "permanentFailures": 6
+  },
+  "directImageCanary": {
+    "classification": "PASS",
+    "tested": 1100,
+    "stateCounts": {
+      "permanent_404": 6,
+      "valid": 1094
+    },
+    "byLanguage": {
+      "de": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 98,
+        "validPercent": 98.0
+      },
+      "en": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "es": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 97,
+        "validPercent": 97.0
+      },
+      "es-419": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "fr": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "id": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "it": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 99,
+        "validPercent": 99.0
+      },
+      "ja": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "pt-BR": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "th": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      },
+      "zh-Hant": {
+        "classification": "PASS",
+        "tested": 100,
+        "valid": 100,
+        "validPercent": 100.0
+      }
+    },
+    "humanVisualApproval": false
+  },
+  "globalSearchIndex": {
+    "schemaVersion": "2.0.0",
+    "classification": "PASS",
+    "path": "D:/cardscanr-data/reports/global_rollout/artifacts/global_catalogue_canary_v2.sqlite",
+    "sizeBytes": 118620160,
+    "sha256": "fe9f83b7b110ca52322849548d8980fc3aafbf021fba9e5a66d5e15644bfc041",
+    "records": 117665,
+    "perLanguageCounts": {
+      "de": 19542,
+      "en": 23323,
+      "es": 15172,
+      "es-419": 1329,
+      "fr": 21434,
+      "id": 2788,
+      "it": 15234,
+      "ja": 6246,
+      "ko": 239,
+      "pt-BR": 1124,
+      "th": 2921,
+      "zh-Hans": 877,
+      "zh-Hant": 7436
+    },
+    "deterministicRebuild": true,
+    "verification": {
+      "classification": "PASS",
+      "records": 117665,
+      "ftsRecords": 117665,
+      "duplicateCanonicalPrintingIds": 0,
+      "authenticatedUrls": 0,
+      "perLanguageCounts": {
+        "de": 19542,
+        "en": 23323,
+        "es": 15172,
+        "es-419": 1329,
+        "fr": 21434,
+        "id": 2788,
+        "it": 15234,
+        "ja": 6246,
+        "ko": 239,
+        "pt-BR": 1124,
+        "th": 2921,
+        "zh-Hans": 877,
+        "zh-Hant": 7436
+      },
+      "issues": []
+    },
+    "productionManifestReplaced": false,
+    "productionIndexPreserved": true,
+    "rollbackManifest": {
+      "action": "delete_non_production_canary_only",
+      "productionChangeRequired": false
+    }
+  },
   "verifiedR2Thumbnails": 0,
   "verifiedR2DisplayImages": 0,
   "migratedExistingImages": 0,
@@ -423,7 +585,7 @@
   "ambiguousIdentityCount": 6440,
   "variantUnresolvedCount": 117665,
   "missingImageCount": 24848,
-  "permanentProviderFailures": 0,
+  "permanentProviderFailures": 6,
   "publicImagePreflight": {
     "classification": "PASS",
     "requests": 55,

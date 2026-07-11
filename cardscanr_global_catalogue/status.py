@@ -107,6 +107,10 @@ def build_master_status() -> dict[str, Any]:
     checkpoint = _load_json(REPORT_DIR / "checkpoints" / "tcgdex_metadata.json")
     catalogue_manifest = _load_json(ROOT / "data" / "global" / "catalogue" / "manifest.json")
     test_report = _load_json(REPORT_DIR / "test_report.json")
+    direct_catalogue = _load_json(REPORT_DIR / "direct_image_catalogue.json")
+    direct_canary = _load_json(REPORT_DIR / "direct_image_canary_report.json")
+    direct_failures = _load_json(REPORT_DIR / "direct_image_permanent_failures.json")
+    global_index = _load_json(REPORT_DIR / "global_search_index.json")
 
     language_rows = coverage.get("languages") or []
     languages = [str(row.get("language")) for row in language_rows if row.get("language")]
@@ -190,7 +194,7 @@ def build_master_status() -> dict[str, Any]:
         "schemaVersion": "1.0.0",
         "updatedAtUtc": utc_now_iso(),
         "classification": "PARTIAL",
-        "currentPhase": "Phase 10D planned; stopped before image canary execution",
+        "currentPhase": "Phase 6 source-gap research and Phase 9 Flutter QA integration in progress",
         "phaseCompletion": {
             "phase1CurrentStateAudit": "complete",
             "phase2LanguageRegionContract": "complete",
@@ -203,10 +207,12 @@ def build_master_status() -> dict[str, Any]:
             "phase9ProviderSafeDownloads": "implemented_and_tested_no_global_download",
             "phase10PublicPreflight": "complete",
             "phase10MultilingualCanaryPlans": "complete",
-            "phase10CanaryExecution": "blocked_terms_identity_and_r2_write_gate",
+            "phase10R2MirrorCanaryExecution": "blocked_terms_identity_and_r2_write_gate",
+            "briefPhase4DirectImageCatalogue": "complete",
+            "briefPhase5DirectImageCanaries": "pass_human_visual_review_pending",
             "phase12SupabaseMigrationPlan": "complete_execution_blocked",
             "phase13ProductionWiring": "not_started",
-            "phase14GlobalSearchIndex": "not_started",
+            "phase14GlobalSearchIndex": "complete_non_production_canary_v2",
             "phase15FlutterQa": "not_started_flutter_unchanged",
         },
         "repository": {
@@ -227,6 +233,15 @@ def build_master_status() -> dict[str, Any]:
         "metadataCoverageByLanguage": metadata_by_language,
         "imageCoverageByLanguage": image_by_language,
         "publicFreeImageCandidates": candidate_count,
+        "directImageCatalogue": direct_catalogue,
+        "directImageCanary": {
+            "classification": direct_canary.get("classification"),
+            "tested": direct_canary.get("tested"),
+            "stateCounts": direct_canary.get("stateCounts") or {},
+            "byLanguage": direct_canary.get("byLanguage") or {},
+            "humanVisualApproval": direct_canary.get("humanVisualApproval", False),
+        },
+        "globalSearchIndex": global_index,
         "verifiedR2Thumbnails": 0,
         "verifiedR2DisplayImages": 0,
         "migratedExistingImages": int(migration.get("migratedAndR2Verified") or 0),
@@ -247,7 +262,10 @@ def build_master_status() -> dict[str, Any]:
         "missingImageCount": (
             int(totals.get("canonicalPrintings") or 0) - candidate_count
         ),
-        "permanentProviderFailures": int(checkpoint.get("permanent404s") or 0),
+        "permanentProviderFailures": max(
+            int(checkpoint.get("permanent404s") or 0),
+            int(direct_failures.get("failureCount") or 0),
+        ),
         "publicImagePreflight": {
             "classification": preflight.get("classification"),
             "requests": preflight.get("requestsPerformed"),

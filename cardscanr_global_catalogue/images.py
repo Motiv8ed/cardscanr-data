@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import heapq
+import io
 import json
 import time
 from collections import Counter, defaultdict
@@ -11,6 +12,7 @@ from typing import Any, Iterator
 from urllib.parse import quote
 
 import requests
+from PIL import Image, ImageDraw
 
 from cardscanr_image_pipeline.paths import safe_path_segment
 
@@ -24,6 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CATALOGUE_DIR = ROOT / "data" / "global" / "catalogue"
 REPORT_DIR = ROOT / "reports" / "global_rollout"
 USER_AGENT = "CardScanR-GlobalRollout-ImagePreflight/1.0"
+DIRECT_IMAGE_CATALOGUE_PATH = CATALOGUE_DIR / "direct_images.jsonl"
+PERMANENT_FAILURE_REGISTRY_PATH = REPORT_DIR / "direct_image_permanent_failures.json"
 
 
 def utc_now_iso() -> str:
@@ -77,6 +81,295 @@ def _image_candidate(row: dict[str, Any]) -> dict[str, Any] | None:
                 "sourceUrl": str(source_url),
             }
     return None
+
+
+def _direct_image_record(row: dict[str, Any]) -> dict[str, Any] | None:
+    candidate = _image_candidate(row)
+    if candidate is None:
+        return None
+    provenance = next(
+        (
+            item
+            for item in row.get("imageProvenance") or []
+            if isinstance(item, dict) and str(item.get("provider") or "") == candidate["provider"]
+        ),
+        {},
+    )
+    provider = candidate["provider"]
+    policy = _provider_policy(provider) or {}
+    authentication = str(policy.get("authenticationMethod") or "unknown")
+    public_direct = authentication == "none"
+    mirror_status = str(policy.get("imageRehostingStatus") or "unclear")
+    if not public_direct:
+        technical_status = "auth_server_only"
+    elif mirror_status in {"approved", "approved_with_conditions"}:
+        technical_status = "direct_ready"
+    else:
+        technical_status = "direct_ready_permission_to_mirror_pending"
+    provider_card_ids = row.get("providerCardIds") or {}
+    provider_set_ids = row.get("providerSetIds") or {}
+    return {
+        "schemaVersion": "1.0.0",
+        "canonicalPrintingId": row["canonicalPrintingId"],
+        "language": row["language"],
+        "region": row["region"],
+        "canonicalSetId": row["canonicalSetId"],
+        "printedCollectorNumber": row["printedCollectorNumber"],
+        "normalizedCollectorNumber": row["normalizedCollectorNumber"],
+        "provider": provider,
+        "providerCardId": provider_card_ids.get(provider),
+        "providerSetId": provider_set_ids.get(provider),
+        "originalDocumentedImageUrl": provenance.get("sourceUrl") or candidate["sourceUrl"],
+        "normalizedThumbnailUrl": provenance.get("thumbSourceUrl") or candidate["sourceUrl"],
+        "normalizedDisplayUrl": provenance.get("displaySourceUrl") or provenance.get("sourceUrl") or candidate["sourceUrl"],
+        "authenticationRequirement": "not_required" if public_direct else authentication,
+        "directUseTechnicalStatus": technical_status,
+        "mirrorPermissionStatus": mirror_status,
+        "latestHttpStatus": None,
+        "contentType": None,
+        "contentLength": None,
+        "lastValidationTimestamp": None,
+        "permanentFailureState": None,
+        "fallbackPriority": 1,
+    }
+
+
+def build_direct_image_catalogue() -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    by_language: Counter[str] = Counter()
+    by_state: Counter[str] = Counter()
+    for row in iter_jsonl(CATALOGUE_DIR / "cards.jsonl"):
+        record = _direct_image_record(row)
+        if record is None:
+            continue
+        records.append(record)
+        by_language[str(record["language"])] += 1
+        by_state[str(record["directUseTechnicalStatus"])] += 1
+    records.sort(key=lambda item: str(item["canonicalPrintingId"]))
+    DIRECT_IMAGE_CATALOGUE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256()
+    with DIRECT_IMAGE_CATALOGUE_PATH.open("w", encoding="utf-8", newline="\n") as handle:
+        for record in records:
+            encoded = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+            handle.write(encoded)
+            digest.update(encoded.encode("utf-8"))
+    payload = {
+        "schemaVersion": "1.0.0",
+        "generatedAtUtc": utc_now_iso(),
+        "classification": "PASS",
+        "records": len(records),
+        "byLanguage": dict(sorted(by_language.items())),
+        "byState": dict(sorted(by_state.items())),
+        "path": DIRECT_IMAGE_CATALOGUE_PATH.relative_to(ROOT).as_posix(),
+        "sha256": digest.hexdigest(),
+        "authenticatedUrlsExposedToFlutter": False,
+        "r2Writes": 0,
+    }
+    write_json_atomic(REPORT_DIR / "direct_image_catalogue.json", payload)
+    return payload
+
+
+def run_direct_image_canaries(
+    *,
+    sample_size: int = 100,
+    request_interval_seconds: float = 0.2,
+    seed: str = "cardscanr-direct-image-canary-v1",
+) -> dict[str, Any]:
+    samples, candidate_counts, _ = _deterministic_samples(sample_size=sample_size, seed=seed)
+    session = requests.Session()
+    session.headers.update({"User-Agent": USER_AGENT, "Accept": "image/webp,image/*;q=0.8"})
+    results: list[dict[str, Any]] = []
+    contact_images: dict[tuple[str, str], list[tuple[Image.Image, str]]] = defaultdict(list)
+    last_request: float | None = None
+    permanent_registry = {}
+    try:
+        registry_payload = json.loads(PERMANENT_FAILURE_REGISTRY_PATH.read_text(encoding="utf-8-sig"))
+        permanent_registry = {
+            str(item["canonicalPrintingId"]): item
+            for item in registry_payload.get("failures") or []
+            if isinstance(item, dict) and item.get("canonicalPrintingId")
+        }
+    except (OSError, json.JSONDecodeError):
+        pass
+    for pair in sorted(samples):
+        for card in samples[pair]:
+            cached_failure = permanent_registry.get(str(card["canonicalPrintingId"]))
+            if cached_failure and cached_failure.get("state") == "permanent_404":
+                results.append(
+                    {
+                        "canonicalPrintingId": card["canonicalPrintingId"],
+                        "language": card["language"],
+                        "region": card["region"],
+                        "provider": card["provider"],
+                        "sourceUrlSha256": cached_failure.get("sourceUrlSha256"),
+                        "httpStatus": 404,
+                        "state": "permanent_404_cached",
+                        "networkRequestPerformed": False,
+                    }
+                )
+                continue
+            if last_request is not None:
+                delay = request_interval_seconds - (time.monotonic() - last_request)
+                if delay > 0:
+                    time.sleep(delay)
+            last_request = time.monotonic()
+            result: dict[str, Any] = {
+                "canonicalPrintingId": card["canonicalPrintingId"],
+                "language": card["language"],
+                "region": card["region"],
+                "provider": card["provider"],
+                "sourceUrlSha256": hashlib.sha256(card["sourceUrl"].encode("utf-8")).hexdigest(),
+            }
+            try:
+                response = session.get(card["sourceUrl"], timeout=30)
+                result["httpStatus"] = response.status_code
+                result["contentType"] = response.headers.get("Content-Type")
+                if response.status_code == 404:
+                    result["state"] = "permanent_404"
+                elif response.status_code == 429:
+                    result["state"] = "rate_limited"
+                elif response.status_code != 200 or not str(result["contentType"] or "").startswith("image/"):
+                    result["state"] = "unsuitable_response"
+                else:
+                    with Image.open(io.BytesIO(response.content)) as decoded:
+                        decoded.load()
+                        width, height = decoded.size
+                        ratio = width / height if height else 0
+                        plausible = 0.60 <= ratio <= 0.80 and width >= 100 and height >= 140
+                        result.update({"width": width, "height": height, "aspectRatio": round(ratio, 4)})
+                        result["sha256"] = hashlib.sha256(response.content).hexdigest()
+                        result["state"] = "valid" if plausible else "implausible_aspect_ratio"
+                        if plausible:
+                            thumb = decoded.convert("RGB")
+                            thumb.thumbnail((147, 202))
+                            contact_images[pair].append((thumb.copy(), str(card["collectorNumber"])))
+            except (requests.RequestException, OSError, ValueError) as exc:
+                result.update({"state": "temporary_failure", "errorType": type(exc).__name__})
+            results.append(result)
+    contact_paths: list[str] = []
+    for (language, region), images in sorted(contact_images.items()):
+        if not images:
+            continue
+        columns = 10
+        cell_w, cell_h = 157, 226
+        rows = (len(images) + columns - 1) // columns
+        sheet = Image.new("RGB", (columns * cell_w, rows * cell_h), "white")
+        draw = ImageDraw.Draw(sheet)
+        for index, (thumb, label) in enumerate(images):
+            x, y = (index % columns) * cell_w, (index // columns) * cell_h
+            sheet.paste(thumb, (x + (147 - thumb.width) // 2, y))
+            draw.text((x + 3, y + 205), label[:22], fill="black")
+        path = REPORT_DIR / f"direct_canary_{language}_{region}_contact_sheet.jpg"
+        sheet.save(path, format="JPEG", quality=82, optimize=True)
+        contact_paths.append(path.relative_to(ROOT).as_posix())
+    counts = Counter(str(item["state"]) for item in results)
+    generated_at = utc_now_iso()
+    for item in results:
+        if item["state"] == "permanent_404":
+            canonical_id = str(item["canonicalPrintingId"])
+            previous = permanent_registry.get(canonical_id) or {}
+            permanent_registry[canonical_id] = {
+                "canonicalPrintingId": canonical_id,
+                "language": item["language"],
+                "region": item["region"],
+                "provider": item["provider"],
+                "sourceUrlSha256": item["sourceUrlSha256"],
+                "httpStatus": 404,
+                "state": "permanent_404",
+                "firstObservedAtUtc": previous.get("firstObservedAtUtc") or generated_at,
+                "lastObservedAtUtc": generated_at,
+            }
+    write_json_atomic(
+        PERMANENT_FAILURE_REGISTRY_PATH,
+        {
+            "schemaVersion": "1.0.0",
+            "updatedAtUtc": generated_at,
+            "failureCount": len(permanent_registry),
+            "failures": [permanent_registry[key] for key in sorted(permanent_registry)],
+        },
+    )
+    by_language: dict[str, dict[str, Any]] = {}
+    for language in sorted({str(item["language"]) for item in results}):
+        language_results = [item for item in results if item["language"] == language]
+        valid = sum(item["state"] == "valid" for item in language_results)
+        rate = valid / len(language_results) if language_results else 0
+        classification = "PASS" if rate >= 0.95 else "PARTIAL" if valid else "FAIL"
+        by_language[language] = {"classification": classification, "tested": len(language_results), "valid": valid, "validPercent": round(rate * 100, 2)}
+    overall = "FAIL" if any(item["classification"] == "FAIL" for item in by_language.values()) else "PARTIAL" if any(item["classification"] == "PARTIAL" for item in by_language.values()) else "PASS"
+    payload = {
+        "schemaVersion": "1.0.0",
+        "generatedAtUtc": generated_at,
+        "classification": overall,
+        "sampleSizePerLanguageRegion": sample_size,
+        "candidateCountsByLanguageRegion": {f"{k[0]}|{k[1]}": v for k, v in sorted(candidate_counts.items())},
+        "tested": len(results),
+        "stateCounts": dict(sorted(counts.items())),
+        "byLanguage": by_language,
+        "contactSheets": contact_paths,
+        "humanVisualApproval": False,
+        "imageBodiesRetained": False,
+        "r2Writes": 0,
+        "results": results,
+    }
+    _apply_direct_validation_results(results, validated_at=generated_at)
+    write_json_atomic(REPORT_DIR / "direct_image_canary_report.json", payload)
+    return payload
+
+
+def _apply_direct_validation_results(results: list[dict[str, Any]], *, validated_at: str) -> None:
+    if not DIRECT_IMAGE_CATALOGUE_PATH.exists():
+        return
+    result_by_id = {str(item["canonicalPrintingId"]): item for item in results}
+    temporary_path = DIRECT_IMAGE_CATALOGUE_PATH.with_suffix(".jsonl.tmp")
+    with DIRECT_IMAGE_CATALOGUE_PATH.open("r", encoding="utf-8") as source, temporary_path.open(
+        "w", encoding="utf-8", newline="\n"
+    ) as destination:
+        for line in source:
+            record = json.loads(line)
+            result = result_by_id.get(str(record["canonicalPrintingId"]))
+            if result is not None:
+                state = str(result.get("state") or "")
+                record["latestHttpStatus"] = result.get("httpStatus")
+                record["contentType"] = result.get("contentType")
+                record["lastValidationTimestamp"] = validated_at
+                if result.get("sha256"):
+                    record["checksumSha256"] = result["sha256"]
+                if result.get("width") and result.get("height"):
+                    record["imageDimensions"] = {
+                        "width": result["width"],
+                        "height": result["height"],
+                    }
+                if state in {"permanent_404", "permanent_404_cached"}:
+                    record["directUseTechnicalStatus"] = "permanent_404"
+                    record["permanentFailureState"] = "permanent_404"
+            destination.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    temporary_path.replace(DIRECT_IMAGE_CATALOGUE_PATH)
+    digest = hashlib.sha256()
+    validated = 0
+    permanent_failures = 0
+    with DIRECT_IMAGE_CATALOGUE_PATH.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    for result in results:
+        if result.get("state") == "valid":
+            validated += 1
+        elif result.get("state") in {"permanent_404", "permanent_404_cached"}:
+            permanent_failures += 1
+    try:
+        catalogue_report = json.loads(
+            (REPORT_DIR / "direct_image_catalogue.json").read_text(encoding="utf-8-sig")
+        )
+    except (OSError, json.JSONDecodeError):
+        catalogue_report = {"schemaVersion": "1.0.0"}
+    catalogue_report.update(
+        {
+            "currentSha256": digest.hexdigest(),
+            "lastValidationTimestamp": validated_at,
+            "validatedDirectUrls": validated,
+            "permanentFailures": permanent_failures,
+        }
+    )
+    write_json_atomic(REPORT_DIR / "direct_image_catalogue.json", catalogue_report)
 
 
 def _sample_rank(canonical_printing_id: str, seed: str) -> int:
@@ -793,4 +1086,3 @@ def render_migration_markdown(payload: dict[str, Any]) -> str:
             "",
         ]
     )
-

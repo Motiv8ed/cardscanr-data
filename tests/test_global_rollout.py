@@ -162,6 +162,27 @@ def test_tcgdex_credential_is_explicitly_not_required() -> None:
     assert provider["requiredEnvironmentVariables"] == []
 
 
+def test_direct_image_record_separates_delivery_from_mirroring_permission() -> None:
+    row = _printing()
+    row["providerSetIds"] = {"tcgdex": "base1"}
+    row["providerCardIds"] = {"tcgdex": "base1-1"}
+    row["imageProvenance"] = [
+        {
+            "provider": "tcgdex",
+            "sourceUrl": "https://assets.tcgdex.net/en/base/base1/1/high.webp",
+            "thumbSourceUrl": "https://assets.tcgdex.net/en/base/base1/1/low.webp",
+            "displaySourceUrl": "https://assets.tcgdex.net/en/base/base1/1/high.webp",
+        }
+    ]
+    record = images._direct_image_record(row)
+    assert record is not None
+    assert record["authenticationRequirement"] == "not_required"
+    assert record["directUseTechnicalStatus"] == "direct_ready_permission_to_mirror_pending"
+    assert record["mirrorPermissionStatus"] == "pending_human_review"
+    assert record["normalizedThumbnailUrl"].endswith("/low.webp")
+    assert record["normalizedDisplayUrl"].endswith("/high.webp")
+
+
 def test_retry_after_delta_and_http_date() -> None:
     assert parse_retry_after("12") == 12
     now = datetime(2026, 7, 10, 0, 0, tzinfo=timezone.utc).timestamp()

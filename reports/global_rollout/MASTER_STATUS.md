@@ -2,8 +2,8 @@
 
 Classification: **PARTIAL**
 
-- Current phase: Phase 10D planned; stopped before image canary execution
-- Branch / HEAD: `main` / `9f4dce12ecb254c8c783c1c1144a530e1050a83a`
+- Current phase: Phase 6 source-gap research and Phase 9 Flutter QA integration in progress
+- Branch / HEAD: `main` / `9cd9618656896f4c7228bb2bbc5a25fa4b507c5d`
 - Languages: de, en, es, es-419, fr, id, it, ja, ko, nl, pl, pt-BR, ru, th, zh-Hans, zh-Hant
 - Canonical printing groups: 117665
 - Canonical sets: 1495
