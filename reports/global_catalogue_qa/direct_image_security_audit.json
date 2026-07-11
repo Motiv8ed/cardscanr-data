@@ -1,0 +1,77 @@
+{
+  "classification": "PASS",
+  "database": "D:\\cardscanr-data\\reports\\global_rollout\\artifacts\\global_catalogue_canary_v2.sqlite",
+  "rowsAudited": 117665,
+  "urlFieldsAudited": [
+    "thumbnail_url",
+    "large_image_url"
+  ],
+  "classifications": {
+    "missing": 24848,
+    "permanent_failure": 6,
+    "validated_public_direct": 92811
+  },
+  "byLanguage": {
+    "de": {
+      "missing": 5106,
+      "permanent_failure": 2,
+      "validated_public_direct": 14434
+    },
+    "en": {
+      "missing": 1585,
+      "validated_public_direct": 21738
+    },
+    "es": {
+      "missing": 1051,
+      "permanent_failure": 3,
+      "validated_public_direct": 14118
+    },
+    "es-419": {
+      "missing": 36,
+      "validated_public_direct": 1293
+    },
+    "fr": {
+      "missing": 3349,
+      "validated_public_direct": 18085
+    },
+    "id": {
+      "missing": 1636,
+      "validated_public_direct": 1152
+    },
+    "it": {
+      "missing": 1007,
+      "permanent_failure": 1,
+      "validated_public_direct": 14226
+    },
+    "ja": {
+      "missing": 2949,
+      "validated_public_direct": 3297
+    },
+    "ko": {
+      "missing": 239
+    },
+    "pt-BR": {
+      "missing": 26,
+      "validated_public_direct": 1098
+    },
+    "th": {
+      "missing": 1697,
+      "validated_public_direct": 1224
+    },
+    "zh-Hans": {
+      "missing": 877
+    },
+    "zh-Hant": {
+      "missing": 5290,
+      "validated_public_direct": 2146
+    }
+  },
+  "violations": [],
+  "authenticatedUrlsReachingFlutter": 0,
+  "secretBearingUrls": 0,
+  "nonHttpsUrls": 0,
+  "providerPolicy": {
+    "pokewallet": "authenticated URLs excluded; use verified CardScanR-hosted/public sibling or placeholder",
+    "tcgdex": "documented https low.webp thumbnail form; permanent 404 registry suppresses known failures"
+  }
+}
