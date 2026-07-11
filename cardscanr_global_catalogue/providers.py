@@ -478,10 +478,11 @@ def credential_status(
             variable: _credential_value(definition, variable, local)
             for variable in definition.environment_variables
         }
+        credential_not_required = not definition.environment_variables
         present = (
             all(bool(values.get(variable)) for variable in definition.environment_variables)
             if definition.environment_variables
-            else True
+            else False
         )
         validation = "not tested"
         account_state: dict[str, Any] = {
@@ -498,7 +499,11 @@ def credential_status(
         providers.append(
             {
                 "provider": definition.provider,
-                "keyPresent": "yes" if present else "no",
+                "keyPresent": (
+                    "not required"
+                    if credential_not_required
+                    else "yes" if present else "no"
+                ),
                 "keyValidation": validation,
                 "accountQuotaState": account_state,
                 "requiredEnvironmentVariables": list(definition.environment_variables),
@@ -554,4 +559,3 @@ def write_credential_status_reports(payload: dict[str, Any]) -> None:
         "\n".join(lines),
         encoding="utf-8",
     )
-

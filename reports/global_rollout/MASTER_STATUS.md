@@ -1,20 +1,35 @@
-# CardScanR global catalogue — audited permission readiness
+# CardScanR Global Rollout — Master Status
 
-Classification: **AUDIT_PASS_PERMISSION_BLOCKED**
+Classification: **PARTIAL**
 
-- Starting commit: `e60ac3a67b771aa45b31c80708ea67a127bba0e0`
-- Final commit: this report's containing commit (`git rev-parse HEAD`)
-- Concurrent commit: `overlapping_but_consistent`
-- Total/exact after adversarial audit: 117,665 / 117,665
-- Probable/ambiguous: 0 / 0
-- Duplicate provider/regional conflicts: 0 / 0
-- Existing 260 resolved exact/still unresolved: 0 / 260
-- Missing images: 24,848
-- Prepared commands: 13; currently executable: 0
-- Provider statuses: TCGdex, Pokémon TCG API, PokéWallet all `pending`
-- Tests: 65 passed in 3.88s
-- Image downloads/R2 writes/production publication/Flutter changes: 0/0/0/0
+- Current phase: Phase 10D planned; stopped before image canary execution
+- Branch / HEAD: `main` / `c99e82b92fb8d3ef25c7dac50c698c739389b514`
+- Languages: de, en, es, es-419, fr, id, it, ja, ko, nl, pl, pt-BR, ru, th, zh-Hans, zh-Hant
+- Canonical printing groups: 117665
+- Canonical sets: 1495
+- Public/free image candidates: 92817
+- Verified R2 thumbnails/displays: 0/0
+- Migrated existing images: 0
+- Unresolved identities: 60905
+- Variant-unresolved groups: 117665
+- Projected image storage: 11.286 GiB
+- Estimated rounded monthly R2 storage cost: US$0.045
 
-Exact next human action: Review and send one provider permission email from reports/global_rollout/provider_permission_requests, then save the written response as an evidence file and update provider_permission_tracker.json.
+## Blockers
 
-Resume after recorded approval: `python tools/global_rollout.py permissions-status && python tools/global_rollout.py image-canary --provider tcgdex --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet`
+- TCGdex artwork rehosting permission is not explicit; public image candidates cannot be copied to R2.
+- All set-level canonical records remain cardVariant=unspecified, so physical finish identity is provisional.
+- 260 existing Supabase thumbnails lack a safe exact global crosswalk.
+- Projected R2 storage is 12.584 GB, above the 10 GB-month free tier; estimated rounded storage cost is US$0.045/month, while the configured unexpected-spend budget is US$0.
+- Scrydex requires a paid Starter plan and its terms prohibit mirroring without prior written authorization.
+- Production publication and R2 image writes require explicit approval.
+
+## Safety
+
+- Production catalogue/index publication: **not performed**
+- Flutter repository modification: **not performed**
+- R2 image writes/deletes: **not performed**
+- Supabase deletes: **not performed**
+
+Next safe command: `python tools/global_rollout.py status`
+Resume command: `python tools/global_rollout.py resume`

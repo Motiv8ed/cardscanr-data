@@ -155,6 +155,13 @@ def test_credential_status_never_contains_secret_value(
     assert payload["providers"][0]["keyPresent"] == "yes"
 
 
+def test_tcgdex_credential_is_explicitly_not_required() -> None:
+    payload = credential_status(validate=False, provider_filter="tcgdex")
+    provider = payload["providers"][0]
+    assert provider["keyPresent"] == "not required"
+    assert provider["requiredEnvironmentVariables"] == []
+
+
 def test_retry_after_delta_and_http_date() -> None:
     assert parse_retry_after("12") == 12
     now = datetime(2026, 7, 10, 0, 0, tzinfo=timezone.utc).timestamp()
@@ -296,4 +303,3 @@ def test_canary_plan_is_deterministic_and_redacts_provider_urls(
     )
     assert first["executionPerformed"] is False
     assert first["classification"] == "BLOCKED"
-

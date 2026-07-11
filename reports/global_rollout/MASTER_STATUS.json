@@ -1,64 +1,536 @@
 {
-  "schemaVersion": "4.0.0",
-  "generatedAtUtc": "2026-07-11T03:19:47Z",
-  "classification": "AUDIT_PASS_PERMISSION_BLOCKED",
-  "branch": "main",
-  "startingCommit": "e60ac3a67b771aa45b31c80708ea67a127bba0e0",
-  "finalCommit": "SELF (resolve with git rev-parse HEAD)",
-  "concurrentCommitAuditResult": "overlapping_but_consistent",
-  "totalRecords": 117665,
-  "exactRecordsAfterAdversarialAudit": 117665,
-  "probableRecords": 0,
-  "ambiguousRecords": 0,
-  "duplicateProviderConflicts": 0,
-  "regionalIdentityConflicts": 0,
-  "providerPermissionRequestPaths": [
-    "reports/global_rollout/provider_permission_requests/tcgdex.md",
-    "reports/global_rollout/provider_permission_requests/pokemon_tcg_api.md",
-    "reports/global_rollout/provider_permission_requests/pokewallet.md"
+  "schemaVersion": "1.0.0",
+  "updatedAtUtc": "2026-07-11T04:32:58Z",
+  "classification": "PARTIAL",
+  "currentPhase": "Phase 10D planned; stopped before image canary execution",
+  "phaseCompletion": {
+    "phase1CurrentStateAudit": "complete",
+    "phase2LanguageRegionContract": "complete",
+    "phase3CanonicalIdentityContract": "complete_provisional_variant_evidence",
+    "phase4ProviderLedger": "complete_terms_gate_open",
+    "phase5CredentialPreflight": "complete",
+    "phase6PublicMetadataIngestion": "complete_tcgdex_all_accessible_languages",
+    "phase7CoverageReconciliation": "complete",
+    "phase8ImageAcquisitionModel": "implemented",
+    "phase9ProviderSafeDownloads": "implemented_and_tested_no_global_download",
+    "phase10PublicPreflight": "complete",
+    "phase10MultilingualCanaryPlans": "complete",
+    "phase10CanaryExecution": "blocked_terms_identity_and_r2_write_gate",
+    "phase12SupabaseMigrationPlan": "complete_execution_blocked",
+    "phase13ProductionWiring": "not_started",
+    "phase14GlobalSearchIndex": "not_started",
+    "phase15FlutterQa": "not_started_flutter_unchanged"
+  },
+  "repository": {
+    "branch": "main",
+    "head": "c99e82b92fb8d3ef25c7dac50c698c739389b514",
+    "commitCreated": false
+  },
+  "languagesDiscovered": [
+    "de",
+    "en",
+    "es",
+    "es-419",
+    "fr",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "nl",
+    "pl",
+    "pt-BR",
+    "pt-PT",
+    "ru",
+    "th",
+    "zh-Hans",
+    "zh-Hant"
   ],
-  "providerContactPath": "reports/global_rollout/provider_permission_contact_details.md",
-  "providerStatuses": {
-    "tcgdex": "pending",
-    "pokemon_tcg_api": "pending",
-    "pokewallet": "pending"
+  "languagesIngested": [
+    "de",
+    "en",
+    "es",
+    "es-419",
+    "fr",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "nl",
+    "pl",
+    "pt-BR",
+    "ru",
+    "th",
+    "zh-Hans",
+    "zh-Hant"
+  ],
+  "totalCanonicalPrintingGroups": 117665,
+  "totalCanonicalSets": 1495,
+  "metadataCoverageByLanguage": {
+    "de": {
+      "region": "DE",
+      "sets": 150,
+      "canonicalPrintingGroups": 19542,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "en": {
+      "region": "GLOBAL",
+      "sets": 214,
+      "canonicalPrintingGroups": 23323,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "es": {
+      "region": "ES",
+      "sets": 151,
+      "canonicalPrintingGroups": 15172,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "es-419": {
+      "region": "LATAM",
+      "sets": 8,
+      "canonicalPrintingGroups": 1329,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "fr": {
+      "region": "FR",
+      "sets": 197,
+      "canonicalPrintingGroups": 21434,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "id": {
+      "region": "ID",
+      "sets": 70,
+      "canonicalPrintingGroups": 2788,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "it": {
+      "region": "IT",
+      "sets": 187,
+      "canonicalPrintingGroups": 15234,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "ja": {
+      "region": "JP",
+      "sets": 172,
+      "canonicalPrintingGroups": 6246,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "ko": {
+      "region": "KR",
+      "sets": 95,
+      "canonicalPrintingGroups": 239,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "nl": {
+      "region": "NL",
+      "sets": 3,
+      "canonicalPrintingGroups": 0,
+      "nativeNamePercent": 0.0,
+      "releaseDatePercent": 0.0,
+      "rarityPercent": 0.0
+    },
+    "pl": {
+      "region": "PL",
+      "sets": 2,
+      "canonicalPrintingGroups": 0,
+      "nativeNamePercent": 0.0,
+      "releaseDatePercent": 0.0,
+      "rarityPercent": 0.0
+    },
+    "pt-BR": {
+      "region": "BR",
+      "sets": 11,
+      "canonicalPrintingGroups": 1124,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "pt-PT": {
+      "region": "PT",
+      "sets": 0,
+      "canonicalPrintingGroups": 0,
+      "nativeNamePercent": 0.0,
+      "releaseDatePercent": 0.0,
+      "rarityPercent": 0.0
+    },
+    "ru": {
+      "region": "RU",
+      "sets": 9,
+      "canonicalPrintingGroups": 0,
+      "nativeNamePercent": 0.0,
+      "releaseDatePercent": 0.0,
+      "rarityPercent": 0.0
+    },
+    "th": {
+      "region": "TH",
+      "sets": 72,
+      "canonicalPrintingGroups": 2921,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "zh-Hans": {
+      "region": "CN",
+      "sets": 56,
+      "canonicalPrintingGroups": 877,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    },
+    "zh-Hant": {
+      "region": "MULTI",
+      "sets": 98,
+      "canonicalPrintingGroups": 7436,
+      "nativeNamePercent": 100.0,
+      "releaseDatePercent": 100.0,
+      "rarityPercent": 0.0
+    }
   },
-  "existing260ResolvedExact": 0,
-  "existing260StillUnresolved": 260,
-  "missingImageCountByLanguage": {
-    "de": 5106,
-    "en": 1585,
-    "es": 1051,
-    "es-419": 36,
-    "fr": 3349,
-    "id": 1636,
-    "it": 1007,
-    "ja": 2949,
-    "ko": 239,
-    "pt-BR": 26,
-    "th": 1697,
-    "zh-Hans": 877,
-    "zh-Hant": 5290
+  "imageCoverageByLanguage": {
+    "de": {
+      "region": "DE",
+      "candidates": 14436,
+      "verified": 0
+    },
+    "en": {
+      "region": "GLOBAL",
+      "candidates": 21738,
+      "verified": 0
+    },
+    "es": {
+      "region": "ES",
+      "candidates": 14121,
+      "verified": 0
+    },
+    "es-419": {
+      "region": "LATAM",
+      "candidates": 1293,
+      "verified": 0
+    },
+    "fr": {
+      "region": "FR",
+      "candidates": 18085,
+      "verified": 0
+    },
+    "id": {
+      "region": "ID",
+      "candidates": 1152,
+      "verified": 0
+    },
+    "it": {
+      "region": "IT",
+      "candidates": 14227,
+      "verified": 0
+    },
+    "ja": {
+      "region": "JP",
+      "candidates": 3297,
+      "verified": 0
+    },
+    "ko": {
+      "region": "KR",
+      "candidates": 0,
+      "verified": 0
+    },
+    "nl": {
+      "region": "NL",
+      "candidates": 0,
+      "verified": 0
+    },
+    "pl": {
+      "region": "PL",
+      "candidates": 0,
+      "verified": 0
+    },
+    "pt-BR": {
+      "region": "BR",
+      "candidates": 1098,
+      "verified": 0
+    },
+    "pt-PT": {
+      "region": "PT",
+      "candidates": 0,
+      "verified": 0
+    },
+    "ru": {
+      "region": "RU",
+      "candidates": 0,
+      "verified": 0
+    },
+    "th": {
+      "region": "TH",
+      "candidates": 1224,
+      "verified": 0
+    },
+    "zh-Hans": {
+      "region": "CN",
+      "candidates": 0,
+      "verified": 0
+    },
+    "zh-Hant": {
+      "region": "MULTI",
+      "candidates": 2146,
+      "verified": 0
+    }
   },
-  "executableCommandsPrepared": 13,
-  "currentlyExecutableCommands": 0,
+  "publicFreeImageCandidates": 92817,
+  "verifiedR2Thumbnails": 0,
+  "verifiedR2DisplayImages": 0,
+  "migratedExistingImages": 0,
+  "providerBreakdown": {
+    "metadata": {
+      "tcgdex": 117665
+    },
+    "imageCandidates": {
+      "tcgdex": 92817
+    },
+    "existingCompletedSupabase": {
+      "pokemon_tcg_api": 441,
+      "pokewallet": 130,
+      "tcgdex": 20
+    }
+  },
+  "credentialBlockers": [
+    {
+      "provider": "scrydex",
+      "keyPresent": "no",
+      "keyValidation": "not tested",
+      "accountQuotaState": {
+        "state": "not_configured"
+      },
+      "requiredEnvironmentVariables": [
+        "SCRYDEX_API_KEY",
+        "SCRYDEX_TEAM_ID"
+      ],
+      "requiredForCurrentMetadata": true,
+      "accountUrl": "https://scrydex.com/register",
+      "plan": "Paid Starter, US$29/month",
+      "freeQuota": "No current $0 plan found; Starter includes 5,000 credits",
+      "requiredPermissionScopes": [
+        "read-only Pokémon cards, expansions, and image URLs"
+      ],
+      "reason": "English/Japanese supplemental coverage, only after paid-spend and written-authorization gates.",
+      "configurationFile": "config/provider_credentials.local.json",
+      "validationCommand": "python tools/global_rollout.py credentials-status --provider scrydex --validate",
+      "resumeCommand": "python tools/global_rollout.py resume"
+    }
+  ],
+  "optionalMissingCredentials": [
+    {
+      "provider": "pokemon_tcg_api",
+      "keyPresent": "no",
+      "keyValidation": "passed",
+      "accountQuotaState": {
+        "state": "reachable",
+        "httpStatus": 200,
+        "quota": {}
+      },
+      "requiredEnvironmentVariables": [
+        "POKEMON_TCG_API_KEY"
+      ],
+      "requiredForCurrentMetadata": false,
+      "accountUrl": "https://dev.pokemontcg.io/",
+      "plan": "Free key (optional for higher quota)",
+      "freeQuota": "Anonymous 1,000/day and 30/minute; keyed default 20,000/day",
+      "requiredPermissionScopes": [
+        "read-only cards and sets API access"
+      ],
+      "reason": "Optional higher-quota validation and English metadata reconciliation.",
+      "configurationFile": "config/provider_credentials.local.json",
+      "validationCommand": "python tools/global_rollout.py credentials-status --provider pokemon_tcg_api --validate",
+      "resumeCommand": "python tools/global_rollout.py resume"
+    },
+    {
+      "provider": "ximilar",
+      "keyPresent": "no",
+      "keyValidation": "not tested",
+      "accountQuotaState": {
+        "state": "not_configured"
+      },
+      "requiredEnvironmentVariables": [
+        "XIMILAR_API_TOKEN"
+      ],
+      "requiredForCurrentMetadata": false,
+      "accountUrl": "https://app.ximilar.com/",
+      "plan": "Free recognition plan",
+      "freeQuota": "1,000 credits/month; 10 credits per TCG identification",
+      "requiredPermissionScopes": [
+        "TCG recognition endpoint only"
+      ],
+      "reason": "Optional recognition of user-owned captures; never used as an artwork source.",
+      "configurationFile": "config/provider_credentials.local.json",
+      "validationCommand": "python tools/global_rollout.py credentials-status --provider ximilar --validate",
+      "resumeCommand": "python tools/global_rollout.py resume"
+    }
+  ],
+  "paidProviderBlockers": [
+    {
+      "provider": "scrydex",
+      "requirement": "Starter: US$29/month, 5,000 credits, US$0.006 per overage credit",
+      "termsStatus": "prohibited"
+    }
+  ],
+  "legalTermsBlockers": [
+    {
+      "provider": "tcgdex",
+      "termsStatus": "pending_human_review",
+      "imageRehostingStatus": "pending_human_review",
+      "reason": "Card metadata repository is MIT; artwork redistribution is not expressly licensed."
+    },
+    {
+      "provider": "pokemon_tcg_api",
+      "termsStatus": "pending_human_review",
+      "imageRehostingStatus": "pending_human_review",
+      "reason": "not expressly documented for the complete artwork archive"
+    },
+    {
+      "provider": "pokewallet",
+      "termsStatus": "pending_human_review",
+      "imageRehostingStatus": "pending_human_review",
+      "reason": "commercial service use is licensed, but complete image rehosting is not explicit"
+    },
+    {
+      "provider": "scrydex",
+      "termsStatus": "prohibited",
+      "imageRehostingStatus": "prohibited_without_written_authorization",
+      "reason": "terms prohibit redistribution or mirroring of the Services without prior written authorization"
+    },
+    {
+      "provider": "official_regional_pokemon_catalogues",
+      "termsStatus": "pending_human_review",
+      "imageRehostingStatus": "pending_human_review",
+      "reason": "unclear"
+    }
+  ],
+  "unresolvedIdentityCount": 60905,
+  "ambiguousIdentityCount": 6440,
+  "variantUnresolvedCount": 117665,
+  "missingImageCount": 24848,
+  "permanentProviderFailures": 0,
+  "publicImagePreflight": {
+    "classification": "PASS",
+    "requests": 33,
+    "available": 33,
+    "states": {
+      "available": 33
+    }
+  },
+  "canary": {
+    "classification": "BLOCKED",
+    "plannedCards": 1100,
+    "executed": false,
+    "blockers": [
+      "tcgdex"
+    ]
+  },
+  "supabaseMigration": {
+    "recordsAudited": 591,
+    "sourceObjectsAvailable": 591,
+    "sourceChecksumsVerified": 591,
+    "r2Writes": 0
+  },
+  "storage": {
+    "currentR2Bytes": 465414622,
+    "currentR2PokemonImageObjects": 0,
+    "measuredAverageExistingThumbBytes": 12843,
+    "measuredAverageExistingDisplayBytes": 117717,
+    "displaySamples": 100,
+    "candidatePrintings": 92817,
+    "projectedThumbAndDisplayBytes": 12118187520,
+    "projectedGiB": 11.286,
+    "projectedTotalBucketDecimalGB": 12.584,
+    "projectedObjectWrites": 185634,
+    "cloudflarePricingReviewedAt": "2026-07-11",
+    "cloudflarePricingUrl": "https://developers.cloudflare.com/r2/pricing/",
+    "standardStorageFreeTierGBMonth": 10,
+    "billableStorageGBMonthAfterRounding": 3,
+    "estimatedMonthlyStorageCostUsd": 0.045,
+    "estimatedClassACostUsdIfMonthlyFreeTierAvailable": 0,
+    "estimatedClassACostUsdIfFreeTierExhausted": 4.5,
+    "classBReadCost": "not estimable until application request volume is known",
+    "estimateOnly": true,
+    "paidExecutionApproved": false
+  },
+  "apiQuotaState": {
+    "tcgdex": {
+      "state": "reachable",
+      "httpStatus": 200,
+      "quota": {}
+    },
+    "pokemon_tcg_api": {
+      "state": "reachable",
+      "httpStatus": 200,
+      "quota": {}
+    },
+    "pokewallet": {
+      "state": "reachable",
+      "httpStatus": 200,
+      "quota": {
+        "X-RateLimit-Limit-Hour": 100,
+        "X-RateLimit-Remaining-Hour": 99,
+        "X-RateLimit-Limit-Day": 1000,
+        "X-RateLimit-Remaining-Day": 999
+      }
+    },
+    "scrydex": {
+      "state": "not_configured"
+    },
+    "ximilar": {
+      "state": "not_configured"
+    }
+  },
   "tests": {
-    "command": ".\\.venv\\Scripts\\python.exe -m pytest tests/test_global_rollout.py tests/test_layered_identity.py tests/test_permissions_and_adversarial.py tests/test_image_pipeline.py tests/test_thumbnail_rollout.py",
-    "result": "65 passed in 3.88s"
+    "schemaVersion": "1.0.0",
+    "generatedAtUtc": "2026-07-10T21:21:30Z",
+    "classification": "PASS",
+    "command": ".\\.venv\\Scripts\\python.exe -m pytest -q",
+    "passed": 523,
+    "skipped": 31,
+    "subtestsPassed": 19,
+    "failed": 0,
+    "durationSeconds": 22.26,
+    "catalogueSchemaValidation": {
+      "classification": "PASS",
+      "rowsValidated": 117665,
+      "uniqueCanonicalPrintingIds": 117665,
+      "duplicateCanonicalPrintingIds": 0,
+      "schemaErrors": 0
+    }
   },
-  "filesChanged": "Concurrent audit, adversarial sample/index, permission pack/tracker/validator, 260-resolution, missing-image inventory, guarded command plans, tests, and master reports.",
-  "safety": {
-    "imageBodiesDownloaded": 0,
-    "r2Writes": 0,
-    "productionPublished": false,
-    "flutterModified": false
+  "lastCheckpoint": "reports/global_rollout/checkpoints/tcgdex_metadata.json",
+  "productionPublication": {
+    "cataloguePublished": false,
+    "searchManifestReplaced": false,
+    "flutterModified": false,
+    "supabaseAssetsDeleted": false,
+    "r2AssetsDeleted": false
   },
   "exactBlockers": [
-    "Written mirroring permission with evidence is pending for all three providers.",
-    "Configured unexpected-spend and R2-write budgets remain zero.",
-    "260 existing thumbnails remain identity-unresolved.",
-    "24,848 catalogue records lack an image candidate."
+    "TCGdex artwork rehosting permission is not explicit; public image candidates cannot be copied to R2.",
+    "All set-level canonical records remain cardVariant=unspecified, so physical finish identity is provisional.",
+    "260 existing Supabase thumbnails lack a safe exact global crosswalk.",
+    "Projected R2 storage is 12.584 GB, above the 10 GB-month free tier; estimated rounded storage cost is US$0.045/month, while the configured unexpected-spend budget is US$0.",
+    "Scrydex requires a paid Starter plan and its terms prohibit mirroring without prior written authorization.",
+    "Production publication and R2 image writes require explicit approval."
   ],
-  "exactNextHumanAction": "Review and send one provider permission email from reports/global_rollout/provider_permission_requests, then save the written response as an evidence file and update provider_permission_tracker.json.",
-  "exactResumeCommandAfterPermissionApproval": "python tools/global_rollout.py permissions-status && python tools/global_rollout.py image-canary --provider tcgdex --language en --limit 100 --dry-run --batch-size 100 --max-writes 100 --max-bytes 2000000 --provider-rate 1 --stop-on-mismatch --contact-sheet"
+  "nextSafeAction": "Review/accept an artwork rehosting basis for TCGdex and resolve physical variant evidence; optionally configure only approved provider credentials.",
+  "exactNextCommand": "python tools/global_rollout.py status",
+  "resumeCommand": "python tools/global_rollout.py resume"
 }

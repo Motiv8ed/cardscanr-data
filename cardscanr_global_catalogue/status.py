@@ -291,9 +291,13 @@ def build_master_status() -> dict[str, Any]:
                 f"{int((migration.get('migrationStateCounts') or {}).get('blocked_identity_unresolved') or 0)} "
                 "existing Supabase thumbnails lack a safe exact global crosswalk."
             ),
-            (
-                f"PokéWallet has only {pokewallet_daily_remaining} "
-                "free daily requests remaining; no bulk request is permitted in this window."
+            *(
+                [
+                    f"PokéWallet has only {pokewallet_daily_remaining} "
+                    "free daily requests remaining; no bulk request is permitted in this window."
+                ]
+                if 0 < pokewallet_daily_remaining < 100
+                else []
             ),
             (
                 f"Projected R2 storage is {storage_estimate['projectedTotalBucketDecimalGB']} GB, "
@@ -358,4 +362,3 @@ def render_master_status_markdown(status: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
-
