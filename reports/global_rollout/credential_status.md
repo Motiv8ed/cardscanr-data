@@ -4,8 +4,8 @@ No secret value or partial key is included in this report.
 
 ## tcgdex
 - Key present: **not required**
-- Validation: not tested
-- Account/quota state: `{'state': 'no_account_required'}`
+- Validation: passed
+- Account/quota state: `{'state': 'reachable', 'httpStatus': 200, 'quota': {}}`
 - Account: https://tcgdex.dev/
 - Plan: No account required
 - Free quota: Free; no published hard rate limit
@@ -18,8 +18,8 @@ No secret value or partial key is included in this report.
 
 ## pokemon_tcg_api
 - Key present: **no**
-- Validation: not tested
-- Account/quota state: `{'state': 'not_configured'}`
+- Validation: passed
+- Account/quota state: `{'state': 'reachable', 'httpStatus': 200, 'quota': {}}`
 - Account: https://dev.pokemontcg.io/
 - Plan: Free key (optional for higher quota)
 - Free quota: Anonymous 1,000/day and 30/minute; keyed default 20,000/day
@@ -32,8 +32,8 @@ No secret value or partial key is included in this report.
 
 ## pokewallet
 - Key present: **yes**
-- Validation: not tested
-- Account/quota state: `{'state': 'configured'}`
+- Validation: passed
+- Account/quota state: `{'state': 'reachable', 'httpStatus': 200, 'quota': {'X-RateLimit-Limit-Hour': 100, 'X-RateLimit-Remaining-Hour': 98, 'X-RateLimit-Limit-Day': 1000, 'X-RateLimit-Remaining-Day': 998}}`
 - Account: https://www.pokewallet.io/dashboard
 - Plan: Free
 - Free quota: 100/hour and 1,000/day

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAtUtc": "2026-07-11T04:32:58Z",
+  "updatedAtUtc": "2026-07-11T04:40:30Z",
   "classification": "PARTIAL",
   "currentPhase": "Phase 10D planned; stopped before image canary execution",
   "phaseCompletion": {
@@ -23,7 +23,7 @@
   },
   "repository": {
     "branch": "main",
-    "head": "c99e82b92fb8d3ef25c7dac50c698c739389b514",
+    "head": "9f4dce12ecb254c8c783c1c1144a530e1050a83a",
     "commitCreated": false
   },
   "languagesDiscovered": [
@@ -426,10 +426,10 @@
   "permanentProviderFailures": 0,
   "publicImagePreflight": {
     "classification": "PASS",
-    "requests": 33,
-    "available": 33,
+    "requests": 55,
+    "available": 55,
     "states": {
-      "available": 33
+      "available": 55
     }
   },
   "canary": {
@@ -484,9 +484,9 @@
       "httpStatus": 200,
       "quota": {
         "X-RateLimit-Limit-Hour": 100,
-        "X-RateLimit-Remaining-Hour": 99,
+        "X-RateLimit-Remaining-Hour": 98,
         "X-RateLimit-Limit-Day": 1000,
-        "X-RateLimit-Remaining-Day": 999
+        "X-RateLimit-Remaining-Day": 998
       }
     },
     "scrydex": {

@@ -261,7 +261,7 @@ def command_image_canary(args: argparse.Namespace) -> int:
 def command_resume(args: argparse.Namespace) -> int:
     write_contract_artifacts()
     write_provider_ledger()
-    credentials = credential_status(validate=False)
+    credentials = credential_status(validate=True)
     write_credential_status_reports(credentials)
     result = ingest_tcgdex(
         refresh=False,

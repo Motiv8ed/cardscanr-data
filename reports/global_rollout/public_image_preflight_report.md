@@ -2,9 +2,9 @@
 
 Classification: **PASS**
 
-- Requests performed: 33 / 33
-- Available image responses: 33
-- States: {'available': 33}
+- Requests performed: 55 / 55
+- Available image responses: 55
+- States: {'available': 55}
 - Image bodies retained: False
 - R2 writes: 0
 - Stop reason: None
