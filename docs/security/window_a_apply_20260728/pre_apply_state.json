@@ -1,0 +1,75 @@
+﻿{
+    "captured_at_utc":  "2026-07-27T21:17:24.723586Z",
+    "migration_sha256":  "d30bbcb9af729018c92348e2da5ad94f8aa0436b19b6935f6be2ab6440a98bea",
+    "migration_history":  [
+                              {
+                                  "version":  "20260707204553",
+                                  "name":  "pokemon_card_image_pipeline"
+                              },
+                              {
+                                  "version":  "20260707205727",
+                                  "name":  "pokemon_card_image_records_grants"
+                              },
+                              {
+                                  "version":  "20260710063309",
+                                  "name":  "pokemon_card_image_provider_unavailable_status"
+                              },
+                              {
+                                  "version":  "20260723215548",
+                                  "name":  "card_image_manifests_build46"
+                              },
+                              {
+                                  "version":  "20260724004833",
+                                  "name":  "card_image_manifests_quality_classification_build47"
+                              }
+                          ],
+    "backup_copy":  {
+                        "dest":  "D:\\Google Drive\\CardScanR Backups\\Supabase\\pre_security_beta_20260728_061818",
+                        "file_count":  11,
+                        "source":  "D:\\CardScanR_Supabase_Backups\\pre_security_beta_20260728_061818",
+                        "hash_verification":  "PASS"
+                    },
+    "advisor_pre":  {
+                        "critical_security_definer_views":  [
+                                                                "card_image_manifests_current",
+                                                                "card_image_manifests_with_legacy_records"
+                                                            ],
+                        "public_bucket_listing_warn":  true,
+                        "auth_exec_warn_count":  6,
+                        "anon_exec_warn_count":  6,
+                        "leaked_password_protection_disabled":  true
+                    },
+    "views_pre":  {
+                      "card_image_manifests_with_legacy_records_reloptions":  null,
+                      "card_image_manifests_current_reloptions":  null
+                  },
+    "stage_a":  {
+                    "checkpoint_mtime_local":  "2026-07-28T06:22:04.0326741+10:00",
+                    "manifested":  14964,
+                    "checkpoint_path":  "D:\\CardScanR_image_backfill\\build47_full\\stage_a_public\\checkpoint.json",
+                    "status":  "BACKFILL_RUNNING",
+                    "target":  26605,
+                    "completed":  15016,
+                    "note":  "Do not stop or duplicate; publisher uses service_role INSERT/UPDATE on manifests",
+                    "remaining_batches":  1
+                },
+    "canonical_migration":  "D:\\cardscanr-data\\supabase\\migrations\\20260727000000_security_advisor_remediation.sql",
+    "superseded_not_applied":  "D:\\CardScanR\\supabase\\migrations\\20260727100000_*.sql",
+    "migration_fingerprint":  "d7fbb785479de4afd440f711671a402c",
+    "counts":  {
+                   "user_cards":  60,
+                   "market_price_refresh_jobs":  292,
+                   "market_price_keys":  117,
+                   "pokemon_card_image_records":  607,
+                   "auth_users":  3,
+                   "market_price_cache":  117,
+                   "current_verified_manifests":  15066,
+                   "profiles":  3,
+                   "market_price_snapshots":  285,
+                   "market_sold_listing_evidence":  8774,
+                   "card_image_manifests":  15071,
+                   "scan_sessions":  0,
+                   "collections":  3,
+                   "storage_objects":  746
+               }
+}

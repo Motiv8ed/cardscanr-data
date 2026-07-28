@@ -1,0 +1,32 @@
+﻿{
+    "rows":  [
+                 {
+                     "version":  "20260707204553",
+                     "name":  "pokemon_card_image_pipeline"
+                 },
+                 {
+                     "version":  "20260707205727",
+                     "name":  "pokemon_card_image_records_grants"
+                 },
+                 {
+                     "version":  "20260710063309",
+                     "name":  "pokemon_card_image_provider_unavailable_status"
+                 },
+                 {
+                     "version":  "20260723215548",
+                     "name":  "card_image_manifests_build46"
+                 },
+                 {
+                     "version":  "20260724004833",
+                     "name":  "card_image_manifests_quality_classification_build47"
+                 },
+                 {
+                     "version":  "20260727000000",
+                     "name":  "security_advisor_remediation"
+                 }
+             ],
+    "fingerprint_pre":  "d7fbb785479de4afd440f711671a402c",
+    "insert_sql":  "insert into supabase_migrations.schema_migrations (version, name) values (\u002720260727000000\u0027, \u0027security_advisor_remediation\u0027) on conflict (version) do nothing;",
+    "fingerprint_post":  "fa879824fa41f9b8810a0e46289847b1",
+    "beta_or_superseded_rows_present":  false
+}

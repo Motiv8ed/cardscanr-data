@@ -1,0 +1,27 @@
+﻿{
+    "card_image_manifests_rls":  [
+                                     {
+                                         "cmd":  "SELECT",
+                                         "name":  "card_image_manifests_public_read_current_verified",
+                                         "using":  "is_current=true AND verification_status=verified"
+                                     },
+                                     {
+                                         "cmd":  "INSERT",
+                                         "name":  "card_image_manifests_no_insert_anon_auth",
+                                         "with_check":  "deny"
+                                     },
+                                     {
+                                         "cmd":  "UPDATE",
+                                         "name":  "card_image_manifests_no_update_anon_auth",
+                                         "using":  "false"
+                                     },
+                                     {
+                                         "cmd":  "DELETE",
+                                         "name":  "card_image_manifests_no_delete_anon_auth",
+                                         "using":  "false"
+                                     }
+                                 ],
+    "storage":  {
+                    "pokemon_card_images_public_read":  "REMOVED"
+                }
+}

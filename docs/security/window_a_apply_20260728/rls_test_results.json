@@ -1,0 +1,27 @@
+﻿{
+    "authenticated":  {
+                          "delete_privilege":  false,
+                          "base_table_hidden_leaks":  0,
+                          "get_market_price_bundle_execute":  "PASS",
+                          "insert":  "DENIED",
+                          "update_privilege":  false,
+                          "current_view_select":  "PASS",
+                          "legacy_view_select":  "DENIED"
+                      },
+    "status":  "ROLE_BEHAVIOR_CHECKS_PASS",
+    "service_role":  {
+                         "all_manifests_select":  "PASS",
+                         "insert_update_select_grants":  "PASS",
+                         "publication_capability":  "PASS",
+                         "legacy_view_select":  "PASS"
+                     },
+    "anon":  {
+                 "delete_privilege":  false,
+                 "base_table_hidden_leaks":  0,
+                 "pricing_rpc_execute":  false,
+                 "insert":  "DENIED",
+                 "update_privilege":  false,
+                 "current_view_select":  "PASS",
+                 "legacy_view_select":  "DENIED"
+             }
+}
