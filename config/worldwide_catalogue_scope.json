@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "franchise": "pokemon-tcg",
+  "inventory_status": "enumerated_not_yet_reconciled",
+  "languages": [
+    {"code": "en", "name": "English", "officially_printed": true, "regional_variants": ["US", "CA", "GB", "AU", "NZ", "SG", "MY", "PH"]},
+    {"code": "ja", "name": "Japanese", "officially_printed": true, "regional_variants": ["JP"]},
+    {"code": "ko", "name": "Korean", "officially_printed": true, "regional_variants": ["KR"]},
+    {"code": "zh-cn", "name": "Simplified Chinese", "officially_printed": true, "regional_variants": ["CN"]},
+    {"code": "zh-tw", "name": "Traditional Chinese", "officially_printed": true, "regional_variants": ["TW", "HK"]},
+    {"code": "th", "name": "Thai", "officially_printed": true, "regional_variants": ["TH"]},
+    {"code": "id", "name": "Indonesian", "officially_printed": true, "regional_variants": ["ID"]},
+    {"code": "fr", "name": "French", "officially_printed": true, "regional_variants": ["FR", "CA", "BE", "CH"]},
+    {"code": "de", "name": "German", "officially_printed": true, "regional_variants": ["DE", "AT", "CH"]},
+    {"code": "es", "name": "Spanish", "officially_printed": true, "regional_variants": ["ES", "LATAM"]},
+    {"code": "es-mx", "name": "Spanish (Mexico)", "officially_printed": true, "regional_variants": ["MX"]},
+    {"code": "it", "name": "Italian", "officially_printed": true, "regional_variants": ["IT", "CH"]},
+    {"code": "pt", "name": "Portuguese (source-unspecified)", "officially_printed": true, "regional_variants": ["BR", "PT"], "normalization_note": "Must be resolved to pt-BR or pt-PT when printing evidence permits."},
+    {"code": "pt-br", "name": "Portuguese (Brazil)", "officially_printed": true, "regional_variants": ["BR"]},
+    {"code": "pt-pt", "name": "Portuguese (Portugal)", "officially_printed": true, "regional_variants": ["PT"]},
+    {"code": "nl", "name": "Dutch", "officially_printed": true, "regional_variants": ["NL", "BE"], "historical_or_discontinued": true},
+    {"code": "pl", "name": "Polish", "officially_printed": true, "regional_variants": ["PL"], "historical_or_discontinued": true},
+    {"code": "ru", "name": "Russian", "officially_printed": true, "regional_variants": ["RU"], "historical_or_discontinued": true}
+  ],
+  "regions": [
+    {"code": "INTL", "name": "International / source region unspecified"},
+    {"code": "US", "name": "United States"}, {"code": "CA", "name": "Canada"},
+    {"code": "GB", "name": "United Kingdom"}, {"code": "AU", "name": "Australia"},
+    {"code": "NZ", "name": "New Zealand"}, {"code": "EU", "name": "European multi-market"},
+    {"code": "JP", "name": "Japan"}, {"code": "KR", "name": "South Korea"},
+    {"code": "CN", "name": "Mainland China"}, {"code": "TW", "name": "Taiwan"},
+    {"code": "HK", "name": "Hong Kong"}, {"code": "TH", "name": "Thailand"},
+    {"code": "ID", "name": "Indonesia"}, {"code": "SG", "name": "Singapore"},
+    {"code": "MY", "name": "Malaysia"}, {"code": "PH", "name": "Philippines"},
+    {"code": "BR", "name": "Brazil"}, {"code": "MX", "name": "Mexico"},
+    {"code": "PT", "name": "Portugal"}, {"code": "LATAM", "name": "Latin America multi-market"}
+  ],
+  "sealed_product_types": [
+    "booster_pack", "booster_pack_art", "booster_box", "display_box", "half_box",
+    "sleeved_booster", "booster_bundle", "elite_trainer_box", "pokemon_center_elite_trainer_box",
+    "ultra_premium_collection", "premium_collection", "collection_box", "special_collection",
+    "blister", "checklane_blister", "three_pack_blister", "multi_pack_blister",
+    "build_and_battle_box", "build_and_battle_stadium", "theme_deck", "starter_deck",
+    "battle_deck", "league_battle_deck", "world_championship_deck", "trainer_toolkit",
+    "tin", "mini_tin", "collector_chest", "advent_calendar", "regional_pokemon_center_product",
+    "promotional_pack", "tournament_product", "prize_product", "case", "display_carton"
+  ],
+  "accessory_types": [
+    "binder", "album", "sleeves", "deck_box", "playmat", "coin", "dice", "storage", "marker", "other"
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "rights_policy": "Rights apply per provider and asset class; metadata permission never implies image mirroring permission.",
+  "providers": [
+    {
+      "id": "cardscanr-existing", "name": "Existing CardScanR production catalogue", "type": "internal",
+      "base_url": null, "asset_class": "metadata_and_owned_derivatives", "rights_status": "approved_for_mirror",
+      "priority": 10, "collector_status": "audited"
+    },
+    {
+      "id": "tcgdex-cards-database", "name": "TCGdex cards-database Git repository", "type": "open_dataset",
+      "base_url": "https://github.com/tcgdex/cards-database", "asset_class": "metadata",
+      "rights_status": "approved_for_mirror", "license": "MIT", "priority": 20, "collector_status": "implemented"
+    },
+    {
+      "id": "tcgdex-assets", "name": "TCGdex image assets", "type": "community",
+      "base_url": "https://assets.tcgdex.net", "asset_class": "card_images",
+      "rights_status": "permission_pending", "priority": 45, "collector_status": "existing_partial"
+    },
+    {
+      "id": "pokemontcg-data", "name": "PokémonTCG data repository", "type": "open_dataset",
+      "base_url": "https://github.com/PokemonTCG/pokemon-tcg-data", "asset_class": "metadata",
+      "rights_status": "approved_for_mirror", "license": "MIT", "priority": 25, "collector_status": "mirrored_not_imported"
+    },
+    {
+      "id": "pokemontcg-images", "name": "Pokémon TCG Developers image CDN", "type": "community",
+      "base_url": "https://images.pokemontcg.io", "asset_class": "card_images",
+      "rights_status": "permission_pending", "priority": 50, "collector_status": "existing_partial"
+    },
+    {
+      "id": "pokemon-jp-official", "name": "Pokémon Card Game Japan official card and product database", "type": "official",
+      "base_url": "https://www.pokemon-card.com", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "planned"
+    },
+    {
+      "id": "pokemon-asia-id-official", "name": "Pokémon Card Game Indonesia official trainer site", "type": "official",
+      "base_url": "https://asia.pokemon-card.com/id", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "endpoint_verified"
+    },
+    {
+      "id": "pokemon-asia-th-official", "name": "Pokémon Card Game Thailand official trainer site", "type": "official",
+      "base_url": "https://asia.pokemon-card.com/th", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "endpoint_verified"
+    },
+    {
+      "id": "pokemon-asia-hk-official", "name": "Pokémon Card Game Hong Kong official trainer site", "type": "official",
+      "base_url": "https://asia.pokemon-card.com/hk", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "endpoint_verified"
+    },
+    {
+      "id": "pokemon-cn-official", "name": "Pokémon TCG Mainland China official sources", "type": "official",
+      "base_url": "https://www.pokemon.cn", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "discovery_required"
+    },
+    {
+      "id": "pokemon-kr-official", "name": "Pokémon Korea official card-game sources", "type": "official",
+      "base_url": "https://pokemonkorea.co.kr", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 30, "collector_status": "discovery_required"
+    },
+    {
+      "id": "pokemon-international-official", "name": "Pokémon international product galleries and announcements", "type": "official",
+      "base_url": "https://www.pokemon.com", "asset_class": "metadata_and_images",
+      "rights_status": "metadata_only", "priority": 35, "collector_status": "planned"
+    },
+    {
+      "id": "bulbapedia", "name": "Bulbapedia historical reference", "type": "community",
+      "base_url": "https://bulbapedia.bulbagarden.net", "asset_class": "metadata",
+      "rights_status": "metadata_only", "priority": 70, "collector_status": "planned_gap_filler"
+    },
+    {
+      "id": "internet-archive", "name": "Internet Archive Wayback Machine", "type": "archive",
+      "base_url": "https://web.archive.org", "asset_class": "historical_pages",
+      "rights_status": "link_only", "priority": 75, "collector_status": "planned_gap_filler"
+    },
+    {
+      "id": "marketplace-gap-evidence", "name": "Public marketplace and auction gap evidence", "type": "marketplace",
+      "base_url": null, "asset_class": "identity_evidence_only", "rights_status": "link_only",
+      "priority": 90, "collector_status": "planned_gap_filler"
+    }
+  ]
+}
