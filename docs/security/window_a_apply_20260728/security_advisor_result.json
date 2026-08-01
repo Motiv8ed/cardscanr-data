@@ -1,0 +1,25 @@
+﻿{
+    "pre_apply":  {
+                      "critical_security_definer_views":  [
+                                                              "card_image_manifests_current",
+                                                              "card_image_manifests_with_legacy_records"
+                                                          ],
+                      "warn_anon_security_definer_exec":  6,
+                      "warn_public_bucket_listing":  true,
+                      "warn_authenticated_security_definer_exec":  6,
+                      "warn_leaked_password_protection":  true
+                  },
+    "post_apply":  {
+                       "critical_security_definer_views":  [
+
+                                                           ],
+                       "warn_anon_security_definer_exec":  0,
+                       "warn_public_bucket_listing":  false,
+                       "intentional_residual_warnings":  [
+                                                             "authenticated EXECUTE on get_market_price_bundle (required by signed-in app)",
+                                                             "authenticated EXECUTE on request_market_price_refresh (required by signed-in app)",
+                                                             "auth_leaked_password_protection disabled (owner dashboard step; not SQL / not Window A)"
+                                                         ]
+                   },
+    "expected_result_met":  true
+}

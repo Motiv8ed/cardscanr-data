@@ -1,0 +1,79 @@
+﻿{
+    "functions":  {
+                      "handle_new_user":  {
+                                              "authenticated":  false,
+                                              "service_role":  false,
+                                              "search_path":  "public",
+                                              "anon":  false
+                                          },
+                      "get_or_create_market_price_key":  {
+                                                             "authenticated":  false,
+                                                             "service_role":  true,
+                                                             "search_path":  "public",
+                                                             "anon":  false
+                                                         },
+                      "rls_auto_enable":  {
+                                              "authenticated":  false,
+                                              "service_role":  false,
+                                              "search_path":  "pg_catalog",
+                                              "anon":  false
+                                          },
+                      "handle_new_user_default_collection":  {
+                                                                 "authenticated":  false,
+                                                                 "service_role":  false,
+                                                                 "search_path":  "public",
+                                                                 "anon":  false
+                                                             },
+                      "request_market_price_refresh":  {
+                                                           "authenticated":  true,
+                                                           "service_role":  true,
+                                                           "search_path":  "public",
+                                                           "anon":  false
+                                                       },
+                      "get_market_price_bundle":  {
+                                                      "authenticated":  true,
+                                                      "service_role":  true,
+                                                      "search_path":  "public",
+                                                      "anon":  false
+                                                  }
+                  },
+    "card_image_manifests":  {
+                                 "authenticated":  [
+                                                       "SELECT"
+                                                   ],
+                                 "service_role":  [
+                                                      "SELECT",
+                                                      "INSERT",
+                                                      "UPDATE",
+                                                      "DELETE",
+                                                      "REFERENCES",
+                                                      "TRIGGER",
+                                                      "TRUNCATE"
+                                                  ],
+                                 "anon":  [
+                                              "SELECT"
+                                          ]
+                             },
+    "card_image_manifests_with_legacy_records":  {
+                                                     "service_role":  [
+                                                                          "SELECT"
+                                                                      ],
+                                                     "authenticated":  [
+
+                                                                       ],
+                                                     "anon":  [
+
+                                                              ]
+                                                 },
+    "card_image_manifests_current":  {
+                                         "authenticated":  [
+                                                               "SELECT"
+                                                           ],
+                                         "service_role":  [
+                                                              "SELECT"
+                                                          ],
+                                         "anon":  [
+                                                      "SELECT"
+                                                  ]
+                                     }
+}
