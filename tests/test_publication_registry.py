@@ -21,6 +21,6 @@ def test_register_bundle_verifies_and_is_idempotent(tmp_path: Path) -> None:
     assert first["status"] == "canary"
     connection = sqlite3.connect(database)
     assert connection.execute("select version,status,rollback_retained from publication_run").fetchone() == ("v1", "canary", 1)
-    assert connection.execute("select count(*) from publication_artifact").fetchone()[0] == 13
+    assert connection.execute("select count(*) from publication_artifact").fetchone()[0] == 14
     assert connection.execute("pragma foreign_key_check").fetchall() == []
     connection.close()

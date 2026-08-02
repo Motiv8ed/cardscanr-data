@@ -15,7 +15,11 @@ def main() -> int:
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--json", required=True, type=Path)
     parser.add_argument("--markdown", required=True, type=Path)
+    parser.add_argument("--product-database", type=Path)
+    parser.add_argument("--product-provider")
     args = parser.parse_args()
+    if bool(args.product_database) != bool(args.product_provider):
+        parser.error("--product-database and --product-provider must be supplied together")
     connection = sqlite3.connect(f"file:{args.checkpoint.resolve()}?mode=ro", uri=True)
     connection.row_factory = sqlite3.Row
     try:
@@ -44,6 +48,31 @@ def main() -> int:
         }
     finally:
         connection.close()
+    product_coverage = None
+    if args.product_database:
+        catalogue = sqlite3.connect(f"file:{args.product_database.resolve()}?mode=ro", uri=True)
+        try:
+            total = catalogue.execute(
+                "select count(*) from sealed_product where provider_id=?", (args.product_provider,),
+            ).fetchone()[0]
+            verified = catalogue.execute(
+                """select count(distinct sp.id)
+                     from sealed_product sp
+                     join sealed_product_variant spv on spv.sealed_product_id=sp.id
+                     join product_image_candidate pic on pic.sealed_product_variant_id=spv.id
+                    where sp.provider_id=?
+                      and pic.validation_status in ('verified','acquired','published')""",
+                (args.product_provider,),
+            ).fetchone()[0]
+            product_coverage = {
+                "provider_id": args.product_provider,
+                "total_products": total,
+                "products_with_verified_image": verified,
+                "products_without_verified_image": total - verified,
+            }
+            report["product_coverage"] = product_coverage
+        finally:
+            catalogue.close()
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     lines = [
@@ -57,6 +86,14 @@ def main() -> int:
         f"| {row['provider_id']} | {row['status']} | {row['distinct_urls']:,} | {row['candidates']:,} |"
         for row in providers
     )
+    if product_coverage:
+        lines.extend([
+            "", "## Product coverage", "",
+            f"- Provider: `{product_coverage['provider_id']}`",
+            f"- Total products: `{product_coverage['total_products']:,}`",
+            f"- Products with at least one verified image: `{product_coverage['products_with_verified_image']:,}`",
+            f"- Products without a verified image: `{product_coverage['products_without_verified_image']:,}`",
+        ])
     lines.extend(["", "## Failure classes", "", "| Outcome | Error | URLs |", "|---|---|---:|"])
     lines.extend(
         f"| {row['status']} | {(row['error'] or '').replace('|', '\\|')} | {row['rows']:,} |"
@@ -70,4 +107,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

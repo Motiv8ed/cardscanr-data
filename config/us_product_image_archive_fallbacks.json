@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "provider_id": "pokemon-us-products-official-archive",
+  "excluded_non_product_urls": [
+    "https://www.pokemon.com/static-assets/content-assets/cms2/img/trading-card-game/_symbols/energy_icons/inline/fighting.gif",
+    "https://www.pokemon.com/static-assets/content-assets/cms2/img/trading-card-game/_symbols/energy_icons/inline/fire.gif"
+  ],
+  "fallbacks": [
+    {
+      "original_url": "http://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/tapu-koko-fini-deck-shield/tcg-deck-shield-tapu-koko-fini-169.jpg",
+      "archive_timestamp": "20170724180334",
+      "archive_digest": "QGMBUHZPIYR6NUYCVQKWKJZT2J3IEOUR",
+      "archive_url": "https://web.archive.org/web/20170724180334id_/http://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/tapu-koko-fini-deck-shield/tcg-deck-shield-tapu-koko-fini-169.jpg"
+    },
+    {
+      "original_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/kleavor-vstar-special-collection/kleavor-vstar-special-collection-169-en.png",
+      "archive_timestamp": "20230225234559",
+      "archive_digest": "C34PV57K7XQLG4TSISOHJN4H5ZEY7Y52",
+      "archive_url": "https://web.archive.org/web/20230225234559id_/https://assets.pokemon.com/assets//cms2/img/trading-card-game/series/incrementals/kleavor-vstar-special-collection/kleavor-vstar-special-collection-169-en.png"
+    },
+    {
+      "original_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/lucario-vstar-special-collection/lucario-vstar-special-collection-169-en.png",
+      "archive_timestamp": "20230228041916",
+      "archive_digest": "SE7S7EFDGLTEILS7P7VGRHFCWD3GLJZM",
+      "archive_url": "https://web.archive.org/web/20230228041916id_/https://assets.pokemon.com/assets//cms2/img/trading-card-game/series/incrementals/lucario-vstar-special-collection/lucario-vstar-special-collection-169-en.png"
+    },
+    {
+      "original_url": "https://assets.pokemon.com/assets//cms2/img/trading-card-game/series/incrementals/break-box-ho-oh-lugia/break-box-ohho-lugia-169.jpg",
+      "archive_timestamp": "20170412012407",
+      "archive_digest": "RJDB5Y7E3MU2ASXOW2WFFHADAA62OQXU",
+      "archive_url": "https://web.archive.org/web/20170412012407id_/http://assets.pokemon.com/assets//cms2/img/trading-card-game/series/incrementals/break-box-ho-oh-lugia/break-box-ohho-lugia-169.jpg"
+    }
+  ],
+  "additional_candidates": [
+    {
+      "product_provider_record_id": "galar-collection",
+      "source_url": "https://web.archive.org/web/20220523064342id_/https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/galar-collection/galar-collection-169-en.jpg",
+      "archive_timestamp": "20220523064342",
+      "archive_digest": "DWUZWL2D2TASDB4BUOPZLAIWFBUMVVZK",
+      "match_method": "exact_official_product_slug_asset_path_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "mythical-squishy-premium-collection",
+      "source_url": "https://web.archive.org/web/20220727054016id_/https://assets.pokemon.com/assets//cms2/img/trading-card-game/series/incrementals/mythical-squishy-premium-collection/mythical-squishy-premium-collection-169.jpg",
+      "archive_timestamp": "20220727054016",
+      "archive_digest": "BHWQ57KIODY37OF5NGIN7ORA7J6WI6PS",
+      "match_method": "exact_official_product_slug_asset_path_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "xy-elite-trainer-box",
+      "source_url": "https://www.pokemon.com/static-assets/content-assets/cms2/img/trading-card-game/series/xy_series/xy-elite-trainer-box/xy1_elite_trainer_box_169.jpg",
+      "match_method": "exact_official_asset_path_recovered_from_sibling_gallery_capture"
+    },
+    {
+      "product_provider_record_id": "sun-moon-crimson-invasion-elite-trainer-box",
+      "source_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/sm04-elite-trainer-box/tcg-sm4-elite-trainer-box-169-en.jpg",
+      "archive_timestamp": "20171003010756",
+      "archive_digest": "UIMB74ZWF2BIHESG6RDIQIYTEJLS4UHV",
+      "match_method": "exact_official_page_data_preload_src_and_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "sun-moon-team-up-elite-trainer-box",
+      "source_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/sm09-elite-trainer-box/tcg-sm09-elite-trainer-box-169-en.jpg",
+      "archive_timestamp": "20181216024704",
+      "archive_digest": "TJNYEWIHTDP37HMNNK2FSTKQV4XDDVW7",
+      "match_method": "exact_official_page_data_preload_src_and_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "sun-moon-ultra-prism-elite-trainer-box",
+      "source_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/sm05-elite-trainer-box/sm5-etb-169-en.jpg",
+      "archive_timestamp": "20180203172030",
+      "archive_digest": "NE4K3JSOFJPVCZ4OP7X4HNUQFQ7B3UC6",
+      "match_method": "exact_official_page_data_preload_src_and_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "xy-fates-collide-elite-trainer-box",
+      "source_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/xy10-etb/xy10-etb-just-box-169.jpg",
+      "archive_timestamp": "20190216213601",
+      "archive_digest": "VLJ3JD3RU2NNV7DNBHHUBME6VANPMOYI",
+      "match_method": "exact_official_page_data_preload_src_and_cdx_capture"
+    },
+    {
+      "product_provider_record_id": "xy-furious-fists-elite-trainer-box",
+      "source_url": "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/xy_series/xy03-elite-trainer-box/xy03-elite-trainer-box-169.jpg",
+      "archive_timestamp": "20160214195255",
+      "archive_digest": "FYYHNRTJXWI4WWA4TEOJFGOHWULNQB6E",
+      "match_method": "exact_official_page_data_preload_src_and_cdx_capture"
+    }
+  ]
+}

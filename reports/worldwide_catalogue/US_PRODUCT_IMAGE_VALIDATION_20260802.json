@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T04:09:35.173849+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\product_image_validation_us\\checkpoint.sqlite",
+  "status": {
+    "fail": 2,
+    "not_found": 4,
+    "pass": 1070,
+    "pending": 7506
+  },
+  "providers": [
+    {
+      "provider_id": "pokemon-cn-official",
+      "status": "pending",
+      "distinct_urls": 3062,
+      "candidates": 3106
+    },
+    {
+      "provider_id": "pokemon-japan-products-official",
+      "status": "pending",
+      "distinct_urls": 1946,
+      "candidates": 1946
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "pending",
+      "distinct_urls": 2305,
+      "candidates": 2551
+    },
+    {
+      "provider_id": "pokemon-us-products-official-archive",
+      "status": "fail",
+      "distinct_urls": 2,
+      "candidates": 2
+    },
+    {
+      "provider_id": "pokemon-us-products-official-archive",
+      "status": "not_found",
+      "distinct_urls": 4,
+      "candidates": 4
+    },
+    {
+      "provider_id": "pokemon-us-products-official-archive",
+      "status": "pass",
+      "distinct_urls": 1070,
+      "candidates": 1416
+    },
+    {
+      "provider_id": "ptcg-chs-datasets",
+      "status": "pending",
+      "distinct_urls": 193,
+      "candidates": 193
+    }
+  ],
+  "failure_classes": [
+    {
+      "status": "not_found",
+      "error": "HTTP 404",
+      "rows": 4
+    },
+    {
+      "status": "fail",
+      "error": "ValueError: implausible decoded image: GIF 14x14",
+      "rows": 2
+    }
+  ],
+  "cache": {
+    "cached_objects": 721,
+    "observed_bytes": 241377844
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report.",
+  "product_coverage": {
+    "provider_id": "pokemon-us-products-official-archive",
+    "total_products": 575,
+    "products_with_verified_image": 575,
+    "products_without_verified_image": 0
+  }
+}

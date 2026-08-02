@@ -22,6 +22,22 @@ def test_us_product_archive_parsers() -> None:
     assert result["images"][0]["canonical_url"].endswith("/test-box.jpg")
 
 
+def test_us_product_archive_parser_recovers_lazy_preload_images() -> None:
+    html = """<h1 class="us-title">Pokémon TCG: Archived Box</h1>
+    <div class="full-article-body"><p>Description.</p></div>
+    <img class="hero preload" data-preload-src="https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/archived/box.jpg">
+    <img data-src="/static-assets/content-assets/cms2/img/trading-card-game/series/archived/contents.jpg">"""
+    result = parse_product(
+        html,
+        "https://www.pokemon.com/us/pokemon-tcg/product-gallery/archived-box/",
+        "archived-box",
+    )
+    assert [image["canonical_url"] for image in result["images"]] == [
+        "https://assets.pokemon.com/assets/cms2/img/trading-card-game/series/incrementals/archived/box.jpg",
+        "https://www.pokemon.com/static-assets/content-assets/cms2/img/trading-card-game/series/archived/contents.jpg",
+    ]
+
+
 def test_us_product_archive_cdx_excludes_navigation_placeholder() -> None:
     payload = json.dumps([
         ["timestamp", "original", "digest", "statuscode"],

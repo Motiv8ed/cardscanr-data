@@ -75,8 +75,12 @@ def parse_product(html: str, source_url: str, provider_record_id: str) -> dict[s
     contents = [_text(node) for node in body.select("li") if _text(node)]
     images = []
     seen = set()
-    for image in soup.find_all("img", src=True):
-        src = str(image["src"])
+    for image in soup.find_all("img"):
+        src = next(
+            (str(image.get(attribute)) for attribute in ("src", "data-src", "data-preload-src")
+             if image.get(attribute)),
+            "",
+        )
         if not re.search(r"(?:assets\.pokemon\.com|/static-assets/).*/trading-card-game/", src):
             continue
         url = canonical_url(src)
