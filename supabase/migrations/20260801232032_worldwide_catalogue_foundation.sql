@@ -104,6 +104,7 @@ create table public.eras (
 create table public.series (
   id text primary key check (id <> ''),
   franchise_id text not null references public.franchises(id),
+  source_record_id uuid references public.source_records(id),
   era_id text references public.eras(id),
   parent_series_id text references public.series(id),
   name text not null,
@@ -116,6 +117,7 @@ create table public.series (
 create table public.sets (
   id text primary key check (id <> ''),
   franchise_id text not null references public.franchises(id),
+  source_record_id uuid references public.source_records(id),
   series_id text references public.series(id),
   canonical_name text not null,
   set_kind text not null check (set_kind in ('main','special','promo','deck','tournament','prize','retailer','vending','historical','other')),
@@ -128,6 +130,7 @@ create table public.sets (
 create table public.set_releases (
   id text primary key check (id <> ''),
   set_id text not null references public.sets(id),
+  source_record_id uuid references public.source_records(id),
   language_code text not null references public.languages(code),
   region_code text not null references public.regions(code),
   local_name text not null,
@@ -157,6 +160,7 @@ create table public.card_printings (
   id text primary key check (id <> ''),
   card_design_id text not null references public.card_designs(id),
   set_release_id text not null references public.set_releases(id),
+  source_record_id uuid references public.source_records(id),
   collector_number text not null,
   printed_collector_number text,
   printed_total integer check (printed_total is null or printed_total >= 0),
@@ -270,6 +274,7 @@ create table public.card_images (
 create table public.sealed_products (
   id text primary key check (id <> ''),
   franchise_id text not null references public.franchises(id),
+  source_record_id uuid references public.source_records(id),
   canonical_name text not null,
   translated_name text,
   product_type text not null,
@@ -282,6 +287,7 @@ create table public.sealed_products (
 create table public.accessories (
   id text primary key check (id <> ''),
   franchise_id text not null references public.franchises(id),
+  source_record_id uuid references public.source_records(id),
   canonical_name text not null,
   accessory_type text not null check (accessory_type in ('binder','album','sleeves','deck_box','playmat','coin','dice','storage','marker','other')),
   description text,
@@ -323,6 +329,7 @@ create table public.product_contents (
     'booster_pack','promotional_card','constructed_deck','digital_code','card','other'
   )),
   set_release_id text references public.set_releases(id),
+  card_printing_id text references public.card_printings(id),
   card_variant_id text references public.card_variants(id),
   nested_product_variant_id text references public.sealed_product_variants(id),
   accessory_id text references public.accessories(id),
@@ -460,15 +467,19 @@ create index source_records_snapshot_idx on public.source_records(snapshot_id);
 create index source_records_import_run_idx on public.source_records(import_run_id);
 create index eras_franchise_idx on public.eras(franchise_id);
 create index series_franchise_idx on public.series(franchise_id);
+create index series_source_record_idx on public.series(source_record_id);
 create index series_era_idx on public.series(era_id);
 create index series_parent_idx on public.series(parent_series_id);
 create index sets_franchise_idx on public.sets(franchise_id);
+create index sets_source_record_idx on public.sets(source_record_id);
 create index sets_series_idx on public.sets(series_id);
 create index set_releases_language_idx on public.set_releases(language_code);
 create index set_releases_region_idx on public.set_releases(region_code);
+create index set_releases_source_record_idx on public.set_releases(source_record_id);
 create index card_designs_franchise_idx on public.card_designs(franchise_id);
 create index card_printings_release_collector_idx on public.card_printings(set_release_id, collector_number);
 create index card_printings_design_idx on public.card_printings(card_design_id);
+create index card_printings_source_record_idx on public.card_printings(source_record_id);
 create index card_printings_evolves_from_idx on public.card_printings(evolves_from_printing_id);
 create index card_variants_printing_idx on public.card_variants(card_printing_id);
 create index card_images_source_url_idx on public.card_images(source_url);
@@ -477,11 +488,14 @@ create index card_images_variant_status_idx on public.card_images(card_variant_i
 create index card_images_source_record_idx on public.card_images(source_record_id);
 create index card_images_source_provider_idx on public.card_images(source_provider_id);
 create index sealed_products_franchise_idx on public.sealed_products(franchise_id);
+create index sealed_products_source_record_idx on public.sealed_products(source_record_id);
 create index accessories_franchise_idx on public.accessories(franchise_id);
+create index accessories_source_record_idx on public.accessories(source_record_id);
 create index sealed_product_variants_language_idx on public.sealed_product_variants(language_code);
 create index sealed_product_variants_region_language_idx on public.sealed_product_variants(region_code, language_code);
 create index product_contents_variant_idx on public.product_contents(sealed_product_variant_id);
 create index product_contents_set_release_idx on public.product_contents(set_release_id);
+create index product_contents_card_printing_idx on public.product_contents(card_printing_id);
 create index product_contents_card_variant_idx on public.product_contents(card_variant_id);
 create index product_contents_nested_variant_idx on public.product_contents(nested_product_variant_id);
 create index product_contents_accessory_idx on public.product_contents(accessory_id);
