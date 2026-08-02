@@ -25,7 +25,7 @@ def test_inspect_image_hashes_and_rejects_html() -> None:
         raise AssertionError("HTML response was accepted as an image")
 
 
-def test_apply_result_verifies_candidate_without_changing_rights(tmp_path) -> None:
+def test_apply_transient_result_preserves_rights_and_is_not_app_eligible(tmp_path) -> None:
     database = tmp_path / "catalogue.sqlite"
     connection = connect(str(database))
     connection.execute("insert into source_provider values ('p','P','official','https://example.test','link_only',null,null,null)")
@@ -62,7 +62,7 @@ def test_apply_result_verifies_candidate_without_changing_rights(tmp_path) -> No
     assert apply_results(database, checkpoint) == {"pass": 1, "applied": 1}
     connection = sqlite3.connect(database)
     assert connection.execute("select rights_status,validation_status from product_image_candidate").fetchone() == (
-        "link_only", "verified"
+        "link_only", "acquired_transient"
     )
-    assert connection.execute("select status from image_validation_result").fetchone() == ("pass",)
+    assert connection.execute("select status from image_validation_result").fetchone() == ("warning",)
     assert connection.execute("select outcome from image_acquisition_attempt").fetchone() == ("acquired",)

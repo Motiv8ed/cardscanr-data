@@ -236,7 +236,7 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
     counters: Counter[str] = Counter()
     try:
         rows = progress.execute(
-            """select c.*,a.status,a.attempted_at,a.http_status,a.content_type,a.byte_size,a.sha256,
+            """select c.*,a.fetch_url,a.status,a.attempted_at,a.http_status,a.content_type,a.byte_size,a.sha256,
                       a.cache_path,a.result_json,a.error
                  from candidates c join assets a on a.source_url=c.source_url
                 where a.status!='pending' order by c.candidate_id"""
@@ -244,12 +244,14 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
         with staging:
             for row in rows:
                 status = row["status"]
+                transient_fetch = bool(row["fetch_url"] and row["fetch_url"] != row["source_url"])
                 outcome = {"pass": "acquired", "not_found": "not_found", "fail": "invalid",
                            "retryable_error": "retryable_error"}[status]
                 evidence = {
                     "http_status": row["http_status"], "content_type": row["content_type"],
                     "cache_path": row["cache_path"], "technical": json.loads(row["result_json"] or "{}"),
                     "error": row["error"], "rights_decision": "preserved_from_candidate",
+                    "transient_fetch": transient_fetch,
                 }
                 attempt_id = stable_id("product-image-attempt", row["candidate_id"], VALIDATOR)
                 staging.execute(
@@ -259,7 +261,10 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                     (attempt_id, "sealed_product_variant", row["variant_id"], row["provider_id"], row["source_url"],
                      row["attempted_at"], row["http_status"], outcome, canonical_json(evidence)),
                 )
-                validation_status = "pass" if status == "pass" else ("warning" if status == "retryable_error" else "fail")
+                validation_status = (
+                    "pass" if status == "pass" and not transient_fetch else
+                    "warning" if status in ("pass", "retryable_error") else "fail"
+                )
                 validation_id = stable_id("product-image-validation", row["candidate_id"], VALIDATOR)
                 staging.execute(
                     """insert into image_validation_result values (?,null,?,?,?,?,?,?)
@@ -269,14 +274,26 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                      canonical_json({
                          "http_availability": {"status": "pass" if status == "pass" else validation_status,
                                                "http_status": row["http_status"]},
-                         "decode_and_dimensions": {"status": validation_status, **evidence},
+                         "decode_and_dimensions": {
+                             "status": "pass" if status == "pass" else validation_status, **evidence,
+                         },
+                         "stable_public_source": {
+                             "status": "warning" if transient_fetch else ("pass" if status == "pass" else validation_status),
+                             "reason": "Acquisition required a transient page-issued URL"
+                             if transient_fetch else "Canonical source URL was fetched directly",
+                         },
                          "watermark_or_seller_background": {"status": "not_evaluated"},
                          "identity_match": {"status": "not_evaluated"},
                      }), row["attempted_at"]),
                 )
-                if status == "pass":
+                if status == "pass" and not transient_fetch:
                     staging.execute("update product_image_candidate set validation_status='verified' where id=?",
                                     (row["candidate_id"],))
+                elif status == "pass":
+                    staging.execute(
+                        "update product_image_candidate set validation_status='acquired_transient' where id=?",
+                        (row["candidate_id"],),
+                    )
                 elif status in ("not_found", "fail"):
                     staging.execute("update product_image_candidate set validation_status='invalid' where id=?",
                                     (row["candidate_id"],))
