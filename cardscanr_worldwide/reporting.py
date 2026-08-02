@@ -113,6 +113,14 @@ def build_report(database: Path) -> dict[str, Any]:
                     from card_printing group by set_release_id,collector_number having count(*)>1
                 )
             """).fetchone()[0],
+            "classified_collector_collision_groups": connection.execute("""
+                select count(*) from unresolved_item where issue_class='collector_number_collision'
+                  and status='classified_nonblocking'
+            """).fetchone()[0],
+            "collector_collision_groups_needing_review": connection.execute("""
+                select count(*) from unresolved_item where issue_class='collector_number_collision'
+                  and status='needs_review'
+            """).fetchone()[0],
             "secret_bearing_card_image_urls": connection.execute("""
                 select count(*) from card_image_candidate
                  where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'

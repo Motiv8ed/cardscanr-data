@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "corrections": [
+    {
+      "id": "pokemontcg-zsv10pt5-80-collector-number",
+      "entity_type": "card_printing",
+      "entity_id": "pokemontcg-data:en:printing:zsv10pt5-80",
+      "field": "collector_number",
+      "expected_value": "60",
+      "corrected_value": "80",
+      "reason": "The provider record ID and image are card 080/086, while the dataset number field is an upstream copy error.",
+      "evidence": [
+        "https://images.pokemontcg.io/zsv10pt5/80_hires.png",
+        "https://www.tcgplayer.com/search/all/product?q=Antique+Cover+Fossil+080+Black+Bolt&view=grid",
+        "https://www.serebii.net/card/blackbolt/080.shtml",
+        "https://www.pricecharting.com/game/pokemon-black-bolt/antique-cover-fossil-80"
+      ]
+    }
+  ]
+}
