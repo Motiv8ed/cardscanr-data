@@ -10,7 +10,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -152,6 +152,23 @@ class Collector:
         self.connection.commit()
         raise last_error or RuntimeError("Unknown archive fetch error")
 
+    def fallback_captures(self, slug: str) -> list[dict[str, str]]:
+        query = urlencode({
+            "url": f"www.pokemon.com/us/pokemon-tcg/product-gallery/{slug}*",
+            "from": "2015", "to": "2026", "output": "json", "filter": "statuscode:200",
+            "fl": "timestamp,original,digest,statuscode", "collapse": "digest", "sort": "reverse", "limit": "50",
+        })
+        data = json.loads(self.fetch(f"https://web.archive.org/cdx/search/cdx?{query}", ".json"))
+        header = ["timestamp", "original", "digest", "statuscode"]
+        if not data or data[0] != header:
+            return []
+        rows = []
+        for values in data[1:]:
+            row = dict(zip(header, values))
+            row["replay_url"] = f"https://web.archive.org/web/{row['timestamp']}id_/{row['original']}"
+            rows.append(row)
+        return rows
+
     def run(self) -> dict[str, int]:
         run_id = sha256(utc_now().encode())[:24]
         self.connection.execute("insert into runs(id,status,started_at) values (?, 'running', ?)", (run_id, utc_now()))
@@ -164,6 +181,35 @@ class Collector:
                 try:
                     content = self.fetch(entry["replay_url"], ".html")
                     parsed = parse_product(content.decode("utf-8"), entry["original"], entry["provider_record_id"])
+                except Exception as initial_error:
+                    parsed = None
+                    try:
+                        fallbacks = self.fallback_captures(entry["provider_record_id"])
+                    except Exception:
+                        fallbacks = []
+                    for fallback in fallbacks:
+                        if fallback["timestamp"] == entry["timestamp"] and fallback["original"] == entry["original"]:
+                            continue
+                        try:
+                            content = self.fetch(fallback["replay_url"], ".html")
+                            parsed = parse_product(
+                                content.decode("utf-8"), fallback["original"], entry["provider_record_id"],
+                            )
+                            entry = {**entry, **fallback}
+                            break
+                        except Exception:
+                            continue
+                    if parsed is None:
+                        error = initial_error
+                        self.connection.execute(
+                            "insert or replace into products values (?, ?, ?, ?, ?, null, null, null, 'error', ?, ?)",
+                            (entry["provider_record_id"], entry["original"], entry["replay_url"], entry["timestamp"],
+                             entry["digest"], f"{type(error).__name__}: {error}", utc_now()),
+                        )
+                        counters["errors"] += 1
+                        self.connection.commit()
+                        continue
+                try:
                     self.connection.execute(
                         "insert or replace into products values (?, ?, ?, ?, ?, ?, ?, ?, 'parsed', null, ?)",
                         (entry["provider_record_id"], entry["original"], entry["replay_url"], entry["timestamp"],
@@ -193,4 +239,3 @@ class Collector:
             )
             self.connection.commit()
             raise
-
