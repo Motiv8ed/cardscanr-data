@@ -74,16 +74,74 @@ def parse_card_detail(html: str, page_url: str) -> dict[str, object]:
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.find("h1")
     title = heading.get_text(" ", strip=True) if heading else ""
+    stage_element = heading.select_one(".evolveMarker") if heading else None
+    stage = stage_element.get_text(" ", strip=True) if stage_element else None
+    if stage and title.startswith(stage):
+        title = title[len(stage):].strip()
     image_url = None
     for image in soup.find_all("img", src=True):
         source = str(image["src"])
         if "/card-img/" in source and "/mark/" not in source:
             image_url = urljoin(page_url, source)
             break
+    def energy_values(element) -> list[str]:
+        values = []
+        if not element:
+            return values
+        for image in element.find_all("img", src=True):
+            name = Path(urlparse(str(image["src"])).path).stem
+            if name:
+                values.append(name)
+        return values
+
+    attacks = []
+    for skill in soup.select(".skillInformation .skill"):
+        name_element = skill.select_one(".skillName")
+        damage_element = skill.select_one(".skillDamage")
+        effect_element = skill.select_one(".skillEffect")
+        attacks.append({
+            "name": name_element.get_text(" ", strip=True) if name_element else None,
+            "damage": damage_element.get_text(" ", strip=True) if damage_element else None,
+            "effect": effect_element.get_text(" ", strip=True) if effect_element else None,
+            "cost": energy_values(skill.select_one(".skillHeader")),
+        })
+    collector_text_element = soup.select_one(".collectorNumber")
+    collector_text = collector_text_element.get_text(" ", strip=True) if collector_text_element else None
+    collector_number = collector_text.split("/", 1)[0] if collector_text and "/" in collector_text else collector_text
+    printed_set_code = collector_text.split("/", 1)[1] if collector_text and "/" in collector_text else None
+    hp_element = soup.select_one(".mainInfomation .number")
+    alpha_element = soup.select_one(".expansionColumn .alpha")
+    illustrator_element = soup.select_one(".illustrator")
+    illustrator = illustrator_element.get_text(" ", strip=True) if illustrator_element else None
+    if illustrator:
+        illustrator = re.sub(r"^[^A-Z0-9]+", "", illustrator).strip()
+        illustrator = re.sub(r"^(?:Illustrator|Ilustrator)\s+", "", illustrator, flags=re.IGNORECASE)
+    dex_match = re.search(r"\bNo\.\s*(\d+)", soup.select_one(".extraInformation").get_text(" ", strip=True)
+                          if soup.select_one(".extraInformation") else "")
+    weak = soup.select_one(".subInformation .weakpoint")
+    resist = soup.select_one(".subInformation .resist")
+    weak_types = energy_values(weak)
+    resist_types = energy_values(resist)
     return {
         "page_url": page_url,
         "page_title": soup.title.get_text(" ", strip=True) if soup.title else None,
         "local_name": title,
+        "stage": stage,
+        "hp": int(hp_element.get_text(strip=True)) if hp_element and hp_element.get_text(strip=True).isdigit() else None,
+        "types": energy_values(soup.select_one(".mainInfomation")),
+        "attacks": attacks,
+        "weaknesses": ([{"type": weak_types[0] if weak_types else None,
+                         "value": weak.get_text(" ", strip=True)}] if weak else []),
+        "resistances": ([{"type": resist_types[0] if resist_types else None,
+                          "value": resist.get_text(" ", strip=True)}] if resist else []),
+        "retreat_cost": energy_values(soup.select_one(".subInformation .escape")),
+        "regulation_mark": alpha_element.get_text(" ", strip=True) if alpha_element else None,
+        "collector_number": collector_number,
+        "printed_set_code": printed_set_code,
+        "national_pokedex_numbers": [int(dex_match.group(1))] if dex_match else [],
+        "illustrator": illustrator,
+        "description": (soup.select_one(".discription").get_text(" ", strip=True)
+                        if soup.select_one(".discription") else None),
         "image_url": image_url,
         "text": soup.get_text(" ", strip=True),
     }
@@ -203,7 +261,9 @@ class Collector:
                      self.locale, product["code"], utc_now()),
                 )
             self.connection.commit()
-            if not has_next and new_codes == 0:
+            # A page with no new identities is terminal even if a site leaves a
+            # stale "next" control enabled or redirects an out-of-range page.
+            if new_codes == 0 or not has_next:
                 break
         return len(seen)
 
@@ -227,7 +287,7 @@ class Collector:
                         (self.locale, code, card_id, url),
                     )
                 self.connection.commit()
-                if not has_next and not new_ids:
+                if not new_ids or not has_next:
                     break
         return self.connection.execute("select count(distinct card_id) from product_cards where locale=?", (self.locale,)).fetchone()[0]
 

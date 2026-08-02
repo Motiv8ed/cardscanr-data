@@ -27,10 +27,24 @@ def test_card_list_parser_deduplicates_details() -> None:
 def test_card_detail_parser_extracts_exact_locale_image() -> None:
     html = """
     <html><head><title>Bulbasaur | Trainer</title></head><body>
-    <h1>basic <span>Bulbasaur</span></h1>
+    <h1><span class="evolveMarker">basic</span> <span>Bulbasaur</span></h1>
     <img src="/id/card-img/id00016614.png"><img src="/id/card-img/mark/PROMO.MARK.png">
+    <p class="mainInfomation"><span class="hitPoint">HP</span><span class="number">80</span>
+      <img src="/various_images/energy/Grass.png"></p>
+    <div class="skillInformation"><div class="skill"><p class="skillHeader">
+      <img src="/various_images/energy/Grass.png"><span class="skillName">Menjerat</span>
+      <span class="skillDamage">10</span></p><p class="skillEffect">Tidak dapat Mundur.</p></div></div>
+    <section class="expansionColumn"><span class="alpha">I</span><span class="collectorNumber">001/M-P</span></section>
+    <div class="extraInformation"><p>No.1 Pokémon Bibit</p><p class="discription">Teks.</p></div>
+    <div class="illustrator">Ilustrator HYOGONOSUKE</div>
     </body></html>
     """
     value = parse_card_detail(html, "https://asia.pokemon-card.com/id/card-search/detail/16614/")
-    assert value["local_name"] == "basic Bulbasaur"
+    assert value["local_name"] == "Bulbasaur"
+    assert value["stage"] == "basic"
     assert value["image_url"] == "https://asia.pokemon-card.com/id/card-img/id00016614.png"
+    assert value["hp"] == 80
+    assert value["collector_number"] == "001"
+    assert value["printed_set_code"] == "M-P"
+    assert value["attacks"][0]["cost"] == ["Grass"]
+    assert value["national_pokedex_numbers"] == [1]
