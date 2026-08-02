@@ -187,6 +187,12 @@ class Collector:
             entries = parse_cdx(self.fetch(CDX_URL, ".json"))
             counters["indexed_products"] = len(entries)
             for entry in entries:
+                existing = self.connection.execute(
+                    "select status from products where provider_record_id=?", (entry["provider_record_id"],),
+                ).fetchone()
+                if existing and existing[0] == "parsed":
+                    counters["parsed_products"] += 1
+                    continue
                 try:
                     content = self.fetch(entry["replay_url"], ".html")
                     parsed = parse_product(content.decode("utf-8"), entry["original"], entry["provider_record_id"])
