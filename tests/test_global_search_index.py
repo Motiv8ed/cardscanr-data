@@ -17,3 +17,23 @@ def test_global_index_excludes_authenticated_urls_and_preserves_region(tmp_path:
     assert result["classification"]=="PASS"
     assert result["perLanguageCounts"]=={"es-419":1}
     assert result["authenticatedUrls"]==0
+
+
+def test_global_index_marks_canonical_name_fallback_as_missing_native_text(tmp_path: Path) -> None:
+    cards = tmp_path / "cards.jsonl"
+    images = tmp_path / "images.jsonl"
+    output = tmp_path / "global.sqlite"
+    card = {"canonicalPrintingId":"p2","canonicalSetId":"s2","language":"nl","region":"INTL",
+            "nativeCardName":None,"nativeNameStatus":"missing","canonicalCardName":"Pikachu",
+            "englishCardName":None,"nativeSetName":"Basis Set","englishSetName":"Base Set",
+            "printedCollectorNumber":"58","normalizedCollectorNumber":"58","providerCardIds":{},
+            "providerSetIds":{},"searchAliases":["Pikachu"],"designations":[]}
+    cards.write_text(json.dumps(card)+"\n",encoding="utf-8")
+    images.write_text("",encoding="utf-8")
+    build_global_search_index(cards_path=cards,direct_images_path=images,output_path=output)
+    import sqlite3
+    with sqlite3.connect(output) as connection:
+        row = connection.execute(
+            "select native_card_name,native_name_status,canonical_card_name from cards"
+        ).fetchone()
+    assert row == ("Pikachu", "missing", "Pikachu")

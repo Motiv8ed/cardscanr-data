@@ -105,6 +105,8 @@ def build_global_search_index(
           ,image_cached INTEGER NOT NULL
           ,provider_ids_json TEXT NOT NULL
           ,provider_set_codes_json TEXT NOT NULL
+          ,native_name_status TEXT NOT NULL
+          ,canonical_card_name TEXT
         ) WITHOUT ROWID;
         CREATE INDEX idx_cards_language ON cards(language);
         CREATE INDEX idx_cards_set_collector ON cards(set_id,normalized_collector_number);
@@ -154,7 +156,10 @@ def build_global_search_index(
     for card in _iter_jsonl(cards_path):
         canonical_id = str(card["canonicalPrintingId"])
         image = images.get(canonical_id) or {}
-        public_image = image.get("authenticationRequirement") == "not_required" and image.get("directUseTechnicalStatus") != "permanent_404"
+        public_image = (
+            image.get("authenticationRequirement") == "not_required"
+            and image.get("directUseTechnicalStatus") in {"verified", "reachable", "available", "http_200"}
+        )
         provider_ids = card.get("providerCardIds") or {}
         provider_sets = card.get("providerSetIds") or {}
         provider = str(image.get("provider") or "")
@@ -163,7 +168,13 @@ def build_global_search_index(
         designations = {str(value).casefold() for value in card.get("designations") or []}
         promo = int("promo" in designations or "promo" in str(card.get("nativeSetName") or "").casefold())
         canonical_set_id = str(card["canonicalSetId"])
-        native_name = str(card.get("nativeCardName") or "")
+        native_name_status = str(
+            card.get("nativeNameStatus") or ("source" if card.get("nativeCardName") else "missing")
+        )
+        native_name = str(
+            card.get("nativeCardName") or card.get("englishCardName")
+            or card.get("canonicalCardName") or ""
+        )
         english_name = card.get("englishCardName")
         native_set_name = str(card.get("nativeSetName") or "")
         english_set_name = card.get("englishSetName")
@@ -190,6 +201,7 @@ def build_global_search_index(
             image.get("mirrorPermissionStatus"), provider_ids.get(provider) if provider else None,
             provider_sets.get(provider) if provider else None,
             thumbnail, display, provider or None, 0, provider_ids_json, provider_set_codes_json,
+            native_name_status, card.get("canonicalCardName"),
         )
         connection.execute("INSERT INTO cards VALUES(" + ",".join("?" for _ in values) + ")", values)
         connection.execute(
