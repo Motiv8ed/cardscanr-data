@@ -19,16 +19,19 @@ def test_classifies_selected_classes_but_not_active_collection(tmp_path: Path) -
     connection.execute(
         "insert into unresolved_item values ('c','card_variant','c','ja','JP','missing_card_image','x','{}','open',0)"
     )
+    connection.execute(
+        "insert into unresolved_item values ('d','source_card','d','ja','JP','official_set_membership_unavailable','x','{}','documented_exhausted',0)"
+    )
     connection.commit()
     connection.close()
     result = finalize_external_blockers(database)
-    assert result["classification"]["items"] == 1
+    assert result["classification"]["items"] == 2
     connection = connect(str(database))
     assert connection.execute("select status from unresolved_item where id='a'").fetchone()[0] == "blocked_external"
     assert connection.execute("select status from unresolved_item where id='b'").fetchone()[0] == "open"
     assert connection.execute("select status from unresolved_item where id='c'").fetchone()[0] == "open"
+    assert connection.execute("select status from unresolved_item where id='d'").fetchone()[0] == "blocked_external"
     result = finalize_external_blockers(database, include_missing_card_images=True)
     assert result["classification"]["issue_missing_card_image"] == 1
     evidence = json.loads(connection.execute("select evidence_json from unresolved_item where id='a'").fetchone()[0])
     assert evidence["external_blocker"]["classification_policy"] == "evidence_exhausted_no_inference"
-

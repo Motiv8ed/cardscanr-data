@@ -31,6 +31,10 @@ CLASSIFICATIONS = {
         "reason": "The community inventory is shorter than its stated official count and no exact missing identities are available",
         "resume_condition": "The missing authoritative set roster identities are supplied",
     },
+    "official_set_membership_unavailable": {
+        "reason": "The official card detail was collected but omits the set identity required for an exact canonical printing",
+        "resume_condition": "An authoritative exact set-release membership for the official card identity is supplied",
+    },
 }
 
 MISSING_IMAGE_CLASSIFICATION = {
@@ -109,4 +113,3 @@ def write_report(result: dict[str, object], output_dir: Path) -> tuple[Path, Pat
             lines.append(f"- `{key.removeprefix('issue_')}`: `{value:,}`")
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return json_path, md_path
-

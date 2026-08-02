@@ -261,6 +261,34 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
                 _import_card(connection, row, card, run_id, snapshot_id, releases[key], counters)
             else:
                 counters["cards_without_set_code"] += 1
+                record_id = str(row["provider_record_id"])
+                connection.execute(
+                    """update unresolved_item set status='resolved'
+                         where entity_type='source_card' and entity_id=?
+                           and issue_class='official_detail_not_collected'""",
+                    (record_id,),
+                )
+                unresolved_id = stable_id(PROVIDER_ID, "set-membership", record_id)
+                connection.execute(
+                    """insert or replace into unresolved_item values (
+                         ?, 'source_card', ?, ?, ?, 'official_set_membership_unavailable',
+                         ?, ?, 'documented_exhausted', 0)""",
+                    (
+                        unresolved_id,
+                        record_id,
+                        LANGUAGE,
+                        REGION,
+                        "Official Japanese card detail was collected but does not identify a set release",
+                        canonical_json(
+                            {
+                                "local_name": card.get("local_name") or row["local_name"],
+                                "set_code": card.get("set_code"),
+                                "source_url": row["source_url"],
+                                "status": row["status"],
+                            }
+                        ),
+                    ),
+                )
         for row in checkpoint.execute("select provider_record_id,local_name,status,error from cards where status!='parsed'"):
             unresolved_id = stable_id(PROVIDER_ID, "detail", row["provider_record_id"])
             connection.execute(
@@ -283,4 +311,3 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
     finally:
         connection.close()
         checkpoint.close()
-
