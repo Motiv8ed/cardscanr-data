@@ -261,6 +261,63 @@ create table if not exists product_image_candidate (
   unique(sealed_product_variant_id, image_role, provider_id, source_url)
 );
 
+create table if not exists image_validation_result (
+  id text primary key,
+  card_image_candidate_id text references card_image_candidate(id),
+  product_image_candidate_id text references product_image_candidate(id),
+  validator text not null,
+  validator_version text,
+  status text not null check(status in ('pass','fail','warning','not_applicable')),
+  checks_json text not null,
+  checked_at text not null,
+  check(
+    (card_image_candidate_id is not null and product_image_candidate_id is null) or
+    (card_image_candidate_id is null and product_image_candidate_id is not null)
+  )
+);
+
+create table if not exists image_acquisition_attempt (
+  id text primary key,
+  entity_type text not null check(entity_type in ('card_variant','sealed_product_variant')),
+  entity_id text not null,
+  provider_id text not null references source_provider(id),
+  source_url text,
+  attempted_at text not null,
+  http_status integer,
+  outcome text not null check(outcome in (
+    'acquired','not_found','blocked','mismatch','invalid','retryable_error','rights_blocked'
+  )),
+  evidence_json text not null default '{}'
+);
+
+create table if not exists publication_run (
+  id text primary key,
+  version text not null unique,
+  status text not null check(status in ('building','canary','verified','active','rolled_back','failed')),
+  catalogue_sha256 text,
+  manifest_sha256 text,
+  object_prefix text not null,
+  previous_publication_id text references publication_run(id),
+  counters_json text not null default '{}',
+  gates_json text not null default '{}',
+  started_at text not null,
+  activated_at text,
+  completed_at text,
+  rollback_retained integer not null default 1 check(rollback_retained in (0,1))
+);
+
+create table if not exists publication_artifact (
+  id text primary key,
+  publication_run_id text not null references publication_run(id),
+  artifact_type text not null,
+  object_key text not null,
+  public_url text,
+  byte_size integer not null check(byte_size >= 0),
+  sha256 text not null,
+  verified_at text,
+  unique(publication_run_id, object_key)
+);
+
 create table if not exists accessory (
   id text primary key,
   provider_id text not null references source_provider(id),
@@ -301,6 +358,16 @@ create index if not exists image_candidate_source_url_idx on card_image_candidat
 create index if not exists product_content_entity_idx on product_content(content_kind, entity_id);
 create index if not exists product_image_candidate_variant_idx
   on product_image_candidate(sealed_product_variant_id, validation_status);
+create index if not exists image_validation_card_idx
+  on image_validation_result(card_image_candidate_id, status);
+create index if not exists image_validation_product_idx
+  on image_validation_result(product_image_candidate_id, status);
+create index if not exists image_acquisition_entity_idx
+  on image_acquisition_attempt(entity_type, entity_id, attempted_at);
+create index if not exists image_acquisition_provider_idx
+  on image_acquisition_attempt(provider_id, outcome, http_status);
+create index if not exists publication_run_status_idx on publication_run(status, started_at);
+create index if not exists publication_artifact_run_idx on publication_artifact(publication_run_id);
 create index if not exists unresolved_status_idx on unresolved_item(status, issue_class);
 """
 

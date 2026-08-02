@@ -36,8 +36,12 @@ def test_publication_export_preserves_missing_native_name_and_variants(tmp_path:
     variant = json.loads((tmp_path / "bundles/v-test/card_variants.jsonl").read_text(encoding="utf-8"))
     assert variant["canonicalVariantId"] == "variant"
     assert manifest["outputs"]["products.jsonl"]["rows"] == 1
+    assert manifest["outputs"]["image_acquisition_attempts.jsonl"]["rows"] == 0
+    assert manifest["outputs"]["image_validation_results.jsonl"]["rows"] == 0
+    assert manifest["outputs"]["publication_runs.jsonl"]["rows"] == 0
+    assert manifest["outputs"]["publication_artifacts.jsonl"]["rows"] == 0
+    assert manifest["schemaVersion"] == "2.1.0"
     assert manifest["integrity"]["foreignKeyFailures"] == 0
 
     with pytest.raises(FileExistsError):
         export_bundle(database, tmp_path / "bundles", "v-test")
-

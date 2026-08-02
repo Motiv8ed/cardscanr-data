@@ -34,7 +34,8 @@ def build_report(database: Path) -> dict[str, Any]:
             "set_release", "card_design", "card_printing", "card_variant", "card_localisation",
             "attack", "ability", "marketplace_mapping", "provider_entity_mapping",
             "card_image_candidate", "sealed_product", "sealed_product_variant", "product_content",
-            "product_image_candidate", "accessory", "unresolved_item",
+            "product_image_candidate", "image_validation_result", "image_acquisition_attempt",
+            "publication_run", "publication_artifact", "accessory", "unresolved_item",
         ):
             counts[table] = connection.execute(f"select count(*) from {table}").fetchone()[0]
         language_coverage = _rows(connection, """
@@ -137,6 +138,15 @@ def build_report(database: Path) -> dict[str, Any]:
             "external_blocker_items": connection.execute(
                 "select count(*) from unresolved_item where externally_unavoidable=1 and status='blocked_external'"
             ).fetchone()[0],
+            "failed_image_validation_results": connection.execute(
+                "select count(*) from image_validation_result where status='fail'"
+            ).fetchone()[0],
+            "not_found_image_acquisition_attempts": connection.execute(
+                "select count(*) from image_acquisition_attempt where outcome='not_found'"
+            ).fetchone()[0],
+            "active_publication_runs": connection.execute(
+                "select count(*) from publication_run where status='active'"
+            ).fetchone()[0],
         }
         return {
             "schema_version": 1,
@@ -185,6 +195,21 @@ def build_report(database: Path) -> dict[str, Any]:
                 from card_image_candidate
                 group by provider_id, rights_status, validation_status, image_role
                 order by provider_id, rights_status, validation_status, image_role
+            """),
+            "image_acquisition_attempts": _rows(connection, """
+                select provider_id,entity_type,outcome,http_status,count(*) attempts
+                  from image_acquisition_attempt
+                 group by provider_id,entity_type,outcome,http_status
+                 order by provider_id,entity_type,outcome,http_status
+            """),
+            "image_validation_results": _rows(connection, """
+                select validator,status,count(*) validations
+                  from image_validation_result group by validator,status order by validator,status
+            """),
+            "publication_runs": _rows(connection, """
+                select id,version,status,catalogue_sha256,manifest_sha256,object_prefix,
+                       previous_publication_id,started_at,activated_at,completed_at,rollback_retained
+                  from publication_run order by started_at,id
             """),
             "sealed_products": _rows(connection, """
                 select provider_id, product_type, verification_status, count(*) products

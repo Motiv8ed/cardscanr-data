@@ -214,16 +214,41 @@ def export_bundle(database: Path, output_root: Path, version: str) -> dict[str, 
             for row in connection.execute("select * from unresolved_item order by id"):
                 yield {**dict(row), "evidence_json": _json(row["evidence_json"], {})}
 
+        def acquisition_attempts() -> Iterable[dict[str, Any]]:
+            for row in connection.execute("select * from image_acquisition_attempt order by id"):
+                yield {**dict(row), "evidence_json": _json(row["evidence_json"], {})}
+
+        def validation_results() -> Iterable[dict[str, Any]]:
+            for row in connection.execute("select * from image_validation_result order by id"):
+                yield {**dict(row), "checks_json": _json(row["checks_json"], {})}
+
+        def publication_runs() -> Iterable[dict[str, Any]]:
+            for row in connection.execute("select * from publication_run order by started_at,id"):
+                yield {
+                    **dict(row), "counters_json": _json(row["counters_json"], {}),
+                    "gates_json": _json(row["gates_json"], {}),
+                    "rollback_retained": bool(row["rollback_retained"]),
+                }
+
+        def publication_artifacts() -> Iterable[dict[str, Any]]:
+            yield from (dict(row) for row in connection.execute(
+                "select * from publication_artifact order by publication_run_id,object_key"
+            ))
+
         for name, factory in (
             ("sets.jsonl", sets), ("cards.jsonl", cards), ("card_variants.jsonl", variants),
             ("direct_images.jsonl", direct_images), ("products.jsonl", products),
             ("product_contents.jsonl", product_contents), ("product_images.jsonl", product_images),
+            ("image_acquisition_attempts.jsonl", acquisition_attempts),
+            ("image_validation_results.jsonl", validation_results),
+            ("publication_runs.jsonl", publication_runs),
+            ("publication_artifacts.jsonl", publication_artifacts),
             ("unresolved.jsonl", unresolved),
         ):
             writer.jsonl(name, factory())
             counts[name] = writer.outputs[name]["rows"]
         manifest = {
-            "schemaVersion": "2.0.0", "catalogueVersion": version,
+            "schemaVersion": "2.1.0", "catalogueVersion": version,
             "generatedAtUtc": datetime.now(timezone.utc).isoformat(),
             "classification": "STAGED_NOT_PUBLISHED",
             "sourceDatabaseSha256": file_sha256(database), "sourceDatabaseBytes": database.stat().st_size,
@@ -236,4 +261,3 @@ def export_bundle(database: Path, output_root: Path, version: str) -> dict[str, 
         return manifest
     finally:
         connection.close()
-
