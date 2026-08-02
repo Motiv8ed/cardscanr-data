@@ -22,10 +22,11 @@ def main() -> int:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--delay-seconds", type=float, default=0.05)
     parser.add_argument("--provider", action="append", dest="providers")
+    parser.add_argument("--transient-source-checkpoint", type=Path)
     parser.add_argument("--acquire-only", action="store_true")
     args = parser.parse_args()
     checkpoint = args.runtime_root / "checkpoint.sqlite"
-    output = {"registered": register_candidates(args.database, checkpoint)}
+    output = {"registered": register_candidates(args.database, checkpoint, args.transient_source_checkpoint)}
     output["acquired"] = acquire(checkpoint, args.runtime_root / "cache", args.workers, args.limit,
                                   args.delay_seconds, args.providers)
     output["checkpoint"] = checkpoint_counts(checkpoint)

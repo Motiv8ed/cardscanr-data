@@ -28,7 +28,7 @@ MAX_BYTES = 30 * 1024 * 1024
 CHECKPOINT_SCHEMA = """
 pragma journal_mode=wal;
 create table if not exists assets(
- source_url text primary key,status text not null default 'pending',attempts integer not null default 0,
+ source_url text primary key,fetch_url text,status text not null default 'pending',attempts integer not null default 0,
  attempted_at text,http_status integer,content_type text,byte_size integer,sha256 text,cache_path text,
  result_json text not null default '{}',error text
 );
@@ -38,6 +38,13 @@ create table if not exists candidates(
 );
 """
 _thread_local = threading.local()
+
+
+def ensure_checkpoint_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(CHECKPOINT_SCHEMA)
+    columns = {row[1] for row in connection.execute("pragma table_info(assets)")}
+    if "fetch_url" not in columns:
+        connection.execute("alter table assets add column fetch_url text")
 
 
 def utc_now() -> str:
@@ -143,18 +150,35 @@ def _fetch(source_url: str, cache_root: Path, delay_seconds: float) -> dict[str,
                 "error": f"{type(error).__name__}: {error}"}
 
 
-def register_candidates(database: Path, checkpoint: Path) -> dict[str, int]:
+def register_candidates(database: Path, checkpoint: Path,
+                        transient_source_checkpoint: Path | None = None) -> dict[str, int]:
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
     staging = sqlite3.connect(f"file:{database.resolve()}?mode=ro", uri=True)
     progress = sqlite3.connect(checkpoint)
     try:
-        progress.executescript(CHECKPOINT_SCHEMA)
+        ensure_checkpoint_schema(progress)
+        transient_urls: dict[str, str] = {}
+        if transient_source_checkpoint and transient_source_checkpoint.exists():
+            source = sqlite3.connect(f"file:{transient_source_checkpoint.resolve()}?mode=ro", uri=True)
+            try:
+                for (parsed_json,) in source.execute("select parsed_json from products where parsed_json is not null"):
+                    for image in json.loads(parsed_json).get("images") or []:
+                        if image.get("canonical_url") and image.get("source_url"):
+                            transient_urls[image["canonical_url"]] = image["source_url"]
+            finally:
+                source.close()
         rows = staging.execute(
-            "select id,sealed_product_variant_id,provider_id,source_url from product_image_candidate order by id"
+            """select id,sealed_product_variant_id,provider_id,source_url,attributes_json
+                 from product_image_candidate order by id"""
         ).fetchall()
         with progress:
-            for candidate_id, variant_id, provider_id, source_url in rows:
-                progress.execute("insert or ignore into assets(source_url) values (?)", (source_url,))
+            for candidate_id, variant_id, provider_id, source_url, attributes_json in rows:
+                attributes = json.loads(attributes_json or "{}")
+                fetch_url = transient_urls.get(source_url) or attributes.get("signed_source_url")
+                progress.execute("insert or ignore into assets(source_url,fetch_url) values (?,?)",
+                                 (source_url, fetch_url))
+                if fetch_url:
+                    progress.execute("update assets set fetch_url=? where source_url=?", (fetch_url, source_url))
                 progress.execute(
                     "insert or replace into candidates values (?,?,?,?)",
                     (candidate_id, variant_id, provider_id, source_url),
@@ -169,19 +193,20 @@ def acquire(checkpoint: Path, cache_root: Path, workers: int = 4, limit: int | N
             delay_seconds: float = 0.05, providers: list[str] | None = None) -> dict[str, int]:
     progress = sqlite3.connect(checkpoint)
     try:
-        query = "select a.source_url from assets a where a.status in ('pending','retryable_error') and a.attempts<3"
+        query = "select a.source_url,coalesce(a.fetch_url,a.source_url) from assets a where a.status in ('pending','retryable_error') and a.attempts<3"
         parameters: list[str] = []
         if providers:
             placeholders = ",".join("?" for _ in providers)
             query += f" and exists (select 1 from candidates c where c.source_url=a.source_url and c.provider_id in ({placeholders}))"
             parameters.extend(providers)
         query += " order by a.source_url"
-        urls = [row[0] for row in progress.execute(query, parameters).fetchall()]
+        urls = progress.execute(query, parameters).fetchall()
         if limit is not None:
             urls = urls[:limit]
         counters: dict[str, int] = {"selected": len(urls)}
         with ThreadPoolExecutor(max_workers=max(1, workers)) as executor:
-            futures = {executor.submit(_fetch, url, cache_root, delay_seconds): url for url in urls}
+            futures = {executor.submit(_fetch, fetch_url, cache_root, delay_seconds): source_url
+                       for source_url, fetch_url in urls}
             for future in as_completed(futures):
                 url = futures[future]
                 result = future.result()

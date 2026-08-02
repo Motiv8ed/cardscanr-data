@@ -38,8 +38,20 @@ def test_apply_result_verifies_candidate_without_changing_rights(tmp_path) -> No
     connection.commit()
     connection.close()
     checkpoint = tmp_path / "checkpoint.sqlite"
-    register_candidates(database, checkpoint)
+    source_checkpoint = tmp_path / "source.sqlite"
+    source = sqlite3.connect(source_checkpoint)
+    source.execute("create table products(parsed_json text)")
+    source.execute("insert into products values (?)", (json.dumps({"images": [{
+        "canonical_url": "https://example.test/x.png",
+        "source_url": "https://example.test/x.png?auth_key=temporary",
+    }]}),))
+    source.commit()
+    source.close()
+    register_candidates(database, checkpoint, source_checkpoint)
     progress = sqlite3.connect(checkpoint)
+    assert progress.execute("select fetch_url from assets").fetchone() == (
+        "https://example.test/x.png?auth_key=temporary",
+    )
     progress.execute(
         """update assets set status='pass',attempts=1,attempted_at='now',http_status=200,
            content_type='image/png',byte_size=12,sha256='abc',cache_path='cache.png',result_json=?,error=null""",

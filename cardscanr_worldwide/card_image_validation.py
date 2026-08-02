@@ -12,6 +12,7 @@ from .product_image_validation import (
     VALIDATOR_VERSION,
     acquire,
     checkpoint_counts,
+    ensure_checkpoint_schema,
 )
 from .schema import connect
 from .tcgdex import canonical_json, stable_id
@@ -27,7 +28,7 @@ def register_candidates(database: Path, checkpoint: Path) -> dict[str, int]:
     staging = sqlite3.connect(f"file:{database.resolve()}?mode=ro", uri=True)
     progress = sqlite3.connect(checkpoint)
     try:
-        progress.executescript(CHECKPOINT_SCHEMA)
+        ensure_checkpoint_schema(progress)
         rows = staging.execute(
             "select id,card_variant_id,provider_id,source_url from card_image_candidate order by id"
         ).fetchall()
@@ -135,4 +136,3 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
 
 
 __all__ = ["acquire", "apply_results", "checkpoint_counts", "register_candidates"]
-
