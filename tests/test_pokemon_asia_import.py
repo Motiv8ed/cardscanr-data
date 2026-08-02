@@ -10,6 +10,8 @@ def test_official_product_classification_and_date() -> None:
     name = 'Evolusi Mega Booster Pack "Ancaman Bayangan" Tanggal Penjualan 06-26-2026'
     assert product_type(name) == "booster_pack"
     assert product_release_date(name) == "2026-06-26"
+    assert product_type("Mega Evolution Perfect Order Release Date 03-27-2026") is None
+    assert product_type("Mega Evolution Basic Energy ME Release Date 09-26-2025") is None
     assert product_type("朱＆紫 ex初階牌組 皮卡丘 發售日 07-18-2025") == "starter_deck"
 
 
@@ -48,7 +50,28 @@ def test_completed_checkpoint_imports_official_product_card_and_image(tmp_path: 
     assert counters == {"products": 1, "cards": 1}
     with sqlite3.connect(database) as connection:
         assert connection.execute("select count(*) from sealed_product").fetchone()[0] == 1
+        assert connection.execute("select count(*) from product_content").fetchone()[0] == 0
         assert connection.execute("select count(*) from card_printing").fetchone()[0] == 1
         assert connection.execute("select rights_status from card_image_candidate").fetchone() == ("link_only",)
         assert json.loads(connection.execute("select checkpoint_json from import_run").fetchone()[0]) == {"complete": True}
         assert connection.execute("pragma foreign_key_check").fetchall() == []
+
+
+def test_bare_expansion_filter_does_not_invent_a_sealed_product(tmp_path: Path) -> None:
+    checkpoint = tmp_path / "checkpoint.sqlite"
+    with sqlite3.connect(checkpoint) as source:
+        source.executescript(SCHEMA)
+        source.execute(
+            "insert into products values ('ph','ME03','Mega Evolution Perfect Order Release Date 03-27-2026',?,'now')",
+            ("https://asia.pokemon-card.com/ph/card-search/",),
+        )
+        source.execute(
+            "insert into collector_runs(id,locale,mode,status,started_at,completed_at,counters_json) "
+            "values ('run','ph','full','completed','now','now','{}')"
+        )
+    database = tmp_path / "worldwide.sqlite"
+    counters = import_checkpoint(database, checkpoint, "ph")
+    assert counters == {"products": 1}
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("select count(*) from card_set").fetchone()[0] == 1
+        assert connection.execute("select count(*) from sealed_product").fetchone()[0] == 0

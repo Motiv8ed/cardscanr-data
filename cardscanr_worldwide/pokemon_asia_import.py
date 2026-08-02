@@ -35,7 +35,7 @@ def product_release_date(name: str) -> str | None:
     return f"{match.group(3)}-{match.group(1)}-{match.group(2)}" if match else None
 
 
-def product_type(name: str) -> str:
+def product_type(name: str) -> str | None:
     lowered = name.casefold()
     if "booster pack" in lowered or "擴充包" in name or "扩充包" in name:
         return "booster_pack"
@@ -47,7 +47,9 @@ def product_type(name: str) -> str:
         return "promotional_pack"
     if "box" in lowered or "boks" in lowered or "盒" in name:
         return "collection_box"
-    return "official_card_product"
+    # The card-search filter also contains bare expansion and basic-energy
+    # rosters. Those are set releases, not evidence of a distinct sealed SKU.
+    return None
 
 
 def _source_record(
@@ -81,7 +83,7 @@ def _direct_mapping(
 def _import_product(
     connection: sqlite3.Connection, source: sqlite3.Row, provider_id: str,
     run_id: str, snapshot_id: str, language: str, region: str,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str | None]:
     code = source["expansion_code"]
     classified_product_type = product_type(source["local_name"])
     card_ids = [row[0] for row in source["checkpoint"].execute(
@@ -92,9 +94,10 @@ def _import_product(
         "locale": source["locale"], "expansion_code": code, "local_name": source["local_name"],
         "source_url": source["source_url"], "release_date": product_release_date(source["local_name"]),
         "product_type": classified_product_type, "official_card_ids": card_ids,
+        "source_kind": "official_card_search_expansion_filter",
     }
     source_id = _source_record(
-        connection, provider_id, run_id, snapshot_id, "product", code,
+        connection, provider_id, run_id, snapshot_id, "release_filter", code,
         f"checkpoint:products/{code}", payload,
     )
     series_id = stable_id(provider_id, "series", "official")
@@ -124,6 +127,21 @@ def _import_product(
     )
     sealed_id = stable_id(provider_id, "sealed", code)
     sealed_variant_id = stable_id(sealed_id, language, region, "standard")
+    # Remove stale speculative product rows from earlier imports before
+    # deciding whether the official label identifies an actual sealed item.
+    connection.execute(
+        "delete from provider_entity_mapping where provider_id=? and provider_record_type='product' "
+        "and provider_record_id=? and entity_type='sealed_product'",
+        (provider_id, code),
+    )
+    if classified_product_type is None:
+        connection.execute("delete from product_content where sealed_product_variant_id=?", (sealed_variant_id,))
+        connection.execute("delete from product_image_candidate where sealed_product_variant_id=?", (sealed_variant_id,))
+        connection.execute("delete from sealed_product_variant where id=?", (sealed_variant_id,))
+        connection.execute("delete from sealed_product where id=?", (sealed_id,))
+        _direct_mapping(connection, provider_id, "release_filter", code, "card_set", set_id, source_id)
+        return set_id, release_id, None
+    connection.execute("delete from product_content where sealed_product_variant_id=?", (sealed_variant_id,))
     connection.execute(
         """insert into sealed_product values (?, ?, ?, ?, ?, ?, 'verified', ?)
         on conflict(id) do update set source_record_id=excluded.source_record_id,raw_product_json=excluded.raw_product_json""",
@@ -135,13 +153,16 @@ def _import_product(
         (sealed_variant_id, sealed_id, language, region, source["local_name"], payload["release_date"],
          canonical_json({"expansion_code": code, "official_card_count": len(card_ids)})),
     )
-    for ordinal, card_id in enumerate(card_ids):
-        connection.execute(
-            "insert or replace into product_content values (?, ?, 'other', null, ?, 1, ?)",
-            (sealed_variant_id, ordinal, f"Official source card ID {card_id}",
-             canonical_json({"provider_card_id": card_id})),
-        )
-    _direct_mapping(connection, provider_id, "product", code, "card_set", set_id, source_id)
+    # A deck filter is an exact deck roster. A booster/promo filter is a set
+    # pool and must never be represented as the literal contents of one pack.
+    if classified_product_type in {"starter_deck", "theme_deck"}:
+        for ordinal, card_id in enumerate(card_ids):
+            connection.execute(
+                "insert or replace into product_content values (?, ?, 'card', null, ?, 1, ?)",
+                (sealed_variant_id, ordinal, f"Official source card ID {card_id}",
+                 canonical_json({"provider_card_id": card_id, "roster_basis": "official_deck_filter"})),
+            )
+    _direct_mapping(connection, provider_id, "release_filter", code, "card_set", set_id, source_id)
     _direct_mapping(connection, provider_id, "product", code, "sealed_product", sealed_id, source_id)
     return set_id, release_id, sealed_variant_id
 
