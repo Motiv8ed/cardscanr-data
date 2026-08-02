@@ -193,16 +193,31 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
     for container in soup.select(".lyt-product"):
         content = container.select_one(".lyt-product-content")
         text = content.get_text(" ", strip=True) if content else ""
-        match = re.search(r"(?:商品名稱|商品名称|Nama Produk|ชื่อสินค้า)\s*[：:]\s*(.+?)(?=\s*[●•]|\s*(?:建議|建议|Harga|ราคา)|$)", text)
-        if not match:
-            continue
-        name = match.group(1).strip()
+        heading = container.select_one(".lyt-product-head")
+        name = heading.get_text(" ", strip=True) if heading else ""
+        if not name:
+            match = re.search(
+                r"(?:商品名稱|商品名称|Nama Produk|ชื่อสินค้า)\s*[：:]\s*(.+?)(?=\s*[●•]|\s*(?:建議|建议|Harga|ราคา)|$)",
+                text,
+            )
+            if not match:
+                continue
+            name = match.group(1).strip()
         image = container.select_one(".lyt-product-image img[src]")
+        contents: list[str] = []
+        for item in container.select(".lyt-product-list dd"):
+            value = item.get_text(" ", strip=True)
+            if value:
+                contents.append(value)
         products.append({
             "local_name": name,
             "product_type": product_type(name),
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
-            "metadata": {"template": "legacy_lyt_product", "contents": [], "text": text},
+            "metadata": {
+                "template": "legacy_lyt_product",
+                "contents": contents,
+                "text": text,
+            },
         })
     for article in soup.select("article.article-detail--card"):
         heading = article.select_one("h1.article-detail__title")
@@ -237,6 +252,41 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
             "metadata": {"template": "block_product", "contents": [], "text": text},
         })
+    # Modern hashed-class product sections used by recent official special sites.
+    spa_sections = soup.select('[class*="Product_product__"]')
+    for section in spa_sections:
+        fields: dict[str, str] = {}
+        contents: list[str] = []
+        for item in section.select('[class*="Product_product_content_item__"]'):
+            title = item.select_one('[class*="Product_product_content_item_title__"]')
+            details = [
+                node.get_text(" ", strip=True)
+                for node in item.select('[class*="Product_product_content_item_detail__"]')
+                if node.get_text(" ", strip=True)
+            ]
+            if not title or not details:
+                continue
+            key = title.get_text(" ", strip=True)
+            fields[key] = " / ".join(details)
+            if key.casefold() in {"isi", "contents", "内容", "內容"}:
+                contents.extend(details)
+        name = fields.get("Nama Produk") or fields.get("商品名稱") or fields.get("商品名称") or fields.get("ชื่อสินค้า")
+        if not name:
+            continue
+        # Prefer the primary product family name before variant list suffixes.
+        name = name.split(" / ")[0].strip()
+        image = section.select_one('[class*="Product_product_slider_image__"] img[src], img[src*="product/"]')
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": {
+                "template": "spa_product_section",
+                "contents": contents,
+                "fields": fields,
+            },
+        })
+
     # WordPress trainer-site product articles: one sealed product identity from the
     # article title, optionally split into pack-art variants when multiple PKG images exist.
     if soup.select_one("span.category.product"):

@@ -80,6 +80,29 @@ def test_parse_product_information_and_legacy_lyt_product() -> None:
     assert rows[1]["local_name"].endswith("Classic")
 
 
+def test_parse_lyt_product_head_and_spa_product_section() -> None:
+    html = """
+    <div class="lyt-product"><div class="lyt-product-image"><img src="./product-img-1.png"></div>
+      <div class="lyt-product-content"><h3 class="lyt-product-head">Booster Pack Pemicu Paradigma</h3>
+        <dl class="lyt-product-list"><dt>Isi:</dt><dd>Berisi 5 lembar kartu</dd></dl></div></div>
+    <section class="Product_product__mn4wF">
+      <div class="Product_product_content_item__aUICc">
+        <dt class="Product_product_content_item_title__Q_LgQ">Nama Produk</dt>
+        <dd class="Product_product_content_item_detail__hahsF">Deck Taktik Mega Charizard X ex</dd>
+        <dd class="Product_product_content_item_detail__hahsF">Mega Gardevoir ex</dd></div>
+      <div class="Product_product_content_item__aUICc">
+        <dt class="Product_product_content_item_title__Q_LgQ">Isi</dt>
+        <dd class="Product_product_content_item_detail__hahsF">Deck (Kartu 60 lembar)...1 buah</dd></div>
+      <div class="Product_product_slider_image__u8ph5"><img src="/mat/images/locale/id/product/slider-charizard.png"></div>
+    </section>
+    """
+    rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archive/special/card/mat/")
+    assert rows[0]["local_name"] == "Booster Pack Pemicu Paradigma"
+    assert rows[0]["metadata"]["contents"] == ["Berisi 5 lembar kartu"]
+    assert rows[1]["local_name"] == "Deck Taktik Mega Charizard X ex"
+    assert rows[1]["metadata"]["template"] == "spa_product_section"
+
+
 def test_parse_block_product_and_wordpress_product_article() -> None:
     html = """
     <div class="block-product"><div class="block-product-image"><img src="./news-product-1.png"></div>
