@@ -80,6 +80,20 @@ def test_parse_product_information_and_legacy_lyt_product() -> None:
     assert rows[1]["local_name"].endswith("Classic")
 
 
+def test_parse_title_og_image_product_fallback() -> None:
+    html = """
+    <html><head>
+      <title>Booster Pack \"30th CELEBRATION\"｜Special Site</title>
+      <meta property="og:image" content="/id/archive/special/card/ma6/images/locale/id/ogp.jpg">
+    </head><body><div>Featured cards only</div></body></html>
+    """
+    rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archive/special/card/ma6/")
+    assert len(rows) == 1
+    assert rows[0]["product_type"] == "booster_pack"
+    assert rows[0]["metadata"]["template"] == "title_og_image_product"
+    assert rows[0]["image_url"].endswith("/ogp.jpg")
+
+
 def test_parse_lyt_product_head_and_spa_product_section() -> None:
     html = """
     <div class="lyt-product"><div class="lyt-product-image"><img src="./product-img-1.png"></div>

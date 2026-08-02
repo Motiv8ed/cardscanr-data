@@ -319,6 +319,31 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
                     "image_url": urljoin(page_url, str(image["src"])) if image else None,
                     "metadata": {"template": "wordpress_product_article", "contents": []},
                 })
+    # Conservative fallback for special microsites that name an exact sealed product in
+    # the document title and publish an official og:image, but do not expose product blocks.
+    if not products and soup.title:
+        raw_title = soup.title.get_text(" ", strip=True)
+        name = re.split(r"[｜|]", raw_title, maxsplit=1)[0].strip()
+        name = re.sub(r"\s+", " ", name)
+        classified = product_type(name)
+        og = soup.find("meta", attrs={"property": "og:image"})
+        og_image = og.get("content") if og else None
+        if name and classified != "official_product" and og_image:
+            # Split clear dual-pack titles into distinct sealed products.
+            parts = [part.strip(" \"'") for part in re.split(r"\s*/\s*", name) if part.strip()]
+            names = parts if len(parts) >= 2 and all(product_type(part) != "official_product" for part in parts) else [name]
+            for local_name in names:
+                products.append({
+                    "local_name": local_name,
+                    "product_type": product_type(local_name),
+                    "image_url": urljoin(page_url, str(og_image)),
+                    "metadata": {
+                        "template": "title_og_image_product",
+                        "contents": [],
+                        "source_title": raw_title,
+                    },
+                })
+
     deduplicated: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for product in products:
