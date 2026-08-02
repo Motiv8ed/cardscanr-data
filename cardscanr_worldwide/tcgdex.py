@@ -16,6 +16,7 @@ from . import SCHEMA_VERSION
 from .schema import connect
 
 PROVIDER_ID = "tcgdex-cards-database"
+ASSET_PROVIDER_ID = "tcgdex-assets"
 REGIONS = {
     "ja": "JP", "ko": "KR", "zh-tw": "TW", "zh-cn": "CN",
     "id": "ID", "th": "TH", "es-mx": "MX", "pt-br": "BR",
@@ -333,6 +334,70 @@ def file_sha256(path: Path) -> str:
     return hasher.hexdigest()
 
 
+def add_image_candidates(database: Path) -> dict[str, int]:
+    """Add exact TCGdex asset URLs without claiming that their physical finish is known."""
+    connection = connect(str(database))
+    counters: Counter[str] = Counter()
+    try:
+        connection.execute(
+            """insert into source_provider values (?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict(id) do update set rights_status=excluded.rights_status,
+            attribution_text=excluded.attribution_text, source_version=excluded.source_version""",
+            (ASSET_PROVIDER_ID, "TCGdex image assets", "community", "https://assets.tcgdex.net",
+             "permission_pending", "TCGdex image asset source; Pokémon image rights not implied by metadata license",
+             "https://www.tcgdex.net", None),
+        )
+        rows = connection.execute(
+            """select cp.id printing_id, cp.source_record_id, cp.collector_number,
+                      sr.language_code, src.raw_payload_json
+               from card_printing cp
+               join set_release sr on sr.id=cp.set_release_id
+               join source_record src on src.id=cp.source_record_id
+               where src.provider_id=?""", (PROVIDER_ID,),
+        ).fetchall()
+        for index, row in enumerate(rows, 1):
+            payload = json.loads(row["raw_payload_json"])
+            card_set = payload.get("set") or {}
+            serie_id = (card_set.get("serie") or {}).get("id")
+            set_id = card_set.get("id")
+            if not serie_id or not set_id:
+                counters["missing_asset_identity"] += 1
+                continue
+            unspecified = connection.execute(
+                "select id from card_variant where card_printing_id=? and variant_key='unspecified'",
+                (row["printing_id"],),
+            ).fetchone()
+            if unspecified:
+                variant_id = unspecified["id"]
+            else:
+                variant_id = stable_id(row["printing_id"], "depiction-unspecified")
+                connection.execute(
+                    "insert or ignore into card_variant values (?, ?, 'depiction-unspecified', null, null, null, null, 0, ?, 'unknown')",
+                    (variant_id, row["printing_id"], canonical_json({
+                        "normalization_note": "TCGdex source image does not identify the depicted physical finish"
+                    })),
+                )
+                counters["depiction_variants_added"] += 1
+            base = f"https://assets.tcgdex.net/{row['language_code']}/{serie_id}/{set_id}/{row['collector_number']}"
+            for role, quality in (("thumbnail", "low"), ("display", "high")):
+                url = f"{base}/{quality}.webp"
+                image_id = stable_id(variant_id, ASSET_PROVIDER_ID, role, digest(url)[:16])
+                before = connection.total_changes
+                connection.execute(
+                    "insert or ignore into card_image_candidate values (?, ?, ?, ?, ?, ?, 'permission_pending', 'candidate')",
+                    (image_id, variant_id, row["source_record_id"], ASSET_PROVIDER_ID, role, url),
+                )
+                if connection.total_changes > before:
+                    counters["image_candidates_added"] += 1
+            if index % 1000 == 0:
+                connection.commit()
+        connection.commit()
+        counters["source_printings_examined"] = len(rows)
+        return dict(counters)
+    finally:
+        connection.close()
+
+
 def import_jsonl(database: Path, jsonl: Path, source_version: str) -> dict[str, int]:
     connection = connect(str(database))
     now = datetime.now(timezone.utc).isoformat()
@@ -340,7 +405,9 @@ def import_jsonl(database: Path, jsonl: Path, source_version: str) -> dict[str, 
     counters: Counter[str] = Counter()
     try:
         connection.execute(
-            "insert or replace into source_provider values (?, ?, ?, ?, ?, ?, ?, ?)",
+            """insert into source_provider values (?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict(id) do update set rights_status=excluded.rights_status,
+            attribution_text=excluded.attribution_text, source_version=excluded.source_version""",
             (PROVIDER_ID, "TCGdex cards-database", "open_dataset", "https://github.com/tcgdex/cards-database",
              "approved_for_mirror", "TCGdex contributors; MIT License",
              "https://github.com/tcgdex/cards-database/blob/master/LICENSE", source_version),

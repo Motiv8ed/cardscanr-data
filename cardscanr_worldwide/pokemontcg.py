@@ -302,7 +302,9 @@ def import_repository(database: Path, source_root: Path, source_version: str) ->
     connection = connect(str(database))
     try:
         connection.execute(
-            "insert or replace into source_provider values (?, ?, ?, ?, ?, ?, ?, ?)",
+            """insert into source_provider values (?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict(id) do update set rights_status=excluded.rights_status,
+            attribution_text=excluded.attribution_text, source_version=excluded.source_version""",
             (PROVIDER_ID, "PokémonTCG pokemon-tcg-data", "open_dataset",
              "https://github.com/PokemonTCG/pokemon-tcg-data", "approved_for_mirror",
              "PokémonTCG contributors; repository metadata", "https://github.com/PokemonTCG/pokemon-tcg-data",

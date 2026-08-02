@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-02T00:03:25.080222+00:00",
+  "generated_at_utc": "2026-08-02T00:07:49.836107+00:00",
   "database": "D:\\CardScanR_worldwide_runtime_20260802\\staging\\worldwide-catalogue.sqlite",
-  "database_bytes": 967208960,
-  "database_sha256": "2b291ff0343dd5a5ed64b2e3000dc5d5cdc36b9b3794a08dee7a02dcea496382",
+  "database_bytes": 1195630592,
+  "database_sha256": "a02efdb61ef25256c6c9c902c41d42e8a97dc0f4447c89b894aa3091c2d52fe4",
   "integrity": {
     "sqlite_integrity_check": "ok",
     "foreign_key_failure_count": 0,
     "foreign_key_failures": []
   },
   "counts": {
-    "source_provider": 2,
+    "source_provider": 3,
     "import_run": 2,
     "source_snapshot": 2,
     "source_record": 61999,
@@ -19,13 +19,13 @@
     "set_release": 1994,
     "card_design": 61035,
     "card_printing": 160392,
-    "card_variant": 221329,
+    "card_variant": 297477,
     "card_localisation": 160392,
     "attack": 200418,
     "ability": 29648,
     "marketplace_mapping": 305302,
     "provider_entity_mapping": 36478,
-    "card_image_candidate": 40888,
+    "card_image_candidate": 320784,
     "sealed_product": 188,
     "sealed_product_variant": 188,
     "product_content": 3976,
@@ -95,8 +95,8 @@
       "region_code": "INTL",
       "sets": 187,
       "printings": 20259,
-      "variants": 32377,
-      "unknown_variants": 7021,
+      "variants": 45615,
+      "unknown_variants": 20259,
       "quarantined_printings": 0
     },
     {
@@ -104,8 +104,8 @@
       "region_code": "INTL",
       "sets": 393,
       "printings": 43949,
-      "variants": 56619,
-      "unknown_variants": 29537,
+      "variants": 71031,
+      "unknown_variants": 43949,
       "quarantined_printings": 0
     },
     {
@@ -113,8 +113,8 @@
       "region_code": "INTL",
       "sets": 158,
       "printings": 15438,
-      "variants": 21752,
-      "unknown_variants": 7040,
+      "variants": 30150,
+      "unknown_variants": 15438,
       "quarantined_printings": 0
     },
     {
@@ -122,8 +122,8 @@
       "region_code": "MX",
       "sets": 14,
       "printings": 1827,
-      "variants": 3568,
-      "unknown_variants": 29,
+      "variants": 5366,
+      "unknown_variants": 1827,
       "quarantined_printings": 0
     },
     {
@@ -131,8 +131,8 @@
       "region_code": "INTL",
       "sets": 204,
       "printings": 21604,
-      "variants": 33520,
-      "unknown_variants": 8247,
+      "variants": 46877,
+      "unknown_variants": 21604,
       "quarantined_printings": 2
     },
     {
@@ -140,8 +140,8 @@
       "region_code": "ID",
       "sets": 83,
       "printings": 2788,
-      "variants": 3094,
-      "unknown_variants": 2581,
+      "variants": 3301,
+      "unknown_variants": 2788,
       "quarantined_printings": 0
     },
     {
@@ -149,8 +149,8 @@
       "region_code": "INTL",
       "sets": 194,
       "printings": 15521,
-      "variants": 22142,
-      "unknown_variants": 7021,
+      "variants": 30642,
+      "unknown_variants": 15521,
       "quarantined_printings": 0
     },
     {
@@ -158,8 +158,8 @@
       "region_code": "JP",
       "sets": 221,
       "printings": 10729,
-      "variants": 13053,
-      "unknown_variants": 3353,
+      "variants": 20429,
+      "unknown_variants": 10729,
       "quarantined_printings": 5
     },
     {
@@ -194,8 +194,8 @@
       "region_code": "INTL",
       "sets": 129,
       "printings": 14332,
-      "variants": 20647,
-      "unknown_variants": 5932,
+      "variants": 29047,
+      "unknown_variants": 14332,
       "quarantined_printings": 27
     },
     {
@@ -221,8 +221,8 @@
       "region_code": "TH",
       "sets": 77,
       "printings": 2994,
-      "variants": 3300,
-      "unknown_variants": 2787,
+      "variants": 3507,
+      "unknown_variants": 2994,
       "quarantined_printings": 0
     },
     {
@@ -230,8 +230,8 @@
       "region_code": "CN",
       "sets": 57,
       "printings": 877,
-      "variants": 877,
-      "unknown_variants": 829,
+      "variants": 925,
+      "unknown_variants": 877,
       "quarantined_printings": 0
     },
     {
@@ -239,8 +239,8 @@
       "region_code": "TW",
       "sets": 109,
       "printings": 7587,
-      "variants": 7893,
-      "unknown_variants": 7380,
+      "variants": 8100,
+      "unknown_variants": 7587,
       "quarantined_printings": 0
     }
   ],
@@ -260,8 +260,8 @@
       ],
       "sets": 393,
       "printings": 43949,
-      "variants": 56619,
-      "unknown_variants": 29537,
+      "variants": 71031,
+      "unknown_variants": 43949,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -273,8 +273,8 @@
       ],
       "sets": 221,
       "printings": 10729,
-      "variants": 13053,
-      "unknown_variants": 3353,
+      "variants": 20429,
+      "unknown_variants": 10729,
       "quarantined_printings": 5,
       "inventory_status": "present"
     },
@@ -299,8 +299,8 @@
       ],
       "sets": 57,
       "printings": 877,
-      "variants": 877,
-      "unknown_variants": 829,
+      "variants": 925,
+      "unknown_variants": 877,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -313,8 +313,8 @@
       ],
       "sets": 109,
       "printings": 7587,
-      "variants": 7893,
-      "unknown_variants": 7380,
+      "variants": 8100,
+      "unknown_variants": 7587,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -326,8 +326,8 @@
       ],
       "sets": 77,
       "printings": 2994,
-      "variants": 3300,
-      "unknown_variants": 2787,
+      "variants": 3507,
+      "unknown_variants": 2994,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -339,8 +339,8 @@
       ],
       "sets": 83,
       "printings": 2788,
-      "variants": 3094,
-      "unknown_variants": 2581,
+      "variants": 3301,
+      "unknown_variants": 2788,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -355,8 +355,8 @@
       ],
       "sets": 204,
       "printings": 21604,
-      "variants": 33520,
-      "unknown_variants": 8247,
+      "variants": 46877,
+      "unknown_variants": 21604,
       "quarantined_printings": 2,
       "inventory_status": "present"
     },
@@ -370,8 +370,8 @@
       ],
       "sets": 187,
       "printings": 20259,
-      "variants": 32377,
-      "unknown_variants": 7021,
+      "variants": 45615,
+      "unknown_variants": 20259,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -384,8 +384,8 @@
       ],
       "sets": 158,
       "printings": 15438,
-      "variants": 21752,
-      "unknown_variants": 7040,
+      "variants": 30150,
+      "unknown_variants": 15438,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -397,8 +397,8 @@
       ],
       "sets": 14,
       "printings": 1827,
-      "variants": 3568,
-      "unknown_variants": 29,
+      "variants": 5366,
+      "unknown_variants": 1827,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -411,8 +411,8 @@
       ],
       "sets": 194,
       "printings": 15521,
-      "variants": 22142,
-      "unknown_variants": 7021,
+      "variants": 30642,
+      "unknown_variants": 15521,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -425,8 +425,8 @@
       ],
       "sets": 129,
       "printings": 14332,
-      "variants": 20647,
-      "unknown_variants": 5932,
+      "variants": 29047,
+      "unknown_variants": 14332,
       "quarantined_printings": 27,
       "inventory_status": "present"
     },
@@ -508,7 +508,7 @@
       "provider_id": "tcgdex-cards-database",
       "sets": 554,
       "printings": 139948,
-      "variants": 200885
+      "variants": 277033
     }
   ],
   "mapping_counts": [
@@ -562,6 +562,20 @@
       "validation_status": "candidate",
       "image_role": "thumbnail",
       "images": 20444
+    },
+    {
+      "provider_id": "tcgdex-assets",
+      "rights_status": "permission_pending",
+      "validation_status": "candidate",
+      "image_role": "display",
+      "images": 139948
+    },
+    {
+      "provider_id": "tcgdex-assets",
+      "rights_status": "permission_pending",
+      "validation_status": "candidate",
+      "image_role": "thumbnail",
+      "images": 139948
     }
   ],
   "sealed_products": [

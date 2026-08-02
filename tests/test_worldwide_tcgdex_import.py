@@ -5,7 +5,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from cardscanr_worldwide.tcgdex import import_jsonl, variant_rows
+from cardscanr_worldwide.tcgdex import add_image_candidates, import_jsonl, variant_rows
 
 
 def _record(index: int, kind: str, path: str, payload: dict) -> dict:
@@ -110,3 +110,36 @@ def test_reimport_is_idempotent_for_normalized_entities(tmp_path: Path) -> None:
         assert connection.execute("select count(*) from card_printing").fetchone()[0] == 1
         assert connection.execute("select count(*) from card_variant").fetchone()[0] == 2
         assert connection.execute("select count(*) from source_record").fetchone()[0] == 3
+
+
+def test_image_candidates_do_not_claim_a_physical_finish(tmp_path: Path) -> None:
+    serie = {"id": "sv", "name": {"en": "Scarlet & Violet"}}
+    card_set = {
+        "id": "sv-test", "name": {"en": "Test"}, "serie": serie,
+        "cardCount": {"official": 1}, "releaseDate": "2026-01-01",
+    }
+    card = {
+        "set": card_set, "name": {"en": "Pikachu"}, "category": "Pokemon",
+        "rarity": "Common", "variants": [{"type": "normal"}, {"type": "reverse"}],
+    }
+    records = [
+        _snake_case_exporter_record(_record(0, "series", "data/Scarlet & Violet.ts", serie)),
+        _snake_case_exporter_record(_record(1, "set", "data/Scarlet & Violet/Test.ts", card_set)),
+        _snake_case_exporter_record(_record(2, "card", "data/Scarlet & Violet/Test/001.ts", card)),
+    ]
+    jsonl = tmp_path / "source.jsonl"
+    jsonl.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+    database = tmp_path / "catalogue.sqlite"
+    import_jsonl(database, jsonl, "fixture-commit")
+
+    counters = add_image_candidates(database)
+
+    assert counters["image_candidates_added"] == 2
+    assert counters["depiction_variants_added"] == 1
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            """select cv.variant_key, cic.source_url, cic.rights_status
+            from card_image_candidate cic join card_variant cv on cv.id=cic.card_variant_id
+            where cic.image_role='display'"""
+        ).fetchone()
+    assert row == ("depiction-unspecified", "https://assets.tcgdex.net/en/sv/sv-test/001/high.webp", "permission_pending")

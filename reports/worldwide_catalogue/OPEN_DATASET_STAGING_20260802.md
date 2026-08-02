@@ -1,8 +1,8 @@
 # Worldwide open-dataset staging report
 
-- Generated: `2026-08-02T00:03:25.080222+00:00`
-- Database bytes: `967,208,960`
-- Database SHA-256: `2b291ff0343dd5a5ed64b2e3000dc5d5cdc36b9b3794a08dee7a02dcea496382`
+- Generated: `2026-08-02T00:07:49.836107+00:00`
+- Database bytes: `1,195,630,592`
+- Database SHA-256: `a02efdb61ef25256c6c9c902c41d42e8a97dc0f4447c89b894aa3091c2d52fe4`
 - SQLite integrity: `ok`
 - Foreign-key failures: `0`
 
@@ -10,7 +10,7 @@
 
 | Entity | Rows |
 |---|---:|
-| source_provider | 2 |
+| source_provider | 3 |
 | import_run | 2 |
 | source_snapshot | 2 |
 | source_record | 61,999 |
@@ -19,13 +19,13 @@
 | set_release | 1,994 |
 | card_design | 61,035 |
 | card_printing | 160,392 |
-| card_variant | 221,329 |
+| card_variant | 297,477 |
 | card_localisation | 160,392 |
 | attack | 200,418 |
 | ability | 29,648 |
 | marketplace_mapping | 305,302 |
 | provider_entity_mapping | 36,478 |
-| card_image_candidate | 40,888 |
+| card_image_candidate | 320,784 |
 | sealed_product | 188 |
 | sealed_product_variant | 188 |
 | product_content | 3,976 |
@@ -35,23 +35,23 @@
 
 | Language | Region | Sets | Printings | Variants | Unknown variants | Quarantined |
 |---|---|---:|---:|---:|---:|---:|
-| de | INTL | 187 | 20,259 | 32,377 | 7,021 | 0 |
-| en | INTL | 393 | 43,949 | 56,619 | 29,537 | 0 |
-| es | INTL | 158 | 15,438 | 21,752 | 7,040 | 0 |
-| es-mx | MX | 14 | 1,827 | 3,568 | 29 | 0 |
-| fr | INTL | 204 | 21,604 | 33,520 | 8,247 | 2 |
-| id | ID | 83 | 2,788 | 3,094 | 2,581 | 0 |
-| it | INTL | 194 | 15,521 | 22,142 | 7,021 | 0 |
-| ja | JP | 221 | 10,729 | 13,053 | 3,353 | 5 |
+| de | INTL | 187 | 20,259 | 45,615 | 20,259 | 0 |
+| en | INTL | 393 | 43,949 | 71,031 | 43,949 | 0 |
+| es | INTL | 158 | 15,438 | 30,150 | 15,438 | 0 |
+| es-mx | MX | 14 | 1,827 | 5,366 | 1,827 | 0 |
+| fr | INTL | 204 | 21,604 | 46,877 | 21,604 | 2 |
+| id | ID | 83 | 2,788 | 3,301 | 2,788 | 0 |
+| it | INTL | 194 | 15,521 | 30,642 | 15,521 | 0 |
+| ja | JP | 221 | 10,729 | 20,429 | 10,729 | 5 |
 | ko | KR | 143 | 1,363 | 1,363 | 1,363 | 0 |
 | nl | INTL | 3 | 0 | 0 | 0 | 0 |
 | pl | INTL | 2 | 0 | 0 | 0 | 0 |
-| pt | INTL | 129 | 14,332 | 20,647 | 5,932 | 27 |
+| pt | INTL | 129 | 14,332 | 29,047 | 14,332 | 27 |
 | pt-br | BR | 11 | 1,124 | 1,124 | 1,124 | 2 |
 | ru | INTL | 9 | 0 | 0 | 0 | 0 |
-| th | TH | 77 | 2,994 | 3,300 | 2,787 | 0 |
-| zh-cn | CN | 57 | 877 | 877 | 829 | 0 |
-| zh-tw | TW | 109 | 7,587 | 7,893 | 7,380 | 0 |
+| th | TH | 77 | 2,994 | 3,507 | 2,994 | 0 |
+| zh-cn | CN | 57 | 877 | 925 | 877 | 0 |
+| zh-tw | TW | 109 | 7,587 | 8,100 | 7,587 | 0 |
 
 ## Enumerated language matrix
 
