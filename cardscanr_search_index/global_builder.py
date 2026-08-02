@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 
 
 def _normalize(value: Any) -> str:
@@ -335,14 +335,33 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
         "SELECT COUNT(*) FROM (SELECT canonical_printing_id FROM cards GROUP BY canonical_printing_id HAVING COUNT(*)>1)"
     ).fetchone()[0]
     authenticated_urls = connection.execute(
-        "SELECT COUNT(*) FROM cards WHERE image_thumbnail_url LIKE '%pokewallet.io%' OR image_thumbnail_url LIKE '%api_key%' OR image_thumbnail_url LIKE '%token=%'"
+        "SELECT COUNT(*) FROM cards WHERE image_thumbnail_url LIKE '%pokewallet.io%' "
+        "OR image_thumbnail_url LIKE '%api_key%' OR image_thumbnail_url LIKE '%token=%' "
+        "OR image_thumbnail_url LIKE '%auth_key=%' OR image_thumbnail_url LIKE '%signature=%' "
+        "OR image_thumbnail_url LIKE '%x-amz-%' OR image_display_url LIKE '%api_key%' "
+        "OR image_display_url LIKE '%token=%' OR image_display_url LIKE '%auth_key=%' "
+        "OR image_display_url LIKE '%signature=%' OR image_display_url LIKE '%x-amz-%'"
     ).fetchone()[0]
     fts_records = connection.execute("SELECT COUNT(*) FROM cards_fts").fetchone()[0]
     product_records = connection.execute("SELECT COUNT(*) FROM sealed_products").fetchone()[0]
     product_fts_records = connection.execute("SELECT COUNT(*) FROM sealed_products_fts").fetchone()[0]
     product_content_records = connection.execute("SELECT COUNT(*) FROM sealed_product_contents").fetchone()[0]
+    product_content_orphans = connection.execute(
+        "SELECT COUNT(*) FROM sealed_product_contents c LEFT JOIN sealed_products p "
+        "ON p.product_variant_id=c.product_variant_id WHERE p.product_variant_id IS NULL"
+    ).fetchone()[0]
+    foreign_key_issues = len(connection.execute("PRAGMA foreign_key_check").fetchall())
+    meta = dict(connection.execute("SELECT key,value FROM meta"))
     authenticated_product_urls = connection.execute(
-        "SELECT COUNT(*) FROM sealed_products WHERE image_url LIKE '%auth_key=%' OR image_url LIKE '%token=%' OR image_url LIKE '%api_key%'"
+        "SELECT COUNT(*) FROM sealed_products WHERE image_url LIKE '%auth_key=%' OR image_url LIKE '%token=%' "
+        "OR image_url LIKE '%api_key%' OR image_url LIKE '%signature=%' OR image_url LIKE '%x-amz-%'"
+    ).fetchone()[0]
+    unsafe_urls = connection.execute(
+        "SELECT (SELECT COUNT(*) FROM cards WHERE COALESCE(image_thumbnail_url,'') LIKE '%localhost%' "
+        "OR COALESCE(image_display_url,'') LIKE '%localhost%' OR COALESCE(image_thumbnail_url,'') LIKE '%127.0.0.1%' "
+        "OR COALESCE(image_display_url,'') LIKE '%127.0.0.1%') + "
+        "(SELECT COUNT(*) FROM sealed_products WHERE COALESCE(image_url,'') LIKE '%localhost%' "
+        "OR COALESCE(image_url,'') LIKE '%127.0.0.1%')"
     ).fetchone()[0]
     languages = dict(connection.execute("SELECT language,COUNT(*) FROM cards GROUP BY language ORDER BY language"))
     connection.close()
@@ -352,9 +371,17 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
     if authenticated_urls: issues.append(f"authenticatedUrls:{authenticated_urls}")
     if fts_records != records: issues.append("ftsRecordCountMismatch")
     if product_fts_records != product_records: issues.append("productFtsRecordCountMismatch")
+    if product_content_orphans: issues.append(f"orphanProductContents:{product_content_orphans}")
+    if foreign_key_issues: issues.append(f"foreignKeyIssues:{foreign_key_issues}")
     if authenticated_product_urls: issues.append(f"authenticatedProductUrls:{authenticated_product_urls}")
+    if unsafe_urls: issues.append(f"unsafeLocalUrls:{unsafe_urls}")
+    if meta.get("searchIndexSchemaVersion") != SCHEMA_VERSION: issues.append("schemaVersionMismatch")
+    if int(meta.get("recordCount", -1)) != records: issues.append("metaCardRecordCountMismatch")
+    if int(meta.get("productRecordCount", -1)) != product_records: issues.append("metaProductRecordCountMismatch")
+    if int(meta.get("productContentRecordCount", -1)) != product_content_records: issues.append("metaProductContentRecordCountMismatch")
     return {"classification": "PASS" if not issues else "FAIL", "records": records, "ftsRecords": fts_records,
             "products": product_records, "productFtsRecords": product_fts_records,
             "productContents": product_content_records, "duplicateCanonicalPrintingIds": duplicate_ids,
             "authenticatedUrls": authenticated_urls, "authenticatedProductUrls": authenticated_product_urls,
-            "perLanguageCounts": languages, "issues": issues}
+            "orphanProductContents": product_content_orphans, "foreignKeyIssues": foreign_key_issues,
+            "unsafeLocalUrls": unsafe_urls, "perLanguageCounts": languages, "issues": issues}

@@ -7,10 +7,13 @@ from typing import Any
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from boto3.s3.transfer import TransferConfig
 
 from .builder import sha256_file
 
 R2_REGION = "auto"
+MULTIPART_THRESHOLD_BYTES = 64 * 1024 * 1024
+MULTIPART_CHUNK_BYTES = 16 * 1024 * 1024
 
 
 def build_s3_client(
@@ -72,14 +75,18 @@ def upload_object(
     content_type: str,
     cache_control: str,
 ) -> None:
-    with open(local_path, "rb") as handle:
-        client.put_object(
-            Bucket=bucket,
-            Key=object_key,
-            Body=handle,
-            ContentType=content_type,
-            CacheControl=cache_control,
-        )
+    client.upload_file(
+        str(local_path),
+        bucket,
+        object_key,
+        ExtraArgs={"ContentType": content_type, "CacheControl": cache_control},
+        Config=TransferConfig(
+            multipart_threshold=MULTIPART_THRESHOLD_BYTES,
+            multipart_chunksize=MULTIPART_CHUNK_BYTES,
+            max_concurrency=4,
+            use_threads=True,
+        ),
+    )
 
 
 def head_object_metadata(client: Any, *, bucket: str, object_key: str) -> dict[str, Any]:
