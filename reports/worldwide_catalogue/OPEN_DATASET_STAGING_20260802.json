@@ -1,43 +1,53 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-02T02:10:41.952318+00:00",
+  "generated_at_utc": "2026-08-02T03:00:54.813897+00:00",
   "database": "D:\\CardScanR_worldwide_runtime_20260802\\staging\\worldwide-catalogue.sqlite",
-  "database_bytes": 1690144768,
-  "database_sha256": "a99bc633c44918895b8d8cfcf9920a28f7e0bdeae5ce6a4f23e66965d5bbe599",
+  "database_bytes": 1697050624,
+  "database_sha256": "07699c531141d6d2ad083724531369f2e3efaa58800add86a214beb5d92f1c81",
   "integrity": {
     "sqlite_integrity_check": "ok",
     "foreign_key_failure_count": 0,
     "foreign_key_failures": []
   },
   "counts": {
-    "source_provider": 19,
-    "import_run": 19,
-    "source_snapshot": 18,
-    "source_record": 114594,
+    "source_provider": 20,
+    "import_run": 22,
+    "source_snapshot": 22,
+    "source_record": 138612,
     "series": 66,
     "card_set": 1639,
     "set_release": 2905,
-    "card_design": 98815,
-    "card_printing": 206445,
-    "card_variant": 343530,
-    "card_localisation": 200700,
+    "card_design": 98850,
+    "card_printing": 206480,
+    "card_variant": 343565,
+    "card_localisation": 200735,
     "attack": 227459,
     "ability": 33461,
     "marketplace_mapping": 323303,
-    "provider_entity_mapping": 89647,
-    "card_image_candidate": 361092,
+    "provider_entity_mapping": 113152,
+    "card_image_candidate": 408053,
     "sealed_product": 3702,
     "sealed_product_variant": 3702,
-    "product_content": 104950,
-    "product_image_candidate": 5859,
+    "product_content": 106422,
+    "product_image_candidate": 7796,
+    "image_validation_result": 46961,
+    "image_acquisition_attempt": 23505,
+    "publication_run": 1,
+    "publication_artifact": 9,
     "accessory": 1649,
-    "unresolved_item": 119533
+    "unresolved_item": 119570
   },
   "source_records": [
     {
       "provider_id": "cardscanr-catalogue-corrections",
       "record_type": "normalization_correction",
       "records": 1,
+      "errors": 0
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "record_type": "card_image",
+      "records": 23493,
       "errors": 0
     },
     {
@@ -109,7 +119,7 @@
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "record_type": "sealed_product",
-      "records": 614,
+      "records": 1139,
       "errors": 0
     },
     {
@@ -344,6 +354,33 @@
       "completed_at": "2026-08-02T02:09:37.114986+00:00",
       "counters_json": "{\"applied\":1}",
       "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "completed",
+      "input_sha256": "02e35553a1197ec92ae278cdb654cc551e4891575d7be5acb82e833142a0f5cc",
+      "started_at": "2026-08-02T02:11:32.723185+00:00",
+      "completed_at": "2026-08-02T02:11:33.160559+00:00",
+      "counters_json": "{\"accessories\":319,\"detail_gaps\":89,\"product_contents\":1472,\"product_images\":2551,\"products\":614}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "completed",
+      "input_sha256": "02e35553a1197ec92ae278cdb654cc551e4891575d7be5acb82e833142a0f5cc",
+      "started_at": "2026-08-02T02:14:32.209513+00:00",
+      "completed_at": "2026-08-02T02:14:32.610705+00:00",
+      "counters_json": "{\"accessories\":319,\"detail_gaps\":89,\"product_contents\":1472,\"product_images\":2551,\"products\":614}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "status": "completed",
+      "input_sha256": "3faeab06488da3cb84a34526a0cb1e6516f3355ccb02927fd5b6bb3112ce613b",
+      "started_at": "2026-08-02T02:59:37.695986+00:00",
+      "completed_at": "2026-08-02T02:59:50.900435+00:00",
+      "counters_json": "{\"acquisition_attempts\":23456,\"display_candidates\":23456,\"existing_catalogue_printings_created\":35,\"identity_review\":37,\"manifest_rows\":23493,\"mapped_en\":20304,\"mapped_ja\":3152,\"pending_assets\":4,\"snapshot_files\":3,\"thumbnail_candidates\":23456,\"verified_assets\":23452}",
+      "error_summary": null
     }
   ],
   "language_coverage": [
@@ -360,8 +397,8 @@
       "language_code": "en",
       "region_code": "INTL",
       "sets": 393,
-      "printings": 43949,
-      "variants": 71031,
+      "printings": 43984,
+      "variants": 71066,
       "unknown_variants": 43949,
       "quarantined_printings": 0
     },
@@ -558,7 +595,7 @@
       "populated_releases": 388,
       "zero_printing_releases": 5,
       "declared_official_cards": 38900,
-      "normalized_printings": 43949,
+      "normalized_printings": 43984,
       "exact_count_releases": 155,
       "shortfall_releases": 10,
       "excess_releases": 228,
@@ -827,8 +864,8 @@
         "PH"
       ],
       "sets": 528,
-      "printings": 43949,
-      "variants": 71031,
+      "printings": 43984,
+      "variants": 71066,
       "unknown_variants": 43949,
       "quarantined_printings": 0,
       "inventory_status": "present"
@@ -1066,10 +1103,10 @@
     }
   ],
   "image_readiness": {
-    "total_printings": 206445,
-    "with_candidate": 200700,
-    "technically_verified": 0,
-    "app_eligible": 0
+    "total_printings": 206480,
+    "with_candidate": 200735,
+    "technically_verified": 23452,
+    "app_eligible": 23452
   },
   "product_image_readiness": {
     "total_product_variants": 3702,
@@ -1083,8 +1120,11 @@
     "collector_collision_groups_needing_review": 0,
     "secret_bearing_card_image_urls": 0,
     "secret_bearing_product_image_urls": 0,
-    "open_unresolved_items": 109065,
-    "external_blocker_items": 1
+    "open_unresolved_items": 108488,
+    "external_blocker_items": 1,
+    "failed_image_validation_results": 49,
+    "not_found_image_acquisition_attempts": 49,
+    "active_publication_runs": 0
   },
   "provider_entity_counts": [
     {
@@ -1138,8 +1178,8 @@
     {
       "provider_id": "pokemontcg-data",
       "sets": 174,
-      "printings": 20444,
-      "variants": 20444
+      "printings": 20479,
+      "variants": 20479
     },
     {
       "provider_id": "ptcg-chs-datasets",
@@ -1161,6 +1201,34 @@
       "match_method": "evidence_backed_field_correction",
       "mapping_status": "verified",
       "mappings": 1
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "match_method": "exact_existing_cardscanr_canonical_identity",
+      "mapping_status": "verified",
+      "mappings": 35
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "match_method": "exact_pokemontcg_provider_card_id",
+      "mapping_status": "verified",
+      "mappings": 20269
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "match_method": "exact_set_collector_normalized_local_name",
+      "mapping_status": "verified",
+      "mappings": 3138
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "match_method": "unique_exact_set_collector_with_documented_name_punctuation_difference",
+      "mapping_status": "verified",
+      "mappings": 14
     },
     {
       "provider_id": "cardscanr-missing-image-registry",
@@ -1293,7 +1361,14 @@
       "entity_type": "sealed_product",
       "match_method": "direct_official_archive",
       "mapping_status": "candidate",
-      "mappings": 614
+      "mappings": 89
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "entity_type": "sealed_product",
+      "match_method": "direct_official_archive",
+      "mapping_status": "verified",
+      "mappings": 525
     },
     {
       "provider_id": "pokemon-tcg-kb-pikaqian",
@@ -1357,9 +1432,44 @@
       "match_method": "direct_dataset_record",
       "mapping_status": "candidate",
       "mappings": 217
+    },
+    {
+      "provider_id": "tcgdex-cards-database",
+      "entity_type": "card_variant",
+      "match_method": "exact_set_collector_local_name",
+      "mapping_status": "verified",
+      "mappings": 49
     }
   ],
   "image_candidates": [
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "rights_status": "approved_for_mirror",
+      "validation_status": "candidate",
+      "image_role": "display",
+      "images": 4
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "rights_status": "approved_for_mirror",
+      "validation_status": "candidate",
+      "image_role": "thumbnail",
+      "images": 4
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "rights_status": "approved_for_mirror",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 23452
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "rights_status": "approved_for_mirror",
+      "validation_status": "verified",
+      "image_role": "thumbnail",
+      "images": 23452
+    },
     {
       "provider_id": "pokemon-tcg-kb-pikaqian",
       "rights_status": "permission_pending",
@@ -1421,7 +1531,7 @@
       "rights_status": "permission_pending",
       "validation_status": "missing",
       "image_role": "display",
-      "images": 2857
+      "images": 2906
     },
     {
       "provider_id": "tcgdex-assets",
@@ -1429,6 +1539,61 @@
       "validation_status": "missing",
       "image_role": "thumbnail",
       "images": 2857
+    }
+  ],
+  "image_acquisition_attempts": [
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": null,
+      "attempts": 4
+    },
+    {
+      "provider_id": "cardscanr-existing-r2-images",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 23452
+    },
+    {
+      "provider_id": "tcgdex-assets",
+      "entity_type": "card_variant",
+      "outcome": "not_found",
+      "http_status": 404,
+      "attempts": 49
+    }
+  ],
+  "image_validation_results": [
+    {
+      "validator": "cardscanr-preserved-r2-manifest",
+      "status": "pass",
+      "validations": 46904
+    },
+    {
+      "validator": "cardscanr-preserved-r2-manifest",
+      "status": "warning",
+      "validations": 8
+    },
+    {
+      "validator": "cardscanr-tcgdex-http-availability",
+      "status": "fail",
+      "validations": 49
+    }
+  ],
+  "publication_runs": [
+    {
+      "id": "publication:staging-20260802-1158:ce411b773aea4d7f73401def137969185c55f0135f80bceaebba9c93ee2d1438",
+      "version": "staging-20260802-1158",
+      "status": "canary",
+      "catalogue_sha256": "4ccba7607007a8d369aaed03bbe603449913a2b50e0135b533c95f958bbac588",
+      "manifest_sha256": "ce411b773aea4d7f73401def137969185c55f0135f80bceaebba9c93ee2d1438",
+      "object_prefix": "D:\\CardScanR_worldwide_runtime_20260802\\publication_canaries\\staging-20260802-1158",
+      "previous_publication_id": null,
+      "started_at": "2026-08-02T01:59:57.596636+00:00",
+      "activated_at": null,
+      "completed_at": "2026-08-02T02:44:13.475686+00:00",
+      "rollback_retained": 1
     }
   ],
   "sealed_products": [
@@ -1640,42 +1805,60 @@
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "accessory_product",
       "verification_status": "corroborated",
-      "products": 319
+      "products": 84
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "product_type": "accessory_product",
+      "verification_status": "verified",
+      "products": 235
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "booster_pack",
       "verification_status": "corroborated",
-      "products": 123
+      "products": 1
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "product_type": "booster_pack",
+      "verification_status": "verified",
+      "products": 122
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "collection_box",
-      "verification_status": "corroborated",
+      "verification_status": "verified",
       "products": 14
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "constructed_deck",
-      "verification_status": "corroborated",
+      "verification_status": "verified",
       "products": 16
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "official_product",
-      "verification_status": "corroborated",
+      "verification_status": "verified",
       "products": 8
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "special_collection",
       "verification_status": "corroborated",
-      "products": 87
+      "products": 4
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "product_type": "special_collection",
+      "verification_status": "verified",
+      "products": 83
     },
     {
       "provider_id": "pokemon-korea-products-official-archive",
       "product_type": "starter_deck",
-      "verification_status": "corroborated",
+      "verification_status": "verified",
       "products": 47
     },
     {
@@ -1775,7 +1958,7 @@
   "provider_rights": [
     {
       "rights_status": "approved_for_mirror",
-      "providers": 3
+      "providers": 4
     },
     {
       "rights_status": "internal_audit",
@@ -1837,6 +2020,13 @@
       "language_code": "zh-cn",
       "region_code": "CN",
       "items": 1
+    },
+    {
+      "issue_class": "existing_r2_image_identity_review",
+      "status": "needs_review",
+      "language_code": "en",
+      "region_code": "INTL",
+      "items": 37
     },
     {
       "issue_class": "missing_card_image",
@@ -1903,10 +2093,17 @@
     },
     {
       "issue_class": "official_product_detail_unavailable",
-      "status": "open",
+      "status": "documented_exhausted",
       "language_code": "ko",
       "region_code": "KR",
-      "items": 614
+      "items": 89
+    },
+    {
+      "issue_class": "official_product_detail_unavailable",
+      "status": "resolved",
+      "language_code": "ko",
+      "region_code": "KR",
+      "items": 525
     },
     {
       "issue_class": "regional_card_image_missing",

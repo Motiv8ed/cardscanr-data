@@ -286,8 +286,15 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
                 counters["cards_without_set_code"] += 1
                 continue
             _import_card(connection, row, parsed, run_id, snapshot_id, releases[key], counters)
+            connection.execute(
+                """update unresolved_item set status='resolved'
+                     where entity_type='source_card' and entity_id=?
+                       and issue_class='official_archive_collection_error'""",
+                (row["provider_record_id"],),
+            )
         errors = checkpoint.execute(
-            "select provider_record_id,status,error from cards where status!='parsed' order by provider_record_id",
+            """select provider_record_id,status,error from cards
+                 where status!='parsed' and provider_record_id!='logout' order by provider_record_id""",
         ).fetchall()
         for row in errors:
             unresolved_id = stable_id(PROVIDER_ID, "archive-error", row["provider_record_id"])

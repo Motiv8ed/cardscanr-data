@@ -130,8 +130,16 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
                 "insert or replace into provider_entity_mapping values (?, 'sealed_product', ?, 'sealed_product', ?, 'direct_official_archive', 'verified', ?, '{}')",
                 (PROVIDER_ID, row["provider_record_id"], product_id, source_id),
             )
+            connection.execute(
+                """update unresolved_item set status='resolved'
+                     where entity_type='source_product' and entity_id=?
+                       and issue_class='official_archive_collection_error'""",
+                (row["provider_record_id"],),
+            )
             counters["products"] += 1
-        for row in checkpoint.execute("select provider_record_id,error from products where status!='parsed'"):
+        for row in checkpoint.execute(
+            "select provider_record_id,error from products where status!='parsed' and provider_record_id!='undefinedregions'"
+        ):
             unresolved_id = stable_id(PROVIDER_ID, "archive-error", row["provider_record_id"])
             connection.execute(
                 "insert or replace into unresolved_item values (?, 'source_product', ?, 'en', 'US', 'official_archive_collection_error', ?, ?, 'open', 0)",
@@ -152,4 +160,3 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
     finally:
         connection.close()
         checkpoint.close()
-
