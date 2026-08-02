@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T05:50:44.450684+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\product_image_validation_japan\\checkpoint.sqlite",
+  "status": {
+    "pass": 1946,
+    "pending": 6636
+  },
+  "providers": [
+    {
+      "provider_id": "pokemon-cn-official",
+      "status": "pending",
+      "distinct_urls": 3062,
+      "candidates": 3106
+    },
+    {
+      "provider_id": "pokemon-japan-products-official",
+      "status": "pass",
+      "distinct_urls": 1946,
+      "candidates": 1946
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "pending",
+      "distinct_urls": 2305,
+      "candidates": 2551
+    },
+    {
+      "provider_id": "pokemon-us-products-official-archive",
+      "status": "pending",
+      "distinct_urls": 1076,
+      "candidates": 1422
+    },
+    {
+      "provider_id": "ptcg-chs-datasets",
+      "status": "pending",
+      "distinct_urls": 193,
+      "candidates": 193
+    }
+  ],
+  "failure_classes": [],
+  "cache": {
+    "cached_objects": 1945,
+    "observed_bytes": 661771589
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report.",
+  "product_coverage": {
+    "provider_id": "pokemon-japan-products-official",
+    "total_products": 1947,
+    "products_with_verified_image": 1946,
+    "products_without_verified_image": 1,
+    "candidate_statuses": {
+      "verified": 1946
+    }
+  }
+}
