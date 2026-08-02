@@ -215,6 +215,7 @@ def _import_card(
             (image_id, variant_id, source_id, provider_id, parsed["image_url"]),
         )
     _direct_mapping(connection, provider_id, "card", provider_card_id, "card_printing", printing_id, source_id)
+    _direct_mapping(connection, provider_id, "card", provider_card_id, "card_variant", variant_id, source_id)
     connection.execute(
         "update unresolved_item set status='resolved' where entity_type='source_card' and entity_id=? and issue_class='official_detail_not_collected'",
         (provider_card_id,),
