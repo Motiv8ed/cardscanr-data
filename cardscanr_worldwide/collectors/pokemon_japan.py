@@ -149,11 +149,10 @@ class Collector:
         )
         self.delay_seconds = delay_seconds
         robots_response = self.client.get(f"{BASE}/robots.txt")
-        robots_response.raise_for_status()
         self.robot = RobotFileParser()
         self.robot.set_url(f"{BASE}/robots.txt")
-        self.robot.parse(robots_response.text.splitlines())
-        robots_path = self.raw / f"robots-{sha256(robots_response.content)}.txt"
+        self.robot.parse(robots_response.text.splitlines() if robots_response.status_code == 200 else [])
+        robots_path = self.raw / f"robots-{robots_response.status_code}-{sha256(robots_response.content)}.txt"
         if not robots_path.exists():
             robots_path.write_bytes(robots_response.content)
 
