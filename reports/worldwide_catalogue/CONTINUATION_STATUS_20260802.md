@@ -1,37 +1,40 @@
 # Worldwide catalogue continuation status
 
-- Generated: `2026-08-02T12:53:00+00:00`
+- Generated: `2026-08-02T14:00:00+00:00`
 - Branch: `feature/worldwide-pokemon-catalogue-products-20260802`
 - Worktree: `D:\CardScanR_worktrees\worldwide_catalogue_products_20260802`
+- Flutter worktree: `D:\CardScanR_worktrees\flutter_worldwide_catalogue_20260802`
 - Runtime: `D:\CardScanR_worldwide_runtime_20260802`
-- Active Asia writers: none
-- Production manifest / Supabase: not activated / not written
+- Production active manifest: **not overwritten**
+- Terminal status: **WORLDWIDE_CATALOGUE_EXTERNAL_BLOCKERS_REMAIN**
 
 ## Phase progress
 
 | Phase | Status |
 |---|---|
-| A Secure interrupted work | complete |
-| B Asia card acquisition | complete for id/th/hk/tw/sg/my/ph |
-| C Asia card images | complete except documented residuals |
-| D Sealed products | Asia galleries expanded; 729 variants without pass images release-classified |
-| E External blockers | Europe + SG/MY/PH + product-image + shortfall classes registered |
-| F Release-gate audit | **RELEASE_GATE_ACCEPTED_FOR_CANARY** |
-| G–J Canary / Supabase / Flutter / activation | next: immutable canary (no active-manifest overwrite) |
+| A–F | complete (release gate accepted for canary) |
+| G Immutable canary | **PASS** — canary2 uploaded; `activeManifestKey` null |
+| H Supabase | dry-run PASS; execute blocked by **project disk full** |
+| I Flutter compat | schema `2.1.0`/`2.2.0` accepted in Flutter worktree; tests PASS |
+| J Activation / owner package | not started (await disk + owner activation decision) |
 
-## Release gates (all clean)
+## Canary2
 
-`unclassified_unresolved_items`, `open_unresolved_items`, `unexplained_official_release_shortfalls`, secret-bearing URLs, running imports, orphan contents, missing provenance: **0**
+- Search SHA-256: `89c07376b30e9b0edf8ee1ad74c8b53583dc12a11f5f3fb71ec5d8419db5428b`
+- Bytes: `897,101,824`
+- Cards: `296,463` / products: `4,618`
+- Report: `PUBLICATION_CANARY_20260802_CANARY2.md`
 
-See `RELEASE_GATE_AUDIT_20260802.md`.
+## Remaining exact external blockers
 
-## Product image gap rollup
+1. European official localized DB — Incapsula/CAPTCHA (existing reports)
+2. SG/MY/PH local sealed-product galleries absent
+3. China product images — transient/page-issued only
+4. Supabase project disk exhausted during normalized load (`SUPABASE_LOAD_DISK_BLOCKER_20260802.md`)
+5. Asia card-image residuals: 1 TH empty body, 9 HK empty `/card-img/` URLs
 
-729 without pass → 719 `blocked_external`, 10 parser `classified_nonblocking` (`PRODUCT_IMAGE_GAP_RELEASE_CLASSIFICATION_20260802.md`).
+## Next owner actions
 
-## Next actions
-
-1. Export publication bundle + build search index + immutable R2 canary (**no** `--activate`).
-2. Supabase dry-run/backup/load after canary verifies.
-3. Flutter schema 2.1 worktree from app baseline after canary.
-4. Owner activation package under Downloads only after verification.
+1. Expand Supabase disk (or target a larger project), then re-execute load.
+2. Decide whether to activate canary2 over the production active manifest.
+3. Ship Flutter worktree changes after QA against the canary URL.
