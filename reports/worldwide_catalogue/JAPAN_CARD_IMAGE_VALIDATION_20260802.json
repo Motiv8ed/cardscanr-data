@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T06:11:42.755963+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\card_image_validation_japan\\checkpoint.sqlite",
+  "status": {
+    "pass": 23150
+  },
+  "providers": [
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "status": "pass",
+      "distinct_urls": 23150,
+      "candidates": 23153
+    }
+  ],
+  "failure_classes": [],
+  "cache": {
+    "cached_objects": 23121,
+    "observed_bytes": 7151228816
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report."
+}
