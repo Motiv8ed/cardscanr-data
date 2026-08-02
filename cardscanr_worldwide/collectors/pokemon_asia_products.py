@@ -221,6 +221,54 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
             "metadata": metadata,
         })
+    for container in soup.select(".block-product"):
+        heading = container.select_one(".block-product-head")
+        if not heading:
+            continue
+        name = heading.get_text(" ", strip=True)
+        image = container.select_one(".block-product-image img[src], img[src]")
+        text = ""
+        text_node = container.select_one(".block-product-text")
+        if text_node:
+            text = text_node.get_text(" ", strip=True)
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": {"template": "block_product", "contents": [], "text": text},
+        })
+    # WordPress trainer-site product articles: one sealed product identity from the
+    # article title, optionally split into pack-art variants when multiple PKG images exist.
+    if soup.select_one("span.category.product"):
+        heading = soup.select_one("h1")
+        name = heading.get_text(" ", strip=True) if heading else ""
+        if name and not any(str(row["local_name"]).casefold() == name.casefold() for row in products):
+            pkg_images = [
+                img for img in soup.find_all("img", src=True)
+                if re.search(r"(?:PKG|pkg|_pack|product-img|product_img)", str(img.get("src") or ""), re.I)
+            ]
+            if len(pkg_images) >= 2:
+                for image in pkg_images:
+                    alt = (image.get("alt") or "").strip()
+                    local_name = alt if alt and len(alt) > 3 else name
+                    products.append({
+                        "local_name": local_name,
+                        "product_type": product_type(local_name),
+                        "image_url": urljoin(page_url, str(image["src"])),
+                        "metadata": {
+                            "template": "wordpress_product_article_pack_art",
+                            "contents": [],
+                            "article_title": name,
+                        },
+                    })
+            else:
+                image = pkg_images[0] if pkg_images else soup.select_one("article img[src], .article img[src]")
+                products.append({
+                    "local_name": name,
+                    "product_type": product_type(name),
+                    "image_url": urljoin(page_url, str(image["src"])) if image else None,
+                    "metadata": {"template": "wordpress_product_article", "contents": []},
+                })
     deduplicated: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for product in products:

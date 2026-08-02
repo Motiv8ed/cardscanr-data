@@ -80,6 +80,25 @@ def test_parse_product_information_and_legacy_lyt_product() -> None:
     assert rows[1]["local_name"].endswith("Classic")
 
 
+def test_parse_block_product_and_wordpress_product_article() -> None:
+    html = """
+    <div class="block-product"><div class="block-product-image"><img src="./news-product-1.png"></div>
+      <div class="block-product-head">Booster Pack Neraka Sirna</div>
+      <p class="block-product-text">Harga Eceran : Rp 20.000 Isi : 5 lembar kartu</p></div>
+    <span class="category product">Product</span>
+    <h1>Starter Deck Koraidon and Miraidon</h1>
+    <img src="/id/wp-content/uploads/idn_SVHK_PKG.png" alt="Starter Deck Koraidon ex Purba">
+    <img src="/id/wp-content/uploads/idn_SVHM_PKG.png" alt="Starter Deck Miraidon ex Futur">
+    """
+    rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archives/5424/")
+    assert rows[0]["metadata"]["template"] == "block_product"
+    assert rows[0]["local_name"] == "Booster Pack Neraka Sirna"
+    assert [row["local_name"] for row in rows[1:]] == [
+        "Starter Deck Koraidon ex Purba",
+        "Starter Deck Miraidon ex Futur",
+    ]
+
+
 def test_parse_article_detail_card_archive_page() -> None:
     html = """
     <article class="article-detail article-detail--card">
