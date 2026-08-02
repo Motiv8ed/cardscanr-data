@@ -24,7 +24,9 @@ from .tcgdex import canonical_json, stable_id
 VALIDATOR = "cardscanr-product-image-technical"
 VALIDATOR_VERSION = "1.0.0"
 USER_AGENT = "CardScanR-catalogue-preservation/1.0"
-MAX_BYTES = 30 * 1024 * 1024
+# Official mainland-China product artwork includes valid PNG files slightly
+# above 30 MiB. Keep a hard ceiling while allowing those source originals.
+MAX_BYTES = 40 * 1024 * 1024
 CHECKPOINT_SCHEMA = """
 pragma journal_mode=wal;
 create table if not exists assets(
@@ -193,12 +195,14 @@ def register_candidates(database: Path, checkpoint: Path,
 
 def acquire(checkpoint: Path, cache_root: Path, workers: int = 4, limit: int | None = None,
             delay_seconds: float = 0.05, providers: list[str] | None = None,
-            retry_failed: bool = False) -> dict[str, int]:
+            retry_failed: bool = False, max_attempts: int = 3) -> dict[str, int]:
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
     progress = sqlite3.connect(checkpoint)
     try:
         statuses = "'pending','retryable_error','fail','not_found'" if retry_failed else "'pending','retryable_error'"
-        query = f"select a.source_url,coalesce(a.fetch_url,a.source_url) from assets a where a.status in ({statuses}) and a.attempts<3"
-        parameters: list[str] = []
+        query = f"select a.source_url,coalesce(a.fetch_url,a.source_url) from assets a where a.status in ({statuses}) and a.attempts<?"
+        parameters: list[str | int] = [max_attempts]
         if providers:
             placeholders = ",".join("?" for _ in providers)
             query += f" and exists (select 1 from candidates c where c.source_url=a.source_url and c.provider_id in ({placeholders}))"

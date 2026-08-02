@@ -31,6 +31,7 @@
 - Total products: `575`
 - Products with at least one verified image: `575`
 - Products without a verified image: `0`
+- Candidate statuses: `invalid=6, verified=1,416`
 
 ## Failure classes
 

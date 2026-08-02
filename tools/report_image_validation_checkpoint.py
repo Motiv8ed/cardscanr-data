@@ -69,6 +69,12 @@ def main() -> int:
                 "total_products": total,
                 "products_with_verified_image": verified,
                 "products_without_verified_image": total - verified,
+                "candidate_statuses": dict(catalogue.execute(
+                    """select pic.validation_status,count(*)
+                         from product_image_candidate pic
+                        where pic.provider_id=? group by pic.validation_status order by pic.validation_status""",
+                    (args.product_provider,),
+                ).fetchall()),
             }
             report["product_coverage"] = product_coverage
         finally:
@@ -93,6 +99,9 @@ def main() -> int:
             f"- Total products: `{product_coverage['total_products']:,}`",
             f"- Products with at least one verified image: `{product_coverage['products_with_verified_image']:,}`",
             f"- Products without a verified image: `{product_coverage['products_without_verified_image']:,}`",
+            "- Candidate statuses: `" + ", ".join(
+                f"{key}={value:,}" for key, value in product_coverage["candidate_statuses"].items()
+            ) + "`",
         ])
     lines.extend(["", "## Failure classes", "", "| Outcome | Error | URLs |", "|---|---|---:|"])
     lines.extend(

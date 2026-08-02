@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-02T04:09:35.173849+00:00",
+  "generated_at_utc": "2026-08-02T04:30:00.262455+00:00",
   "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\product_image_validation_us\\checkpoint.sqlite",
   "status": {
     "fail": 2,
@@ -73,6 +73,10 @@
     "provider_id": "pokemon-us-products-official-archive",
     "total_products": 575,
     "products_with_verified_image": 575,
-    "products_without_verified_image": 0
+    "products_without_verified_image": 0,
+    "candidate_statuses": {
+      "invalid": 6,
+      "verified": 1416
+    }
   }
 }

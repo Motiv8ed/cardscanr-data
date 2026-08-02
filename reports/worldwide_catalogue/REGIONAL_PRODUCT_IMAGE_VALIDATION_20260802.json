@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T04:29:54.507753+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\product_image_validation\\checkpoint.sqlite",
+  "status": {
+    "fail": 3,
+    "not_found": 1,
+    "pass": 5556,
+    "pending": 3022
+  },
+  "providers": [
+    {
+      "provider_id": "pokemon-cn-official",
+      "status": "pass",
+      "distinct_urls": 3062,
+      "candidates": 3106
+    },
+    {
+      "provider_id": "pokemon-japan-products-official",
+      "status": "pending",
+      "distinct_urls": 1946,
+      "candidates": 1946
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "fail",
+      "distinct_urls": 3,
+      "candidates": 3
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "not_found",
+      "distinct_urls": 1,
+      "candidates": 1
+    },
+    {
+      "provider_id": "pokemon-korea-products-official-archive",
+      "status": "pass",
+      "distinct_urls": 2301,
+      "candidates": 2547
+    },
+    {
+      "provider_id": "pokemon-us-products-official-archive",
+      "status": "pending",
+      "distinct_urls": 1076,
+      "candidates": 1422
+    },
+    {
+      "provider_id": "ptcg-chs-datasets",
+      "status": "pass",
+      "distinct_urls": 193,
+      "candidates": 193
+    }
+  ],
+  "failure_classes": [
+    {
+      "status": "fail",
+      "error": "ValueError: implausible decoded image: PNG 1501x5",
+      "rows": 2
+    },
+    {
+      "status": "fail",
+      "error": "ValueError: implausible decoded image: PNG 1024x3",
+      "rows": 1
+    },
+    {
+      "status": "not_found",
+      "error": "HTTP 410",
+      "rows": 1
+    }
+  ],
+  "cache": {
+    "cached_objects": 5253,
+    "observed_bytes": 7466422560
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report.",
+  "product_coverage": {
+    "provider_id": "pokemon-cn-official",
+    "total_products": 162,
+    "products_with_verified_image": 0,
+    "products_without_verified_image": 162,
+    "candidate_statuses": {
+      "acquired_transient": 3106
+    }
+  }
+}
