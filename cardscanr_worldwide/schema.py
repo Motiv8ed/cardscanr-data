@@ -248,6 +248,31 @@ create table if not exists product_content (
   primary key(sealed_product_variant_id, ordinal)
 );
 
+create table if not exists product_image_candidate (
+  id text primary key,
+  sealed_product_variant_id text not null references sealed_product_variant(id),
+  source_record_id text not null references source_record(id),
+  provider_id text not null references source_provider(id),
+  image_role text not null,
+  source_url text not null,
+  rights_status text not null,
+  validation_status text not null,
+  attributes_json text not null,
+  unique(sealed_product_variant_id, image_role, provider_id, source_url)
+);
+
+create table if not exists accessory (
+  id text primary key,
+  provider_id text not null references source_provider(id),
+  provider_record_id text not null,
+  source_record_id text not null references source_record(id),
+  canonical_name text not null,
+  accessory_type text not null,
+  description text,
+  verification_status text not null,
+  unique(provider_id, provider_record_id)
+);
+
 create table if not exists unresolved_item (
   id text primary key,
   entity_type text not null,
@@ -273,6 +298,8 @@ create index if not exists variant_printing_idx on card_variant(card_printing_id
 create index if not exists provider_mapping_entity_idx on provider_entity_mapping(entity_type, entity_id);
 create index if not exists image_candidate_variant_idx on card_image_candidate(card_variant_id, validation_status);
 create index if not exists product_content_entity_idx on product_content(content_kind, entity_id);
+create index if not exists product_image_candidate_variant_idx
+  on product_image_candidate(sealed_product_variant_id, validation_status);
 create index if not exists unresolved_status_idx on unresolved_item(status, issue_class);
 """
 

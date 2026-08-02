@@ -15,6 +15,7 @@ def test_worldwide_python_entrypoints_resolve_repo_package() -> None:
         "tools/add_tcgdex_image_candidates.py",
         "tools/import_pokemon_asia_checkpoint.py",
         "tools/collect_pokemon_china_products.py",
+        "tools/import_pokemon_china_products.py",
     ):
         result = subprocess.run(
             [sys.executable, str(ROOT / script), "--help"],

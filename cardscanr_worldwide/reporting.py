@@ -34,7 +34,7 @@ def build_report(database: Path) -> dict[str, Any]:
             "set_release", "card_design", "card_printing", "card_variant", "card_localisation",
             "attack", "ability", "marketplace_mapping", "provider_entity_mapping",
             "card_image_candidate", "sealed_product", "sealed_product_variant", "product_content",
-            "unresolved_item",
+            "product_image_candidate", "accessory", "unresolved_item",
         ):
             counts[table] = connection.execute(f"select count(*) from {table}").fetchone()[0]
         language_coverage = _rows(connection, """
