@@ -144,6 +144,62 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
             "metadata": metadata,
         })
+    for container in soup.select(".product-info"):
+        heading = container.select_one(".product-name")
+        if not heading:
+            continue
+        name = heading.get_text(" ", strip=True)
+        scope = container.find_parent(["section", "article"]) or container.parent
+        image = scope.find("img", src=re.compile(r"(?:product|pkg|pack)", re.I)) if scope else None
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": {"template": "named_product_info", "contents": [],
+                         "text": container.get_text(" ", strip=True)},
+        })
+    for container in soup.select(".box-product"):
+        heading_image = container.select_one(".box-product-head img[alt]")
+        name = heading_image.get("alt", "").strip() if heading_image else ""
+        if not name:
+            continue
+        image = container.select_one(".lyt-block2-pack img[src]")
+        data_image = container.select_one(".lyt-block2-content img[alt]")
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": {"template": "image_label_product_box", "contents": [],
+                         "text": data_image.get("alt", "").strip() if data_image else container.get_text(" ", strip=True)},
+        })
+    for container in soup.select(".product-information"):
+        name_element = container.find("p")
+        name = name_element.get_text(" ", strip=True) if name_element else ""
+        if not name:
+            continue
+        image = soup.select_one(".eyecatch img[src]")
+        metadata = _table_metadata(container)
+        metadata["template"] = "article_product_information"
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": metadata,
+        })
+    for container in soup.select(".lyt-product"):
+        content = container.select_one(".lyt-product-content")
+        text = content.get_text(" ", strip=True) if content else ""
+        match = re.search(r"(?:商品名稱|商品名称|Nama Produk|ชื่อสินค้า)\s*[：:]\s*(.+?)(?=\s*[●•]|\s*(?:建議|建议|Harga|ราคา)|$)", text)
+        if not match:
+            continue
+        name = match.group(1).strip()
+        image = container.select_one(".lyt-product-image img[src]")
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": {"template": "legacy_lyt_product", "contents": [], "text": text},
+        })
     deduplicated: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for product in products:

@@ -43,3 +43,30 @@ def test_parse_legacy_product_group() -> None:
     rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archive/special/card/s10/")
     assert rows[0]["local_name"] == "Booster Pack Alpha"
     assert rows[0]["metadata"]["template"] == "legacy_product_group"
+
+
+def test_parse_named_product_info_and_image_label_box() -> None:
+    html = """
+    <section><img src="./product-main.png"><div class="product-info">
+      <h3 class="product-name">Booster Pack Alpha</h3><ul class="product-detail"><li>5 cards</li></ul>
+    </div></section>
+    <div class="box-product"><h3 class="box-product-head"><img alt="Special Collection"></h3>
+      <div class="lyt-block2-pack"><img src="./box.png"></div>
+      <div class="lyt-block2-content"><img alt="Contents: Booster Pack x4"></div></div>
+    """
+    rows = parse_product_page(html, "https://example.test/products/")
+    assert [row["local_name"] for row in rows] == ["Booster Pack Alpha", "Special Collection"]
+    assert rows[1]["metadata"]["template"] == "image_label_product_box"
+
+
+def test_parse_product_information_and_legacy_lyt_product() -> None:
+    html = """
+    <div class="eyecatch"><img src="/hero.png"></div>
+    <div class="product-information"><h2>Product</h2><p>Battle Deck Alpha</p>
+      <table><tr><th>Contents</th><td><ul><li>60 cards</li></ul></td></tr></table></div>
+    <div class="lyt-product"><div class="lyt-product-image"><img src="/classic.png"></div>
+      <div class="lyt-product-content">●商品名稱：寶可夢集換式卡牌遊戲 Classic ●建議零售價：2000元</div></div>
+    """
+    rows = parse_product_page(html, "https://example.test/product/")
+    assert rows[0]["metadata"]["contents"] == ["60 cards"]
+    assert rows[1]["local_name"].endswith("Classic")
