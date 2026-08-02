@@ -363,6 +363,34 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
         "(SELECT COUNT(*) FROM sealed_products WHERE COALESCE(image_url,'') LIKE '%localhost%' "
         "OR COALESCE(image_url,'') LIKE '%127.0.0.1%')"
     ).fetchone()[0]
+    third_party_card_urls = connection.execute(
+        """
+        SELECT COUNT(*) FROM cards
+        WHERE (
+          COALESCE(image_display_url,'') != ''
+          AND image_display_url NOT LIKE '%r2.dev%'
+          AND image_display_url NOT LIKE '%cardscanr%'
+          AND image_display_url NOT LIKE '%pages.dev%'
+          AND image_display_url NOT LIKE '%andygore149.workers.dev%'
+        ) OR (
+          COALESCE(image_thumbnail_url,'') != ''
+          AND image_thumbnail_url NOT LIKE '%r2.dev%'
+          AND image_thumbnail_url NOT LIKE '%cardscanr%'
+          AND image_thumbnail_url NOT LIKE '%pages.dev%'
+          AND image_thumbnail_url NOT LIKE '%andygore149.workers.dev%'
+        )
+        """
+    ).fetchone()[0]
+    third_party_product_urls = connection.execute(
+        """
+        SELECT COUNT(*) FROM sealed_products
+        WHERE COALESCE(image_url,'') != ''
+          AND image_url NOT LIKE '%r2.dev%'
+          AND image_url NOT LIKE '%cardscanr%'
+          AND image_url NOT LIKE '%pages.dev%'
+          AND image_url NOT LIKE '%andygore149.workers.dev%'
+        """
+    ).fetchone()[0]
     languages = dict(connection.execute("SELECT language,COUNT(*) FROM cards GROUP BY language ORDER BY language"))
     connection.close()
     issues = []
@@ -375,6 +403,8 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
     if foreign_key_issues: issues.append(f"foreignKeyIssues:{foreign_key_issues}")
     if authenticated_product_urls: issues.append(f"authenticatedProductUrls:{authenticated_product_urls}")
     if unsafe_urls: issues.append(f"unsafeLocalUrls:{unsafe_urls}")
+    if third_party_card_urls: issues.append(f"thirdPartyCardImageUrls:{third_party_card_urls}")
+    if third_party_product_urls: issues.append(f"thirdPartyProductImageUrls:{third_party_product_urls}")
     if meta.get("searchIndexSchemaVersion") != SCHEMA_VERSION: issues.append("schemaVersionMismatch")
     if int(meta.get("recordCount", -1)) != records: issues.append("metaCardRecordCountMismatch")
     if int(meta.get("productRecordCount", -1)) != product_records: issues.append("metaProductRecordCountMismatch")
