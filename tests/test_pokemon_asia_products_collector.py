@@ -32,3 +32,14 @@ def test_parse_special_product_column() -> None:
     assert rows[0]["product_type"] == "collection_box"
     assert rows[0]["metadata"]["contents"] == ["Booster Pack x2"]
     assert product_type("Deck Box") == "deck_box"
+
+
+def test_parse_legacy_product_group() -> None:
+    html = """
+    <div class="lyt-group lyt-group--product"><div class="lyt-group-content">
+      <h3 class="lyt-group-text">Booster Pack Alpha</h3><p>Contents: 5 cards</p></div>
+      <div class="lyt-group-image"><img src="./assets/product.png"></div></div>
+    """
+    rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archive/special/card/s10/")
+    assert rows[0]["local_name"] == "Booster Pack Alpha"
+    assert rows[0]["metadata"]["template"] == "legacy_product_group"

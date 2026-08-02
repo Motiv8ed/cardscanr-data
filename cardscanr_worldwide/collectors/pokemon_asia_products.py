@@ -127,6 +127,23 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
             "metadata": metadata,
         })
+    for container in soup.select(".lyt-group--product"):
+        heading = container.select_one(".lyt-group-text")
+        if not heading:
+            continue
+        name = heading.get_text(" ", strip=True)
+        image = container.find("img", src=True)
+        metadata = {
+            "template": "legacy_product_group",
+            "contents": [],
+            "text": container.get_text(" ", strip=True),
+        }
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": metadata,
+        })
     deduplicated: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for product in products:
