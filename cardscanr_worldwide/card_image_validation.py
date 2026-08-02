@@ -60,22 +60,37 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                  from candidates c join assets a on a.source_url=c.source_url
                 where a.status!='pending' order by c.candidate_id"""
         ).fetchall()
+        provider_ids = sorted({str(row["provider_id"]) for row in rows})
+        provider_types: dict[str, str] = {}
+        mapped_candidate_ids: set[str] = set()
+        if provider_ids:
+            placeholders = ",".join("?" for _ in provider_ids)
+            provider_types = {
+                str(provider_id): str(provider_type)
+                for provider_id, provider_type in staging.execute(
+                    f"select id,provider_type from source_provider where id in ({placeholders})",
+                    provider_ids,
+                )
+            }
+            mapped_candidate_ids = {
+                str(row[0])
+                for row in staging.execute(
+                    f"""select distinct cic.id from card_image_candidate cic
+                           join source_record sr on sr.id=cic.source_record_id
+                           join provider_entity_mapping pem on pem.provider_id=sr.provider_id
+                            and pem.provider_record_id=sr.provider_record_id
+                            and pem.entity_type='card_variant' and pem.entity_id=cic.card_variant_id
+                          where cic.provider_id in ({placeholders})""",
+                    provider_ids,
+                )
+            }
         with staging:
             for row in rows:
                 status = row["status"]
                 outcome = {"pass": "acquired", "not_found": "not_found", "fail": "invalid",
                            "retryable_error": "retryable_error"}[status]
-                mapped = staging.execute(
-                    """select exists(select 1 from card_image_candidate cic
-                         join source_record sr on sr.id=cic.source_record_id
-                         join provider_entity_mapping pem on pem.provider_id=sr.provider_id
-                          and pem.provider_record_id=sr.provider_record_id
-                          and pem.entity_type='card_variant' and pem.entity_id=cic.card_variant_id
-                        where cic.id=?)""", (row["candidate_id"],),
-                ).fetchone()[0]
-                provider_type = staging.execute(
-                    "select provider_type from source_provider where id=?", (row["provider_id"],),
-                ).fetchone()[0]
+                mapped = row["candidate_id"] in mapped_candidate_ids
+                provider_type = provider_types[row["provider_id"]]
                 known_watermark = row["provider_id"] == "pokellector-english-gap-evidence"
                 technical = json.loads(row["result_json"] or "{}")
                 evidence = {
