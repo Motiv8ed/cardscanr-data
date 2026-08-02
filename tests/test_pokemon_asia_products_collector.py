@@ -78,3 +78,25 @@ def test_parse_product_information_and_legacy_lyt_product() -> None:
     rows = parse_product_page(html, "https://example.test/product/")
     assert rows[0]["metadata"]["contents"] == ["60 cards"]
     assert rows[1]["local_name"].endswith("Classic")
+
+
+def test_parse_article_detail_card_archive_page() -> None:
+    html = """
+    <article class="article-detail article-detail--card">
+      <h1 class="article-detail__title">Booster Pack Seri Pertama (Set A)</h1>
+      <figure class="article-detail__mv"><img src="/id/archive/pack.png"></figure>
+      <div class="article-detail__content"><p>Booster pack for advanced players.</p>
+        <table class="article-detail__information-table">
+          <tr><th>Seri:</th><td>Seri Sun &amp; Moon</td></tr>
+          <tr><th>Jumlah Kartu:</th><td>Lebih dari 150</td></tr>
+        </table>
+      </div>
+    </article>
+    """
+    rows = parse_product_page(html, "https://asia.pokemon-card.com/id/archive/card/sun_moon_series/1st_booster_pack_seta.html")
+    assert len(rows) == 1
+    assert rows[0]["local_name"] == "Booster Pack Seri Pertama (Set A)"
+    assert rows[0]["product_type"] == "booster_pack"
+    assert rows[0]["image_url"].endswith("/id/archive/pack.png")
+    assert rows[0]["metadata"]["template"] == "article_detail_card"
+    assert rows[0]["metadata"]["fields"]["Seri:"] == "Seri Sun & Moon"

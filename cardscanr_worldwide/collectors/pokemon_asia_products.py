@@ -204,6 +204,23 @@ def parse_product_page(html: str, page_url: str) -> list[dict[str, object]]:
             "image_url": urljoin(page_url, str(image["src"])) if image else None,
             "metadata": {"template": "legacy_lyt_product", "contents": [], "text": text},
         })
+    for article in soup.select("article.article-detail--card"):
+        heading = article.select_one("h1.article-detail__title")
+        if not heading:
+            continue
+        name = heading.get_text(" ", strip=True)
+        image = article.select_one("figure.article-detail__mv img[src]")
+        metadata = _table_metadata(article)
+        metadata["template"] = "article_detail_card"
+        description = article.select_one(".article-detail__content > p")
+        if description:
+            metadata["description"] = description.get_text("\n", strip=True)
+        products.append({
+            "local_name": name,
+            "product_type": product_type(name),
+            "image_url": urljoin(page_url, str(image["src"])) if image else None,
+            "metadata": metadata,
+        })
     deduplicated: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
     for product in products:
