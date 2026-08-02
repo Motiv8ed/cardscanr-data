@@ -22,11 +22,19 @@ def _file_sha256(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def build_report(database: Path) -> dict[str, Any]:
+def build_report(
+    database: Path,
+    *,
+    integrity_mode: str = "full",
+    include_database_sha256: bool = True,
+) -> dict[str, Any]:
+    if integrity_mode not in {"full", "quick"}:
+        raise ValueError("integrity_mode must be 'full' or 'quick'")
     connection = sqlite3.connect(database)
     connection.row_factory = sqlite3.Row
     try:
-        integrity = connection.execute("pragma integrity_check").fetchone()[0]
+        integrity_sql = "pragma integrity_check" if integrity_mode == "full" else "pragma quick_check"
+        integrity = connection.execute(integrity_sql).fetchone()[0]
         foreign_key_failures = [list(row) for row in connection.execute("pragma foreign_key_check").fetchall()]
         counts = {}
         for table in (
@@ -218,12 +226,12 @@ def build_report(database: Path) -> dict[str, Any]:
             1 for row in expected_language_matrix
             if row["officially_printed"] and row["printings"] == 0
         )
-        return {
+        report = {
             "schema_version": 1,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "database": str(database.resolve()),
             "database_bytes": database.stat().st_size,
-            "database_sha256": _file_sha256(database),
+            "integrity_mode": integrity_mode,
             "integrity": {
                 "sqlite_integrity_check": integrity,
                 "foreign_key_failure_count": len(foreign_key_failures),
@@ -301,6 +309,11 @@ def build_report(database: Path) -> dict[str, Any]:
                 order by issue_class, status, language_code, region_code
             """),
         }
+        if include_database_sha256:
+            report["database_sha256"] = _file_sha256(database)
+        else:
+            report["database_sha256"] = None
+        return report
     finally:
         connection.close()
 

@@ -1,8 +1,8 @@
 # Worldwide open-dataset staging report
 
-- Generated: `2026-08-02T05:05:50.901103+00:00`
-- Database bytes: `2,004,836,352`
-- Database SHA-256: `97c3dabeeed3fbd6d01fee7bf2df9ca39ba0f5c90791a1131278b718da3370bb`
+- Generated: `2026-08-02T12:47:26.274277+00:00`
+- Database bytes: `3,266,912,256`
+- Database SHA-256: `None`
 - SQLite integrity: `ok`
 - Foreign-key failures: `0`
 
@@ -10,32 +10,32 @@
 
 | Entity | Rows |
 |---|---:|
-| source_provider | 24 |
-| import_run | 27 |
-| source_snapshot | 27 |
-| source_record | 155,253 |
-| series | 67 |
-| card_set | 1,753 |
-| set_release | 3,019 |
-| card_design | 114,458 |
-| card_printing | 222,088 |
-| card_variant | 359,173 |
-| card_localisation | 216,343 |
-| attack | 253,287 |
-| ability | 33,461 |
+| source_provider | 28 |
+| import_run | 50 |
+| source_snapshot | 47 |
+| source_record | 240,088 |
+| series | 68 |
+| card_set | 1,952 |
+| set_release | 3,218 |
+| card_design | 188,833 |
+| card_printing | 296,463 |
+| card_variant | 433,548 |
+| card_localisation | 290,718 |
+| attack | 364,604 |
+| ability | 34,914 |
 | marketplace_mapping | 323,303 |
-| provider_entity_mapping | 145,688 |
-| card_image_candidate | 423,992 |
-| sealed_product | 4,284 |
-| sealed_product_variant | 4,284 |
-| product_content | 109,860 |
-| product_image_candidate | 9,218 |
-| image_validation_result | 57,847 |
-| image_acquisition_attempt | 34,391 |
+| provider_entity_mapping | 313,773 |
+| card_image_candidate | 507,478 |
+| sealed_product | 4,618 |
+| sealed_product_variant | 4,618 |
+| product_content | 49,492 |
+| product_image_candidate | 9,781 |
+| image_validation_result | 156,167 |
+| image_acquisition_attempt | 132,711 |
 | publication_run | 1 |
 | publication_artifact | 9 |
 | accessory | 1,649 |
-| unresolved_item | 119,586 |
+| unresolved_item | 120,467 |
 
 ## Language and region coverage
 
@@ -43,31 +43,31 @@
 |---|---|---:|---:|---:|---:|---:|
 | de | INTL | 187 | 20,865 | 46,221 | 20,865 | 0 |
 | en | INTL | 393 | 43,984 | 71,066 | 43,949 | 0 |
-| en | MY | 45 | 0 | 0 | 0 | 0 |
-| en | PH | 45 | 0 | 0 | 0 | 0 |
-| en | SG | 45 | 0 | 0 | 0 | 0 |
+| en | MY | 45 | 7,406 | 7,406 | 7,406 | 0 |
+| en | PH | 45 | 7,406 | 7,406 | 7,406 | 0 |
+| en | SG | 45 | 7,406 | 7,406 | 7,406 | 0 |
 | es | INTL | 158 | 17,020 | 31,732 | 17,020 | 0 |
 | es-mx | MX | 14 | 1,827 | 5,366 | 1,827 | 0 |
 | fr | INTL | 204 | 21,604 | 46,877 | 21,604 | 2 |
 | id | ID | 176 | 15,113 | 15,626 | 15,113 | 0 |
 | it | INTL | 194 | 17,817 | 32,938 | 17,817 | 0 |
-| ja | JP | 221 | 10,729 | 20,429 | 10,729 | 5 |
+| ja | JP | 420 | 24,771 | 34,471 | 24,771 | 5 |
 | ko | KR | 257 | 4,646 | 4,646 | 4,646 | 0 |
 | nl | INTL | 3 | 228 | 228 | 228 | 0 |
 | pl | INTL | 2 | 130 | 130 | 130 | 0 |
-| pt | INTL | 129 | 15,050 | 29,765 | 15,050 | 27 |
+| pt | BR | 129 | 15,050 | 29,765 | 15,050 | 27 |
 | pt-br | BR | 11 | 1,124 | 1,124 | 1,124 | 2 |
 | ru | INTL | 9 | 185 | 185 | 185 | 0 |
-| th | TH | 159 | 2,994 | 3,507 | 2,994 | 0 |
+| th | TH | 159 | 12,548 | 13,061 | 12,548 | 0 |
 | zh-cn | CN | 394 | 41,185 | 41,233 | 41,185 | 0 |
-| zh-tw | HK | 132 | 0 | 0 | 0 | 0 |
-| zh-tw | TW | 241 | 7,587 | 8,100 | 7,587 | 0 |
+| zh-tw | HK | 132 | 14,285 | 14,285 | 14,285 | 0 |
+| zh-tw | TW | 241 | 21,863 | 22,376 | 21,863 | 0 |
 
 ## Publication readiness
 
 | Gate | Value |
 |---|---:|
-| collector_number_collision_groups | 10,753 |
+| collector_number_collision_groups | 12,481 |
 | classified_collector_collision_groups | 10,466 |
 | collector_collision_groups_needing_review | 0 |
 | secret_bearing_card_image_urls | 0 |
@@ -75,49 +75,49 @@
 | secret_bearing_source_payloads | 0 |
 | secret_bearing_product_payloads | 0 |
 | transient_only_product_image_candidates | 3,106 |
-| open_unresolved_items | 74,272 |
-| unclassified_unresolved_items | 74,361 |
+| open_unresolved_items | 37 |
+| unclassified_unresolved_items | 37 |
 | external_blocker_state_mismatches | 0 |
-| external_blocker_items | 63 |
+| external_blocker_items | 38,399 |
 | running_import_runs | 0 |
 | orphan_product_contents | 0 |
 | missing_core_provenance | 0 |
-| unexplained_official_release_shortfalls | 1,162 |
-| unclassified_regional_variants | 5,745 |
-| failed_image_validation_results | 59 |
-| not_found_image_acquisition_attempts | 54 |
+| unexplained_official_release_shortfalls | 659 |
+| unclassified_regional_variants | 0 |
+| failed_image_validation_results | 62 |
+| not_found_image_acquisition_attempts | 55 |
 | active_publication_runs | 0 |
-| officially_printed_languages_without_records | 1 |
+| officially_printed_languages_without_records | 0 |
 
 ### Card images
 
 | Total printings | With candidate | Technically verified | App eligible |
 |---:|---:|---:|---:|
-| 222,088 | 216,343 | 26,771 | 26,771 |
+| 296,463 | 290,718 | 118,594 | 118,594 |
 
 ### Product images
 
 | Product variants | With candidate | Technically verified | App eligible |
 |---:|---:|---:|---:|
-| 4,284 | 3,484 | 1,382 | 1,189 |
+| 4,618 | 4,047 | 3,889 | 3,696 |
 
 ## Enumerated language matrix
 
 | Language | Expected regions | Printings | Status |
 |---|---|---:|---|
-| en | US, CA, GB, AU, NZ, SG, MY, PH | 43,984 | present |
-| ja | JP | 10,729 | present |
+| en | US, CA, GB, AU, NZ, SG, MY, PH | 66,202 | present |
+| ja | JP | 24,771 | present |
 | ko | KR | 4,646 | present |
 | zh-cn | CN | 41,185 | present |
-| zh-tw | TW, HK | 7,587 | present |
-| th | TH | 2,994 | present |
+| zh-tw | TW, HK | 36,148 | present |
+| th | TH | 12,548 | present |
 | id | ID | 15,113 | present |
 | fr | FR, CA, BE, CH | 21,604 | present |
 | de | DE, AT, CH | 20,865 | present |
 | es | ES, LATAM | 17,020 | present |
 | es-mx | MX | 1,827 | present |
 | it | IT, CH | 17,817 | present |
-| pt | BR, PT | 15,050 | present |
+| pt | BR | 15,050 | present |
 | pt-br | BR | 1,124 | present |
 | pt-pt | PT | 0 | enumerated_zero_printings |
 | nl | NL, BE | 228 | present |
@@ -133,15 +133,34 @@
 | cardscanr-missing-image-registry | missing_image_record | 2,907 | 0 |
 | cardscanr-regional-roster-derivations | derived_card_roster | 5,745 | 0 |
 | pokellector-english-gap-evidence | card_image_evidence | 50 | 0 |
+| pokemon-asia-hk-official | card | 14,285 | 0 |
 | pokemon-asia-hk-official | product | 132 | 0 |
+| pokemon-asia-hk-official | release_filter | 132 | 0 |
+| pokemon-asia-hk-products-official | product | 187 | 0 |
 | pokemon-asia-id-official | card | 12,325 | 0 |
 | pokemon-asia-id-official | product | 93 | 0 |
+| pokemon-asia-id-official | release_filter | 93 | 0 |
+| pokemon-asia-id-products-official | product | 102 | 0 |
+| pokemon-asia-my-official | card | 7,406 | 0 |
 | pokemon-asia-my-official | product | 45 | 0 |
+| pokemon-asia-my-official | release_filter | 45 | 0 |
+| pokemon-asia-ph-official | card | 7,406 | 0 |
 | pokemon-asia-ph-official | product | 45 | 0 |
+| pokemon-asia-ph-official | release_filter | 45 | 0 |
+| pokemon-asia-sg-official | card | 7,406 | 0 |
 | pokemon-asia-sg-official | product | 45 | 0 |
+| pokemon-asia-sg-official | release_filter | 45 | 0 |
+| pokemon-asia-th-official | card | 9,554 | 0 |
 | pokemon-asia-th-official | product | 82 | 0 |
+| pokemon-asia-th-official | release_filter | 82 | 0 |
+| pokemon-asia-th-products-official | product | 98 | 0 |
+| pokemon-asia-tw-official | card | 14,276 | 0 |
 | pokemon-asia-tw-official | product | 132 | 0 |
+| pokemon-asia-tw-official | release_filter | 132 | 0 |
+| pokemon-asia-tw-products-official | product | 186 | 0 |
 | pokemon-cn-official | sealed_product | 162 | 0 |
+| pokemon-japan-cards-official | card | 23,156 | 0 |
+| pokemon-japan-cards-official | set | 199 | 0 |
 | pokemon-japan-products-official | sealed_product | 1,947 | 0 |
 | pokemon-korea-official-archive | card | 3,570 | 0 |
 | pokemon-korea-official-archive | set | 114 | 0 |

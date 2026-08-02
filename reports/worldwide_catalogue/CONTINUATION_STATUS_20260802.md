@@ -1,6 +1,6 @@
 # Worldwide catalogue continuation status
 
-- Generated: `2026-08-02T12:37:00+00:00`
+- Generated: `2026-08-02T12:45:00+00:00`
 - Branch: `feature/worldwide-pokemon-catalogue-products-20260802`
 - Worktree: `D:\CardScanR_worktrees\worldwide_catalogue_products_20260802`
 - Runtime: `D:\CardScanR_worldwide_runtime_20260802`
@@ -14,9 +14,9 @@
 | A Secure interrupted work | complete |
 | B Asia card acquisition | complete for id/th/hk/tw/sg/my/ph |
 | C Asia card images | complete except documented residuals |
-| D Sealed products | Asia galleries expanded; 729 variants still lack pass images |
-| E External blockers | European Incapsula + SG/MY/PH gallery absence documented |
-| F–J Release / app | not started in this continuation |
+| D Sealed products | Asia galleries expanded; **729** variants without pass images now release-classified |
+| E External blockers | Europe Incapsula + SG/MY/PH gallery absence + product-image classes registered |
+| F–J Release / app | staging report refreshed (`--quick`); canary/Supabase/Flutter not started |
 
 ## Asia card images (staging)
 
@@ -34,20 +34,26 @@
 
 - Sealed product variants: 4618
 - With pass validation: 3889
-- Without: 729 (see `PRODUCT_IMAGE_GAP_BREAKDOWN_20260802.md`)
+- Without: 729 → see `PRODUCT_IMAGE_GAP_RELEASE_CLASSIFICATION_20260802.md`
+- Classification rollup: **719** `blocked_external`, **10** `classified_nonblocking` (parser noise)
 
-## Key commits this continuation
+| Class | Count |
+|---|---:|
+| asia_expansion_sku_no_pack_art_url | 326 |
+| historical_theme_deck_no_image_source | 188 |
+| china_product_image_transient_only | 162 |
+| china_community_product_image_rights_blocked | 24 |
+| product_parser_false_positive | 10 |
+| asia_local_product_gallery_unavailable | 9 |
+| us_product_gap_evidence_no_image | 7 |
+| asia_gallery_invalid_or_placeholder_asset | 2 |
+| japan_accessory_product_no_image | 1 |
 
-- Asia product HTML parsers and gallery expansion
-- SG/MY shared-inventory hydration from PH
-- HK/TW/TH/PH/SG/MY card acquisition + image validation
-- PNG text-chunk limit fix for official Asia assets
-- Gap / residual reports under `reports/worldwide_catalogue/`
+CN note: direct `image.pokemon.com.cn` URLs return HTML; only page-issued fetch URLs yield PNG bytes (`acquired_transient`).
 
 ## Next actions
 
-1. Finish regenerating `OPEN_DATASET_STAGING_20260802` report (in progress).
-2. Classify remaining 729 product-image gaps and China transient cohort for release-gate.
-3. Keep European localized DB / product gaps as explicit external blockers (no CAPTCHA bypass).
-4. Rebuild publication bundle + immutable R2 canary only after release-gate accepts staging.
-5. Flutter schema 2.1 worktree only after canary passes.
+1. Release-gate audit against refreshed `OPEN_DATASET_STAGING_20260802` + product-image classification.
+2. Keep European localized DB / SG-MY-PH gallery gaps as external blockers (no CAPTCHA bypass).
+3. Rebuild publication bundle + immutable R2 canary only after release-gate accepts staging.
+4. Flutter schema 2.1 worktree only after canary passes.

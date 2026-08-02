@@ -20,14 +20,24 @@ def main() -> int:
     parser.add_argument("--database", required=True, type=Path)
     parser.add_argument("--json", required=True, type=Path)
     parser.add_argument("--markdown", required=True, type=Path)
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Use pragma quick_check and skip hashing the database file (for large staging DBs).",
+    )
     args = parser.parse_args()
-    report = build_report(args.database.resolve())
+    report = build_report(
+        args.database.resolve(),
+        integrity_mode="quick" if args.quick else "full",
+        include_database_sha256=not args.quick,
+    )
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.markdown.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     args.markdown.write_text(markdown(report), encoding="utf-8")
     print(json.dumps({"json": str(args.json.resolve()), "markdown": str(args.markdown.resolve()),
-                      "counts": report["counts"], "integrity": report["integrity"]}, indent=2))
+                      "counts": report["counts"], "integrity": report["integrity"],
+                      "integrity_mode": report.get("integrity_mode")}, indent=2))
     return 0 if report["integrity"]["sqlite_integrity_check"] == "ok" and not report["integrity"]["foreign_key_failure_count"] else 1
 
 

@@ -1,41 +1,41 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-08-02T05:05:50.901103+00:00",
+  "generated_at_utc": "2026-08-02T12:47:26.274277+00:00",
   "database": "D:\\CardScanR_worldwide_runtime_20260802\\staging\\worldwide-catalogue.sqlite",
-  "database_bytes": 2004836352,
-  "database_sha256": "97c3dabeeed3fbd6d01fee7bf2df9ca39ba0f5c90791a1131278b718da3370bb",
+  "database_bytes": 3266912256,
+  "integrity_mode": "quick",
   "integrity": {
     "sqlite_integrity_check": "ok",
     "foreign_key_failure_count": 0,
     "foreign_key_failures": []
   },
   "counts": {
-    "source_provider": 24,
-    "import_run": 27,
-    "source_snapshot": 27,
-    "source_record": 155253,
-    "series": 67,
-    "card_set": 1753,
-    "set_release": 3019,
-    "card_design": 114458,
-    "card_printing": 222088,
-    "card_variant": 359173,
-    "card_localisation": 216343,
-    "attack": 253287,
-    "ability": 33461,
+    "source_provider": 28,
+    "import_run": 50,
+    "source_snapshot": 47,
+    "source_record": 240088,
+    "series": 68,
+    "card_set": 1952,
+    "set_release": 3218,
+    "card_design": 188833,
+    "card_printing": 296463,
+    "card_variant": 433548,
+    "card_localisation": 290718,
+    "attack": 364604,
+    "ability": 34914,
     "marketplace_mapping": 323303,
-    "provider_entity_mapping": 145688,
-    "card_image_candidate": 423992,
-    "sealed_product": 4284,
-    "sealed_product_variant": 4284,
-    "product_content": 109860,
-    "product_image_candidate": 9218,
-    "image_validation_result": 57847,
-    "image_acquisition_attempt": 34391,
+    "provider_entity_mapping": 313773,
+    "card_image_candidate": 507478,
+    "sealed_product": 4618,
+    "sealed_product_variant": 4618,
+    "product_content": 49492,
+    "product_image_candidate": 9781,
+    "image_validation_result": 156167,
+    "image_acquisition_attempt": 132711,
     "publication_run": 1,
     "publication_artifact": 9,
     "accessory": 1649,
-    "unresolved_item": 119586
+    "unresolved_item": 120467
   },
   "source_records": [
     {
@@ -70,8 +70,26 @@
     },
     {
       "provider_id": "pokemon-asia-hk-official",
+      "record_type": "card",
+      "records": 14285,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
       "record_type": "product",
       "records": 132,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
+      "record_type": "release_filter",
+      "records": 132,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "record_type": "product",
+      "records": 187,
       "errors": 0
     },
     {
@@ -87,9 +105,39 @@
       "errors": 0
     },
     {
+      "provider_id": "pokemon-asia-id-official",
+      "record_type": "release_filter",
+      "records": 93,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "record_type": "product",
+      "records": 102,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "record_type": "card",
+      "records": 7406,
+      "errors": 0
+    },
+    {
       "provider_id": "pokemon-asia-my-official",
       "record_type": "product",
       "records": 45,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "record_type": "release_filter",
+      "records": 45,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "record_type": "card",
+      "records": 7406,
       "errors": 0
     },
     {
@@ -99,9 +147,33 @@
       "errors": 0
     },
     {
+      "provider_id": "pokemon-asia-ph-official",
+      "record_type": "release_filter",
+      "records": 45,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "record_type": "card",
+      "records": 7406,
+      "errors": 0
+    },
+    {
       "provider_id": "pokemon-asia-sg-official",
       "record_type": "product",
       "records": 45,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "record_type": "release_filter",
+      "records": 45,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "record_type": "card",
+      "records": 9554,
       "errors": 0
     },
     {
@@ -111,15 +183,57 @@
       "errors": 0
     },
     {
+      "provider_id": "pokemon-asia-th-official",
+      "record_type": "release_filter",
+      "records": 82,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "record_type": "product",
+      "records": 98,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "record_type": "card",
+      "records": 14276,
+      "errors": 0
+    },
+    {
       "provider_id": "pokemon-asia-tw-official",
       "record_type": "product",
       "records": 132,
       "errors": 0
     },
     {
+      "provider_id": "pokemon-asia-tw-official",
+      "record_type": "release_filter",
+      "records": 132,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "record_type": "product",
+      "records": 186,
+      "errors": 0
+    },
+    {
       "provider_id": "pokemon-cn-official",
       "record_type": "sealed_product",
       "records": 162,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "record_type": "card",
+      "records": 23156,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "record_type": "set",
+      "records": 199,
       "errors": 0
     },
     {
@@ -462,6 +576,213 @@
       "completed_at": "2026-08-02T04:47:31.180151+00:00",
       "counters_json": "{\"cards\":12325,\"products\":93}",
       "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "status": "completed",
+      "input_sha256": "f212ca0582d767a6cd14a728114b453d1dd5b3f1ff74f3cdcd102572205b0b4d",
+      "started_at": "2026-08-02T05:35:51.720575+00:00",
+      "completed_at": "2026-08-02T05:36:20.148179+00:00",
+      "counters_json": "{\"cards_without_set_code\":9,\"created_printings\":14042,\"created_set_releases\":199,\"image_candidates\":23156,\"matched_printings\":9114,\"matched_set_releases\":127}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "status": "completed",
+      "input_sha256": "f212ca0582d767a6cd14a728114b453d1dd5b3f1ff74f3cdcd102572205b0b4d",
+      "started_at": "2026-08-02T06:10:37.497749+00:00",
+      "completed_at": "2026-08-02T06:11:18.494005+00:00",
+      "counters_json": "{\"cards_without_set_code\":9,\"created_printings\":1500,\"image_candidates\":23156,\"matched_printings\":21656,\"matched_set_releases\":326}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-official",
+      "status": "completed",
+      "input_sha256": "299146b25ef0a2cd47be89d246986d0f675c86c0784ca82afa3f4c97be5a4509",
+      "started_at": "2026-08-02T06:15:39.034092+00:00",
+      "completed_at": "2026-08-02T06:16:02.513310+00:00",
+      "counters_json": "{\"cards\":12325,\"products\":93}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "status": "completed",
+      "input_sha256": "41cbaab69155eacfd5373c64685ad075dd4945ffef63503332a2f0c3ea64842e",
+      "started_at": "2026-08-02T06:22:19.786634+00:00",
+      "completed_at": "2026-08-02T06:22:19.798423+00:00",
+      "counters_json": "{\"contents\":15,\"image_candidates\":33,\"products\":33,\"unparsed_pages\":38}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-official",
+      "status": "completed",
+      "input_sha256": "299146b25ef0a2cd47be89d246986d0f675c86c0784ca82afa3f4c97be5a4509",
+      "started_at": "2026-08-02T08:47:41.408391+00:00",
+      "completed_at": "2026-08-02T08:48:00.238614+00:00",
+      "counters_json": "{\"cards\":12325,\"products\":93}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "status": "completed",
+      "input_sha256": "d8d1868a74e743c2fb67dc02e9ac0449ed225df369ac0807f09b4c789e019502",
+      "started_at": "2026-08-02T08:48:01.425351+00:00",
+      "completed_at": "2026-08-02T08:48:14.359390+00:00",
+      "counters_json": "{\"cards\":9554,\"products\":82}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "status": "completed",
+      "input_sha256": "9225b35c8b966d6d7fb6f2afa6205b116b7d2dac0f4dc1d3cac58a68eb312082",
+      "started_at": "2026-08-02T08:48:16.265634+00:00",
+      "completed_at": "2026-08-02T08:48:24.930664+00:00",
+      "counters_json": "{\"cards\":7406,\"products\":45}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "status": "completed",
+      "input_sha256": "c4458ba94c80f1975c0f8751bd231a0f4947ee43f5911966bf273387d2595130",
+      "started_at": "2026-08-02T08:48:26.182609+00:00",
+      "completed_at": "2026-08-02T08:48:34.639590+00:00",
+      "counters_json": "{\"cards\":7406,\"products\":45}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "status": "completed",
+      "input_sha256": "cba999fa532b82e413787f9486bfd3676713de96c46ec179c801e0ef0a9d1dc9",
+      "started_at": "2026-08-02T08:48:35.972748+00:00",
+      "completed_at": "2026-08-02T08:48:44.474780+00:00",
+      "counters_json": "{\"cards\":7406,\"products\":45}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "status": "completed",
+      "input_sha256": "c97ee5a8a9f90ba9bf64945cb8e121281f501eea9988b7e09949fac3681f5587",
+      "started_at": "2026-08-02T08:52:10.024924+00:00",
+      "completed_at": "2026-08-02T08:52:10.039516+00:00",
+      "counters_json": "{\"contents\":15,\"image_candidates\":54,\"products\":57,\"unparsed_pages\":34}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "status": "completed",
+      "input_sha256": "4eddc297033b9295dbadb404a3471dc9e9de86d833957e6ddb8ee1fa9f366155",
+      "started_at": "2026-08-02T08:52:10.608379+00:00",
+      "completed_at": "2026-08-02T08:52:10.620816+00:00",
+      "counters_json": "{\"contents\":8,\"image_candidates\":58,\"products\":59,\"unparsed_pages\":38}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "status": "completed",
+      "input_sha256": "c2a4818c6951ad8ca83bf74937ad1111e3ed6c49ffc49a5391c9a8275c804053",
+      "started_at": "2026-08-02T08:55:01.169540+00:00",
+      "completed_at": "2026-08-02T08:55:01.184107+00:00",
+      "counters_json": "{\"contents\":15,\"image_candidates\":86,\"products\":89,\"unparsed_pages\":16}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "status": "completed",
+      "input_sha256": "a6e1f206f8829181f1c9aea023c7fff28acd3df095b3ac4af2cf4ff56b2e420e",
+      "started_at": "2026-08-02T08:55:01.609837+00:00",
+      "completed_at": "2026-08-02T08:55:01.625457+00:00",
+      "counters_json": "{\"contents\":8,\"image_candidates\":86,\"products\":87,\"unparsed_pages\":21}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "status": "completed",
+      "input_sha256": "0fc5bda04b43d5c856a0b7c149d1c8b351bb7b996da63cfeb4518dc35f6c20f6",
+      "started_at": "2026-08-02T08:56:36.777551+00:00",
+      "completed_at": "2026-08-02T08:56:36.795800+00:00",
+      "counters_json": "{\"contents\":26,\"image_candidates\":89,\"products\":92,\"unparsed_pages\":13}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "status": "completed",
+      "input_sha256": "0b69a09b55768ddd60fc6f4a1b1c8f6deb8c1e9a1421cea01d588ab73a81a2ad",
+      "started_at": "2026-08-02T08:57:35.441410+00:00",
+      "completed_at": "2026-08-02T08:57:35.458698+00:00",
+      "counters_json": "{\"contents\":14,\"image_candidates\":89,\"products\":90,\"unparsed_pages\":18}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "status": "completed",
+      "input_sha256": "a4e8e4515f75df88dad66d167af71110f3a197224aa06d9a7e260f1cbbb7c243",
+      "started_at": "2026-08-02T08:58:49.751567+00:00",
+      "completed_at": "2026-08-02T08:58:49.801020+00:00",
+      "counters_json": "{\"contents\":73,\"image_candidates\":173,\"products\":176,\"unparsed_pages\":23}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "status": "completed",
+      "input_sha256": "85a56008a5270b8075df73c8cb0007dc914f31dd048f9d639c6111fcd5a950ff",
+      "started_at": "2026-08-02T08:58:50.085039+00:00",
+      "completed_at": "2026-08-02T08:58:50.134879+00:00",
+      "counters_json": "{\"contents\":73,\"image_candidates\":172,\"products\":175,\"unparsed_pages\":22}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "status": "completed",
+      "input_sha256": "e0f5268c7224df0f5a4e70872a2ff80bf6997b72ef8f28acef60cb3e935b1856",
+      "started_at": "2026-08-02T09:03:21.563711+00:00",
+      "completed_at": "2026-08-02T09:03:21.582419+00:00",
+      "counters_json": "{\"contents\":26,\"image_candidates\":99,\"products\":102,\"unparsed_pages\":4}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "status": "completed",
+      "input_sha256": "9daf2a558afc9725926e395d0ee489c3fa5827f207d1da16d6b9a56a99118257",
+      "started_at": "2026-08-02T09:03:21.969328+00:00",
+      "completed_at": "2026-08-02T09:03:21.988480+00:00",
+      "counters_json": "{\"contents\":14,\"image_candidates\":97,\"products\":98,\"unparsed_pages\":10}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "status": "completed",
+      "input_sha256": "ba48ec8f0a58a0a8cf756b915b0b2842b821d91da8938b93a6a39ebfee96fb8a",
+      "started_at": "2026-08-02T09:03:22.502716+00:00",
+      "completed_at": "2026-08-02T09:03:22.531758+00:00",
+      "counters_json": "{\"contents\":73,\"image_candidates\":184,\"products\":187,\"unparsed_pages\":12}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "status": "completed",
+      "input_sha256": "a411f2919fdf9654c5535076ce1f4112d497c6d5a17e68a0ac1ae7b51e19e08e",
+      "started_at": "2026-08-02T09:03:22.675395+00:00",
+      "completed_at": "2026-08-02T09:03:22.705469+00:00",
+      "counters_json": "{\"contents\":73,\"image_candidates\":183,\"products\":186,\"unparsed_pages\":11}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "status": "completed",
+      "input_sha256": "bfa0300a14d9eb01f60281de07ddd111a8c7bd9bf9106780d7a8797a2f53f5b2",
+      "started_at": "2026-08-02T09:17:46.173865+00:00",
+      "completed_at": "2026-08-02T09:18:54.196131+00:00",
+      "counters_json": "{\"cards\":14276,\"products\":132}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
+      "status": "completed",
+      "input_sha256": "813a702586ec636382eb1d4753c0ff6ac5b10907b9ac9501306bf09a003c5b3f",
+      "started_at": "2026-08-02T10:58:36.731280+00:00",
+      "completed_at": "2026-08-02T10:59:36.650660+00:00",
+      "counters_json": "{\"cards\":14285,\"products\":132}",
+      "error_summary": null
     }
   ],
   "language_coverage": [
@@ -487,27 +808,27 @@
       "language_code": "en",
       "region_code": "MY",
       "sets": 45,
-      "printings": 0,
-      "variants": 0,
-      "unknown_variants": 0,
+      "printings": 7406,
+      "variants": 7406,
+      "unknown_variants": 7406,
       "quarantined_printings": 0
     },
     {
       "language_code": "en",
       "region_code": "PH",
       "sets": 45,
-      "printings": 0,
-      "variants": 0,
-      "unknown_variants": 0,
+      "printings": 7406,
+      "variants": 7406,
+      "unknown_variants": 7406,
       "quarantined_printings": 0
     },
     {
       "language_code": "en",
       "region_code": "SG",
       "sets": 45,
-      "printings": 0,
-      "variants": 0,
-      "unknown_variants": 0,
+      "printings": 7406,
+      "variants": 7406,
+      "unknown_variants": 7406,
       "quarantined_printings": 0
     },
     {
@@ -558,10 +879,10 @@
     {
       "language_code": "ja",
       "region_code": "JP",
-      "sets": 221,
-      "printings": 10729,
-      "variants": 20429,
-      "unknown_variants": 10729,
+      "sets": 420,
+      "printings": 24771,
+      "variants": 34471,
+      "unknown_variants": 24771,
       "quarantined_printings": 5
     },
     {
@@ -593,7 +914,7 @@
     },
     {
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "sets": 129,
       "printings": 15050,
       "variants": 29765,
@@ -622,9 +943,9 @@
       "language_code": "th",
       "region_code": "TH",
       "sets": 159,
-      "printings": 2994,
-      "variants": 3507,
-      "unknown_variants": 2994,
+      "printings": 12548,
+      "variants": 13061,
+      "unknown_variants": 12548,
       "quarantined_printings": 0
     },
     {
@@ -640,18 +961,18 @@
       "language_code": "zh-tw",
       "region_code": "HK",
       "sets": 132,
-      "printings": 0,
-      "variants": 0,
-      "unknown_variants": 0,
+      "printings": 14285,
+      "variants": 14285,
+      "unknown_variants": 14285,
       "quarantined_printings": 0
     },
     {
       "language_code": "zh-tw",
       "region_code": "TW",
       "sets": 241,
-      "printings": 7587,
-      "variants": 8100,
-      "unknown_variants": 7587,
+      "printings": 21863,
+      "variants": 22376,
+      "unknown_variants": 21863,
       "quarantined_printings": 0
     }
   ],
@@ -686,12 +1007,12 @@
       "language_code": "en",
       "region_code": "MY",
       "releases": 45,
-      "populated_releases": 0,
-      "zero_printing_releases": 45,
+      "populated_releases": 45,
+      "zero_printing_releases": 0,
       "declared_official_cards": 7406,
-      "normalized_printings": 0,
-      "exact_count_releases": 0,
-      "shortfall_releases": 45,
+      "normalized_printings": 7406,
+      "exact_count_releases": 45,
+      "shortfall_releases": 0,
       "excess_releases": 0,
       "unknown_count_releases": 0
     },
@@ -699,12 +1020,12 @@
       "language_code": "en",
       "region_code": "PH",
       "releases": 45,
-      "populated_releases": 0,
-      "zero_printing_releases": 45,
+      "populated_releases": 45,
+      "zero_printing_releases": 0,
       "declared_official_cards": 7406,
-      "normalized_printings": 0,
-      "exact_count_releases": 0,
-      "shortfall_releases": 45,
+      "normalized_printings": 7406,
+      "exact_count_releases": 45,
+      "shortfall_releases": 0,
       "excess_releases": 0,
       "unknown_count_releases": 0
     },
@@ -712,12 +1033,12 @@
       "language_code": "en",
       "region_code": "SG",
       "releases": 45,
-      "populated_releases": 0,
-      "zero_printing_releases": 45,
+      "populated_releases": 45,
+      "zero_printing_releases": 0,
       "declared_official_cards": 7406,
-      "normalized_printings": 0,
-      "exact_count_releases": 0,
-      "shortfall_releases": 45,
+      "normalized_printings": 7406,
+      "exact_count_releases": 45,
+      "shortfall_releases": 0,
       "excess_releases": 0,
       "unknown_count_releases": 0
     },
@@ -789,14 +1110,14 @@
     {
       "language_code": "ja",
       "region_code": "JP",
-      "releases": 221,
-      "populated_releases": 108,
-      "zero_printing_releases": 113,
-      "declared_official_cards": 17564,
-      "normalized_printings": 10729,
-      "exact_count_releases": 31,
-      "shortfall_releases": 115,
-      "excess_releases": 75,
+      "releases": 420,
+      "populated_releases": 353,
+      "zero_printing_releases": 67,
+      "declared_official_cards": 26937,
+      "normalized_printings": 24771,
+      "exact_count_releases": 139,
+      "shortfall_releases": 97,
+      "excess_releases": 184,
       "unknown_count_releases": 0
     },
     {
@@ -840,7 +1161,7 @@
     },
     {
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "releases": 129,
       "populated_releases": 115,
       "zero_printing_releases": 14,
@@ -881,12 +1202,12 @@
       "language_code": "th",
       "region_code": "TH",
       "releases": 159,
-      "populated_releases": 32,
-      "zero_printing_releases": 127,
+      "populated_releases": 114,
+      "zero_printing_releases": 45,
       "declared_official_cards": 17197,
-      "normalized_printings": 2994,
-      "exact_count_releases": 13,
-      "shortfall_releases": 131,
+      "normalized_printings": 12548,
+      "exact_count_releases": 95,
+      "shortfall_releases": 49,
       "excess_releases": 15,
       "unknown_count_releases": 0
     },
@@ -907,12 +1228,12 @@
       "language_code": "zh-tw",
       "region_code": "HK",
       "releases": 132,
-      "populated_releases": 0,
-      "zero_printing_releases": 132,
+      "populated_releases": 132,
+      "zero_printing_releases": 0,
       "declared_official_cards": 14285,
-      "normalized_printings": 0,
-      "exact_count_releases": 0,
-      "shortfall_releases": 132,
+      "normalized_printings": 14285,
+      "exact_count_releases": 132,
+      "shortfall_releases": 0,
       "excess_releases": 0,
       "unknown_count_releases": 0
     },
@@ -920,12 +1241,12 @@
       "language_code": "zh-tw",
       "region_code": "TW",
       "releases": 241,
-      "populated_releases": 84,
-      "zero_printing_releases": 157,
+      "populated_releases": 216,
+      "zero_printing_releases": 25,
       "declared_official_cards": 24080,
-      "normalized_printings": 7587,
-      "exact_count_releases": 47,
-      "shortfall_releases": 159,
+      "normalized_printings": 21863,
+      "exact_count_releases": 179,
+      "shortfall_releases": 27,
       "excess_releases": 35,
       "unknown_count_releases": 0
     }
@@ -945,9 +1266,9 @@
         "PH"
       ],
       "sets": 528,
-      "printings": 43984,
-      "variants": 71066,
-      "unknown_variants": 43949,
+      "printings": 66202,
+      "variants": 93284,
+      "unknown_variants": 66167,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -957,10 +1278,10 @@
       "expected_regions": [
         "JP"
       ],
-      "sets": 221,
-      "printings": 10729,
-      "variants": 20429,
-      "unknown_variants": 10729,
+      "sets": 420,
+      "printings": 24771,
+      "variants": 34471,
+      "unknown_variants": 24771,
       "quarantined_printings": 5,
       "inventory_status": "present"
     },
@@ -998,9 +1319,9 @@
         "HK"
       ],
       "sets": 373,
-      "printings": 7587,
-      "variants": 8100,
-      "unknown_variants": 7587,
+      "printings": 36148,
+      "variants": 36661,
+      "unknown_variants": 36148,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -1011,9 +1332,9 @@
         "TH"
       ],
       "sets": 159,
-      "printings": 2994,
-      "variants": 3507,
-      "unknown_variants": 2994,
+      "printings": 12548,
+      "variants": 13061,
+      "unknown_variants": 12548,
       "quarantined_printings": 0,
       "inventory_status": "present"
     },
@@ -1106,8 +1427,7 @@
       "language_code": "pt",
       "officially_printed": true,
       "expected_regions": [
-        "BR",
-        "PT"
+        "BR"
       ],
       "sets": 129,
       "printings": 15050,
@@ -1131,7 +1451,7 @@
     },
     {
       "language_code": "pt-pt",
-      "officially_printed": true,
+      "officially_printed": false,
       "expected_regions": [
         "PT"
       ],
@@ -1184,19 +1504,19 @@
     }
   ],
   "image_readiness": {
-    "total_printings": 222088,
-    "with_candidate": 216343,
-    "technically_verified": 26771,
-    "app_eligible": 26771
+    "total_printings": 296463,
+    "with_candidate": 290718,
+    "technically_verified": 118594,
+    "app_eligible": 118594
   },
   "product_image_readiness": {
-    "total_product_variants": 4284,
-    "with_candidate": 3484,
-    "technically_verified": 1382,
-    "app_eligible": 1189
+    "total_product_variants": 4618,
+    "with_candidate": 4047,
+    "technically_verified": 3889,
+    "app_eligible": 3696
   },
   "publication_gates": {
-    "collector_number_collision_groups": 10753,
+    "collector_number_collision_groups": 12481,
     "classified_collector_collision_groups": 10466,
     "collector_collision_groups_needing_review": 0,
     "secret_bearing_card_image_urls": 0,
@@ -1204,26 +1524,26 @@
     "secret_bearing_source_payloads": 0,
     "secret_bearing_product_payloads": 0,
     "transient_only_product_image_candidates": 3106,
-    "open_unresolved_items": 74272,
-    "unclassified_unresolved_items": 74361,
+    "open_unresolved_items": 37,
+    "unclassified_unresolved_items": 37,
     "external_blocker_state_mismatches": 0,
-    "external_blocker_items": 63,
+    "external_blocker_items": 38399,
     "running_import_runs": 0,
     "orphan_product_contents": 0,
     "missing_core_provenance": 0,
-    "unexplained_official_release_shortfalls": 1162,
-    "unclassified_regional_variants": 5745,
-    "failed_image_validation_results": 59,
-    "not_found_image_acquisition_attempts": 54,
+    "unexplained_official_release_shortfalls": 659,
+    "unclassified_regional_variants": 0,
+    "failed_image_validation_results": 62,
+    "not_found_image_acquisition_attempts": 55,
     "active_publication_runs": 0,
-    "officially_printed_languages_without_records": 1
+    "officially_printed_languages_without_records": 0
   },
   "provider_entity_counts": [
     {
       "provider_id": "pokemon-asia-hk-official",
       "sets": 132,
-      "printings": 0,
-      "variants": 0
+      "printings": 14285,
+      "variants": 14285
     },
     {
       "provider_id": "pokemon-asia-id-official",
@@ -1234,32 +1554,38 @@
     {
       "provider_id": "pokemon-asia-my-official",
       "sets": 45,
-      "printings": 0,
-      "variants": 0
+      "printings": 7406,
+      "variants": 7406
     },
     {
       "provider_id": "pokemon-asia-ph-official",
       "sets": 45,
-      "printings": 0,
-      "variants": 0
+      "printings": 7406,
+      "variants": 7406
     },
     {
       "provider_id": "pokemon-asia-sg-official",
       "sets": 45,
-      "printings": 0,
-      "variants": 0
+      "printings": 7406,
+      "variants": 7406
     },
     {
       "provider_id": "pokemon-asia-th-official",
       "sets": 82,
-      "printings": 0,
-      "variants": 0
+      "printings": 9554,
+      "variants": 9554
     },
     {
       "provider_id": "pokemon-asia-tw-official",
       "sets": 132,
-      "printings": 0,
-      "variants": 0
+      "printings": 14276,
+      "variants": 14276
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "sets": 199,
+      "printings": 9323,
+      "variants": 9323
     },
     {
       "provider_id": "pokemon-korea-official-archive",
@@ -1288,8 +1614,8 @@
     {
       "provider_id": "tcgdex-cards-database",
       "sets": 554,
-      "printings": 147314,
-      "variants": 284399
+      "printings": 152033,
+      "variants": 289118
     }
   ],
   "mapping_counts": [
@@ -1351,17 +1677,38 @@
     },
     {
       "provider_id": "pokemon-asia-hk-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 14285
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 132
+      "mappings": 264
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 14285
     },
     {
       "provider_id": "pokemon-asia-hk-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 132
+      "mappings": 112
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "entity_type": "sealed_product",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 187
     },
     {
       "provider_id": "pokemon-asia-id-official",
@@ -1375,7 +1722,7 @@
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 93
+      "mappings": 186
     },
     {
       "provider_id": "pokemon-asia-id-official",
@@ -1389,77 +1736,168 @@
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 93
+      "mappings": 87
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "entity_type": "sealed_product",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 102
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-my-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 90
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-my-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 3
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-ph-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 90
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-ph-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 3
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-sg-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 90
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 7406
     },
     {
       "provider_id": "pokemon-asia-sg-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 45
+      "mappings": 3
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 9554
     },
     {
       "provider_id": "pokemon-asia-th-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 82
+      "mappings": 164
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 9554
     },
     {
       "provider_id": "pokemon-asia-th-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 82
+      "mappings": 15
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "entity_type": "sealed_product",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 98
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "entity_type": "card_printing",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 14276
     },
     {
       "provider_id": "pokemon-asia-tw-official",
       "entity_type": "card_set",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 132
+      "mappings": 264
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "entity_type": "card_variant",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 14276
     },
     {
       "provider_id": "pokemon-asia-tw-official",
       "entity_type": "sealed_product",
       "match_method": "direct_official_record",
       "mapping_status": "verified",
-      "mappings": 132
+      "mappings": 112
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "entity_type": "sealed_product",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 186
     },
     {
       "provider_id": "pokemon-cn-official",
@@ -1467,6 +1905,27 @@
       "match_method": "direct_official_record",
       "mapping_status": "verified",
       "mappings": 162
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "entity_type": "card_printing",
+      "match_method": "set_collector_exact",
+      "mapping_status": "verified",
+      "mappings": 23156
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "entity_type": "card_set",
+      "match_method": "direct_official_record",
+      "mapping_status": "verified",
+      "mappings": 199
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "entity_type": "card_variant",
+      "match_method": "official_depiction",
+      "mapping_status": "verified",
+      "mappings": 23156
     },
     {
       "provider_id": "pokemon-japan-products-official",
@@ -1632,11 +2091,74 @@
       "images": 50
     },
     {
-      "provider_id": "pokemon-asia-id-official",
+      "provider_id": "pokemon-asia-hk-official",
       "rights_status": "link_only",
       "validation_status": "candidate",
       "image_role": "display",
+      "images": 9
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 14276
+    },
+    {
+      "provider_id": "pokemon-asia-id-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
       "images": 12325
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "rights_status": "link_only",
+      "validation_status": "invalid",
+      "image_role": "display",
+      "images": 1
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 9553
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 14276
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "rights_status": "link_only",
+      "validation_status": "verified",
+      "image_role": "display",
+      "images": 23153
     },
     {
       "provider_id": "pokemon-korea-official-archive",
@@ -1739,11 +2261,130 @@
       "attempts": 50
     },
     {
+      "provider_id": "pokemon-asia-hk-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 14276
+    },
+    {
+      "provider_id": "pokemon-asia-hk-official",
+      "entity_type": "card_variant",
+      "outcome": "retryable_error",
+      "http_status": 403,
+      "attempts": 9
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 184
+    },
+    {
+      "provider_id": "pokemon-asia-id-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 12325
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 99
+    },
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-ph-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-sg-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 7406
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 9553
+    },
+    {
+      "provider_id": "pokemon-asia-th-official",
+      "entity_type": "card_variant",
+      "outcome": "invalid",
+      "http_status": 200,
+      "attempts": 1
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 96
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "invalid",
+      "http_status": 200,
+      "attempts": 1
+    },
+    {
+      "provider_id": "pokemon-asia-tw-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 14276
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 182
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "not_found",
+      "http_status": 404,
+      "attempts": 1
+    },
+    {
       "provider_id": "pokemon-cn-official",
       "entity_type": "sealed_product_variant",
       "outcome": "acquired",
       "http_status": 200,
       "attempts": 3106
+    },
+    {
+      "provider_id": "pokemon-japan-cards-official",
+      "entity_type": "card_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 23153
+    },
+    {
+      "provider_id": "pokemon-japan-products-official",
+      "entity_type": "sealed_product_variant",
+      "outcome": "acquired",
+      "http_status": 200,
+      "attempts": 1946
     },
     {
       "provider_id": "pokemon-korea-official-archive",
@@ -1812,13 +2453,18 @@
   "image_validation_results": [
     {
       "validator": "cardscanr-card-image-technical",
+      "status": "fail",
+      "validations": 1
+    },
+    {
+      "validator": "cardscanr-card-image-technical",
       "status": "pass",
-      "validations": 3564
+      "validations": 99365
     },
     {
       "validator": "cardscanr-card-image-technical",
       "status": "warning",
-      "validations": 50
+      "validations": 59
     },
     {
       "validator": "cardscanr-preserved-r2-manifest",
@@ -1833,12 +2479,12 @@
     {
       "validator": "cardscanr-product-image-technical",
       "status": "fail",
-      "validations": 10
+      "validations": 12
     },
     {
       "validator": "cardscanr-product-image-technical",
       "status": "pass",
-      "validations": 4156
+      "validations": 6663
     },
     {
       "validator": "cardscanr-product-image-technical",
@@ -1875,12 +2521,6 @@
     },
     {
       "provider_id": "pokemon-asia-hk-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 20
-    },
-    {
-      "provider_id": "pokemon-asia-hk-official",
       "product_type": "promotional_pack",
       "verification_status": "verified",
       "products": 4
@@ -1898,16 +2538,52 @@
       "products": 30
     },
     {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "binder",
+      "verification_status": "verified",
+      "products": 2
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "booster_pack",
+      "verification_status": "verified",
+      "products": 55
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "collection_box",
+      "verification_status": "verified",
+      "products": 8
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "multi_pack",
+      "verification_status": "verified",
+      "products": 6
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "official_product",
+      "verification_status": "verified",
+      "products": 87
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "starter_deck",
+      "verification_status": "verified",
+      "products": 7
+    },
+    {
+      "provider_id": "pokemon-asia-hk-products-official",
+      "product_type": "theme_deck",
+      "verification_status": "verified",
+      "products": 22
+    },
+    {
       "provider_id": "pokemon-asia-id-official",
       "product_type": "booster_pack",
       "verification_status": "verified",
       "products": 52
-    },
-    {
-      "provider_id": "pokemon-asia-id-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 6
     },
     {
       "provider_id": "pokemon-asia-id-official",
@@ -1928,10 +2604,34 @@
       "products": 12
     },
     {
-      "provider_id": "pokemon-asia-my-official",
-      "product_type": "official_card_product",
+      "provider_id": "pokemon-asia-id-products-official",
+      "product_type": "booster_pack",
       "verification_status": "verified",
-      "products": 42
+      "products": 54
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "product_type": "collection_box",
+      "verification_status": "verified",
+      "products": 2
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "product_type": "multi_pack",
+      "verification_status": "verified",
+      "products": 4
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "product_type": "official_product",
+      "verification_status": "verified",
+      "products": 24
+    },
+    {
+      "provider_id": "pokemon-asia-id-products-official",
+      "product_type": "starter_deck",
+      "verification_status": "verified",
+      "products": 18
     },
     {
       "provider_id": "pokemon-asia-my-official",
@@ -1941,33 +2641,15 @@
     },
     {
       "provider_id": "pokemon-asia-ph-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 42
-    },
-    {
-      "provider_id": "pokemon-asia-ph-official",
       "product_type": "promotional_pack",
       "verification_status": "verified",
       "products": 3
     },
     {
       "provider_id": "pokemon-asia-sg-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 42
-    },
-    {
-      "provider_id": "pokemon-asia-sg-official",
       "product_type": "promotional_pack",
       "verification_status": "verified",
       "products": 3
-    },
-    {
-      "provider_id": "pokemon-asia-th-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 67
     },
     {
       "provider_id": "pokemon-asia-th-official",
@@ -1976,16 +2658,40 @@
       "products": 15
     },
     {
+      "provider_id": "pokemon-asia-th-products-official",
+      "product_type": "booster_pack",
+      "verification_status": "verified",
+      "products": 50
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "product_type": "collection_box",
+      "verification_status": "verified",
+      "products": 2
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "product_type": "official_product",
+      "verification_status": "verified",
+      "products": 21
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "product_type": "starter_deck",
+      "verification_status": "verified",
+      "products": 20
+    },
+    {
+      "provider_id": "pokemon-asia-th-products-official",
+      "product_type": "theme_deck",
+      "verification_status": "verified",
+      "products": 5
+    },
+    {
       "provider_id": "pokemon-asia-tw-official",
       "product_type": "booster_pack",
       "verification_status": "verified",
       "products": 68
-    },
-    {
-      "provider_id": "pokemon-asia-tw-official",
-      "product_type": "official_card_product",
-      "verification_status": "verified",
-      "products": 20
     },
     {
       "provider_id": "pokemon-asia-tw-official",
@@ -2004,6 +2710,48 @@
       "product_type": "theme_deck",
       "verification_status": "verified",
       "products": 30
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "binder",
+      "verification_status": "verified",
+      "products": 2
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "booster_pack",
+      "verification_status": "verified",
+      "products": 54
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "collection_box",
+      "verification_status": "verified",
+      "products": 8
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "multi_pack",
+      "verification_status": "verified",
+      "products": 6
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "official_product",
+      "verification_status": "verified",
+      "products": 87
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "starter_deck",
+      "verification_status": "verified",
+      "products": 7
+    },
+    {
+      "provider_id": "pokemon-asia-tw-products-official",
+      "product_type": "theme_deck",
+      "verification_status": "verified",
+      "products": 22
     },
     {
       "provider_id": "pokemon-cn-official",
@@ -2291,17 +3039,17 @@
     {
       "language_code": "en",
       "region_code": "MY",
-      "product_variants": 45
+      "product_variants": 3
     },
     {
       "language_code": "en",
       "region_code": "PH",
-      "product_variants": 45
+      "product_variants": 3
     },
     {
       "language_code": "en",
       "region_code": "SG",
-      "product_variants": 45
+      "product_variants": 3
     },
     {
       "language_code": "en",
@@ -2311,7 +3059,7 @@
     {
       "language_code": "id",
       "region_code": "ID",
-      "product_variants": 93
+      "product_variants": 189
     },
     {
       "language_code": "ja",
@@ -2326,7 +3074,7 @@
     {
       "language_code": "th",
       "region_code": "TH",
-      "product_variants": 82
+      "product_variants": 113
     },
     {
       "language_code": "zh-cn",
@@ -2336,12 +3084,12 @@
     {
       "language_code": "zh-tw",
       "region_code": "HK",
-      "product_variants": 132
+      "product_variants": 299
     },
     {
       "language_code": "zh-tw",
       "region_code": "TW",
-      "product_variants": 132
+      "product_variants": 298
     }
   ],
   "provider_rights": [
@@ -2359,7 +3107,7 @@
     },
     {
       "rights_status": "metadata_only",
-      "providers": 13
+      "providers": 17
     },
     {
       "rights_status": "noncommercial_no_redistribution",
@@ -2376,11 +3124,88 @@
   ],
   "unresolved": [
     {
+      "issue_class": "asia_expansion_sku_no_pack_art_url",
+      "status": "blocked_external",
+      "language_code": "id",
+      "region_code": "ID",
+      "items": 87
+    },
+    {
+      "issue_class": "asia_expansion_sku_no_pack_art_url",
+      "status": "blocked_external",
+      "language_code": "th",
+      "region_code": "TH",
+      "items": 15
+    },
+    {
+      "issue_class": "asia_expansion_sku_no_pack_art_url",
+      "status": "blocked_external",
+      "language_code": "zh-tw",
+      "region_code": "HK",
+      "items": 112
+    },
+    {
+      "issue_class": "asia_expansion_sku_no_pack_art_url",
+      "status": "blocked_external",
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "items": 112
+    },
+    {
+      "issue_class": "asia_gallery_invalid_or_placeholder_asset",
+      "status": "blocked_external",
+      "language_code": "th",
+      "region_code": "TH",
+      "items": 1
+    },
+    {
+      "issue_class": "asia_gallery_invalid_or_placeholder_asset",
+      "status": "blocked_external",
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "items": 1
+    },
+    {
+      "issue_class": "asia_local_product_gallery_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "MY",
+      "items": 3
+    },
+    {
+      "issue_class": "asia_local_product_gallery_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "PH",
+      "items": 3
+    },
+    {
+      "issue_class": "asia_local_product_gallery_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "SG",
+      "items": 3
+    },
+    {
       "issue_class": "card_image_identity_review",
       "status": "blocked_external",
       "language_code": "en",
       "region_code": "INTL",
       "items": 50
+    },
+    {
+      "issue_class": "china_community_product_image_rights_blocked",
+      "status": "blocked_external",
+      "language_code": "zh-cn",
+      "region_code": "CN",
+      "items": 24
+    },
+    {
+      "issue_class": "china_product_image_transient_only",
+      "status": "blocked_external",
+      "language_code": "zh-cn",
+      "region_code": "CN",
+      "items": 162
     },
     {
       "issue_class": "collector_number_collision",
@@ -2412,21 +3237,42 @@
     },
     {
       "issue_class": "existing_r2_image_identity_review",
-      "status": "needs_review",
+      "status": "blocked_external",
       "language_code": "en",
       "region_code": "INTL",
       "items": 37
     },
     {
-      "issue_class": "missing_card_image",
-      "status": "open",
+      "issue_class": "historical_theme_deck_no_image_source",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "INTL",
+      "items": 188
+    },
+    {
+      "issue_class": "japan_accessory_product_no_image",
+      "status": "blocked_external",
       "language_code": "ja",
       "region_code": "JP",
-      "items": 2857
+      "items": 1
+    },
+    {
+      "issue_class": "missing_card_image",
+      "status": "blocked_external",
+      "language_code": "ja",
+      "region_code": "JP",
+      "items": 2184
+    },
+    {
+      "issue_class": "missing_card_image",
+      "status": "resolved",
+      "language_code": "ja",
+      "region_code": "JP",
+      "items": 673
     },
     {
       "issue_class": "missing_official_local_name",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "zh-cn",
       "region_code": "CN",
       "items": 18001
@@ -2447,52 +3293,17 @@
     },
     {
       "issue_class": "official_count_shortfall",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "zh-cn",
       "region_code": "CN",
       "items": 4
     },
     {
       "issue_class": "official_detail_not_collected",
-      "status": "open",
-      "language_code": "en",
-      "region_code": "PH",
-      "items": 3540
-    },
-    {
-      "issue_class": "official_detail_not_collected",
-      "status": "open",
-      "language_code": "ja",
-      "region_code": "JP",
-      "items": 22234
-    },
-    {
-      "issue_class": "official_detail_not_collected",
-      "status": "open",
-      "language_code": "th",
-      "region_code": "TH",
-      "items": 3531
-    },
-    {
-      "issue_class": "official_detail_not_collected",
-      "status": "open",
-      "language_code": "zh-tw",
-      "region_code": "HK",
-      "items": 1577
-    },
-    {
-      "issue_class": "official_detail_not_collected",
-      "status": "open",
-      "language_code": "zh-tw",
-      "region_code": "TW",
-      "items": 5220
-    },
-    {
-      "issue_class": "official_detail_not_collected",
       "status": "resolved",
       "language_code": "en",
       "region_code": "PH",
-      "items": 3866
+      "items": 7406
     },
     {
       "issue_class": "official_detail_not_collected",
@@ -2506,32 +3317,32 @@
       "status": "resolved",
       "language_code": "ja",
       "region_code": "JP",
-      "items": 931
+      "items": 23165
     },
     {
       "issue_class": "official_detail_not_collected",
       "status": "resolved",
       "language_code": "th",
       "region_code": "TH",
-      "items": 6023
+      "items": 9554
     },
     {
       "issue_class": "official_detail_not_collected",
       "status": "resolved",
       "language_code": "zh-tw",
       "region_code": "HK",
-      "items": 1965
+      "items": 3542
     },
     {
       "issue_class": "official_detail_not_collected",
       "status": "resolved",
       "language_code": "zh-tw",
       "region_code": "TW",
-      "items": 9056
+      "items": 14276
     },
     {
       "issue_class": "official_product_detail_unavailable",
-      "status": "documented_exhausted",
+      "status": "blocked_external",
       "language_code": "ko",
       "region_code": "KR",
       "items": 89
@@ -2544,179 +3355,432 @@
       "items": 525
     },
     {
+      "issue_class": "official_product_page_unparsed",
+      "status": "needs_review",
+      "language_code": "id",
+      "region_code": "ID",
+      "items": 4
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "needs_review",
+      "language_code": "th",
+      "region_code": "TH",
+      "items": 10
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "needs_review",
+      "language_code": "zh-tw",
+      "region_code": "HK",
+      "items": 12
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "needs_review",
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "items": 11
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "resolved",
+      "language_code": "id",
+      "region_code": "ID",
+      "items": 34
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "resolved",
+      "language_code": "th",
+      "region_code": "TH",
+      "items": 28
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "resolved",
+      "language_code": "zh-tw",
+      "region_code": "HK",
+      "items": 11
+    },
+    {
+      "issue_class": "official_product_page_unparsed",
+      "status": "resolved",
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "items": 11
+    },
+    {
+      "issue_class": "official_set_membership_unavailable",
+      "status": "blocked_external",
+      "language_code": "ja",
+      "region_code": "JP",
+      "items": 9
+    },
+    {
+      "issue_class": "product_parser_false_positive",
+      "status": "classified_nonblocking",
+      "language_code": "id",
+      "region_code": "ID",
+      "items": 3
+    },
+    {
+      "issue_class": "product_parser_false_positive",
+      "status": "classified_nonblocking",
+      "language_code": "th",
+      "region_code": "TH",
+      "items": 1
+    },
+    {
+      "issue_class": "product_parser_false_positive",
+      "status": "classified_nonblocking",
+      "language_code": "zh-tw",
+      "region_code": "HK",
+      "items": 3
+    },
+    {
+      "issue_class": "product_parser_false_positive",
+      "status": "classified_nonblocking",
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "items": 3
+    },
+    {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "de",
       "region_code": "INTL",
       "items": 606
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "es",
       "region_code": "INTL",
       "items": 1582
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "it",
       "region_code": "INTL",
       "items": 2296
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "nl",
       "region_code": "INTL",
       "items": 228
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pl",
       "region_code": "INTL",
       "items": 130
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "items": 718
     },
     {
       "issue_class": "regional_card_image_missing",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "ru",
       "region_code": "INTL",
       "items": 185
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "de",
       "region_code": "INTL",
       "items": 606
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "es",
       "region_code": "INTL",
       "items": 1582
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "it",
       "region_code": "INTL",
       "items": 2296
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "nl",
       "region_code": "INTL",
       "items": 228
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pl",
       "region_code": "INTL",
       "items": 130
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "items": 718
     },
     {
       "issue_class": "regional_card_metadata_unverified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "ru",
       "region_code": "INTL",
       "items": 185
     },
     {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "de",
+      "region_code": "AT",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "de",
+      "region_code": "CH",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "de",
+      "region_code": "DE",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "AU",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "CA",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "GB",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "NZ",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "es",
+      "region_code": "ES",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "es",
+      "region_code": "LATAM",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "es-mx",
+      "region_code": "MX",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "fr",
+      "region_code": "BE",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "fr",
+      "region_code": "CA",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "fr",
+      "region_code": "CH",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "fr",
+      "region_code": "FR",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "it",
+      "region_code": "CH",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "it",
+      "region_code": "IT",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "nl",
+      "region_code": "BE",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "nl",
+      "region_code": "NL",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "pl",
+      "region_code": "PL",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "pt",
+      "region_code": "BR",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "pt-br",
+      "region_code": "BR",
+      "items": 1
+    },
+    {
+      "issue_class": "regional_sealed_product_catalogue_unavailable",
+      "status": "blocked_external",
+      "language_code": "ru",
+      "region_code": "RU",
+      "items": 1
+    },
+    {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "de",
       "region_code": "INTL",
       "items": 606
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "es",
       "region_code": "INTL",
       "items": 1582
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "it",
       "region_code": "INTL",
       "items": 2296
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "nl",
       "region_code": "INTL",
       "items": 228
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pl",
       "region_code": "INTL",
       "items": 130
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "items": 718
     },
     {
       "issue_class": "regional_variant_unclassified",
-      "status": "open",
+      "status": "blocked_external",
       "language_code": "ru",
       "region_code": "INTL",
       "items": 185
     },
     {
       "issue_class": "source_text_quality",
-      "status": "needs_review",
+      "status": "blocked_external",
       "language_code": "fr",
       "region_code": "INTL",
       "items": 2
     },
     {
       "issue_class": "source_text_quality",
-      "status": "needs_review",
+      "status": "blocked_external",
       "language_code": "ja",
       "region_code": "JP",
       "items": 5
     },
     {
       "issue_class": "source_text_quality",
-      "status": "needs_review",
+      "status": "blocked_external",
       "language_code": "pt",
-      "region_code": "INTL",
+      "region_code": "BR",
       "items": 27
     },
     {
       "issue_class": "source_text_quality",
-      "status": "needs_review",
+      "status": "blocked_external",
       "language_code": "pt-br",
       "region_code": "BR",
       "items": 2
+    },
+    {
+      "issue_class": "us_product_gap_evidence_no_image",
+      "status": "blocked_external",
+      "language_code": "en",
+      "region_code": "US",
+      "items": 7
     }
-  ]
+  ],
+  "database_sha256": null
 }
