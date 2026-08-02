@@ -62,6 +62,12 @@ def is_cardscanr_url(url: str) -> bool:
 def iter_checkpoint_assets(checkpoint: Path, entity_kind: str) -> Iterator[Asset]:
     connection = sqlite3.connect(f"file:{checkpoint.resolve().as_posix()}?mode=ro", uri=True)
     try:
+        # Avoid full-table scans on huge pending-only checkpoints.
+        has_pass = connection.execute(
+            "select 1 from assets where status = 'pass' limit 1"
+        ).fetchone()
+        if has_pass is None:
+            return
         rows = connection.execute(
             """
             select source_url, sha256, cache_path, coalesce(byte_size, 0), content_type
@@ -91,13 +97,24 @@ def iter_checkpoint_assets(checkpoint: Path, entity_kind: str) -> Iterator[Asset
 
 def discover_assets() -> list[Asset]:
     by_sha: dict[str, Asset] = {}
-    for checkpoint in sorted(RUNTIME.glob("card_image_validation*/checkpoint.sqlite")):
+    # Prefer regional pass checkpoints; skip accidental nested runtimes.
+    checkpoints = sorted(
+        path
+        for path in RUNTIME.glob("card_image_validation*/checkpoint.sqlite")
+        if "accidental_nested" not in path.as_posix()
+        # Root EN probe DB is pending-only (~411k rows) and has no pass assets.
+        and path.parent.name != "card_image_validation"
+    )
+    for checkpoint in checkpoints:
+        print(f"discover {checkpoint.parent.name}", flush=True)
         for asset in iter_checkpoint_assets(checkpoint, "card"):
             by_sha.setdefault(asset.sha256, asset)
     product_checkpoint = RUNTIME / "product_image_validation" / "checkpoint.sqlite"
     if product_checkpoint.is_file():
+        print("discover product_image_validation", flush=True)
         for asset in iter_checkpoint_assets(product_checkpoint, "product"):
             by_sha.setdefault(asset.sha256, asset)
+    print(f"discover complete unique={len(by_sha)}", flush=True)
     return list(by_sha.values())
 
 
@@ -261,82 +278,88 @@ def main() -> int:
             "source_size": source_size,
         }
 
+    batch_size = max(args.workers * 8, 64)
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        futures = {pool.submit(process_one, asset): asset for asset in pending}
-        for future in as_completed(futures):
-            asset = futures[future]
-            try:
-                result = future.result()
-                with lock:
-                    done += 1
-                    source_bytes += int(result["source_size"])
-                    display_bytes_total += len(result["display_data"])
-                    thumb_bytes_total += len(result["thumb_data"])
-                    if result["status"] == "uploaded":
-                        uploaded += 1
-                        display_url = public_url(public_base, result["display_key"])
-                        thumb_url = public_url(public_base, result["thumb_key"])
-                        checkpoint.execute(
-                            """
-                            insert or replace into mirrored(
-                              sha256, source_url, entity_kind, display_key, thumb_key, display_url, thumb_url,
-                              source_bytes, display_bytes, thumb_bytes, technical_status, rights_status, mirrored_at
-                            ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)
-                            """,
-                            (
-                                asset.sha256,
-                                asset.source_url,
-                                asset.entity_kind,
-                                result["display_key"],
-                                result["thumb_key"],
-                                display_url,
-                                thumb_url,
-                                int(result["source_size"]),
-                                len(result["display_data"]),
-                                len(result["thumb_data"]),
-                                "mirrored_to_r2",
-                                "unknown",
-                                utc_iso(),
-                            ),
-                        )
-                        if uploaded % 20 == 0:
+        for batch_start in range(0, len(pending), batch_size):
+            batch = pending[batch_start : batch_start + batch_size]
+            futures = {pool.submit(process_one, asset): asset for asset in batch}
+            for future in as_completed(futures):
+                asset = futures[future]
+                try:
+                    result = future.result()
+                    with lock:
+                        done += 1
+                        source_bytes += int(result["source_size"])
+                        display_bytes_total += len(result["display_data"])
+                        thumb_bytes_total += len(result["thumb_data"])
+                        if result["status"] == "uploaded":
+                            uploaded += 1
+                            display_url = public_url(public_base, result["display_key"])
+                            thumb_url = public_url(public_base, result["thumb_key"])
+                            checkpoint.execute(
+                                """
+                                insert or replace into mirrored(
+                                  sha256, source_url, entity_kind, display_key, thumb_key, display_url, thumb_url,
+                                  source_bytes, display_bytes, thumb_bytes, technical_status, rights_status, mirrored_at
+                                ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                """,
+                                (
+                                    asset.sha256,
+                                    asset.source_url,
+                                    asset.entity_kind,
+                                    result["display_key"],
+                                    result["thumb_key"],
+                                    display_url,
+                                    thumb_url,
+                                    int(result["source_size"]),
+                                    len(result["display_data"]),
+                                    len(result["thumb_data"]),
+                                    "mirrored_to_r2",
+                                    "unknown",
+                                    utc_iso(),
+                                ),
+                            )
+                            if uploaded % 20 == 0:
+                                checkpoint.commit()
+                        elif result["status"] == "dry_run":
+                            skipped += 1
+                        if done % 50 == 0 or done == len(pending):
                             checkpoint.commit()
-                    elif result["status"] == "dry_run":
-                        skipped += 1
-                    if done % 50 == 0 or done == len(pending):
-                        checkpoint.commit()
-                        print(
-                            json.dumps(
-                                {
-                                    "progress": done,
-                                    "pending": len(pending),
-                                    "total": len(assets),
-                                    "uploaded": uploaded,
-                                    "skipped": skipped,
-                                    "failed": failed,
-                                }
-                            ),
-                            flush=True,
+                            print(
+                                json.dumps(
+                                    {
+                                        "progress": done,
+                                        "pending": len(pending),
+                                        "total": len(assets),
+                                        "uploaded": uploaded,
+                                        "skipped": skipped,
+                                        "failed": failed,
+                                    }
+                                ),
+                                flush=True,
+                            )
+                except Exception as exc:  # noqa: BLE001 - continue batch
+                    with lock:
+                        failed += 1
+                        done += 1
+                        failures.append(
+                            {"sha256": asset.sha256, "error": repr(exc), "path": str(asset.cache_path)}
                         )
-            except Exception as exc:  # noqa: BLE001 - continue batch
-                with lock:
-                    failed += 1
-                    done += 1
-                    failures.append({"sha256": asset.sha256, "error": repr(exc), "path": str(asset.cache_path)})
-                    if done % 50 == 0 or done == len(pending):
-                        print(
-                            json.dumps(
-                                {
-                                    "progress": done,
-                                    "pending": len(pending),
-                                    "total": len(assets),
-                                    "uploaded": uploaded,
-                                    "skipped": skipped,
-                                    "failed": failed,
-                                }
-                            ),
-                            flush=True,
-                        )
+                        if done % 50 == 0 or done == len(pending):
+                            print(
+                                json.dumps(
+                                    {
+                                        "progress": done,
+                                        "pending": len(pending),
+                                        "total": len(assets),
+                                        "uploaded": uploaded,
+                                        "skipped": skipped,
+                                        "failed": failed,
+                                    }
+                                ),
+                                flush=True,
+                            )
+            checkpoint.commit()
     checkpoint.commit()
 
     report = {
