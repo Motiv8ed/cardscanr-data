@@ -152,12 +152,20 @@ class Collector:
 
     def enumerate_products(self, max_pages: int = 200) -> list[str]:
         products: set[str] = set()
+        seen_articles: set[str] = set()
         for page in range(1, max_pages + 1):
             url = f"{BASE}/tcg" if page == 1 else f"{BASE}/tcg/p/{page}"
-            content = self.fetch(url)
+            try:
+                content = self.fetch(url)
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code == 404:
+                    break
+                raise
             product_links, article_links = parse_index(content.decode("utf-8"))
             products.update(product_links)
-            if not article_links:
+            new_articles = set(article_links) - seen_articles
+            seen_articles.update(article_links)
+            if not new_articles:
                 break
         category = self.fetch(f"{BASE}/products_category/products")
         category_products, _ = parse_index(category.decode("utf-8"), product_category=True)
