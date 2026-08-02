@@ -369,6 +369,8 @@ create index if not exists image_acquisition_provider_idx
 create index if not exists publication_run_status_idx on publication_run(status, started_at);
 create index if not exists publication_artifact_run_idx on publication_artifact(publication_run_id);
 create index if not exists unresolved_status_idx on unresolved_item(status, issue_class);
+create index if not exists unresolved_entity_issue_idx
+  on unresolved_item(entity_type, entity_id, issue_class);
 """
 
 
