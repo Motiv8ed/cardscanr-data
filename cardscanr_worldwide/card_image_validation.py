@@ -73,6 +73,10 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                           and pem.entity_type='card_variant' and pem.entity_id=cic.card_variant_id
                         where cic.id=?)""", (row["candidate_id"],),
                 ).fetchone()[0]
+                provider_type = staging.execute(
+                    "select provider_type from source_provider where id=?", (row["provider_id"],),
+                ).fetchone()[0]
+                known_watermark = row["provider_id"] == "pokellector-english-gap-evidence"
                 technical = json.loads(row["result_json"] or "{}")
                 evidence = {
                     "http_status": row["http_status"], "content_type": row["content_type"],
@@ -87,7 +91,7 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                     (attempt_id, "card_variant", row["variant_id"], row["provider_id"], row["source_url"],
                      row["attempted_at"], row["http_status"], outcome, canonical_json(evidence)),
                 )
-                validation_status = "pass" if status == "pass" and mapped else (
+                validation_status = "pass" if status == "pass" and mapped and not known_watermark else (
                     "warning" if status in ("pass", "retryable_error") else "fail"
                 )
                 validation_id = stable_id("card-image-validation", row["candidate_id"], VALIDATOR)
@@ -103,8 +107,13 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                                                           **evidence},
                          "identity_match": {"status": "pass" if mapped else "warning",
                                             "provider_entity_mapping": bool(mapped)},
-                         "watermark_or_seller_background": {"status": "not_applicable",
-                                                              "basis": "official provider asset"},
+                         "watermark_or_seller_background": (
+                             {"status": "fail", "basis": "known Pokellector scan watermark"}
+                             if known_watermark else
+                             {"status": "not_applicable", "basis": "official provider asset"}
+                             if provider_type in ("official", "official_archive") else
+                             {"status": "not_evaluated", "basis": "non-official provider candidate"}
+                         ),
                      }), row["attempted_at"]),
                 )
                 if validation_status == "pass":
@@ -115,6 +124,23 @@ def apply_results(database: Path, checkpoint: Path) -> dict[str, int]:
                            where entity_type='card_variant' and entity_id=? and issue_class='missing_card_image'""",
                         (row["variant_id"],),
                     )
+                elif status == "pass" and known_watermark:
+                    staging.execute("update card_image_candidate set validation_status='blocked' where id=?",
+                                    (row["candidate_id"],))
+                    unresolved = staging.execute(
+                        """select id,evidence_json from unresolved_item where entity_type='card_variant'
+                           and entity_id=? and issue_class in ('missing_card_image','card_image_identity_review')""",
+                        (row["variant_id"],),
+                    ).fetchall()
+                    for item in unresolved:
+                        existing = json.loads(item["evidence_json"] or "{}")
+                        existing["exact_public_candidate"] = evidence
+                        existing["remaining_blocker"] = "known_provider_watermark_and_redistribution_permission_pending"
+                        staging.execute(
+                            "update unresolved_item set status='blocked_external',externally_unavoidable=1,evidence_json=? where id=?",
+                            (canonical_json(existing), item["id"]),
+                        )
+                    counters["known_watermark_blockers"] += 1
                 elif status in ("not_found", "fail"):
                     staging.execute("update card_image_candidate set validation_status='invalid' where id=?",
                                     (row["candidate_id"],))

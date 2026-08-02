@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T04:46:32.929058+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\card_image_validation_english_gaps\\checkpoint.sqlite",
+  "status": {
+    "pass": 50
+  },
+  "providers": [
+    {
+      "provider_id": "pokellector-english-gap-evidence",
+      "status": "pass",
+      "distinct_urls": 50,
+      "candidates": 50
+    }
+  ],
+  "failure_classes": [],
+  "cache": {
+    "cached_objects": 50,
+    "observed_bytes": 44088745
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report."
+}
