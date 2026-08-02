@@ -68,7 +68,11 @@ def product_type(name: str) -> str:
 
 def parse_index(html: str, locale: str, page_url: str) -> list[str]:
     soup = BeautifulSoup(html, "html.parser")
-    pattern = re.compile(rf"/{re.escape(locale)}/(?:archives/\d+|archive/special/card/)")
+    # Official Asia product indexes mix WordPress archive posts, special-product
+    # galleries, and older series product pages under /archive/card/.
+    pattern = re.compile(
+        rf"/{re.escape(locale)}/(?:archives/\d+|archive/special/card/|archive/card/)"
+    )
     return sorted({
         urljoin(page_url, str(anchor["href"]))
         for anchor in soup.find_all("a", href=True)

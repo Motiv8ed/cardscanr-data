@@ -2,9 +2,17 @@ from cardscanr_worldwide.collectors.pokemon_asia_products import parse_index, pa
 
 
 def test_parse_product_gallery_index() -> None:
-    html = '<a href="/id/archives/8863/">Product</a><a href="/id/card-search/">Cards</a>'
+    html = (
+        '<a href="/id/archives/8863/">Product</a>'
+        '<a href="/id/archive/special/card/s10/">Special</a>'
+        '<a href="/id/archive/card/sun_moon_series/gx_starter_deck.html">Legacy</a>'
+        '<a href="/id/card-search/">Cards</a>'
+        '<a href="https://tcg.pokemon.com/en-us/expansions/151/">US</a>'
+    )
     assert parse_index(html, "id", "https://asia.pokemon-card.com/id/products/") == [
-        "https://asia.pokemon-card.com/id/archives/8863/"
+        "https://asia.pokemon-card.com/id/archive/card/sun_moon_series/gx_starter_deck.html",
+        "https://asia.pokemon-card.com/id/archive/special/card/s10/",
+        "https://asia.pokemon-card.com/id/archives/8863/",
     ]
 
 
