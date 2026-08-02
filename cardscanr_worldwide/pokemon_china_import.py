@@ -91,7 +91,11 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
         )
         for row in checkpoint.execute("select * from products order by provider_record_id"):
             parsed = json.loads(row["parsed_json"])
-            raw = canonical_json(parsed)
+            sanitized = {**parsed, "images": [
+                {key: value for key, value in image.items() if key != "source_url"}
+                for image in parsed.get("images") or []
+            ]}
+            raw = canonical_json(sanitized)
             source_id = stable_id(PROVIDER_ID, row["provider_record_id"], digest(raw)[:16])
             connection.execute(
                 """insert into source_record values (?, ?, ?, ?, 'sealed_product', ?, null, ?, ?, ?, null)
@@ -127,7 +131,7 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
                 connection.execute(
                     "insert or replace into product_image_candidate values (?, ?, ?, ?, 'display', ?, 'link_only', 'candidate', ?)",
                     (image_id, variant_id, source_id, PROVIDER_ID, url, canonical_json({
-                        "signed_source_url": image["source_url"], "alt": image.get("alt"), "ordinal": ordinal,
+                        "alt": image.get("alt"), "ordinal": ordinal,
                     })),
                 )
                 counters["product_images"] += 1

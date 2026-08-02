@@ -132,6 +132,17 @@ def build_report(database: Path) -> dict[str, Any]:
                  where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'
                     or lower(source_url) like '%apikey=%' or lower(source_url) like '%localhost%'
             """).fetchone()[0],
+            "secret_bearing_source_payloads": connection.execute("""
+                select count(*) from source_record where lower(coalesce(raw_payload_json,'')) like '%auth_key=%'
+                   or lower(coalesce(raw_payload_json,'')) like '%token=%'
+                   or lower(coalesce(raw_payload_json,'')) like '%api_key=%'
+                   or lower(coalesce(raw_payload_json,'')) like '%x-amz-signature=%'
+            """).fetchone()[0],
+            "secret_bearing_product_payloads": connection.execute("""
+                select count(*) from sealed_product where lower(raw_product_json) like '%auth_key=%'
+                   or lower(raw_product_json) like '%token=%' or lower(raw_product_json) like '%api_key=%'
+                   or lower(raw_product_json) like '%x-amz-signature=%'
+            """).fetchone()[0],
             "open_unresolved_items": connection.execute(
                 "select count(*) from unresolved_item where status in ('open','needs_review')"
             ).fetchone()[0],
