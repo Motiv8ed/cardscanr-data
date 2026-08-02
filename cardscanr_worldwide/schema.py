@@ -297,6 +297,7 @@ create index if not exists printing_release_number_idx
 create index if not exists variant_printing_idx on card_variant(card_printing_id);
 create index if not exists provider_mapping_entity_idx on provider_entity_mapping(entity_type, entity_id);
 create index if not exists image_candidate_variant_idx on card_image_candidate(card_variant_id, validation_status);
+create index if not exists image_candidate_source_url_idx on card_image_candidate(source_url);
 create index if not exists product_content_entity_idx on product_content(content_kind, entity_id);
 create index if not exists product_image_candidate_variant_idx
   on product_image_candidate(sealed_product_variant_id, validation_status);

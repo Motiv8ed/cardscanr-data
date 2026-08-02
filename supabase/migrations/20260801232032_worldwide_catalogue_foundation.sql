@@ -460,6 +460,7 @@ create index card_printings_release_collector_idx on public.card_printings(set_r
 create index card_printings_design_idx on public.card_printings(card_design_id);
 create index card_printings_evolves_from_idx on public.card_printings(evolves_from_printing_id);
 create index card_variants_printing_idx on public.card_variants(card_printing_id);
+create index card_images_source_url_idx on public.card_images(source_url);
 create index card_text_localisations_language_idx on public.card_text_localisations(language_code);
 create index card_images_variant_status_idx on public.card_images(card_variant_id, validation_status);
 create index card_images_source_record_idx on public.card_images(source_record_id);
