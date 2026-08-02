@@ -1,7 +1,7 @@
 # Worldwide open-dataset staging report
 
-- Generated: `2026-08-02T12:47:26.274277+00:00`
-- Database bytes: `3,266,912,256`
+- Generated: `2026-08-02T12:54:33.430999+00:00`
+- Database bytes: `3,267,694,592`
 - Database SHA-256: `None`
 - SQLite integrity: `ok`
 - Foreign-key failures: `0`
@@ -35,7 +35,7 @@
 | publication_run | 1 |
 | publication_artifact | 9 |
 | accessory | 1,649 |
-| unresolved_item | 120,467 |
+| unresolved_item | 121,126 |
 
 ## Language and region coverage
 
@@ -75,14 +75,14 @@
 | secret_bearing_source_payloads | 0 |
 | secret_bearing_product_payloads | 0 |
 | transient_only_product_image_candidates | 3,106 |
-| open_unresolved_items | 37 |
-| unclassified_unresolved_items | 37 |
+| open_unresolved_items | 0 |
+| unclassified_unresolved_items | 0 |
 | external_blocker_state_mismatches | 0 |
-| external_blocker_items | 38,399 |
+| external_blocker_items | 39,058 |
 | running_import_runs | 0 |
 | orphan_product_contents | 0 |
 | missing_core_provenance | 0 |
-| unexplained_official_release_shortfalls | 659 |
+| unexplained_official_release_shortfalls | 0 |
 | unclassified_regional_variants | 0 |
 | failed_image_validation_results | 62 |
 | not_found_image_acquisition_attempts | 55 |
