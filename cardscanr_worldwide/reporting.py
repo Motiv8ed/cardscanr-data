@@ -199,7 +199,7 @@ def build_report(database: Path) -> dict[str, Any]:
                 select count(*) from card_variant cv
                  where cv.variant_key='regional-variant-unclassified'
                    and not exists (
-                     select 1 from unresolved_item u where u.entity_id=cv.id
+                     select 1 from unresolved_item u where u.entity_id in (cv.id,cv.card_printing_id)
                        and u.issue_class like '%variant%'
                        and u.status in ('classified_nonblocking','blocked_external')
                    )

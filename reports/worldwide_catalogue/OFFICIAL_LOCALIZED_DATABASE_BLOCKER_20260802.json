@@ -12,7 +12,15 @@
     "serverRenderedSearchResults": true,
     "publicStaticCardImagesObserved": true,
     "publicRosterJsonEndpointFound": false,
-    "autocompleteStatus": 404
+    "autocompleteStatus": 404,
+    "germanProductGallery2017": {
+      "url": "https://www.pokemon.com/de/pokemon-sammelkartenspiel/Produktgalerie/2017",
+      "localizedProductsObserved": 12,
+      "annualGalleryStart": 2014,
+      "annualGalleryEnd": 2026,
+      "officialProductImagesObserved": true,
+      "publicBulkJsonEndpointFound": false
+    }
   },
   "cookieFreeHttpObservations": [
     {
@@ -39,7 +47,8 @@
     "browser_storage_extraction",
     "access_control_bypass"
   ],
-  "recordsImported": 0,
+  "cardRecordsImported": 0,
+  "sealedProductRecordsImported": 0,
   "classification": "external_acquisition_blocker",
   "resumeCondition": "Stable authorized export/API or written permission plus an approved acquisition method"
 }
