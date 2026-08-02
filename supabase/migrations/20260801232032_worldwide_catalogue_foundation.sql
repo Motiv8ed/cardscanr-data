@@ -258,7 +258,9 @@ create table public.card_images (
   original_object_key text,
   display_object_key text,
   thumbnail_object_key text,
-  validation_status text not null default 'candidate' check (validation_status in ('candidate','approved','rejected','blocked','missing')),
+  validation_status text not null default 'candidate' check (validation_status in (
+    'candidate','verified','acquired','published','acquired_transient','invalid','blocked','missing'
+  )),
   language_verified boolean,
   region_verified boolean,
   identity_verified boolean,
@@ -316,7 +318,10 @@ create table public.product_contents (
   id uuid primary key default gen_random_uuid(),
   sealed_product_variant_id text not null references public.sealed_product_variants(id),
   ordinal integer not null check (ordinal >= 0),
-  content_kind text not null check (content_kind in ('set_release','card_variant','sealed_product_variant','accessory','pack','other')),
+  content_kind text not null check (content_kind in (
+    'set_release','card_printing','card_variant','sealed_product_variant','accessory','pack',
+    'booster_pack','promotional_card','constructed_deck','digital_code','card','other'
+  )),
   set_release_id text references public.set_releases(id),
   card_variant_id text references public.card_variants(id),
   nested_product_variant_id text references public.sealed_product_variants(id),
@@ -332,7 +337,9 @@ create table public.product_images (
   sealed_product_variant_id text not null references public.sealed_product_variants(id),
   source_record_id uuid references public.source_records(id),
   source_provider_id text not null references public.source_providers(id),
-  image_role text not null check (image_role in ('front','back','side','contents','pack_art','box_art','display','thumbnail')),
+  image_role text not null check (image_role in (
+    'front','back','side','contents','pack_art','box_art','listing','display','thumbnail'
+  )),
   source_url text not null,
   source_rights_status text not null,
   fetched_at timestamptz,
@@ -345,7 +352,9 @@ create table public.product_images (
   original_object_key text,
   display_object_key text,
   thumbnail_object_key text,
-  validation_status text not null default 'candidate' check (validation_status in ('candidate','approved','rejected','blocked','missing')),
+  validation_status text not null default 'candidate' check (validation_status in (
+    'candidate','verified','acquired','published','acquired_transient','invalid','blocked','missing'
+  )),
   unique (sealed_product_variant_id, image_role, source_provider_id, source_url)
 );
 
@@ -435,7 +444,9 @@ create table public.unresolved_items (
   summary text not null,
   evidence jsonb not null default '{}'::jsonb,
   attempted_providers text[] not null default '{}',
-  status text not null default 'open' check (status in ('open','blocked_external','needs_review','resolved','wont_fix')),
+  status text not null default 'open' check (status in (
+    'open','blocked_external','needs_review','resolved','wont_fix','classified_nonblocking','documented_exhausted'
+  )),
   externally_unavoidable boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
