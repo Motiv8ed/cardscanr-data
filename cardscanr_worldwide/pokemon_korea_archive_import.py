@@ -294,17 +294,23 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
             )
         errors = checkpoint.execute(
             """select provider_record_id,status,error from cards
-                 where status!='parsed' and provider_record_id!='logout' order by provider_record_id""",
+                 where status not in ('parsed','excluded_non_card') and provider_record_id!='logout'
+                 order by provider_record_id""",
         ).fetchall()
         for row in errors:
             unresolved_id = stable_id(PROVIDER_ID, "archive-error", row["provider_record_id"])
+            exhausted = row["status"] == "documented_exhausted"
             connection.execute(
-                "insert or replace into unresolved_item values (?, 'source_card', ?, ?, ?, 'official_archive_collection_error', ?, ?, 'open', 0)",
+                "insert or replace into unresolved_item values (?, 'source_card', ?, ?, ?, 'official_archive_collection_error', ?, ?, ?, ?)",
                 (unresolved_id, row["provider_record_id"], LANGUAGE, REGION,
-                 "An indexed official Korean archive page has not yet been parsed",
-                 canonical_json({"status": row["status"], "error": row["error"]})),
+                 "All accessible live and archived official Korean card pages were exhausted"
+                 if exhausted else "An indexed official Korean archive page has not yet been parsed",
+                 canonical_json({"status": row["status"], "error": row["error"]}),
+                 "blocked_external" if exhausted else "open", 1 if exhausted else 0),
             )
             counters["collection_errors"] += 1
+            if exhausted:
+                counters["documented_exhausted"] += 1
         connection.execute(
             "update import_run set status='completed',counters_json=?,checkpoint_json=?,completed_at=? where id=?",
             (canonical_json(dict(counters)), canonical_json({"complete": not errors}),

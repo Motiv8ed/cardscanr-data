@@ -29,6 +29,11 @@ def test_korea_archive_import_creates_official_printing_and_image(tmp_path) -> N
         ("SVP000000203", parsed["source_url"], "https://web.archive/replay", "20260107185537", "digest",
          json.dumps(parsed, ensure_ascii=False), "sha", "parsed", None, "now"),
     )
+    source.execute(
+        "insert into cards values (?,?,?,?,?,?,?,?,?,?)",
+        ("REMOVED0001", "https://pokemoncard.co.kr/cards/detail/REMOVED0001", None, None, None,
+         None, None, "documented_exhausted", '{"classification":"documented_exhausted"}', "now"),
+    )
     source.commit()
     source.close()
     database = tmp_path / "catalogue.sqlite"
@@ -48,3 +53,6 @@ def test_korea_archive_import_creates_official_printing_and_image(tmp_path) -> N
     assert connection.execute(
         "select count(*) from provider_entity_mapping where provider_id='pokemon-korea-official-archive'"
     ).fetchone()[0] == 3
+    assert connection.execute(
+        "select status,externally_unavoidable from unresolved_item where entity_id='REMOVED0001'"
+    ).fetchone() == ("blocked_external", 1)

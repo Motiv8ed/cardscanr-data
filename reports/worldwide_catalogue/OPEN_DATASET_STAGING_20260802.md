@@ -1,8 +1,8 @@
 # Worldwide open-dataset staging report
 
-- Generated: `2026-08-02T03:00:54.813897+00:00`
-- Database bytes: `1,697,050,624`
-- Database SHA-256: `07699c531141d6d2ad083724531369f2e3efaa58800add86a214beb5d92f1c81`
+- Generated: `2026-08-02T03:08:40.531157+00:00`
+- Database bytes: `1,932,791,808`
+- Database SHA-256: `d57bb5bbdaff11f486bb92fb6a3f56ea4c777205843fc9bf6d79bb1945640bb0`
 - SQLite integrity: `ok`
 - Foreign-key failures: `0`
 
@@ -10,22 +10,22 @@
 
 | Entity | Rows |
 |---|---:|
-| source_provider | 20 |
-| import_run | 22 |
-| source_snapshot | 22 |
-| source_record | 138,612 |
-| series | 66 |
-| card_set | 1,639 |
-| set_release | 2,905 |
-| card_design | 98,850 |
-| card_printing | 206,480 |
-| card_variant | 343,565 |
-| card_localisation | 200,735 |
-| attack | 227,459 |
+| source_provider | 21 |
+| import_run | 23 |
+| source_snapshot | 23 |
+| source_record | 142,296 |
+| series | 67 |
+| card_set | 1,753 |
+| set_release | 3,019 |
+| card_design | 102,133 |
+| card_printing | 209,763 |
+| card_variant | 346,848 |
+| card_localisation | 204,018 |
+| attack | 233,398 |
 | ability | 33,461 |
 | marketplace_mapping | 323,303 |
-| provider_entity_mapping | 113,152 |
-| card_image_candidate | 408,053 |
+| provider_entity_mapping | 120,406 |
+| card_image_candidate | 411,617 |
 | sealed_product | 3,702 |
 | sealed_product_variant | 3,702 |
 | product_content | 106,422 |
@@ -35,7 +35,7 @@
 | publication_run | 1 |
 | publication_artifact | 9 |
 | accessory | 1,649 |
-| unresolved_item | 119,570 |
+| unresolved_item | 119,582 |
 
 ## Language and region coverage
 
@@ -52,7 +52,7 @@
 | id | ID | 176 | 2,788 | 3,301 | 2,788 | 0 |
 | it | INTL | 194 | 17,817 | 32,938 | 17,817 | 0 |
 | ja | JP | 221 | 10,729 | 20,429 | 10,729 | 5 |
-| ko | KR | 143 | 1,363 | 1,363 | 1,363 | 0 |
+| ko | KR | 257 | 4,646 | 4,646 | 4,646 | 0 |
 | nl | INTL | 3 | 228 | 228 | 228 | 0 |
 | pl | INTL | 2 | 130 | 130 | 130 | 0 |
 | pt | INTL | 129 | 15,050 | 29,765 | 15,050 | 27 |
@@ -73,7 +73,7 @@
 | secret_bearing_card_image_urls | 0 |
 | secret_bearing_product_image_urls | 0 |
 | open_unresolved_items | 108,488 |
-| external_blocker_items | 1 |
+| external_blocker_items | 13 |
 | failed_image_validation_results | 49 |
 | not_found_image_acquisition_attempts | 49 |
 | active_publication_runs | 0 |
@@ -82,7 +82,7 @@
 
 | Total printings | With candidate | Technically verified | App eligible |
 |---:|---:|---:|---:|
-| 206,480 | 200,735 | 23,452 | 23,452 |
+| 209,763 | 204,018 | 23,452 | 23,452 |
 
 ### Product images
 
@@ -96,7 +96,7 @@
 |---|---|---:|---|
 | en | US, CA, GB, AU, NZ, SG, MY, PH | 43,984 | present |
 | ja | JP | 10,729 | present |
-| ko | KR | 1,363 | present |
+| ko | KR | 4,646 | present |
 | zh-cn | CN | 41,185 | present |
 | zh-tw | TW, HK | 7,587 | present |
 | th | TH | 2,994 | present |
@@ -130,6 +130,8 @@
 | pokemon-asia-tw-official | product | 132 | 0 |
 | pokemon-cn-official | sealed_product | 162 | 0 |
 | pokemon-japan-products-official | sealed_product | 1,947 | 0 |
+| pokemon-korea-official-archive | card | 3,570 | 0 |
+| pokemon-korea-official-archive | set | 114 | 0 |
 | pokemon-korea-products-official-archive | sealed_product | 1,139 | 0 |
 | pokemon-tcg-kb-pikaqian | card | 18,001 | 0 |
 | pokemon-tcg-kb-pikaqian | set | 120 | 0 |
