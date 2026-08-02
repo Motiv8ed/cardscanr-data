@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-08-02T06:00:00Z",
+  "source": {
+    "name": "Official Pokemon localized card database",
+    "germanEntryUrl": "https://www.pokemon.com/de/karten",
+    "clientScriptUrl": "https://assets.pokemon.com/static2/_ui/js/card-database.js",
+    "autocompletePath": "https://www.pokemon.com/us/api/pokemon-cards/lookups"
+  },
+  "ordinaryBrowserVerification": {
+    "rendered": true,
+    "serverRenderedSearchResults": true,
+    "publicStaticCardImagesObserved": true,
+    "publicRosterJsonEndpointFound": false,
+    "autocompleteStatus": 404
+  },
+  "cookieFreeHttpObservations": [
+    {
+      "locale": "de",
+      "route": "filtered_search",
+      "httpStatus": 200,
+      "byteSize": 458930,
+      "title": "Sammelkarten-Datenbank",
+      "outcome": "one_successful_response"
+    },
+    {
+      "locales": ["de", "es", "it", "pt-BR"],
+      "route": "localized_search",
+      "httpStatus": 200,
+      "byteSize": 6058,
+      "title": "Pardon Our Interruption",
+      "outcome": "access_control_replaced_card_data"
+    }
+  ],
+  "prohibitedMethodsNotUsed": [
+    "captcha_solving",
+    "browser_cookie_or_token_replay",
+    "authenticated_session_automation",
+    "browser_storage_extraction",
+    "access_control_bypass"
+  ],
+  "recordsImported": 0,
+  "classification": "external_acquisition_blocker",
+  "resumeCondition": "Stable authorized export/API or written permission plus an approved acquisition method"
+}
