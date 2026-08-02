@@ -1,0 +1,605 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T00:03:25.080222+00:00",
+  "database": "D:\\CardScanR_worldwide_runtime_20260802\\staging\\worldwide-catalogue.sqlite",
+  "database_bytes": 967208960,
+  "database_sha256": "2b291ff0343dd5a5ed64b2e3000dc5d5cdc36b9b3794a08dee7a02dcea496382",
+  "integrity": {
+    "sqlite_integrity_check": "ok",
+    "foreign_key_failure_count": 0,
+    "foreign_key_failures": []
+  },
+  "counts": {
+    "source_provider": 2,
+    "import_run": 2,
+    "source_snapshot": 2,
+    "source_record": 61999,
+    "series": 54,
+    "card_set": 728,
+    "set_release": 1994,
+    "card_design": 61035,
+    "card_printing": 160392,
+    "card_variant": 221329,
+    "card_localisation": 160392,
+    "attack": 200418,
+    "ability": 29648,
+    "marketplace_mapping": 305302,
+    "provider_entity_mapping": 36478,
+    "card_image_candidate": 40888,
+    "sealed_product": 188,
+    "sealed_product_variant": 188,
+    "product_content": 3976,
+    "unresolved_item": 36
+  },
+  "source_records": [
+    {
+      "provider_id": "pokemontcg-data",
+      "record_type": "card",
+      "records": 20444,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "record_type": "deck",
+      "records": 188,
+      "errors": 0
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "record_type": "set",
+      "records": 174,
+      "errors": 0
+    },
+    {
+      "provider_id": "tcgdex-cards-database",
+      "record_type": "card",
+      "records": 40591,
+      "errors": 0
+    },
+    {
+      "provider_id": "tcgdex-cards-database",
+      "record_type": "series",
+      "records": 39,
+      "errors": 0
+    },
+    {
+      "provider_id": "tcgdex-cards-database",
+      "record_type": "set",
+      "records": 563,
+      "errors": 0
+    }
+  ],
+  "imports": [
+    {
+      "provider_id": "tcgdex-cards-database",
+      "status": "completed",
+      "input_sha256": "58969c9f3f5a68afc875d94434d0381a32e0ea4641705ee29be6544f7fccf21f",
+      "started_at": "2026-08-01T23:55:28.862550+00:00",
+      "completed_at": "2026-08-01T23:57:48.704159+00:00",
+      "counters_json": "{\"normalized_card\":40591,\"normalized_series\":39,\"normalized_set\":563,\"rows_ability\":25556,\"rows_attack\":172442,\"rows_card_design\":40591,\"rows_card_localisation\":139948,\"rows_card_printing\":139948,\"rows_card_set\":554,\"rows_card_variant\":200885,\"rows_marketplace_mapping\":305302,\"rows_series\":37,\"rows_set_release\":1820,\"rows_unresolved_item\":36,\"source_card\":40591,\"source_series\":39,\"source_set\":563}",
+      "error_summary": null
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "status": "completed",
+      "input_sha256": "be46cffcd9c2240d97c58963be16e6e048d90d88c7a3c8f4cb4db83812f84c17",
+      "started_at": "2026-08-02T00:00:46.769341+00:00",
+      "completed_at": "2026-08-02T00:01:16.172016+00:00",
+      "counters_json": "{\"card_crosswalk_ambiguous_or_missing\":2657,\"card_crosswalk_candidate\":15524,\"cards\":20444,\"decks\":188,\"set_crosswalk_ambiguous_or_missing\":26,\"set_crosswalk_candidate\":148,\"sets\":174}",
+      "error_summary": null
+    }
+  ],
+  "language_coverage": [
+    {
+      "language_code": "de",
+      "region_code": "INTL",
+      "sets": 187,
+      "printings": 20259,
+      "variants": 32377,
+      "unknown_variants": 7021,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "en",
+      "region_code": "INTL",
+      "sets": 393,
+      "printings": 43949,
+      "variants": 56619,
+      "unknown_variants": 29537,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "es",
+      "region_code": "INTL",
+      "sets": 158,
+      "printings": 15438,
+      "variants": 21752,
+      "unknown_variants": 7040,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "es-mx",
+      "region_code": "MX",
+      "sets": 14,
+      "printings": 1827,
+      "variants": 3568,
+      "unknown_variants": 29,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "fr",
+      "region_code": "INTL",
+      "sets": 204,
+      "printings": 21604,
+      "variants": 33520,
+      "unknown_variants": 8247,
+      "quarantined_printings": 2
+    },
+    {
+      "language_code": "id",
+      "region_code": "ID",
+      "sets": 83,
+      "printings": 2788,
+      "variants": 3094,
+      "unknown_variants": 2581,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "it",
+      "region_code": "INTL",
+      "sets": 194,
+      "printings": 15521,
+      "variants": 22142,
+      "unknown_variants": 7021,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "ja",
+      "region_code": "JP",
+      "sets": 221,
+      "printings": 10729,
+      "variants": 13053,
+      "unknown_variants": 3353,
+      "quarantined_printings": 5
+    },
+    {
+      "language_code": "ko",
+      "region_code": "KR",
+      "sets": 143,
+      "printings": 1363,
+      "variants": 1363,
+      "unknown_variants": 1363,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "nl",
+      "region_code": "INTL",
+      "sets": 3,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "pl",
+      "region_code": "INTL",
+      "sets": 2,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "pt",
+      "region_code": "INTL",
+      "sets": 129,
+      "printings": 14332,
+      "variants": 20647,
+      "unknown_variants": 5932,
+      "quarantined_printings": 27
+    },
+    {
+      "language_code": "pt-br",
+      "region_code": "BR",
+      "sets": 11,
+      "printings": 1124,
+      "variants": 1124,
+      "unknown_variants": 1124,
+      "quarantined_printings": 2
+    },
+    {
+      "language_code": "ru",
+      "region_code": "INTL",
+      "sets": 9,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "th",
+      "region_code": "TH",
+      "sets": 77,
+      "printings": 2994,
+      "variants": 3300,
+      "unknown_variants": 2787,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "zh-cn",
+      "region_code": "CN",
+      "sets": 57,
+      "printings": 877,
+      "variants": 877,
+      "unknown_variants": 829,
+      "quarantined_printings": 0
+    },
+    {
+      "language_code": "zh-tw",
+      "region_code": "TW",
+      "sets": 109,
+      "printings": 7587,
+      "variants": 7893,
+      "unknown_variants": 7380,
+      "quarantined_printings": 0
+    }
+  ],
+  "expected_language_matrix": [
+    {
+      "language_code": "en",
+      "officially_printed": true,
+      "expected_regions": [
+        "US",
+        "CA",
+        "GB",
+        "AU",
+        "NZ",
+        "SG",
+        "MY",
+        "PH"
+      ],
+      "sets": 393,
+      "printings": 43949,
+      "variants": 56619,
+      "unknown_variants": 29537,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "ja",
+      "officially_printed": true,
+      "expected_regions": [
+        "JP"
+      ],
+      "sets": 221,
+      "printings": 10729,
+      "variants": 13053,
+      "unknown_variants": 3353,
+      "quarantined_printings": 5,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "ko",
+      "officially_printed": true,
+      "expected_regions": [
+        "KR"
+      ],
+      "sets": 143,
+      "printings": 1363,
+      "variants": 1363,
+      "unknown_variants": 1363,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "zh-cn",
+      "officially_printed": true,
+      "expected_regions": [
+        "CN"
+      ],
+      "sets": 57,
+      "printings": 877,
+      "variants": 877,
+      "unknown_variants": 829,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "zh-tw",
+      "officially_printed": true,
+      "expected_regions": [
+        "TW",
+        "HK"
+      ],
+      "sets": 109,
+      "printings": 7587,
+      "variants": 7893,
+      "unknown_variants": 7380,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "th",
+      "officially_printed": true,
+      "expected_regions": [
+        "TH"
+      ],
+      "sets": 77,
+      "printings": 2994,
+      "variants": 3300,
+      "unknown_variants": 2787,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "id",
+      "officially_printed": true,
+      "expected_regions": [
+        "ID"
+      ],
+      "sets": 83,
+      "printings": 2788,
+      "variants": 3094,
+      "unknown_variants": 2581,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "fr",
+      "officially_printed": true,
+      "expected_regions": [
+        "FR",
+        "CA",
+        "BE",
+        "CH"
+      ],
+      "sets": 204,
+      "printings": 21604,
+      "variants": 33520,
+      "unknown_variants": 8247,
+      "quarantined_printings": 2,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "de",
+      "officially_printed": true,
+      "expected_regions": [
+        "DE",
+        "AT",
+        "CH"
+      ],
+      "sets": 187,
+      "printings": 20259,
+      "variants": 32377,
+      "unknown_variants": 7021,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "es",
+      "officially_printed": true,
+      "expected_regions": [
+        "ES",
+        "LATAM"
+      ],
+      "sets": 158,
+      "printings": 15438,
+      "variants": 21752,
+      "unknown_variants": 7040,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "es-mx",
+      "officially_printed": true,
+      "expected_regions": [
+        "MX"
+      ],
+      "sets": 14,
+      "printings": 1827,
+      "variants": 3568,
+      "unknown_variants": 29,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "it",
+      "officially_printed": true,
+      "expected_regions": [
+        "IT",
+        "CH"
+      ],
+      "sets": 194,
+      "printings": 15521,
+      "variants": 22142,
+      "unknown_variants": 7021,
+      "quarantined_printings": 0,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "pt",
+      "officially_printed": true,
+      "expected_regions": [
+        "BR",
+        "PT"
+      ],
+      "sets": 129,
+      "printings": 14332,
+      "variants": 20647,
+      "unknown_variants": 5932,
+      "quarantined_printings": 27,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "pt-br",
+      "officially_printed": true,
+      "expected_regions": [
+        "BR"
+      ],
+      "sets": 11,
+      "printings": 1124,
+      "variants": 1124,
+      "unknown_variants": 1124,
+      "quarantined_printings": 2,
+      "inventory_status": "present"
+    },
+    {
+      "language_code": "pt-pt",
+      "officially_printed": true,
+      "expected_regions": [
+        "PT"
+      ],
+      "sets": 0,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0,
+      "inventory_status": "enumerated_zero_printings"
+    },
+    {
+      "language_code": "nl",
+      "officially_printed": true,
+      "expected_regions": [
+        "NL",
+        "BE"
+      ],
+      "sets": 3,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0,
+      "inventory_status": "enumerated_zero_printings"
+    },
+    {
+      "language_code": "pl",
+      "officially_printed": true,
+      "expected_regions": [
+        "PL"
+      ],
+      "sets": 2,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0,
+      "inventory_status": "enumerated_zero_printings"
+    },
+    {
+      "language_code": "ru",
+      "officially_printed": true,
+      "expected_regions": [
+        "RU"
+      ],
+      "sets": 9,
+      "printings": 0,
+      "variants": 0,
+      "unknown_variants": 0,
+      "quarantined_printings": 0,
+      "inventory_status": "enumerated_zero_printings"
+    }
+  ],
+  "provider_entity_counts": [
+    {
+      "provider_id": "pokemontcg-data",
+      "sets": 174,
+      "printings": 20444,
+      "variants": 20444
+    },
+    {
+      "provider_id": "tcgdex-cards-database",
+      "sets": 554,
+      "printings": 139948,
+      "variants": 200885
+    }
+  ],
+  "mapping_counts": [
+    {
+      "provider_id": "pokemontcg-data",
+      "entity_type": "card_printing",
+      "match_method": "direct_source_record",
+      "mapping_status": "verified",
+      "mappings": 20444
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "entity_type": "card_printing",
+      "match_method": "exact_set_signature_plus_collector_number",
+      "mapping_status": "candidate",
+      "mappings": 15524
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "entity_type": "card_set",
+      "match_method": "direct_source_record",
+      "mapping_status": "verified",
+      "mappings": 174
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "entity_type": "card_set",
+      "match_method": "exact_normalized_name_official_count_release_date",
+      "mapping_status": "candidate",
+      "mappings": 148
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "entity_type": "sealed_product",
+      "match_method": "direct_source_record",
+      "mapping_status": "verified",
+      "mappings": 188
+    }
+  ],
+  "image_candidates": [
+    {
+      "provider_id": "pokemontcg-data",
+      "rights_status": "permission_pending",
+      "validation_status": "candidate",
+      "image_role": "display",
+      "images": 20444
+    },
+    {
+      "provider_id": "pokemontcg-data",
+      "rights_status": "permission_pending",
+      "validation_status": "candidate",
+      "image_role": "thumbnail",
+      "images": 20444
+    }
+  ],
+  "sealed_products": [
+    {
+      "provider_id": "pokemontcg-data",
+      "product_type": "theme_deck",
+      "verification_status": "provisional",
+      "products": 188
+    }
+  ],
+  "unresolved": [
+    {
+      "issue_class": "source_text_quality",
+      "status": "needs_review",
+      "language_code": "fr",
+      "region_code": "INTL",
+      "items": 2
+    },
+    {
+      "issue_class": "source_text_quality",
+      "status": "needs_review",
+      "language_code": "ja",
+      "region_code": "JP",
+      "items": 5
+    },
+    {
+      "issue_class": "source_text_quality",
+      "status": "needs_review",
+      "language_code": "pt",
+      "region_code": "INTL",
+      "items": 27
+    },
+    {
+      "issue_class": "source_text_quality",
+      "status": "needs_review",
+      "language_code": "pt-br",
+      "region_code": "BR",
+      "items": 2
+    }
+  ]
+}
