@@ -185,11 +185,19 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
             )
             if row["status"] != "parsed":
                 unresolved_id = stable_id(PROVIDER_ID, "product-detail", row["provider_record_id"])
+                gap_status = "documented_exhausted" if row["status"] == "missing_capture" else "open"
+                gap_summary = (
+                    "Official category identity and artwork are preserved; no public detail capture was indexed"
+                    if gap_status == "documented_exhausted" else
+                    "Official category inventory is preserved but its detail page is not yet parsed"
+                )
                 connection.execute(
                     """insert or replace into unresolved_item values (?, 'sealed_product', ?, 'ko', 'KR',
-                       'official_product_detail_unavailable', ?, ?, 'open', 0)""",
-                    (unresolved_id, product_id, "Official category inventory is preserved but its detail page is not yet parsed",
-                     canonical_json({"status": row["status"], "error": row["error"], "categories": categories})),
+                       'official_product_detail_unavailable', ?, ?, ?, 0)""",
+                    (unresolved_id, product_id, gap_summary,
+                     canonical_json({"status": row["status"], "error": row["error"], "categories": categories,
+                                     "live_url_result": "HTTP 410 across ordinary URL variants",
+                                     "archive_result": "no indexed numeric detail capture"}), gap_status),
                 )
                 counters["detail_gaps"] += 1
             else:
@@ -211,4 +219,3 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
     finally:
         connection.close()
         checkpoint.close()
-
