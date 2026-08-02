@@ -2,10 +2,14 @@ import io
 import json
 import sqlite3
 
-from PIL import Image
+from PIL import Image, PngImagePlugin
 
 from cardscanr_worldwide.product_image_validation import apply_results, inspect_image, register_candidates
 from cardscanr_worldwide.schema import connect
+
+
+def test_png_text_chunk_limit_allows_large_official_metadata() -> None:
+    assert PngImagePlugin.MAX_TEXT_CHUNK >= 64 * 1024 * 1024
 
 
 def test_inspect_image_hashes_and_rejects_html() -> None:

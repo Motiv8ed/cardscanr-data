@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 import numpy as np
-from PIL import Image
+from PIL import Image, PngImagePlugin
 
 from .schema import connect
 from .tcgdex import canonical_json, stable_id
@@ -27,6 +27,9 @@ USER_AGENT = "CardScanR-catalogue-preservation/1.0"
 # Official mainland-China product artwork includes valid PNG files slightly
 # above 30 MiB. Keep a hard ceiling while allowing those source originals.
 MAX_BYTES = 40 * 1024 * 1024
+# Official Asia card PNGs can embed large text chunks; Pillow's default 1 MiB
+# limit rejects otherwise valid official assets.
+PngImagePlugin.MAX_TEXT_CHUNK = 64 * 1024 * 1024
 CHECKPOINT_SCHEMA = """
 pragma journal_mode=wal;
 create table if not exists assets(
