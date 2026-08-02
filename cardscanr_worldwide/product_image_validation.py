@@ -190,10 +190,12 @@ def register_candidates(database: Path, checkpoint: Path,
 
 
 def acquire(checkpoint: Path, cache_root: Path, workers: int = 4, limit: int | None = None,
-            delay_seconds: float = 0.05, providers: list[str] | None = None) -> dict[str, int]:
+            delay_seconds: float = 0.05, providers: list[str] | None = None,
+            retry_failed: bool = False) -> dict[str, int]:
     progress = sqlite3.connect(checkpoint)
     try:
-        query = "select a.source_url,coalesce(a.fetch_url,a.source_url) from assets a where a.status in ('pending','retryable_error') and a.attempts<3"
+        statuses = "'pending','retryable_error','fail','not_found'" if retry_failed else "'pending','retryable_error'"
+        query = f"select a.source_url,coalesce(a.fetch_url,a.source_url) from assets a where a.status in ({statuses}) and a.attempts<3"
         parameters: list[str] = []
         if providers:
             placeholders = ",".join("?" for _ in providers)

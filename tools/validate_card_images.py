@@ -21,11 +21,12 @@ def main() -> int:
     parser.add_argument("--delay-seconds", type=float, default=0.05)
     parser.add_argument("--provider", action="append", dest="providers", required=True)
     parser.add_argument("--acquire-only", action="store_true")
+    parser.add_argument("--retry-failed", action="store_true")
     args = parser.parse_args()
     checkpoint = args.runtime_root / "checkpoint.sqlite"
     output = {"registered": register_candidates(args.database, checkpoint)}
     output["acquired"] = acquire(checkpoint, args.runtime_root / "cache", args.workers, args.limit,
-                                  args.delay_seconds, args.providers)
+                                  args.delay_seconds, args.providers, args.retry_failed)
     output["checkpoint"] = checkpoint_counts(checkpoint)
     if not args.acquire_only:
         output["applied"] = apply_results(args.database, checkpoint)
@@ -35,4 +36,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
