@@ -15,9 +15,9 @@
     {"code": "es", "name": "Spanish", "officially_printed": true, "regional_variants": ["ES", "LATAM"]},
     {"code": "es-mx", "name": "Spanish (Mexico)", "officially_printed": true, "regional_variants": ["MX"]},
     {"code": "it", "name": "Italian", "officially_printed": true, "regional_variants": ["IT", "CH"]},
-    {"code": "pt", "name": "Portuguese (source-unspecified)", "officially_printed": true, "regional_variants": ["BR", "PT"], "normalization_note": "Must be resolved to pt-BR or pt-PT when printing evidence permits."},
+    {"code": "pt", "name": "Portuguese (source-unspecified)", "officially_printed": true, "regional_variants": ["BR"], "normalization_note": "Legacy provider records must be resolved to pt-BR when printing evidence permits; The Pokémon Company states Portuguese cards are produced in Brazil."},
     {"code": "pt-br", "name": "Portuguese (Brazil)", "officially_printed": true, "regional_variants": ["BR"]},
-    {"code": "pt-pt", "name": "Portuguese (Portugal)", "officially_printed": true, "regional_variants": ["PT"]},
+    {"code": "pt-pt", "name": "Portuguese (Portugal)", "officially_printed": false, "regional_variants": ["PT"], "normalization_note": "Enumerated as a language tag but not a distinct official card printing. The Pokémon Company states Portuguese cards are produced in Brazil; cards distributed in Portugal are not evidence of a pt-PT printing.", "evidence_url": "https://support.pokemon.com/hc/en-us/articles/360001421466-Country-of-Origin"},
     {"code": "nl", "name": "Dutch", "officially_printed": true, "regional_variants": ["NL", "BE"], "historical_or_discontinued": true},
     {"code": "pl", "name": "Polish", "officially_printed": true, "regional_variants": ["PL"], "historical_or_discontinued": true},
     {"code": "ru", "name": "Russian", "officially_printed": true, "regional_variants": ["RU"], "historical_or_discontinued": true}

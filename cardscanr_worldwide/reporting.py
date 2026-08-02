@@ -125,12 +125,16 @@ def build_report(database: Path) -> dict[str, Any]:
             "secret_bearing_card_image_urls": connection.execute("""
                 select count(*) from card_image_candidate
                  where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'
-                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%localhost%'
+                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%auth_key=%'
+                    or lower(source_url) like '%signature=%' or lower(source_url) like '%x-amz-%'
+                    or lower(source_url) like '%localhost%' or lower(source_url) like '%127.0.0.1%'
             """).fetchone()[0],
             "secret_bearing_product_image_urls": connection.execute("""
                 select count(*) from product_image_candidate
                  where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'
-                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%localhost%'
+                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%auth_key=%'
+                    or lower(source_url) like '%signature=%' or lower(source_url) like '%x-amz-%'
+                    or lower(source_url) like '%localhost%' or lower(source_url) like '%127.0.0.1%'
             """).fetchone()[0],
             "secret_bearing_source_payloads": connection.execute("""
                 select count(*) from source_record where lower(coalesce(raw_payload_json,'')) like '%auth_key=%'
@@ -149,9 +153,57 @@ def build_report(database: Path) -> dict[str, Any]:
             "open_unresolved_items": connection.execute(
                 "select count(*) from unresolved_item where status in ('open','needs_review')"
             ).fetchone()[0],
+            "unclassified_unresolved_items": connection.execute("""
+                select count(*) from unresolved_item
+                 where status not in ('resolved','classified_nonblocking','blocked_external')
+            """).fetchone()[0],
+            "external_blocker_state_mismatches": connection.execute("""
+                select count(*) from unresolved_item
+                 where (status='blocked_external' and externally_unavoidable!=1)
+                    or (externally_unavoidable=1 and status!='blocked_external')
+            """).fetchone()[0],
             "external_blocker_items": connection.execute(
                 "select count(*) from unresolved_item where externally_unavoidable=1 and status='blocked_external'"
             ).fetchone()[0],
+            "running_import_runs": connection.execute(
+                "select count(*) from import_run where status='running'"
+            ).fetchone()[0],
+            "orphan_product_contents": connection.execute("""
+                select count(*) from product_content pc left join sealed_product_variant spv
+                  on spv.id=pc.sealed_product_variant_id where spv.id is null
+            """).fetchone()[0],
+            "missing_core_provenance": connection.execute("""
+                select
+                  (select count(*) from card_set where source_record_id is null) +
+                  (select count(*) from set_release where source_record_id is null) +
+                  (select count(*) from card_printing where source_record_id is null) +
+                  (select count(*) from sealed_product where source_record_id is null) +
+                  (select count(*) from card_image_candidate where source_record_id is null) +
+                  (select count(*) from product_image_candidate where source_record_id is null)
+            """).fetchone()[0],
+            "unexplained_official_release_shortfalls": connection.execute("""
+                with actual as (
+                  select sr.id,sr.official_count,count(cp.id) actual_count
+                    from set_release sr left join card_printing cp on cp.set_release_id=sr.id
+                   group by sr.id
+                )
+                select count(*) from actual a
+                 where a.official_count is not null and a.actual_count<a.official_count
+                   and not exists (
+                     select 1 from unresolved_item u where u.entity_id=a.id
+                       and u.issue_class like '%shortfall%'
+                       and u.status in ('classified_nonblocking','blocked_external')
+                   )
+            """).fetchone()[0],
+            "unclassified_regional_variants": connection.execute("""
+                select count(*) from card_variant cv
+                 where cv.variant_key='regional-variant-unclassified'
+                   and not exists (
+                     select 1 from unresolved_item u where u.entity_id=cv.id
+                       and u.issue_class like '%variant%'
+                       and u.status in ('classified_nonblocking','blocked_external')
+                   )
+            """).fetchone()[0],
             "failed_image_validation_results": connection.execute(
                 "select count(*) from image_validation_result where status='fail'"
             ).fetchone()[0],
@@ -162,6 +214,10 @@ def build_report(database: Path) -> dict[str, Any]:
                 "select count(*) from publication_run where status='active'"
             ).fetchone()[0],
         }
+        publication_gates["officially_printed_languages_without_records"] = sum(
+            1 for row in expected_language_matrix
+            if row["officially_printed"] and row["printings"] == 0
+        )
         return {
             "schema_version": 1,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),

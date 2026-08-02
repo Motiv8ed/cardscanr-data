@@ -11,6 +11,10 @@ def test_scope_contains_all_tcgdex_languages_and_required_regions() -> None:
     tcgdex = {"en", "fr", "es", "es-mx", "it", "pt", "pt-br", "pt-pt", "de", "nl", "pl", "ru",
                "ja", "ko", "zh-tw", "id", "th", "zh-cn"}
     assert tcgdex <= languages
+    by_language = {item["code"]: item for item in scope["languages"]}
+    assert by_language["pt-br"]["officially_printed"] is True
+    assert by_language["pt-pt"]["officially_printed"] is False
+    assert by_language["pt-pt"]["evidence_url"].startswith("https://support.pokemon.com/")
     regions = {item["code"] for item in scope["regions"]}
     assert {"JP", "KR", "CN", "TW", "HK", "TH", "ID", "BR", "MX", "PT", "INTL"} <= regions
 

@@ -18,5 +18,10 @@ def test_empty_staging_report_runs_integrity_gates(tmp_path: Path) -> None:
     expected = {row["language_code"]: row for row in report["expected_language_matrix"]}
     assert expected["ko"]["inventory_status"] == "enumerated_zero_printings"
     assert expected["pt-pt"]["expected_regions"] == ["PT"]
+    gates = report["publication_gates"]
+    assert gates["missing_core_provenance"] == 0
+    assert gates["orphan_product_contents"] == 0
+    assert gates["external_blocker_state_mismatches"] == 0
+    assert gates["officially_printed_languages_without_records"] > 0
     rendered = markdown(report)
     assert "not a completion declaration" in rendered
