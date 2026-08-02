@@ -38,11 +38,22 @@ def build_global_search_index(
     cards_path: Path,
     direct_images_path: Path,
     output_path: Path,
+    products_path: Path | None = None,
+    product_contents_path: Path | None = None,
+    direct_product_images_path: Path | None = None,
 ) -> dict[str, Any]:
     images: dict[str, dict[str, Any]] = {}
     if direct_images_path.exists():
         for row in _iter_jsonl(direct_images_path):
             images[str(row["canonicalPrintingId"])] = row
+    product_images: dict[str, dict[str, Any]] = {}
+    if direct_product_images_path and direct_product_images_path.exists():
+        image_priority = {"display": 0, "front": 1, "box_art": 2, "pack_art": 3, "listing": 4, "thumbnail": 5}
+        for row in _iter_jsonl(direct_product_images_path):
+            variant_id = str(row["productVariantId"])
+            current = product_images.get(variant_id)
+            if current is None or image_priority.get(str(row.get("imageRole")), 99) < image_priority.get(str(current.get("imageRole")), 99):
+                product_images[variant_id] = row
     temporary = output_path.with_suffix(".sqlite.tmp")
     temporary.parent.mkdir(parents=True, exist_ok=True)
     temporary.unlink(missing_ok=True)
@@ -140,6 +151,48 @@ def build_global_search_index(
           aliases,
           tokenize='unicode61 remove_diacritics 2'
         );
+        CREATE TABLE sealed_products(
+          product_variant_id TEXT PRIMARY KEY,
+          canonical_product_id TEXT NOT NULL,
+          language TEXT,
+          region TEXT NOT NULL,
+          local_name TEXT NOT NULL,
+          canonical_name TEXT NOT NULL,
+          normalized_local_name TEXT NOT NULL,
+          normalized_canonical_name TEXT NOT NULL,
+          product_type TEXT NOT NULL,
+          release_date TEXT,
+          verification_status TEXT NOT NULL,
+          attributes_json TEXT NOT NULL,
+          image_url TEXT,
+          image_provider TEXT,
+          image_role TEXT,
+          image_state TEXT NOT NULL,
+          mirror_permission_status TEXT,
+          provider_product_ids_json TEXT NOT NULL
+        ) WITHOUT ROWID;
+        CREATE INDEX sealed_products_language_region ON sealed_products(language,region);
+        CREATE INDEX sealed_products_type ON sealed_products(product_type);
+        CREATE INDEX sealed_products_local_name ON sealed_products(normalized_local_name);
+        CREATE INDEX sealed_products_canonical_name ON sealed_products(normalized_canonical_name);
+        CREATE TABLE sealed_product_contents(
+          product_variant_id TEXT NOT NULL,
+          ordinal INTEGER NOT NULL,
+          content_kind TEXT NOT NULL,
+          entity_id TEXT,
+          description TEXT,
+          quantity INTEGER NOT NULL,
+          attributes_json TEXT NOT NULL,
+          PRIMARY KEY(product_variant_id,ordinal),
+          FOREIGN KEY(product_variant_id) REFERENCES sealed_products(product_variant_id)
+        ) WITHOUT ROWID;
+        CREATE VIRTUAL TABLE sealed_products_fts USING fts5(
+          product_variant_id UNINDEXED,
+          local_name,
+          canonical_name,
+          product_type,
+          tokenize='unicode61 remove_diacritics 2'
+        );
         """
     )
     connection.executemany(
@@ -212,7 +265,51 @@ def build_global_search_index(
             connection.execute("INSERT OR IGNORE INTO card_aliases VALUES(?,?,?)", (canonical_id, alias, "search_alias"))
         counts[str(card["language"])] += 1
         row_count += 1
+    product_counts: Counter[str] = Counter()
+    product_count = 0
+    if products_path and products_path.exists():
+        for product in _iter_jsonl(products_path):
+            variant_id = str(product["productVariantId"])
+            image = product_images.get(variant_id) or {}
+            public_image = (
+                image.get("authenticationRequirement") == "not_required"
+                and image.get("directUseTechnicalStatus") in {"verified", "reachable", "available", "http_200"}
+            )
+            local_name = str(product.get("localName") or product.get("canonicalName") or "")
+            canonical_name = str(product.get("canonicalName") or local_name)
+            provider_ids = product.get("providerProductIds") or {}
+            language = product.get("language")
+            region = str(product.get("region") or "")
+            connection.execute(
+                "INSERT INTO sealed_products VALUES(" + ",".join("?" for _ in range(18)) + ")",
+                (variant_id, str(product["canonicalProductId"]), language, region, local_name, canonical_name,
+                 _normalize(local_name), _normalize(canonical_name), str(product.get("productType") or "other"),
+                 product.get("releaseDate"), str(product.get("verificationStatus") or "provisional"),
+                 json.dumps(product.get("attributes") or {}, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                 image.get("url") if public_image else None, image.get("provider") if public_image else None,
+                 image.get("imageRole") if public_image else None,
+                 str(image.get("directUseTechnicalStatus") or "missing"), image.get("mirrorPermissionStatus"),
+                 json.dumps(provider_ids, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            )
+            connection.execute(
+                "INSERT INTO sealed_products_fts VALUES(?,?,?,?)",
+                (variant_id, local_name, canonical_name, str(product.get("productType") or "other")),
+            )
+            product_counts[f"{language or 'und'}:{region}"] += 1
+            product_count += 1
+    content_count = 0
+    if product_contents_path and product_contents_path.exists():
+        for content in _iter_jsonl(product_contents_path):
+            connection.execute(
+                "INSERT INTO sealed_product_contents VALUES(?,?,?,?,?,?,?)",
+                (str(content["productVariantId"]), int(content["ordinal"]), str(content["contentKind"]),
+                 content.get("entityId"), content.get("description"), int(content.get("quantity") or 1),
+                 json.dumps(content.get("attributes") or {}, ensure_ascii=False, sort_keys=True, separators=(",", ":"))),
+            )
+            content_count += 1
     connection.execute("INSERT INTO meta(key,value) VALUES(?,?)", ("recordCount", str(row_count)))
+    connection.execute("INSERT INTO meta(key,value) VALUES(?,?)", ("productRecordCount", str(product_count)))
+    connection.execute("INSERT INTO meta(key,value) VALUES(?,?)", ("productContentRecordCount", str(content_count)))
     connection.commit()
     connection.execute("VACUUM")
     connection.close()
@@ -224,6 +321,9 @@ def build_global_search_index(
         "sha256": _sha256(output_path),
         "records": row_count,
         "perLanguageCounts": dict(sorted(counts.items())),
+        "products": product_count,
+        "productContents": content_count,
+        "perLanguageRegionProductCounts": dict(sorted(product_counts.items())),
     }
 
 
@@ -238,6 +338,12 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
         "SELECT COUNT(*) FROM cards WHERE image_thumbnail_url LIKE '%pokewallet.io%' OR image_thumbnail_url LIKE '%api_key%' OR image_thumbnail_url LIKE '%token=%'"
     ).fetchone()[0]
     fts_records = connection.execute("SELECT COUNT(*) FROM cards_fts").fetchone()[0]
+    product_records = connection.execute("SELECT COUNT(*) FROM sealed_products").fetchone()[0]
+    product_fts_records = connection.execute("SELECT COUNT(*) FROM sealed_products_fts").fetchone()[0]
+    product_content_records = connection.execute("SELECT COUNT(*) FROM sealed_product_contents").fetchone()[0]
+    authenticated_product_urls = connection.execute(
+        "SELECT COUNT(*) FROM sealed_products WHERE image_url LIKE '%auth_key=%' OR image_url LIKE '%token=%' OR image_url LIKE '%api_key%'"
+    ).fetchone()[0]
     languages = dict(connection.execute("SELECT language,COUNT(*) FROM cards GROUP BY language ORDER BY language"))
     connection.close()
     issues = []
@@ -245,4 +351,10 @@ def verify_global_search_index(path: Path) -> dict[str, Any]:
     if duplicate_ids: issues.append(f"duplicateCanonicalPrintingIds:{duplicate_ids}")
     if authenticated_urls: issues.append(f"authenticatedUrls:{authenticated_urls}")
     if fts_records != records: issues.append("ftsRecordCountMismatch")
-    return {"classification": "PASS" if not issues else "FAIL", "records": records, "ftsRecords": fts_records, "duplicateCanonicalPrintingIds": duplicate_ids, "authenticatedUrls": authenticated_urls, "perLanguageCounts": languages, "issues": issues}
+    if product_fts_records != product_records: issues.append("productFtsRecordCountMismatch")
+    if authenticated_product_urls: issues.append(f"authenticatedProductUrls:{authenticated_product_urls}")
+    return {"classification": "PASS" if not issues else "FAIL", "records": records, "ftsRecords": fts_records,
+            "products": product_records, "productFtsRecords": product_fts_records,
+            "productContents": product_content_records, "duplicateCanonicalPrintingIds": duplicate_ids,
+            "authenticatedUrls": authenticated_urls, "authenticatedProductUrls": authenticated_product_urls,
+            "perLanguageCounts": languages, "issues": issues}

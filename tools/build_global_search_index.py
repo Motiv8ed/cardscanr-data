@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -12,13 +13,19 @@ from cardscanr_search_index.global_builder import build_global_search_index, ver
 
 
 def main() -> int:
-    output_dir = ROOT / "reports" / "global_rollout" / "artifacts"
-    output = output_dir / "global_catalogue_canary_v2.sqlite"
-    cards = ROOT / "data" / "global" / "catalogue" / "cards.jsonl"
-    images = ROOT / "data" / "global" / "catalogue" / "direct_images.jsonl"
-    first = build_global_search_index(cards_path=cards, direct_images_path=images, output_path=output)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bundle-dir", type=Path, default=ROOT / "data" / "global" / "catalogue")
+    parser.add_argument("--output", type=Path,
+                        default=ROOT / "reports" / "global_rollout" / "artifacts" / "global_catalogue_canary_v2.sqlite")
+    args = parser.parse_args()
+    output = args.output
+    bundle = args.bundle_dir
+    kwargs = {"cards_path": bundle / "cards.jsonl", "direct_images_path": bundle / "direct_images.jsonl",
+              "products_path": bundle / "products.jsonl", "product_contents_path": bundle / "product_contents.jsonl",
+              "direct_product_images_path": bundle / "direct_product_images.jsonl", "output_path": output}
+    first = build_global_search_index(**kwargs)
     first_bytes = output.read_bytes()
-    second = build_global_search_index(cards_path=cards, direct_images_path=images, output_path=output)
+    second = build_global_search_index(**kwargs)
     deterministic = first["sha256"] == second["sha256"] and first_bytes == output.read_bytes()
     verification = verify_global_search_index(output)
     report = {
