@@ -1,7 +1,13 @@
 import json
 
 from cardscanr_worldwide.schema import connect
-from cardscanr_worldwide.supabase_publication import _batches, build_load_plan, stable_uuid, table_specs
+from cardscanr_worldwide.supabase_publication import (
+    _batches,
+    build_load_plan,
+    integer_pokedex_numbers,
+    stable_uuid,
+    table_specs,
+)
 
 
 def test_supabase_plan_is_deterministic_and_maps_staging_enums(tmp_path) -> None:
@@ -35,6 +41,10 @@ def test_supabase_plan_is_deterministic_and_maps_staging_enums(tmp_path) -> None
     assert first["plan_sha256"] == second["plan_sha256"]
     assert first["integrity"] == {"sqlite": "ok", "foreign_key_failures": 0}
     json.dumps(first)
+
+
+def test_integer_pokedex_numbers_drop_fractional_forme_markers() -> None:
+    assert integer_pokedex_numbers([25, 384.1, "150", 6.0, "x"]) == [25, 150, 6]
 
 
 def test_postgrest_batches_have_uniform_keys() -> None:

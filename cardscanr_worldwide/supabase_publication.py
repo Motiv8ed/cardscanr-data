@@ -61,6 +61,30 @@ def stable_uuid(kind: str, value: str) -> str:
     return str(uuid.uuid5(NAMESPACE, f"cardscanr-worldwide:{kind}:{value}"))
 
 
+def integer_pokedex_numbers(values: Any) -> list[int]:
+    """Coerce pokedex values for Postgres integer[]; drop non-integral forme markers."""
+    if not isinstance(values, list):
+        return []
+    numbers: list[int] = []
+    for value in values:
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            numbers.append(value)
+            continue
+        if isinstance(value, float) and value.is_integer():
+            numbers.append(int(value))
+            continue
+        if isinstance(value, str):
+            try:
+                as_float = float(value)
+            except ValueError:
+                continue
+            if as_float.is_integer():
+                numbers.append(int(as_float))
+    return numbers
+
+
 def parse_json(value: str | None, fallback: Any) -> Any:
     if value is None:
         return fallback
@@ -214,7 +238,8 @@ def table_specs() -> list[TableSpec]:
             if kind == "pokémon": kind = "pokemon"
             if kind == "existing_catalogue_card": kind = "other"
             yield {"id": row["id"], "franchise_id": "pokemon", "design_kind": kind,
-                   "national_pokedex_numbers": parse_json(row["national_pokedex_numbers_json"], []),
+                   "national_pokedex_numbers": integer_pokedex_numbers(
+                       parse_json(row["national_pokedex_numbers_json"], [])),
                    "canonical_name": row["canonical_name"], "rules_identity_key": row["source_identity_key"]}
 
     def printings(c: sqlite3.Connection) -> Iterable[dict[str, Any]]:

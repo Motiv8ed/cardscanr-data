@@ -156,6 +156,7 @@ def backup_supabase(
     *,
     page_size: int,
     known_empty_resources: set[str],
+    skip_resources: set[str] | None = None,
 ) -> dict[str, Any]:
     config = load_json(config_path)
     base_url = str(config["SUPABASE_URL"])
@@ -168,7 +169,17 @@ def backup_supabase(
         raise ValueError("Supabase secret key is missing")
     resources = discover_supabase_resources(base_url, secret)
     exports: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    skip_resources = skip_resources or set()
     for resource in resources:
+        if resource in skip_resources:
+            skipped.append(
+                {
+                    "resource": resource,
+                    "reason": "explicit_skip_forbidden_or_out_of_scope",
+                }
+            )
+            continue
         target = destination / f"{resource}.jsonl.gz"
         try:
             exports.append(
@@ -205,6 +216,7 @@ def backup_supabase(
         "resourceCount": len(exports),
         "totalRows": sum(item["rows"] for item in exports),
         "resources": exports,
+        "skippedResources": skipped,
     }
 
 
@@ -325,6 +337,15 @@ def parse_args() -> argparse.Namespace:
             "Data API response without silently omitting it"
         ),
     )
+    parser.add_argument(
+        "--skip-resource",
+        action="append",
+        default=[],
+        help=(
+            "resource to omit from the backup (e.g. user-data tables forbidden to the "
+            "current key); recorded in the manifest as skipped, not as empty"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -347,6 +368,7 @@ def main() -> int:
             output / "supabase",
             page_size=args.page_size,
             known_empty_resources=set(args.known_empty_resource),
+            skip_resources=set(args.skip_resource),
         ),
         "r2": backup_r2(args.cloudflare_config.resolve(), output / "r2"),
         "localPublicationManifests": backup_local_manifests(output / "local_manifests"),

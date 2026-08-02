@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "database": "D:\\CardScanR_worldwide_runtime_20260802\\staging\\worldwide-catalogue.sqlite",
+  "tables": {
+    "franchises": {
+      "rows": 1,
+      "sha256": "3a7f1fefe7b48a804170ae8b7a6be6051a0304353ea1eeec73dfbd924ff97acd",
+      "conflict": "id"
+    },
+    "languages": {
+      "rows": 17,
+      "sha256": "ede3ce4162294e6a5bc646cecc0f958233e7809390fc9141edcda2292cbe885f",
+      "conflict": "code"
+    },
+    "regions": {
+      "rows": 29,
+      "sha256": "2f4dbf5926f7eb30209ab7b7a612c6488aa6743026d73e3a58356abf4aafce4f",
+      "conflict": "code"
+    },
+    "source_providers": {
+      "rows": 28,
+      "sha256": "95e1a33213a747f3090360063253133d2ee6126d50ecd2a35ebeb2088acab793",
+      "conflict": "id"
+    },
+    "import_runs": {
+      "rows": 50,
+      "sha256": "60f64601881ca9bcf259f77b83d585bec089b184561dae4c34ce95350a4227dd",
+      "conflict": "id"
+    },
+    "source_snapshots": {
+      "rows": 47,
+      "sha256": "46d24e9353cffea8b4134fbae137c94987e6afaee9d8139546aa1f15fac000f3",
+      "conflict": "id"
+    },
+    "source_records": {
+      "rows": 240088,
+      "sha256": "0b7043fc90734af9a38b7a1e3237a1e95366edd68090fd06c4913f318240c983",
+      "conflict": "id"
+    },
+    "series": {
+      "rows": 68,
+      "sha256": "f91fdae4b40fc5e96a7c3e38649ea6c945c5f2dabc14c1d3647504bdceec068f",
+      "conflict": "id"
+    },
+    "sets": {
+      "rows": 1952,
+      "sha256": "e1564b761533acfde81342f74c02ee282dc3862a189acdf8060f8326ff048f3a",
+      "conflict": "id"
+    },
+    "set_releases": {
+      "rows": 3218,
+      "sha256": "67b034abd67b6af95621d11710258015a96cb374d683a9b5b824bca9169f2db5",
+      "conflict": "id"
+    },
+    "card_designs": {
+      "rows": 188833,
+      "sha256": "ce60b73b71684bee10ab3dfd1086fbaa8b1eb080fa373019cc61f64c645ce268",
+      "conflict": "id"
+    },
+    "card_printings": {
+      "rows": 296463,
+      "sha256": "0b833239b6a4dfbfa5df5bbc615c11233f3fe42277a9bd63af83ba22e274ef98",
+      "conflict": "id"
+    },
+    "card_variants": {
+      "rows": 433548,
+      "sha256": "62d54369afdd6057e6abd921fdc21d085e6c0cc7008195fbab2a20d4358e0c33",
+      "conflict": "id"
+    },
+    "card_text_localisations": {
+      "rows": 290718,
+      "sha256": "68efe1a7113ffa776f1bac5a0aabbd61c3d6b83cf315be61ffe7a0c35f67a9aa",
+      "conflict": "id"
+    },
+    "abilities": {
+      "rows": 34914,
+      "sha256": "eab05d644584636f6b247da04d3d3434af39aef3aae3061b29f87571ed0bc6bb",
+      "conflict": "id"
+    },
+    "attacks": {
+      "rows": 364604,
+      "sha256": "8f0332c32841c363811d99b238001a3dbb765e42b507bceeeceec8e91912abb2",
+      "conflict": "id"
+    },
+    "card_images": {
+      "rows": 507478,
+      "sha256": "ae1920d106e92a013f588a819fa2167ba9ab21dd3404622dd47fe3536b9e1c54",
+      "conflict": "id"
+    },
+    "sealed_products": {
+      "rows": 4618,
+      "sha256": "27541f0d1a37471c4f05d6fc97f7b79daf7ecadb069750f25830a3be61252343",
+      "conflict": "id"
+    },
+    "accessories": {
+      "rows": 1649,
+      "sha256": "b4faee22e89923b51f06652fa9e540727b9d9a16bee98d8ebe2be5e70afae15f",
+      "conflict": "id"
+    },
+    "sealed_product_variants": {
+      "rows": 4618,
+      "sha256": "03f264cce141bb177bc51f1efe07422db6fe75039e01c81a864d472e820b26b6",
+      "conflict": "id"
+    },
+    "product_contents": {
+      "rows": 49492,
+      "sha256": "ad046c0eceb245d63557c9f3f9cb7ff39b9ed78e8af6078af57ebd998081a383",
+      "conflict": "id"
+    },
+    "product_images": {
+      "rows": 9781,
+      "sha256": "8f1fac9b610d5aeab566c8b86198f63bbf5c6cec2a3a4a8d325d9dbcc28a6805",
+      "conflict": "id"
+    },
+    "marketplace_mappings": {
+      "rows": 323303,
+      "sha256": "ad535b0ccfe377465104babd16596664267cb541361a27d1e13433d949d43f92",
+      "conflict": "id"
+    },
+    "provider_entity_mappings": {
+      "rows": 313773,
+      "sha256": "d5a51b24353f5f37b2d71c117e6f103d866635d73a3b5e08c7aae409787256ae",
+      "conflict": "id"
+    },
+    "image_validation_results": {
+      "rows": 156167,
+      "sha256": "c617ff7793800ed7222718d79d0e1ab2ea6942b83319679389cd4d13131e7b07",
+      "conflict": "id"
+    },
+    "image_acquisition_attempts": {
+      "rows": 132711,
+      "sha256": "5a24d5c76099b27811911a886f3fde9a1f64bb200a3acb915b9f88a94a9b7560",
+      "conflict": "id"
+    },
+    "publication_runs": {
+      "rows": 2,
+      "sha256": "449645aa87c5ee3c14f6a13aeb521d37d625b6163fef31820c22becd4e7a37de",
+      "conflict": "id"
+    },
+    "publication_artifacts": {
+      "rows": 23,
+      "sha256": "64ea13007d3b265088c27f38bb0cefc51de5269a1e4c979d66cb2e7861ba04dd",
+      "conflict": "id"
+    },
+    "unresolved_items": {
+      "rows": 121126,
+      "sha256": "80ec65936e4a8915c57740e611436ae3e742c46aa7b8dccba7b4f8020cea45ea",
+      "conflict": "id"
+    }
+  },
+  "total_rows": 3479319,
+  "integrity": {
+    "sqlite": "ok",
+    "foreign_key_failures": 0
+  },
+  "plan_sha256": "2fa453eeab0527795e2e98e06ecd2e0fab6912ee85e6665f855c2f6ed659e742",
+  "mode": "dry_run"
+}
