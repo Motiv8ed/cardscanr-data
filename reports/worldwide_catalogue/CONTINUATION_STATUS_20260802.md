@@ -1,36 +1,53 @@
 # Worldwide catalogue continuation status
 
-- Generated: 2026-08-02T11:00:19.117459+00:00
-- All Asia card locales (id/th/hk/tw/sg/my/ph) now have completed detail inventories in checkpoints and staging imports.
-- Image validators resumed for th/sg/my/tw/hk after Hong Kong completion.
+- Generated: `2026-08-02T12:37:00+00:00`
+- Branch: `feature/worldwide-pokemon-catalogue-products-20260802`
+- Worktree: `D:\CardScanR_worktrees\worldwide_catalogue_products_20260802`
+- Runtime: `D:\CardScanR_worldwide_runtime_20260802`
+- Active Asia writers: none
+- Production manifest / Supabase: not activated / not written
 
-## Card collectors
+## Phase progress
 
-- id: 12325/12325 status=completed
-- th: 9554/9554 status=completed
-- hk: 14285/14285 status=completed
-- tw: 14276/14276 status=completed
-- sg: 7406/7406 status=hydrated/none
-- my: 7406/7406 status=hydrated/none
-- ph: 7406/7406 status=completed
+| Phase | Status |
+|---|---|
+| A Secure interrupted work | complete |
+| B Asia card acquisition | complete for id/th/hk/tw/sg/my/ph |
+| C Asia card images | complete except documented residuals |
+| D Sealed products | Asia galleries expanded; 729 variants still lack pass images |
+| E External blockers | European Incapsula + SG/MY/PH gallery absence documented |
+| F–J Release / app | not started in this continuation |
 
-## Image validation
+## Asia card images (staging)
 
-- asia_id: {'pass': 12324}
-- asia_th: {'fail': 1, 'pass': 6642, 'pending': 2903}
-- asia_ph: {'pass': 7406}
-- asia_sg: {'pass': 1199, 'pending': 6207}
-- asia_my: {'pass': 1196, 'pending': 6210}
-- asia_tw: {'pass': 1160, 'pending': 13116}
-- asia_hk: {'pending': 14277}
-- japan: {'pass': 23150}
+| Provider | verified | other |
+|---|---:|---|
+| pokemon-asia-id-official | 12325 | |
+| pokemon-asia-th-official | 9553 | invalid 1 (empty body) |
+| pokemon-asia-ph-official | 7406 | |
+| pokemon-asia-sg-official | 7406 | |
+| pokemon-asia-my-official | 7406 | |
+| pokemon-asia-tw-official | 14276 | |
+| pokemon-asia-hk-official | 14276 | candidate 9 (empty `/card-img/` URL, HTTP 403) |
 
-## Staging verified Asia card images
+## Product images
 
-- pokemon-asia-hk-official candidate=14285
-- pokemon-asia-id-official verified=12325
-- pokemon-asia-my-official candidate=7406
-- pokemon-asia-ph-official verified=7406
-- pokemon-asia-sg-official candidate=7406
-- pokemon-asia-th-official candidate=9554
-- pokemon-asia-tw-official candidate=14276
+- Sealed product variants: 4618
+- With pass validation: 3889
+- Without: 729 (see `PRODUCT_IMAGE_GAP_BREAKDOWN_20260802.md`)
+
+## Key commits this continuation
+
+- Asia product HTML parsers and gallery expansion
+- SG/MY shared-inventory hydration from PH
+- HK/TW/TH/PH/SG/MY card acquisition + image validation
+- PNG text-chunk limit fix for official Asia assets
+- Gap / residual reports under `reports/worldwide_catalogue/`
+
+## Next actions
+
+1. Finish regenerating `OPEN_DATASET_STAGING_20260802` report (in progress).
+2. Classify remaining 729 product-image gaps and China transient cohort for release-gate.
+3. Keep European localized DB / product gaps as explicit external blockers (no CAPTCHA bypass).
+4. Rebuild publication bundle + immutable R2 canary only after release-gate accepts staging.
+5. Flutter schema 2.1 worktree only after canary passes.
