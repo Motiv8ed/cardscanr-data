@@ -71,6 +71,65 @@ def build_report(database: Path) -> dict[str, Any]:
                 **totals,
                 "inventory_status": "present" if totals["printings"] else "enumerated_zero_printings",
             })
+        release_reconciliation = _rows(connection, """
+            with release_counts as (
+              select sr.id,sr.language_code,sr.region_code,sr.official_count,count(cp.id) actual_count
+                from set_release sr left join card_printing cp on cp.set_release_id=sr.id
+               group by sr.id
+            )
+            select language_code,region_code,count(*) releases,
+                   sum(case when actual_count>0 then 1 else 0 end) populated_releases,
+                   sum(case when actual_count=0 then 1 else 0 end) zero_printing_releases,
+                   sum(coalesce(official_count,0)) declared_official_cards,
+                   sum(actual_count) normalized_printings,
+                   sum(case when official_count is not null and actual_count=official_count then 1 else 0 end) exact_count_releases,
+                   sum(case when official_count is not null and actual_count<official_count then 1 else 0 end) shortfall_releases,
+                   sum(case when official_count is not null and actual_count>official_count then 1 else 0 end) excess_releases,
+                   sum(case when official_count is null then 1 else 0 end) unknown_count_releases
+              from release_counts group by language_code,region_code order by language_code,region_code
+        """)
+        image_readiness = dict(connection.execute("""
+            select count(distinct cp.id) total_printings,
+                   count(distinct case when cic.id is not null then cp.id end) with_candidate,
+                   count(distinct case when cic.validation_status in ('verified','acquired','published') then cp.id end) technically_verified,
+                   count(distinct case when cic.validation_status in ('verified','acquired','published')
+                                        and cic.rights_status in ('approved_for_mirror','link_only') then cp.id end) app_eligible
+              from card_printing cp left join card_variant cv on cv.card_printing_id=cp.id
+              left join card_image_candidate cic on cic.card_variant_id=cv.id
+        """).fetchone())
+        product_image_readiness = dict(connection.execute("""
+            select count(distinct spv.id) total_product_variants,
+                   count(distinct case when pic.id is not null then spv.id end) with_candidate,
+                   count(distinct case when pic.validation_status in ('verified','acquired','published') then spv.id end) technically_verified,
+                   count(distinct case when pic.validation_status in ('verified','acquired','published')
+                                        and pic.rights_status in ('approved_for_mirror','link_only') then spv.id end) app_eligible
+              from sealed_product_variant spv left join product_image_candidate pic
+                on pic.sealed_product_variant_id=spv.id
+        """).fetchone())
+        publication_gates = {
+            "collector_number_collision_groups": connection.execute("""
+                select count(*) from (
+                  select set_release_id,collector_number,count(*) rows
+                    from card_printing group by set_release_id,collector_number having count(*)>1
+                )
+            """).fetchone()[0],
+            "secret_bearing_card_image_urls": connection.execute("""
+                select count(*) from card_image_candidate
+                 where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'
+                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%localhost%'
+            """).fetchone()[0],
+            "secret_bearing_product_image_urls": connection.execute("""
+                select count(*) from product_image_candidate
+                 where lower(source_url) like '%token=%' or lower(source_url) like '%api_key=%'
+                    or lower(source_url) like '%apikey=%' or lower(source_url) like '%localhost%'
+            """).fetchone()[0],
+            "open_unresolved_items": connection.execute(
+                "select count(*) from unresolved_item where status in ('open','needs_review')"
+            ).fetchone()[0],
+            "external_blocker_items": connection.execute(
+                "select count(*) from unresolved_item where externally_unavoidable=1 and status='blocked_external'"
+            ).fetchone()[0],
+        }
         return {
             "schema_version": 1,
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -93,7 +152,11 @@ def build_report(database: Path) -> dict[str, Any]:
                 from import_run order by started_at
             """),
             "language_coverage": language_coverage,
+            "release_reconciliation": release_reconciliation,
             "expected_language_matrix": expected_language_matrix,
+            "image_readiness": image_readiness,
+            "product_image_readiness": product_image_readiness,
+            "publication_gates": publication_gates,
             "provider_entity_counts": _rows(connection, """
                 select cs.provider_id, count(distinct cs.id) sets,
                        count(distinct cp.id) printings, count(distinct cv.id) variants
@@ -119,6 +182,15 @@ def build_report(database: Path) -> dict[str, Any]:
                 select provider_id, product_type, verification_status, count(*) products
                 from sealed_product group by provider_id, product_type, verification_status
                 order by provider_id, product_type, verification_status
+            """),
+            "sealed_product_regions": _rows(connection, """
+                select language_code,region_code,count(*) product_variants
+                  from sealed_product_variant group by language_code,region_code
+                 order by language_code,region_code
+            """),
+            "provider_rights": _rows(connection, """
+                select rights_status,count(*) providers from source_provider
+                 group by rights_status order by rights_status
             """),
             "unresolved": _rows(connection, """
                 select issue_class, status, language_code, region_code, count(*) items
@@ -150,6 +222,21 @@ def markdown(report: dict[str, Any]) -> str:
             f"{row['printings']:,} | {row['variants']:,} | {row['unknown_variants'] or 0:,} | "
             f"{row['quarantined_printings'] or 0:,} |"
         )
+    lines.extend(["", "## Publication readiness", "",
+                  "| Gate | Value |", "|---|---:|"])
+    lines.extend(f"| {key} | {value:,} |" for key, value in report["publication_gates"].items())
+    lines.extend(["", "### Card images", "",
+                  "| Total printings | With candidate | Technically verified | App eligible |",
+                  "|---:|---:|---:|---:|",
+                  f"| {report['image_readiness']['total_printings']:,} | {report['image_readiness']['with_candidate']:,} | "
+                  f"{report['image_readiness']['technically_verified']:,} | {report['image_readiness']['app_eligible']:,} |",
+                  "", "### Product images", "",
+                  "| Product variants | With candidate | Technically verified | App eligible |",
+                  "|---:|---:|---:|---:|",
+                  f"| {report['product_image_readiness']['total_product_variants']:,} | "
+                  f"{report['product_image_readiness']['with_candidate']:,} | "
+                  f"{report['product_image_readiness']['technically_verified']:,} | "
+                  f"{report['product_image_readiness']['app_eligible']:,} |"])
     lines.extend(["", "## Enumerated language matrix", "",
                   "| Language | Expected regions | Printings | Status |", "|---|---|---:|---|"])
     for row in report["expected_language_matrix"]:
