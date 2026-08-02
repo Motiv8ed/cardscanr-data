@@ -42,6 +42,8 @@ def product_type(official_type: str | None, name: str) -> str:
         return "booster_pack"
     if official_type == "構築デッキ":
         return "starter_deck" if "スターター" in name else "constructed_deck"
+    if official_type == "周辺グッズ":
+        return "accessory_product"
     for token, result in (
         ("ブースターボックス", "booster_box"), ("ボックス", "collection_box"),
         ("スペシャルセット", "special_collection"), ("スターターセット", "starter_deck"),
@@ -49,7 +51,7 @@ def product_type(official_type: str | None, name: str) -> str:
     ):
         if token in name:
             return result
-    return "official_product" if official_type != "周辺グッズ" else "accessory_product"
+    return "official_product"
 
 
 def accessory_type(name: str) -> str | None:
@@ -125,7 +127,9 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
             }
             connection.execute(
                 """insert into sealed_product values (?, ?, ?, ?, ?, ?, 'verified', ?)
-                on conflict(id) do update set source_record_id=excluded.source_record_id,raw_product_json=excluded.raw_product_json""",
+                on conflict(id) do update set source_record_id=excluded.source_record_id,
+                canonical_name=excluded.canonical_name,product_type=excluded.product_type,
+                verification_status=excluded.verification_status,raw_product_json=excluded.raw_product_json""",
                 (product_id, PROVIDER_ID, row["provider_record_id"], source_id, name, ptype, row["parsed_json"]),
             )
             connection.execute(
@@ -173,4 +177,3 @@ def import_checkpoint(database: Path, checkpoint_path: Path) -> dict[str, int]:
     finally:
         connection.close()
         checkpoint.close()
-
