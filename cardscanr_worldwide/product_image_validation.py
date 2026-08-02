@@ -36,6 +36,8 @@ create table if not exists candidates(
  candidate_id text primary key,variant_id text not null,provider_id text not null,source_url text not null,
  foreign key(source_url) references assets(source_url)
 );
+create index if not exists assets_status_idx on assets(status,attempts,source_url);
+create index if not exists candidates_provider_url_idx on candidates(provider_id,source_url);
 """
 _thread_local = threading.local()
 

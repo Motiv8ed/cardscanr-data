@@ -23,15 +23,19 @@ CHECKPOINT_SCHEMA = ASSET_CHECKPOINT_SCHEMA.replace(
 )
 
 
-def register_candidates(database: Path, checkpoint: Path) -> dict[str, int]:
+def register_candidates(database: Path, checkpoint: Path, providers: list[str] | None = None) -> dict[str, int]:
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
     staging = sqlite3.connect(f"file:{database.resolve()}?mode=ro", uri=True)
     progress = sqlite3.connect(checkpoint)
     try:
         ensure_checkpoint_schema(progress)
-        rows = staging.execute(
-            "select id,card_variant_id,provider_id,source_url from card_image_candidate order by id"
-        ).fetchall()
+        query = "select id,card_variant_id,provider_id,source_url from card_image_candidate"
+        parameters: list[str] = []
+        if providers:
+            query += f" where provider_id in ({','.join('?' for _ in providers)})"
+            parameters.extend(providers)
+        query += " order by id"
+        rows = staging.execute(query, parameters).fetchall()
         with progress:
             for candidate_id, variant_id, provider_id, source_url in rows:
                 progress.execute("insert or ignore into assets(source_url) values (?)", (source_url,))

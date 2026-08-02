@@ -24,7 +24,7 @@ def main() -> int:
     parser.add_argument("--retry-failed", action="store_true")
     args = parser.parse_args()
     checkpoint = args.runtime_root / "checkpoint.sqlite"
-    output = {"registered": register_candidates(args.database, checkpoint)}
+    output = {"registered": register_candidates(args.database, checkpoint, args.providers)}
     output["acquired"] = acquire(checkpoint, args.runtime_root / "cache", args.workers, args.limit,
                                   args.delay_seconds, args.providers, args.retry_failed)
     output["checkpoint"] = checkpoint_counts(checkpoint)
