@@ -25,6 +25,7 @@ def test_publication_export_preserves_missing_native_name_and_variants(tmp_path:
     connection.execute("insert into card_variant values ('variant','print','unspecified',null,null,null,null,0,'{}','unknown')")
     connection.execute("insert into sealed_product values ('product','p','prod','src','Box','collection_box','verified','{}')")
     connection.execute("insert into sealed_product_variant values ('pv','product','nl','INTL','Box','standard',null,'{}')")
+    connection.execute("insert into product_image_candidate values ('pi','pv','src','p','display','https://example.test/product.png','link_only','verified','{}')")
     connection.commit(); connection.close()
 
     manifest = export_bundle(database, tmp_path / "bundles", "v-test")
@@ -36,11 +37,12 @@ def test_publication_export_preserves_missing_native_name_and_variants(tmp_path:
     variant = json.loads((tmp_path / "bundles/v-test/card_variants.jsonl").read_text(encoding="utf-8"))
     assert variant["canonicalVariantId"] == "variant"
     assert manifest["outputs"]["products.jsonl"]["rows"] == 1
+    assert manifest["outputs"]["direct_product_images.jsonl"]["rows"] == 1
     assert manifest["outputs"]["image_acquisition_attempts.jsonl"]["rows"] == 0
     assert manifest["outputs"]["image_validation_results.jsonl"]["rows"] == 0
     assert manifest["outputs"]["publication_runs.jsonl"]["rows"] == 0
     assert manifest["outputs"]["publication_artifacts.jsonl"]["rows"] == 0
-    assert manifest["schemaVersion"] == "2.1.0"
+    assert manifest["schemaVersion"] == "2.2.0"
     assert manifest["integrity"]["foreignKeyFailures"] == 0
 
     with pytest.raises(FileExistsError):

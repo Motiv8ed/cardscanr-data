@@ -210,6 +210,22 @@ def export_bundle(database: Path, output_root: Path, version: str) -> dict[str, 
                     "sourceRecordId": row["source_record_id"],
                 }
 
+        def direct_product_images() -> Iterable[dict[str, Any]]:
+            for row in connection.execute(
+                """select * from product_image_candidate
+                    where validation_status in ('verified','acquired','published')
+                      and rights_status in ('approved_for_mirror','link_only')
+                    order by sealed_product_variant_id,image_role,id"""
+            ):
+                yield {
+                    "imageCandidateId": row["id"],
+                    "productVariantId": row["sealed_product_variant_id"],
+                    "provider": row["provider_id"], "imageRole": row["image_role"],
+                    "url": row["source_url"], "authenticationRequirement": "not_required",
+                    "directUseTechnicalStatus": "verified", "mirrorPermissionStatus": row["rights_status"],
+                    "sourceRecordId": row["source_record_id"],
+                }
+
         def unresolved() -> Iterable[dict[str, Any]]:
             for row in connection.execute("select * from unresolved_item order by id"):
                 yield {**dict(row), "evidence_json": _json(row["evidence_json"], {})}
@@ -239,6 +255,7 @@ def export_bundle(database: Path, output_root: Path, version: str) -> dict[str, 
             ("sets.jsonl", sets), ("cards.jsonl", cards), ("card_variants.jsonl", variants),
             ("direct_images.jsonl", direct_images), ("products.jsonl", products),
             ("product_contents.jsonl", product_contents), ("product_images.jsonl", product_images),
+            ("direct_product_images.jsonl", direct_product_images),
             ("image_acquisition_attempts.jsonl", acquisition_attempts),
             ("image_validation_results.jsonl", validation_results),
             ("publication_runs.jsonl", publication_runs),
@@ -248,7 +265,7 @@ def export_bundle(database: Path, output_root: Path, version: str) -> dict[str, 
             writer.jsonl(name, factory())
             counts[name] = writer.outputs[name]["rows"]
         manifest = {
-            "schemaVersion": "2.1.0", "catalogueVersion": version,
+            "schemaVersion": "2.2.0", "catalogueVersion": version,
             "generatedAtUtc": datetime.now(timezone.utc).isoformat(),
             "classification": "STAGED_NOT_PUBLISHED",
             "sourceDatabaseSha256": file_sha256(database), "sourceDatabaseBytes": database.stat().st_size,
