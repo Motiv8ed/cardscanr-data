@@ -18,6 +18,10 @@ then built into the application search database. This is validation evidence, no
 - Duplicate canonical printing IDs: 0
 - Authenticated or secret-bearing image URLs: 0
 - Search verification: PASS
+- Publication-history registration: PASS (`canary`)
+- Registered manifest SHA-256: `ce411b773aea4d7f73401def137969185c55f0135f80bceaebba9c93ee2d1438`
+- Registered immutable artifacts: 9 / 512,869,338 bytes
+- Rollback retained: `true`
 
 The canary intentionally exported zero app-eligible direct images because no staging image candidate
 yet satisfies both the technical-verification and rights gates. Candidate and blocked image evidence
