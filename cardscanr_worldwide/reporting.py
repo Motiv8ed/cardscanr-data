@@ -143,6 +143,9 @@ def build_report(database: Path) -> dict[str, Any]:
                    or lower(raw_product_json) like '%token=%' or lower(raw_product_json) like '%api_key=%'
                    or lower(raw_product_json) like '%x-amz-signature=%'
             """).fetchone()[0],
+            "transient_only_product_image_candidates": connection.execute(
+                "select count(*) from product_image_candidate where validation_status='acquired_transient'"
+            ).fetchone()[0],
             "open_unresolved_items": connection.execute(
                 "select count(*) from unresolved_item where status in ('open','needs_review')"
             ).fetchone()[0],
