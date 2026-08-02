@@ -213,7 +213,19 @@ def _import_card(
     if card.get("image_url"):
         image_id = stable_id(variant_id, PROVIDER_ID, "display", digest(card["image_url"])[:16])
         connection.execute(
-            "insert or replace into card_image_candidate values (?, ?, ?, ?, 'display', ?, 'link_only', 'candidate')",
+            """insert into card_image_candidate values (?, ?, ?, ?, 'display', ?, 'link_only', 'candidate')
+               on conflict(id) do update set
+                 card_variant_id=excluded.card_variant_id,
+                 source_record_id=excluded.source_record_id,
+                 provider_id=excluded.provider_id,
+                 image_role=excluded.image_role,
+                 source_url=excluded.source_url,
+                 rights_status=excluded.rights_status,
+                 validation_status=case
+                   when card_image_candidate.validation_status in ('verified','acquired','published','blocked')
+                     then card_image_candidate.validation_status
+                   else excluded.validation_status
+                 end""",
             (image_id, variant_id, source_id, PROVIDER_ID, card["image_url"]),
         )
         counters["image_candidates"] += 1

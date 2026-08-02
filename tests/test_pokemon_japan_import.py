@@ -43,6 +43,10 @@ def test_japan_official_checkpoint_import(tmp_path) -> None:
     connection = sqlite3.connect(database)
     assert connection.execute("select count(*) from attack").fetchone()[0] == 1
     assert connection.execute("select count(*) from ability").fetchone()[0] == 1
+    connection.execute("update card_image_candidate set validation_status='verified'")
+    connection.commit()
+    import_checkpoint(database, checkpoint)
+    assert connection.execute("select validation_status from card_image_candidate").fetchone() == ("verified",)
 
 
 def test_japan_parsed_card_without_set_code_is_not_reported_as_uncollected(tmp_path) -> None:
