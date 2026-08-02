@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-02T11:56:28.920088+00:00",
+  "checkpoint": "D:\\CardScanR_worldwide_runtime_20260802\\card_image_validation_asia_my\\checkpoint.sqlite",
+  "status": {
+    "pass": 7406
+  },
+  "providers": [
+    {
+      "provider_id": "pokemon-asia-my-official",
+      "status": "pass",
+      "distinct_urls": 7406,
+      "candidates": 7406
+    }
+  ],
+  "failure_classes": [],
+  "cache": {
+    "cached_objects": 7406,
+    "observed_bytes": 2090815728
+  },
+  "security_note": "Transient fetch_url values are intentionally excluded from this report."
+}
