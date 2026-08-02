@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 
 USER_AGENT = "CardScanR-catalogue-preservation/1.0"
 PREFIX = "/us/pokemon-tcg/product-gallery/"
+NON_PRODUCT_SLUGS = {"undefinedregions"}
 CDX_URL = (
     "https://web.archive.org/cdx/search/cdx?url=www.pokemon.com/us/pokemon-tcg/product-gallery/*"
     "&from=2015&to=2026&output=json&filter=statuscode:200&fl=timestamp,original,digest,statuscode"
@@ -50,7 +51,7 @@ def parse_cdx(payload: bytes) -> list[dict[str, str]]:
         if not path.startswith(PREFIX):
             continue
         slug = path[len(PREFIX):]
-        if not slug or "/" in slug or not re.fullmatch(r"[a-z0-9-]+", slug):
+        if not slug or "/" in slug or not re.fullmatch(r"[a-z0-9-]+", slug) or slug in NON_PRODUCT_SLUGS:
             continue
         if slug not in latest or row["timestamp"] > latest[slug]["timestamp"]:
             row["provider_record_id"] = slug
@@ -153,21 +154,29 @@ class Collector:
         raise last_error or RuntimeError("Unknown archive fetch error")
 
     def fallback_captures(self, slug: str) -> list[dict[str, str]]:
-        query = urlencode({
-            "url": f"www.pokemon.com/us/pokemon-tcg/product-gallery/{slug}*",
-            "from": "2015", "to": "2026", "output": "json", "filter": "statuscode:200",
-            "fl": "timestamp,original,digest,statuscode", "collapse": "digest", "sort": "reverse", "limit": "50",
-        })
-        data = json.loads(self.fetch(f"https://web.archive.org/cdx/search/cdx?{query}", ".json"))
         header = ["timestamp", "original", "digest", "statuscode"]
-        if not data or data[0] != header:
-            return []
-        rows = []
-        for values in data[1:]:
-            row = dict(zip(header, values))
-            row["replay_url"] = f"https://web.archive.org/web/{row['timestamp']}id_/{row['original']}"
-            rows.append(row)
-        return rows
+        expected_path = f"{PREFIX}{slug}"
+        rows: dict[tuple[str, str, str], dict[str, str]] = {}
+        for host in ("www.pokemon.com", "pokemon.com"):
+            query = urlencode({
+                "url": f"{host}{expected_path}*",
+                "from": "2015", "to": "2026", "output": "json", "filter": "statuscode:200",
+                "fl": "timestamp,original,digest,statuscode", "collapse": "digest",
+                "sort": "reverse", "limit": "100",
+            })
+            try:
+                data = json.loads(self.fetch(f"https://web.archive.org/cdx/search/cdx?{query}", ".json"))
+            except (json.JSONDecodeError, OSError, httpx.HTTPError):
+                continue
+            if not data or data[0] != header:
+                continue
+            for values in data[1:]:
+                row = dict(zip(header, values))
+                if urlsplit(row["original"]).path.rstrip("/") != expected_path:
+                    continue
+                row["replay_url"] = f"https://web.archive.org/web/{row['timestamp']}id_/{row['original']}"
+                rows[(row["timestamp"], row["original"], row["digest"])] = row
+        return sorted(rows.values(), key=lambda row: row["timestamp"], reverse=True)
 
     def run(self) -> dict[str, int]:
         run_id = sha256(utc_now().encode())[:24]

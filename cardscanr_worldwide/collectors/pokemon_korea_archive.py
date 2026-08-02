@@ -47,6 +47,8 @@ def parse_cdx(payload: bytes) -> list[dict[str, str]]:
         if not re.fullmatch(r"https?://(?:www\.)?pokemoncard\.co\.kr/cards/detail/[A-Za-z0-9_-]+", row["original"]):
             continue
         row["provider_record_id"] = row["original"].rstrip("/").rsplit("/", 1)[-1]
+        if row["provider_record_id"] == "logout":
+            continue
         row["replay_url"] = f"https://web.archive.org/web/{row['timestamp']}id_/{row['original']}"
         result.append(row)
     return sorted(result, key=lambda row: row["provider_record_id"])

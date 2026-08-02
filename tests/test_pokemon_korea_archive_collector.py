@@ -35,3 +35,11 @@ def test_korea_archive_cdx_and_card_parser() -> None:
     assert card["regulation_mark"] == "I"
     assert card["image_url"].endswith("/SV-P_203.png")
     assert canonical_url("//cards.example/x.png?w=512") == "https://cards.example/x.png"
+
+
+def test_korea_archive_cdx_excludes_logout_navigation_capture() -> None:
+    payload = json.dumps([
+        ["timestamp", "original", "digest", "statuscode"],
+        ["20260101000000", "https://pokemoncard.co.kr/cards/detail/logout", "d", "200"],
+    ]).encode()
+    assert parse_cdx(payload) == []

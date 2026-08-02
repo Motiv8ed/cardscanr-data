@@ -20,3 +20,11 @@ def test_us_product_archive_parsers() -> None:
     assert result["release_date_text"] == "August 03, 2016"
     assert result["contents"] == ["8 booster packs", "65 card sleeves"]
     assert result["images"][0]["canonical_url"].endswith("/test-box.jpg")
+
+
+def test_us_product_archive_cdx_excludes_navigation_placeholder() -> None:
+    payload = json.dumps([
+        ["timestamp", "original", "digest", "statuscode"],
+        ["20240101000000", "https://www.pokemon.com/us/pokemon-tcg/product-gallery/undefinedregions", "d", "200"],
+    ]).encode()
+    assert parse_cdx(payload) == []
