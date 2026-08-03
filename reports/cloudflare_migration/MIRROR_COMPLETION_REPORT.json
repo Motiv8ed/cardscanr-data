@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-08-03T00:44:53Z",
+  "checkpointPath": "D:\\CardScanR_worldwide_runtime_20260802\\image_mirror_r2\\mirror_checkpoint.sqlite",
+  "checkpointQuickCheck": "ok",
+  "targetUniqueShaCount": 75666,
+  "mirroredUniqueShaCount": 75666,
+  "terminal": true,
+  "cardAssetsMirrored": 70413,
+  "productAssetsMirrored": 5253,
+  "displayBytes": 6267550992,
+  "thumbnailBytes": 1381869760,
+  "sourceBytes": 43385488258,
+  "chinaProductSourceUrlsIncluded": 3034,
+  "technicalStatusCounts": {
+    "mirrored_to_r2": 75666
+  },
+  "rightsStatusCounts": {
+    "unknown": 75666
+  },
+  "uploadFailuresInCheckpoint": 0,
+  "missingLocalBytesClassifiedSeparately": "discovery skipped non-local; checkpoint contains only successful mirrors",
+  "rightsBlockedAssets": 0,
+  "headSamplePairsChecked": 406,
+  "headSampleOk": 406,
+  "headSampleFail": [],
+  "deterministicPathOk": 50,
+  "deterministicPathBad": [],
+  "nonCardScanRDisplayUrlsInCheckpoint": 0,
+  "duplicateMirrorProcess": false,
+  "note": "No mirror writer process was running at verification time. Completion requires terminal checkpoint + HEAD sample PASS; full HEAD of all 151332 objects deferred as follow-up if needed.",
+  "classification": "PASS_TERMINAL_SAMPLED"
+}

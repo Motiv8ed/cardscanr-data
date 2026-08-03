@@ -92,7 +92,14 @@ def rewrite(database: Path, output: Path, mirror_db: Path, placeholder: str) -> 
         new_display = display
         new_thumb = thumb
         changed = False
-        if display and not is_cardscanr(display):
+        image_source = "cardscanr_r2"
+        if not display and not thumb:
+            new_display = placeholder
+            new_thumb = placeholder
+            card_placeholder += 1
+            changed = True
+            image_source = "cardscanr_placeholder"
+        elif display and not is_cardscanr(display):
             mapped = url_map.get(display)
             if mapped:
                 new_display, new_thumb = mapped
@@ -101,6 +108,7 @@ def rewrite(database: Path, output: Path, mirror_db: Path, placeholder: str) -> 
                 new_display = placeholder
                 new_thumb = placeholder
                 card_placeholder += 1
+                image_source = "cardscanr_placeholder"
             changed = True
         elif thumb and not is_cardscanr(thumb):
             mapped = url_map.get(thumb)
@@ -112,16 +120,23 @@ def rewrite(database: Path, output: Path, mirror_db: Path, placeholder: str) -> 
                 new_display = display or placeholder
                 new_thumb = placeholder
                 card_placeholder += 1
+                image_source = "cardscanr_placeholder"
             changed = True
         if changed:
             connection.execute(
                 "update cards set image_display_url=?, image_thumbnail_url=?, thumbnail_url=?, large_image_url=?, image_source=? where canonical_printing_id=?",
-                (new_display, new_thumb, new_thumb, new_display, "cardscanr_r2", printing_id),
+                (new_display, new_thumb, new_thumb, new_display, image_source, printing_id),
             )
     for variant_id, image_url in connection.execute(
         "select product_variant_id, image_url from sealed_products"
     ):
-        if image_url and not is_cardscanr(image_url):
+        if not image_url:
+            connection.execute(
+                "update sealed_products set image_url=?, image_provider=? where product_variant_id=?",
+                (placeholder, "cardscanr_placeholder", variant_id),
+            )
+            product_placeholder += 1
+        elif not is_cardscanr(image_url):
             mapped = url_map.get(image_url)
             if mapped:
                 connection.execute(

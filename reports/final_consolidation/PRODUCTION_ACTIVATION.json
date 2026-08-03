@@ -1,0 +1,120 @@
+{
+  "classification": "PASS",
+  "releaseId": "production-packs-20260803",
+  "localManifestSha256": "eeda5d4ff6cd631a4f39c1814b000870c95655cbdce6b9e57ca9756e45f5b9e3",
+  "localManifestBytes": 19309,
+  "immutableKey": "v2/catalog/pokemon/packs/production-packs-20260803/catalogue.packs.manifest.json",
+  "immutableVerification": {
+    "head": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/catalogue.packs.manifest.json",
+      "status": 200,
+      "contentType": "application/json",
+      "contentLength": "19309"
+    },
+    "getStatus": 200,
+    "sha256": "eeda5d4ff6cd631a4f39c1814b000870c95655cbdce6b9e57ca9756e45f5b9e3",
+    "matchesLocal": true
+  },
+  "rollbackEvidenceBeforeActivation": {
+    "searchPointer": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/search/catalogue.manifest.json",
+      "status": 404,
+      "error": "HTTP Error 404: Not Found"
+    },
+    "packsActivePointer": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/active/catalogue.packs.manifest.json",
+      "status": 200,
+      "contentType": "application/json",
+      "contentLength": "18142"
+    }
+  },
+  "packsUploaded": [],
+  "activated": true,
+  "activePointers": {
+    "v2/catalog/pokemon/packs/active/catalogue.packs.manifest.json": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/active/catalogue.packs.manifest.json",
+      "status": 200,
+      "bytes": 19309,
+      "sha256": "eeda5d4ff6cd631a4f39c1814b000870c95655cbdce6b9e57ca9756e45f5b9e3",
+      "matchesLocal": true
+    },
+    "v2/catalog/pokemon/search/catalogue.manifest.json": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/search/catalogue.manifest.json",
+      "status": 200,
+      "bytes": 19309,
+      "sha256": "eeda5d4ff6cd631a4f39c1814b000870c95655cbdce6b9e57ca9756e45f5b9e3",
+      "matchesLocal": true
+    }
+  },
+  "defaultPackHeads": [
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/core/5b2c06d5c9cc581f3724c1c1aa4b53a58d351837bcfe85eafc3ab25fa70d7e6b/core.sqlite.gz",
+      "status": 200,
+      "contentType": "application/gzip",
+      "contentLength": "63171"
+    },
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/core/5b2c06d5c9cc581f3724c1c1aa4b53a58d351837bcfe85eafc3ab25fa70d7e6b/core.sqlite",
+      "status": 200,
+      "contentType": "application/vnd.sqlite3",
+      "contentLength": "421888"
+    },
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/en/4a7518700a145f248d46f4fe3e6d698207a12ec6d076c2ea876d46ac610ffb85/en.sqlite.gz",
+      "status": 200,
+      "contentType": "application/gzip",
+      "contentLength": "19553247"
+    },
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/en/4a7518700a145f248d46f4fe3e6d698207a12ec6d076c2ea876d46ac610ffb85/en.sqlite",
+      "status": 200,
+      "contentType": "application/vnd.sqlite3",
+      "contentLength": "268324864"
+    },
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/sealed-products/05b93a8d3ec386f7e89128769a6d48ce632527be270a6c3ac9f557a52d338cdb/sealed-products.sqlite.gz",
+      "status": 200,
+      "contentType": "application/gzip",
+      "contentLength": "2850308"
+    },
+    {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/production-packs-20260803/sealed-products/05b93a8d3ec386f7e89128769a6d48ce632527be270a6c3ac9f557a52d338cdb/sealed-products.sqlite",
+      "status": 200,
+      "contentType": "application/vnd.sqlite3",
+      "contentLength": "23506944"
+    }
+  ],
+  "canariesPreserved": {
+    "canary2": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/search/versions/89c07376b30e9b0edf8ee1ad74c8b53583dc12a11f5f3fb71ec5d8419db5428b/manifest.json",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "contentLength": "1716"
+    },
+    "canary3": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/search/versions/95f4acb70ff30f19a3d18d21435d21711fda557ea003f9f131319ff5db540425/manifest.json",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "contentLength": "1717"
+    },
+    "canary4": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/search/versions/87939dfc7a5e7a29a5c8191b1a56abd947a7e5f89011ef91b84231318e0e41c0/manifest.json",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "contentLength": "1717"
+    },
+    "canary4_packs": {
+      "url": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v2/catalog/pokemon/packs/canary4-packs-20260803/catalogue.packs.manifest.json",
+      "status": 200,
+      "contentType": "application/json",
+      "contentLength": "18142"
+    }
+  },
+  "gates": {
+    "THIRD_PARTY_RUNTIME_IMAGE_URLS": 0,
+    "NULL_CARD_IMAGE_URLS": 0,
+    "NULL_PRODUCT_IMAGE_URLS": 0,
+    "FULL_IMAGE_LIBRARY_AUTO_DOWNLOAD": false,
+    "IMAGES_EMBEDDED_IN_CATALOGUE_PACKS": 0
+  }
+}
