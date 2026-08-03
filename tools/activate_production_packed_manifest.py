@@ -64,11 +64,26 @@ def main() -> int:
 
     manifest_path = args.packs_dir / "catalogue.packs.manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    body = manifest_path.read_bytes()
+    # Public manifests must never include local filesystem paths.
+    public_manifest = json.loads(json.dumps(manifest))
+    for pack in public_manifest.get("packs", []):
+        for key in ("sqlitePath", "gzipPath"):
+            pack.pop(key, None)
+    public_body = (
+        json.dumps(public_manifest, ensure_ascii=False, indent=2) + "\n"
+    ).encode("utf-8")
+    if b"CardScanR_worldwide_runtime" in public_body or b":\\\\" in public_body:
+        raise SystemExit("public manifest still contains local filesystem paths")
+    public_manifest_path = args.packs_dir / "catalogue.packs.manifest.public.json"
+    public_manifest_path.write_bytes(public_body)
+    body = public_body
     local_sha = hashlib.sha256(body).hexdigest()
     # Determinism check
-    body2 = json.dumps(json.loads(body.decode("utf-8")), ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
-    # Accept either exact bytes or normalized indentation equivalence for report
+    body2 = (
+        json.dumps(json.loads(body.decode("utf-8")), ensure_ascii=False, indent=2) + "\n"
+    ).encode("utf-8")
+    if body != body2:
+        raise SystemExit("public manifest serialization is not deterministic")
     config = load_publication_config(args.config)
     client = build_s3_client(
         endpoint_url=config.r2_s3_endpoint,
@@ -110,7 +125,7 @@ def main() -> int:
         client,
         bucket=config.r2_bucket,
         object_key=immutable_key,
-        local_path=manifest_path,
+        local_path=public_manifest_path,
         content_type=JSON_CONTENT_TYPE,
         cache_control=IMMUTABLE_CACHE,
     )
@@ -127,7 +142,7 @@ def main() -> int:
             client,
             bucket=config.r2_bucket,
             object_key=ACTIVE_PACKS_POINTER,
-            local_path=manifest_path,
+            local_path=public_manifest_path,
             content_type=JSON_CONTENT_TYPE,
             cache_control=ACTIVE_CACHE,
         )
@@ -135,7 +150,7 @@ def main() -> int:
             client,
             bucket=config.r2_bucket,
             object_key=ACTIVE_SEARCH_POINTER,
-            local_path=manifest_path,
+            local_path=public_manifest_path,
             content_type=JSON_CONTENT_TYPE,
             cache_control=ACTIVE_CACHE,
         )
