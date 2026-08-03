@@ -1,0 +1,160 @@
+{
+  "hosts": {
+    "https://assets.cardscanr.com": {
+      "rootHead": 404,
+      "server": "cloudflare"
+    },
+    "https://cards.cardscanr.com": {
+      "rootHead": 404,
+      "server": "cloudflare"
+    }
+  },
+  "manifest": {
+    "status": 200,
+    "bytes": 16608,
+    "sha256": "0c9a2b2222c4f833b4aec587cb3c4eb837117fb8a89bf97ce3ed1ecd5fd5a011",
+    "shaMatch": true,
+    "cache": "public, max-age=60, must-revalidate",
+    "contentType": "application/json",
+    "release": "production-packs-20260803",
+    "r2DevCount": 1,
+    "assetsCount": 24,
+    "imageBase": {
+      "publicBaseUrl": "https://assets.cardscanr.com",
+      "cardImagePrefix": "v2/catalog/pokemon/images/",
+      "productImagePrefix": "v2/catalog/pokemon/images/",
+      "ownedCardImageBaseUrl": "https://cards.cardscanr.com",
+      "ownedCardImagePrefix": "cards/"
+    },
+    "gates": {
+      "THIRD_PARTY_RUNTIME_IMAGE_URLS": 0,
+      "NULL_CARD_IMAGE_URLS": 0,
+      "NULL_PRODUCT_IMAGE_URLS": 0,
+      "R2_DEV_PRODUCTION_URLS": 0,
+      "FULL_IMAGE_LIBRARY_AUTO_DOWNLOAD": false,
+      "IMAGES_EMBEDDED_IN_CATALOGUE_PACKS": 0
+    }
+  },
+  "packs": [
+    {
+      "packId": "core",
+      "head": 200,
+      "range": 206,
+      "len": "63171",
+      "cache": "public, max-age=31536000, immutable",
+      "ct": "application/gzip",
+      "rangeLen": 1024,
+      "contentRange": null
+    },
+    {
+      "packId": "en",
+      "head": 200,
+      "range": 206,
+      "len": "19446555",
+      "cache": "public, max-age=31536000, immutable",
+      "ct": "application/gzip",
+      "rangeLen": 1024,
+      "contentRange": null
+    },
+    {
+      "packId": "sealed-products",
+      "head": 200,
+      "range": 206,
+      "len": "2837008",
+      "cache": "public, max-age=31536000, immutable",
+      "ct": "application/gzip",
+      "rangeLen": 1024,
+      "contentRange": null
+    },
+    {
+      "packId": "ja",
+      "head": 200,
+      "range": 206,
+      "len": "8313449",
+      "cache": "public, max-age=31536000, immutable",
+      "ct": "application/gzip",
+      "rangeLen": 1024,
+      "contentRange": null
+    },
+    {
+      "packId": "ko",
+      "head": 200,
+      "range": 206,
+      "len": "1826935",
+      "cache": "public, max-age=31536000, immutable",
+      "ct": "application/gzip",
+      "rangeLen": 1024,
+      "contentRange": null
+    }
+  ],
+  "images": [
+    {
+      "kind": "thumb",
+      "url": "https://assets.cardscanr.com/v2/catalog/pokemon/images/by-sha/db6ac10a99a7417e800cac64ee189e63447600a7325a5e9d9717de0ad6b71e83/thumb.webp",
+      "status": 200,
+      "ct": "image/webp",
+      "cache": "public, max-age=31536000, immutable",
+      "len": "16928"
+    },
+    {
+      "kind": "display",
+      "url": "https://assets.cardscanr.com/v2/catalog/pokemon/images/by-sha/db6ac10a99a7417e800cac64ee189e63447600a7325a5e9d9717de0ad6b71e83/display.webp",
+      "status": 200,
+      "ct": "image/webp",
+      "cache": "public, max-age=31536000, immutable",
+      "len": "38472"
+    },
+    {
+      "kind": "product",
+      "url": "https://assets.cardscanr.com/v2/catalog/pokemon/placeholders/card_missing.webp",
+      "status": 200,
+      "ct": "image/webp",
+      "cache": "public, max-age=31536000, immutable"
+    },
+    {
+      "kind": "cards-bucket",
+      "url": "https://cards.cardscanr.com/cards/en/me3/me3-38/thumb.webp",
+      "status": 200,
+      "ct": "image/webp",
+      "cache": "public, max-age=31536000, immutable",
+      "len": "15824"
+    },
+    {
+      "kind": "cards-bucket",
+      "url": "https://cards.cardscanr.com/cards/en/me3/me3-38/display.webp",
+      "status": 200,
+      "ct": "image/webp",
+      "cache": "public, max-age=31536000, immutable",
+      "len": "165392"
+    }
+  ],
+  "cors": {
+    "assetsGetWithOrigin": {
+      "status": 200,
+      "ACAO": null
+    },
+    "apiPutBucketCors": "AccessDenied",
+    "note": "Flutter mobile does not require CORS. Dashboard CORS needs an owner token with R2 CORS edit permission."
+  },
+  "gates": {
+    "THIRD_PARTY_RUNTIME_IMAGE_URLS": 0,
+    "NULL_CARD_IMAGE_URLS": 0,
+    "NULL_PRODUCT_IMAGE_URLS": 0,
+    "R2_DEV_PRODUCTION_URLS": 0,
+    "FULL_IMAGE_LIBRARY_AUTO_DOWNLOAD": false,
+    "IMAGES_EMBEDDED_IN_CATALOGUE_PACKS": 0
+  },
+  "rollbackR2Dev": {
+    "status": 200,
+    "retained": true
+  },
+  "summary": {
+    "THIRD_PARTY_RUNTIME_IMAGE_URLS": 0,
+    "NULL_CARD_IMAGE_URLS": 0,
+    "R2_DEV_PRODUCTION_URLS": 0,
+    "MISSING_REFERENCED_R2_OBJECTS": 0,
+    "CANARY_FALLBACK_REQUIRED": false,
+    "PACKS_OK": true,
+    "IMAGES_OK": true
+  }
+}

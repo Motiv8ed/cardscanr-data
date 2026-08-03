@@ -11,10 +11,10 @@ import time
 from pathlib import Path
 
 PLACEHOLDER = (
-    "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/"
+    "https://assets.cardscanr.com/"
     "v2/catalog/pokemon/placeholders/card_missing.webp"
 )
-PUBLIC_BASE = "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev"
+PUBLIC_BASE = "https://assets.cardscanr.com"
 SRC_PACKS = Path(r"D:\CardScanR_worldwide_runtime_20260802\publication\packs_canary4_20260803")
 OUT_PACKS = Path(r"D:\CardScanR_worldwide_runtime_20260802\publication\packs_production_20260803")
 RELEASE_ID = "production-packs-20260803"

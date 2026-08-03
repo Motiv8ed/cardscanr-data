@@ -14,10 +14,18 @@ from urllib.parse import urlparse
 RUNTIME = Path(r"D:\CardScanR_worldwide_runtime_20260802")
 DEFAULT_MIRROR_DB = RUNTIME / "image_mirror_r2" / "mirror_checkpoint.sqlite"
 PLACEHOLDER = (
-    "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/"
+    "https://assets.cardscanr.com/"
     "v2/catalog/pokemon/placeholders/card_missing.webp"
 )
-CARDSCANR_MARKERS = ("r2.dev", "cardscanr", "pages.dev", "andygore149.workers.dev")
+CARDSCANR_MARKERS = (
+    "assets.cardscanr.com",
+    "cards.cardscanr.com",
+    "cardscanr.com",
+    "r2.dev",
+    "cardscanr",
+    "pages.dev",
+    "andygore149.workers.dev",
+)
 
 
 def is_cardscanr(url: str | None) -> bool:
