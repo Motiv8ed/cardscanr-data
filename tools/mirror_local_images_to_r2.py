@@ -145,7 +145,17 @@ def ensure_checkpoint(path: Path) -> sqlite3.Connection:
 
 
 def make_derivatives(source: Path, *, display_max: int, thumb_max: int) -> tuple[bytes, bytes, int, int]:
+    # Some official PNGs embed oversized iTXt/zTXt chunks that trip Pillow defaults.
+    Image.MAX_IMAGE_PIXELS = None
+    try:
+        from PIL import PngImagePlugin
+
+        PngImagePlugin.MAX_TEXT_CHUNK = 100 * 1024 * 1024
+        PngImagePlugin.MAX_TEXT_MEMORY = 200 * 1024 * 1024
+    except Exception:  # noqa: BLE001 - best-effort Pillow tuning
+        pass
     with Image.open(source) as image:
+        image.load()
         image = image.convert("RGBA") if image.mode in {"P", "RGBA", "LA"} else image.convert("RGB")
         display = image.copy()
         display.thumbnail((display_max, display_max), Image.Resampling.LANCZOS)
@@ -153,11 +163,9 @@ def make_derivatives(source: Path, *, display_max: int, thumb_max: int) -> tuple
         thumb.thumbnail((thumb_max, thumb_max), Image.Resampling.LANCZOS)
         display_buf = io.BytesIO()
         thumb_buf = io.BytesIO()
-        display_format = "RGBA" if display.mode == "RGBA" else "RGB"
-        thumb_format = "RGBA" if thumb.mode == "RGBA" else "RGB"
-        if display_format == "RGB":
+        if display.mode != "RGBA":
             display = display.convert("RGB")
-        if thumb_format == "RGB":
+        if thumb.mode != "RGBA":
             thumb = thumb.convert("RGB")
         display.save(display_buf, format="WEBP", quality=80, method=0)
         thumb.save(thumb_buf, format="WEBP", quality=78, method=0)
