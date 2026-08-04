@@ -1,0 +1,2 @@
+-- Play v56: optimize legacy user-data RLS initplans (auth.uid() -> select auth.uid()).
+-- Applied live as play_v56_legacy_rls_initplan. Idempotent via drop/create.
