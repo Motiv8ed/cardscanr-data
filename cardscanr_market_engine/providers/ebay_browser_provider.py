@@ -94,6 +94,7 @@ LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ", " bulk ", " card lot
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
 SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
+EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity/")
 DEFAULT_MAX_QUERY_ATTEMPTS = 5
 RESULT_CONTAINER_SELECTOR = 'li.s-item, .srp-results, a[href*="/itm/"]'
 DIAGNOSTIC_STAGES = (
@@ -187,6 +188,18 @@ def normalize_ebay_listing_url(href: str, *, provider_domain: str) -> dict[str, 
 def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
     haystack = f"{title}\n{body_text}".lower()
     return any(marker in haystack for marker in BLOCK_TEXT_MARKERS)
+
+
+def is_ebay_authentication_url(url: str) -> bool:
+    """Return true when an eBay navigation has left public browsing for authentication."""
+    parsed = urlparse(url)
+    host = parsed.netloc.lower().split(":", 1)[0]
+    if not (host == "ebay.com" or host.endswith(".ebay.com") or ".ebay." in host):
+        return False
+    if host.startswith(("signin.", "login.")):
+        return True
+    path = parsed.path.lower()
+    return any(marker in path for marker in EBAY_AUTH_PATH_MARKERS)
 
 
 def classify_browser_page_state(
@@ -1670,6 +1683,18 @@ class EbayBrowserSoldCompsProvider:
                 page.set_default_timeout(timeout_ms)
                 with _StageTimer(stage_timings, "open_ebay_page"):
                     page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                if is_ebay_authentication_url(page.url):
+                    current_url = urlparse(page.url)
+                    raise ProviderAuthenticationRequiredError(
+                        "eBay redirected the public sold-listing search to authentication; sign-in is not attempted",
+                        diagnostics={
+                            "providerOutcome": "authentication_redirect",
+                            "providerDomain": search_query.provider_domain,
+                            "redirectHost": current_url.netloc,
+                            "redirectPath": current_url.path,
+                            "stageTimings": stage_timings.snapshot(),
+                        },
+                    )
                 with _StageTimer(stage_timings, "apply_sold_completed_filters"):
                     if "LH_Sold=1" not in search_query.search_url or "LH_Complete=1" not in search_query.search_url:
                         raise ProviderParseError(
@@ -1681,6 +1706,18 @@ class EbayBrowserSoldCompsProvider:
                         page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 15000))
                 except PlaywrightTimeoutError:
                     pass
+                if is_ebay_authentication_url(page.url):
+                    current_url = urlparse(page.url)
+                    raise ProviderAuthenticationRequiredError(
+                        "eBay redirected the public sold-listing search to authentication; sign-in is not attempted",
+                        diagnostics={
+                            "providerOutcome": "authentication_redirect",
+                            "providerDomain": search_query.provider_domain,
+                            "redirectHost": current_url.netloc,
+                            "redirectPath": current_url.path,
+                            "stageTimings": stage_timings.snapshot(),
+                        },
+                    )
 
                 try:
                     with _StageTimer(stage_timings, "wait_for_result_container"):
