@@ -31,6 +31,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     contains_block_marker,
     count_candidate_selectors,
     dedupe_sold_comps,
+    is_ebay_authentication_url,
     is_price_range_text,
     normalize_ebay_listing_url,
     parse_candidate_dict,
@@ -1448,6 +1449,13 @@ class EvidenceStrategyTests(unittest.TestCase):
 
 
 class ParserTests(unittest.TestCase):
+    def test_public_search_never_continues_into_ebay_authentication_routes(self) -> None:
+        self.assertFalse(is_ebay_authentication_url("https://www.ebay.com.au/sch/i.html?_nkw=Pikachu&LH_Sold=1"))
+        self.assertFalse(is_ebay_authentication_url("https://www.ebay.com.au/itm/1234567890"))
+        self.assertTrue(is_ebay_authentication_url("https://signin.ebay.com/ws/eBayISAPI.dll?SignIn"))
+        self.assertTrue(is_ebay_authentication_url("https://www.ebay.com.au/signin/"))
+        self.assertFalse(is_ebay_authentication_url("https://example.com/login"))
+
     def test_price_parser_handles_aud_usd_gbp_cad_examples(self) -> None:
         examples = [
             ("A$12.34", "AUD", 12.34),
