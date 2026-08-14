@@ -318,7 +318,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-root",
         type=Path,
-        default=Path(r"D:\CardScanR_backups"),
+        default=Path(r"D:\CardScanR_Archive\backups"),
         help="parent directory for the timestamped backup",
     )
     parser.add_argument(
