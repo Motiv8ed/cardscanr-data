@@ -28,6 +28,10 @@ from .providers.errors import (
     sanitize_provider_diagnostics,
 )
 from .scheduler import parse_market_allowlist
+from .marketplace_ops_state import (
+    get_active_cooldown,
+    maybe_record_failure_cooldown,
+)
 
 
 def utc_now() -> datetime:
@@ -194,6 +198,21 @@ class MarketPriceJobRunner:
                 diagnostics={
                     "marketCountry": market,
                     "allowedMarkets": allowed,
+                },
+            )
+        cooldown = get_active_cooldown(market)
+        if cooldown is not None:
+            status = cooldown.reason if cooldown.reason in {"AUTH_REQUIRED", "CHALLENGE_REQUIRED"} else "DEFERRED"
+            raise ProviderBlockedError(
+                f"{status}: marketplace temporarily deferred until {utc_iso(cooldown.until)}; "
+                "manual session restore may be required",
+                diagnostics={
+                    "providerOutcome": "marketplace_ops_cooldown",
+                    "operationalStatus": status,
+                    "marketCountry": market,
+                    "cooldownUntil": utc_iso(cooldown.until),
+                    "cooldownReason": cooldown.reason,
+                    "retryable": True,
                 },
             )
 
@@ -510,6 +529,7 @@ class MarketPriceJobRunner:
         if not job.price_key_id:
             raise ValueError(f"Market refresh job {job.id} is missing price_key_id")
         now = self.now_func()
+        price_key: MarketPriceKey | None = None
         try:
             price_key = self.client.get_price_key(job.price_key_id)
             if not price_key.id:
@@ -599,6 +619,13 @@ class MarketPriceJobRunner:
                         "retryable": exc.retryable,
                         "diagnostics": exc.diagnostics,
                     }
+                )
+            if price_key is not None:
+                maybe_record_failure_cooldown(
+                    market=str(price_key.market_country or ""),
+                    message=str(exc),
+                    diagnostics=(exc.diagnostics if isinstance(exc, ProviderError) else None),
+                    now=now,
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
             fail_job_error: str | None = None

@@ -187,6 +187,22 @@ class MarketPriceRefreshScheduler:
                     "allowed_markets": list(self.config.allowed_markets),
                 },
             )
+        from .marketplace_ops_state import get_active_cooldown
+
+        cooldown = get_active_cooldown(market_country, now=now) if market_country else None
+        if cooldown is not None:
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="marketplace_cooldown",
+                score=0,
+                details={
+                    "market_country": market_country or None,
+                    "cooldown_reason": cooldown.reason,
+                    "cooldown_until": utc_iso(cooldown.until),
+                    "last_error": cooldown.last_error,
+                },
+            )
         has_cache = bool(candidate.get("has_cache"))
         stale_after = _parse_utc(candidate.get("stale_after"))
         is_stale = bool(stale_after and stale_after <= now)
@@ -417,6 +433,8 @@ class MarketPriceRefreshScheduler:
             top_reason_counts[reason_key] = top_reason_counts.get(reason_key, 0) + 1
             if not decision.should_enqueue:
                 if decision.reason == "market_not_allowed":
+                    skipped_market += 1
+                elif decision.reason == "marketplace_cooldown":
                     skipped_market += 1
                 else:
                     skipped_fresh += 1

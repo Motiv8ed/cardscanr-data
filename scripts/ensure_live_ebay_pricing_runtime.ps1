@@ -163,6 +163,17 @@ function Show-Status {
     } | ConvertTo-Json -Depth 6
 }
 
+function Write-HealthReportBestEffort {
+    try {
+        $healthScript = Join-Path $repoRoot "scripts\report_ebay_pricing_health.py"
+        if (Test-Path $healthScript) {
+            & $pythonPath $healthScript | Out-Null
+        }
+    } catch {
+        Write-Host "[runtime] health report skipped: $($_.Exception.Message)"
+    }
+}
+
 if ($Stop) {
     if ($Component -in @("worker", "both")) {
         Stop-Component -Needle "workers/market_price_worker.py" -StatePath $workerStatePath -Label "worker"
@@ -184,5 +195,8 @@ if ($Component -in @("worker", "both")) {
 }
 if ($Component -in @("scheduler", "both")) {
     Ensure-Scheduler
+}
+if ($Component -in @("worker", "scheduler", "both", "status")) {
+    Write-HealthReportBestEffort
 }
 Show-Status
