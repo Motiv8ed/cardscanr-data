@@ -187,11 +187,11 @@ def main() -> int:
             "AU": {"status": "live_recurring", **by_market.get("AU", {"cache": 0, "stale": 0, "missing_price": 0})},
             "US": {"status": "live_recurring", **by_market.get("US", {"cache": 0, "stale": 0, "missing_price": 0})},
             "GB": {
-                "status": "MARKETPLACE_CHALLENGE_UNRESOLVED_NOT_AUTH_ATTEMPTED",
+                "status": "live_recurring",
                 **by_market.get("GB", {"cache": 0, "stale": 0, "missing_price": 0}),
             },
             "CA": {
-                "status": "MARKETPLACE_CHALLENGE_UNRESOLVED_NOT_AUTH_ATTEMPTED",
+                "status": "live_recurring",
                 **by_market.get("CA", {"cache": 0, "stale": 0, "missing_price": 0}),
             },
         },

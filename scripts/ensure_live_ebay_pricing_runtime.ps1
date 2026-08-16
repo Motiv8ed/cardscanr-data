@@ -77,8 +77,8 @@ function Ensure-Worker {
     }
 
     Set-LiveEbayWorkerEnvironment -ProfilePath $profilePath -Headless $true
-    $env:MARKET_WORKER_ALLOWED_MARKETS = "AU,US"
-    $env:MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS = "GB,CA"
+    $env:MARKET_WORKER_ALLOWED_MARKETS = "AU,US,GB,CA"
+    $env:MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS = "NONE"
     $env:MARKET_WORKER_CONCURRENCY = "1"
     $env:MARKET_WORKER_MAX_JOBS_PER_RUN = "1"
     $env:MARKET_WORKER_POLL_SECONDS = "30"
@@ -119,7 +119,7 @@ function Ensure-Scheduler {
         return
     }
 
-    $env:MARKET_SCHEDULER_ALLOWED_MARKETS = "AU,US"
+    $env:MARKET_SCHEDULER_ALLOWED_MARKETS = "AU,US,GB,CA"
     $env:MARKET_SCHEDULER_MAX_KEYS_PER_RUN = "25"
     $env:MARKET_SCHEDULER_MAX_ENQUEUES_PER_RUN = "2"
     $env:MARKET_SCHEDULER_POLL_SECONDS = "900"
@@ -144,7 +144,7 @@ function Ensure-Scheduler {
         status = "started"
         stdoutLog = $stdout
         stderrLog = $stderr
-        allowedMarkets = "AU,US"
+        allowedMarkets = "AU,US,GB,CA"
         maxEnqueuesPerRun = 2
     }
     Write-Host "[runtime] Started scheduler PID=$($proc.Id)"

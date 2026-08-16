@@ -163,10 +163,19 @@ class MarketPriceJobRunner:
 
     def _assert_market_allowed_for_worker(self, price_key: MarketPriceKey) -> None:
         market = str(price_key.market_country or "").strip().upper()
-        allowed = parse_market_allowlist(os.getenv("MARKET_WORKER_ALLOWED_MARKETS", "AU,US"))
-        deferred = parse_market_allowlist(
-            os.getenv("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS", "GB,CA")
-        )
+        allowed_raw = os.getenv("MARKET_WORKER_ALLOWED_MARKETS")
+        if allowed_raw is None:
+            allowed_raw = "AU,US,GB,CA"
+        allowed = parse_market_allowlist(allowed_raw)
+        # Empty string must mean "no deferred markets". On Windows, an unset var
+        # falls back to none; do not treat blank as the old GB,CA default.
+        deferred_raw = os.getenv("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS")
+        if deferred_raw is None:
+            deferred_raw = ""
+        if deferred_raw.strip().upper() in {"", "NONE", "OFF", "DISABLE", "DISABLED"}:
+            deferred = []
+        else:
+            deferred = parse_market_allowlist(deferred_raw)
         if deferred and market in deferred:
             raise ProviderBlockedError(
                 "MARKETPLACE_CHALLENGE_REQUIRED: marketplace challenge unresolved; "
