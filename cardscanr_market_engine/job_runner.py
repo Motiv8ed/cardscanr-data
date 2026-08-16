@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from dataclasses import replace
+import os
 from typing import Any
 
 from .cache_writer import build_cache_payload
@@ -26,6 +27,7 @@ from .providers.errors import (
     ProviderUnsupportedMarketError,
     sanitize_provider_diagnostics,
 )
+from .scheduler import parse_market_allowlist
 
 
 def utc_now() -> datetime:
@@ -158,6 +160,33 @@ class MarketPriceJobRunner:
         self.config = config
         self.now_func = now_func
         self.logger = logger
+
+    def _assert_market_allowed_for_worker(self, price_key: MarketPriceKey) -> None:
+        market = str(price_key.market_country or "").strip().upper()
+        allowed = parse_market_allowlist(os.getenv("MARKET_WORKER_ALLOWED_MARKETS", "AU,US"))
+        deferred = parse_market_allowlist(
+            os.getenv("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS", "GB,CA")
+        )
+        if deferred and market in deferred:
+            raise ProviderBlockedError(
+                "MARKETPLACE_CHALLENGE_REQUIRED: marketplace challenge unresolved; "
+                "authentication was not attempted and challenge pages are not retried",
+                diagnostics={
+                    "providerOutcome": "marketplace_challenge_deferred",
+                    "operationalStatus": "MARKETPLACE_CHALLENGE_REQUIRED",
+                    "marketCountry": market,
+                    "currency": str(price_key.currency or "").upper(),
+                    "retryable": True,
+                },
+            )
+        if allowed and market and market not in allowed:
+            raise ProviderUnsupportedMarketError(
+                f"Worker market allowlist excludes {market}",
+                diagnostics={
+                    "marketCountry": market,
+                    "allowedMarkets": allowed,
+                },
+            )
 
     def marketplace_attempts(self, price_key: MarketPriceKey, provider_marketplace: str) -> tuple[LocalMarketConfig, ...]:
         # Home-market only. Cross-marketplace comps must never populate another
@@ -478,6 +507,7 @@ class MarketPriceJobRunner:
                 raise ValueError(f"Market price key row missing id for job {job.id}")
             if not price_key.fingerprint:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
+            self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
             (

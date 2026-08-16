@@ -41,6 +41,22 @@ def _parse_bool(name: str, default: bool) -> bool:
     return raw in {"1", "true", "yes", "y", "on"}
 
 
+def parse_market_allowlist(value: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    """Parse a comma-separated market allowlist. Empty means all markets."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        raw_items = [str(item) for item in value]
+    else:
+        raw_items = str(value).split(",")
+    markets: list[str] = []
+    for raw in raw_items:
+        market = str(raw).strip().upper()
+        if market and market not in markets:
+            markets.append(market)
+    return markets
+
+
 def _parse_utc(value: Any) -> datetime | None:
     if value is None:
         return None
@@ -89,6 +105,7 @@ class MarketSchedulerConfig:
     min_inventory_count: int
     dry_run: bool
     poll_seconds: int
+    allowed_markets: list[str]
     latest_report_path: Path
     runs_report_path: Path
 
@@ -112,6 +129,7 @@ class MarketSchedulerConfig:
             min_inventory_count=_parse_non_negative_int("MARKET_SCHEDULER_MIN_INVENTORY_COUNT", 0),
             dry_run=_parse_bool("MARKET_SCHEDULER_DRY_RUN", False),
             poll_seconds=_parse_positive_int("MARKET_SCHEDULER_POLL_SECONDS", 300),
+            allowed_markets=parse_market_allowlist(os.getenv("MARKET_SCHEDULER_ALLOWED_MARKETS", "")),
             latest_report_path=REPORTS_DIR / "market_price_scheduler_latest.json",
             runs_report_path=REPORTS_DIR / "market_price_scheduler_runs.jsonl",
         )
@@ -157,6 +175,18 @@ class MarketPriceRefreshScheduler:
         return (0 if item.get("candidate_type") == "missing_cache" else 1, -seen_ts, str(item.get("id")))
 
     def evaluate_candidate(self, candidate: dict[str, Any], *, now: datetime) -> SchedulerDecision:
+        market_country = str(candidate.get("market_country") or "").strip().upper()
+        if self.config.allowed_markets and market_country and market_country not in self.config.allowed_markets:
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="market_not_allowed",
+                score=0,
+                details={
+                    "market_country": market_country or None,
+                    "allowed_markets": list(self.config.allowed_markets),
+                },
+            )
         has_cache = bool(candidate.get("has_cache"))
         stale_after = _parse_utc(candidate.get("stale_after"))
         is_stale = bool(stale_after and stale_after <= now)
@@ -198,6 +228,8 @@ class MarketPriceRefreshScheduler:
             "recently_seen": recently_seen,
             "very_old": very_old,
             "score": score,
+            "market_country": market_country or None,
+            "allowed_markets": list(self.config.allowed_markets),
         }
 
         if not has_cache:
@@ -374,6 +406,7 @@ class MarketPriceRefreshScheduler:
         skipped_active = 0
         skipped_limits = 0
         skipped_fresh = 0
+        skipped_market = 0
         dry_run_candidates = 0
         enqueued_jobs: list[dict[str, Any]] = []
         top_reason_counts: dict[str, int] = {}
@@ -383,7 +416,10 @@ class MarketPriceRefreshScheduler:
             reason_key = decision.reason
             top_reason_counts[reason_key] = top_reason_counts.get(reason_key, 0) + 1
             if not decision.should_enqueue:
-                skipped_fresh += 1
+                if decision.reason == "market_not_allowed":
+                    skipped_market += 1
+                else:
+                    skipped_fresh += 1
                 continue
             if item["active_job"] is not None:
                 skipped_active += 1
@@ -394,6 +430,7 @@ class MarketPriceRefreshScheduler:
 
             if self.config.dry_run:
                 dry_run_candidates += 1
+                enqueues_done += 1
                 enqueued_jobs.append(
                     {
                         "price_key_id": item["price_key_id"],
@@ -443,13 +480,15 @@ class MarketPriceRefreshScheduler:
                 "includeStaleCache": self.config.include_stale_cache,
                 "minPopularityScore": self.config.min_popularity_score,
                 "minInventoryCount": self.config.min_inventory_count,
+                "allowedMarkets": list(self.config.allowed_markets),
             },
             "summary": {
                 "candidatesScanned": len(raw_candidates),
-                "jobsEnqueued": enqueues_done,
+                "jobsEnqueued": 0 if self.config.dry_run else enqueues_done,
                 "jobsSkippedAlreadyActive": skipped_active,
                 "jobsSkippedByLimit": skipped_limits,
                 "jobsSkippedFresh": skipped_fresh,
+                "jobsSkippedMarket": skipped_market,
                 "jobsDryRunOnly": dry_run_candidates,
             },
             "topPriorityReasons": [

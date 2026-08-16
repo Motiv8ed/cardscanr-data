@@ -41,6 +41,9 @@ function Set-LiveEbayWorkerEnvironment {
     [Environment]::SetEnvironmentVariable("MARKET_WORKER_CONCURRENCY", "1", "Process")
     # Never silently price AU jobs from US/UK/CA (or vice versa).
     [Environment]::SetEnvironmentVariable("MARKET_EBAY_FALLBACK_MARKETPLACES", "", "Process")
+    # Keep GB/CA deferred until owner-authorized challenge resolution.
+    [Environment]::SetEnvironmentVariable("MARKET_WORKER_ALLOWED_MARKETS", "AU,US", "Process")
+    [Environment]::SetEnvironmentVariable("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS", "GB,CA", "Process")
 }
 
 function Write-LiveEbayWorkerConfigSummary {

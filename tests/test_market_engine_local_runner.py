@@ -47,6 +47,7 @@ def _fixed_scheduler_config() -> MarketSchedulerConfig:
         min_inventory_count=0,
         dry_run=False,
         poll_seconds=300,
+        allowed_markets=[],
         latest_report_path=ROOT / "reports" / "market_price_scheduler_latest.json",
         runs_report_path=ROOT / "reports" / "market_price_scheduler_runs.jsonl",
     )

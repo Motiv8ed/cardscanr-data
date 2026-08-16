@@ -50,7 +50,7 @@ class FakeSchedulerClient:
         return payload
 
 
-def fixed_config(*, dry_run: bool = False, max_enqueues: int = 50) -> MarketSchedulerConfig:
+def fixed_config(*, dry_run: bool = False, max_enqueues: int = 50, allowed_markets: list[str] | None = None) -> MarketSchedulerConfig:
     return MarketSchedulerConfig(
         supabase_url="https://example.supabase.co",
         supabase_service_role_key="secret",
@@ -62,6 +62,7 @@ def fixed_config(*, dry_run: bool = False, max_enqueues: int = 50) -> MarketSche
         min_inventory_count=0,
         dry_run=dry_run,
         poll_seconds=300,
+        allowed_markets=list(allowed_markets or []),
         latest_report_path=ROOT / "reports" / "market_price_scheduler_latest.json",
         runs_report_path=ROOT / "reports" / "market_price_scheduler_runs.jsonl",
     )
@@ -308,6 +309,50 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         report = self.scheduler_for(client, max_enqueues=2).run_once()
         self.assertEqual(report["summary"]["jobsEnqueued"], 2)
         self.assertEqual({row["price_key_id"] for row in report["enqueuedJobs"]}, {"key-au", "key-us"})
+
+    def test_scheduler_skips_markets_outside_allowlist(self) -> None:
+        client = FakeSchedulerClient(
+            stale_rows=[
+                {
+                    "id": "key-au",
+                    "fingerprint": "f-au",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "marketplace": "EBAY_AU",
+                    "popularity_score": 20,
+                    "inventory_count": 2,
+                    "last_seen_at": iso(self.now),
+                    "last_updated_at": iso(self.now - timedelta(days=30)),
+                    "stale_after": iso(self.now - timedelta(hours=1)),
+                    "current_market_price": 40,
+                    "recommended_price": 38,
+                },
+                {
+                    "id": "key-gb",
+                    "fingerprint": "f-gb",
+                    "market_country": "gb",
+                    "currency": "gbp",
+                    "marketplace": "EBAY_GB",
+                    "popularity_score": 20,
+                    "inventory_count": 2,
+                    "last_seen_at": iso(self.now),
+                    "last_updated_at": iso(self.now - timedelta(days=30)),
+                    "stale_after": iso(self.now - timedelta(hours=1)),
+                    "current_market_price": 40,
+                    "recommended_price": 38,
+                },
+            ]
+        )
+        scheduler = MarketPriceRefreshScheduler(
+            client=client,
+            config=fixed_config(max_enqueues=5, allowed_markets=["AU"]),
+            now_func=lambda: self.now,
+        )
+        report = scheduler.run_once()
+        self.assertEqual(report["summary"]["jobsEnqueued"], 1)
+        self.assertEqual(report["summary"]["jobsSkippedMarket"], 1)
+        self.assertEqual(report["enqueuedJobs"][0]["price_key_id"], "key-au")
+        self.assertEqual(report["limits"]["allowedMarkets"], ["AU"])
 
     def test_report_redacts_secrets(self) -> None:
         clean = sanitize_scheduler_report(

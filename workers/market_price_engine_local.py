@@ -125,6 +125,7 @@ def _build_scheduler_config(
         min_inventory_count=0,
         dry_run=dry_run,
         poll_seconds=300,
+        allowed_markets=[],
         latest_report_path=reports_dir / "market_price_scheduler_latest.json",
         runs_report_path=reports_dir / "market_price_scheduler_runs.jsonl",
     )
