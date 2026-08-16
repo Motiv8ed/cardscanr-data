@@ -163,6 +163,13 @@ def ebay_marketplace_fallback_order(
     marketplace: object,
     configured_order: tuple[str, ...],
 ) -> tuple[LocalMarketConfig, ...]:
+    """Return marketplaces to attempt for a pricing job.
+
+    The home market from the canonical price key is always first.
+    Additional marketplaces are attempted only when ``configured_order`` is
+    non-empty (explicit opt-in). Production default is home-market only so an
+    AU job cannot silently accept US/UK/CA comps (or vice versa).
+    """
     home = resolve_marketplace_config(
         market_country=requested_market_country,
         currency=requested_currency,
@@ -177,3 +184,41 @@ def ebay_marketplace_fallback_order(
         ordered.append(config)
         seen.add(config.provider_marketplace_id)
     return tuple(ordered)
+
+
+def normalize_ebay_host(value: object) -> str:
+    host = str(value or "").strip().lower()
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def ebay_host_matches_provider_domain(*, final_url_or_host: object, provider_domain: object) -> bool:
+    expected = normalize_ebay_host(provider_domain)
+    if not expected:
+        return False
+    raw = str(final_url_or_host or "").strip()
+    if not raw:
+        return False
+    if "://" in raw:
+        from urllib.parse import urlparse
+
+        host = normalize_ebay_host(urlparse(raw).netloc)
+    else:
+        host = normalize_ebay_host(raw)
+    return host == expected
+
+
+def browser_supported_market_routes() -> tuple[tuple[str, str], ...]:
+    """Routes currently accepted by the live ebay_browser provider."""
+    return (
+        ("AU", "AUD"),
+        ("US", "USD"),
+        ("GB", "GBP"),
+        ("CA", "CAD"),
+    )
+
+
+def is_browser_supported_market(*, market_country: object, currency: object) -> bool:
+    route = (normalize_market_country(market_country), normalize_currency(currency))
+    return route in set(browser_supported_market_routes())

@@ -40,13 +40,31 @@ Legacy `ENABLE_EBAY_REAL_LOOKUP=true` remains accepted for existing scripts, but
 
 ## Marketplace Policy
 
-Backend owns fallback order. Australian default:
+Backend owns marketplace selection from the canonical price key
+(`market_country` + `currency`). Australian default for *user preference
+defaults* must not override an explicit requested market on a job.
+
+Supported live browser routes:
 
 ```text
-EBAY_AU -> EBAY_US -> EBAY_GB -> EBAY_CA
+AU / AUD → ebay.com.au (EBAY_AU)
+US / USD → ebay.com (EBAY_US)
+GB / GBP → ebay.co.uk (EBAY_GB)
+CA / CAD → ebay.ca (EBAY_CA)
 ```
 
-The home marketplace must be attempted first. Every attempted marketplace must record result counts, accepted/rejected comparable counts, confidence, no-price reason, and selected marketplace.
+Cross-marketplace fallback is disabled. An AU job must not accept US/UK/CA
+comps (even with currency conversion), and a US job must not query
+`ebay.com.au`. If eBay redirects to a different marketplace domain, the
+provider fails with `provider_marketplace_mismatch`.
+
+Language remains part of search/filter identity and is independent of
+marketplace. A Japanese-language card with pricing market AU queries
+`ebay.com.au`.
+
+The home marketplace must be attempted. Every attempt must record result
+counts, accepted/rejected comparable counts, confidence, no-price reason,
+and selected marketplace.
 
 ## Cache Policy
 

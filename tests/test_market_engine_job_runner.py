@@ -347,7 +347,7 @@ class JobRunnerTests(unittest.TestCase):
         self.assertIn("Unsupported eBay market route", result["error"])
         self.assertEqual(client.failed, {"job_id": "job-unsupported", "error_message": result["error"]})
 
-    def test_job_runner_uses_home_market_before_international_fallback(self) -> None:
+    def test_job_runner_does_not_accept_cross_marketplace_comps(self) -> None:
         class FallbackClient(FakeClient):
             def get_price_key(self, price_key_id: str) -> MarketPriceKey:
                 key = sample_key()
@@ -401,6 +401,7 @@ class JobRunnerTests(unittest.TestCase):
         client = FallbackClient()
         config = replace(
             fixed_config(),
+            # Even if fallback marketplaces are configured, they must not be used.
             ebay_fallback_marketplaces=("EBAY_US", "EBAY_GB"),
             currency_rates={"USD:AUD": 1.5},
             currency_rate_source="unit_test_rate",
@@ -424,24 +425,21 @@ class JobRunnerTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(provider.attempts, ["EBAY_AU", "EBAY_US"])
+        self.assertEqual(provider.attempts, ["EBAY_AU"])
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["requestedMarketplace"], "EBAY_AU")
-        self.assertEqual(result["marketplace"], "EBAY_US")
-        self.assertEqual(result["fallbackLevel"], 1)
-        self.assertEqual(result["evidenceType"], "completed_sale")
+        self.assertEqual(result["marketplace"], "EBAY_AU")
+        self.assertEqual(result["fallbackLevel"], 0)
+        self.assertIsNone(result["recommendedPrice"])
         self.assertEqual(result["currency"], "AUD")
-        self.assertEqual(result["sourceCurrency"], "USD")
-        self.assertEqual(client.cache_payload["current_market_price"], 18.0)
+        self.assertEqual(result["sourceCurrency"], "AUD")
+        self.assertIsNone(client.cache_payload["current_market_price"])
         self.assertEqual(client.cache_payload["currency"], "AUD")
         diagnostics = client.snapshot_payload["diagnostics_json"]
         self.assertEqual(diagnostics["requestedMarketplace"], "EBAY_AU")
-        self.assertEqual(diagnostics["marketplaceActuallyUsed"], "EBAY_US")
-        self.assertEqual(diagnostics["fallbackLevel"], 1)
-        self.assertEqual(diagnostics["originalCurrency"], "USD")
-        self.assertEqual(diagnostics["displayCurrency"], "AUD")
-        self.assertEqual(diagnostics["currencyConversion"]["rate"], 1.5)
-        self.assertEqual(diagnostics["currencyConversion"]["rateSource"], "unit_test_rate")
+        self.assertEqual(diagnostics["marketplaceActuallyUsed"], "EBAY_AU")
+        self.assertEqual(diagnostics["pricingPolicy"], "ebay_home_marketplace_only")
+        self.assertEqual(diagnostics["fallbackLevel"], 0)
 
     def test_job_runner_persists_terminal_no_evidence_state(self) -> None:
         class AuClient(FakeClient):
@@ -503,11 +501,12 @@ class JobRunnerTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "completed")
-        self.assertEqual(provider.attempts, ["EBAY_AU", "EBAY_US"])
+        self.assertEqual(provider.attempts, ["EBAY_AU"])
         self.assertIsNone(client.cache_payload["current_market_price"])
         self.assertEqual(client.cache_payload["sample_size"], 0)
         self.assertEqual(client.snapshot_payload["diagnostics_json"]["no_reliable_price_reason"], "no_comps_parsed")
         self.assertEqual(client.snapshot_payload["diagnostics_json"]["fallbackLevel"], 0)
+        self.assertEqual(client.snapshot_payload["diagnostics_json"]["pricingPolicy"], "ebay_home_marketplace_only")
 
     def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:
         runner = MarketPriceJobRunner(

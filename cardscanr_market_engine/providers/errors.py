@@ -73,6 +73,12 @@ class ProviderUnsupportedMarketError(ProviderError):
     error_code = "provider_unsupported_market"
 
 
+class ProviderMarketplaceMismatchError(ProviderError):
+    """Final browser domain/currency does not match the requested pricing market."""
+
+    error_code = "provider_marketplace_mismatch"
+
+
 class ProviderTemporaryError(ProviderError):
     error_code = "provider_temporary"
     retryable = True

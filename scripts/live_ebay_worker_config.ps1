@@ -39,6 +39,8 @@ function Set-LiveEbayWorkerEnvironment {
     [Environment]::SetEnvironmentVariable("EBAY_MARKET_SCOPE", "marketplace", "Process")
     [Environment]::SetEnvironmentVariable("CONFIRM_LIVE_EBAY_WORKER", "true", "Process")
     [Environment]::SetEnvironmentVariable("MARKET_WORKER_CONCURRENCY", "1", "Process")
+    # Never silently price AU jobs from US/UK/CA (or vice versa).
+    [Environment]::SetEnvironmentVariable("MARKET_EBAY_FALLBACK_MARKETPLACES", "", "Process")
 }
 
 function Write-LiveEbayWorkerConfigSummary {

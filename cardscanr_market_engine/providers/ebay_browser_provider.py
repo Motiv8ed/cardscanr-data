@@ -21,6 +21,7 @@ from .errors import (
     ProviderDisabledError,
     ProviderError,
     ProviderIdentityUnavailableError,
+    ProviderMarketplaceMismatchError,
     ProviderParseError,
     ProviderTemporaryError,
     ProviderUnsupportedMarketError,
@@ -28,6 +29,7 @@ from .errors import (
 )
 from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_english_market_identity
 from .query_builder import ProviderSearchQuery, build_provider_search_queries
+from ..marketplaces import ebay_host_matches_provider_domain, normalize_ebay_host
 
 
 CHALLENGE_TEXT_MARKERS = (
@@ -141,6 +143,34 @@ def _parse_positive_int(name: str, default: int) -> int:
 def _parse_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name, "true" if default else "false").strip().lower()
     return raw in {"1", "true", "yes", "y", "on"}
+
+
+def assert_final_url_matches_requested_marketplace(
+    *,
+    final_url: str,
+    expected_provider_domain: str,
+    requested_market_country: str,
+    requested_currency: str,
+) -> None:
+    """Reject silent marketplace redirects (e.g. US request ending on ebay.com.au)."""
+    if ebay_host_matches_provider_domain(
+        final_url_or_host=final_url,
+        provider_domain=expected_provider_domain,
+    ):
+        return
+    parsed = urlparse(final_url)
+    raise ProviderMarketplaceMismatchError(
+        "eBay redirected away from the requested pricing marketplace; "
+        "wrong-market results are not accepted",
+        diagnostics={
+            "providerOutcome": "marketplace_domain_mismatch",
+            "requestedMarketCountry": requested_market_country,
+            "requestedCurrency": requested_currency,
+            "expectedProviderDomain": expected_provider_domain,
+            "finalUrlHost": normalize_ebay_host(parsed.netloc),
+            "finalUrlPath": parsed.path,
+        },
+    )
 
 
 def utc_iso(value: datetime | None = None) -> str:
@@ -1695,6 +1725,12 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
+                assert_final_url_matches_requested_marketplace(
+                    final_url=page.url,
+                    expected_provider_domain=search_query.provider_domain,
+                    requested_market_country=search_query.market_country,
+                    requested_currency=search_query.currency,
+                )
                 with _StageTimer(stage_timings, "apply_sold_completed_filters"):
                     if "LH_Sold=1" not in search_query.search_url or "LH_Complete=1" not in search_query.search_url:
                         raise ProviderParseError(
@@ -1718,6 +1754,12 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
+                assert_final_url_matches_requested_marketplace(
+                    final_url=page.url,
+                    expected_provider_domain=search_query.provider_domain,
+                    requested_market_country=search_query.market_country,
+                    requested_currency=search_query.currency,
+                )
 
                 try:
                     with _StageTimer(stage_timings, "wait_for_result_container"):

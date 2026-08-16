@@ -155,9 +155,11 @@ class MarketEngineConfig:
             ebay_browser_user_data_dir=_parse_browser_user_data_dir(),
             provider_max_requests_per_minute=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_MINUTE", 2),
             provider_max_requests_per_day=_parse_positive_int("MARKET_PROVIDER_MAX_REQUESTS_PER_DAY", 200),
+            # Home-market only by default. Cross-marketplace comps must never silently
+            # become another market's cached value. Opt in only via explicit env list.
             ebay_fallback_marketplaces=_parse_csv(
                 "MARKET_EBAY_FALLBACK_MARKETPLACES",
-                "EBAY_AU,EBAY_US,EBAY_GB,EBAY_CA",
+                "",
             ),
             currency_rates=_parse_json_object("MARKET_CURRENCY_RATES_JSON"),
             currency_rate_source=os.getenv("MARKET_CURRENCY_RATE_SOURCE", "configured_static_rates").strip()

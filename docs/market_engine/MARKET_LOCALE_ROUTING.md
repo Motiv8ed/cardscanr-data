@@ -42,7 +42,18 @@ Flutter should send user-selected `market_country` and `currency` from onboardin
 ## Unsupported country policy
 
 Unsupported market routes must fail clearly and cleanly.  
-They must **not** silently fall back to US (`EBAY_US`) because silent fallback can write wrong-market prices to cache.
+They must **not** silently fall back to US (`EBAY_US`) or AU (`EBAY_AU`)
+because silent fallback can write wrong-market prices to cache.
+
+## Cross-marketplace lookup policy
+
+Production pricing is **home-market only**. A job whose fingerprint ends in
+`|au|aud` must query `ebay.com.au` only. It must not accept converted US/UK/CA
+comps into the AU cache. If eBay redirects to a different marketplace domain,
+the worker rejects the result with `provider_marketplace_mismatch`.
+
+Language remains independent of marketplace: a Japanese-language card with
+pricing market AU still uses the AU eBay domain.
 
 ## Future provider requirements
 

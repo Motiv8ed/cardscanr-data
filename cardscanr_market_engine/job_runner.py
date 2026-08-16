@@ -8,7 +8,7 @@ from .cache_writer import build_cache_payload
 from .config import MarketEngineConfig
 from .currency_conversion import CurrencyConversion, resolve_currency_conversion
 from .filters import filter_comps
-from .marketplaces import LocalMarketConfig, ebay_marketplace_fallback_order
+from .marketplaces import LocalMarketConfig, ebay_marketplace_fallback_order, resolve_marketplace_config
 from .models import (
     EvaluatedComp,
     MarketPriceKey,
@@ -22,6 +22,8 @@ from .providers.errors import (
     ProviderAuthenticationRequiredError,
     ProviderBlockedError,
     ProviderError,
+    ProviderMarketplaceMismatchError,
+    ProviderUnsupportedMarketError,
     sanitize_provider_diagnostics,
 )
 
@@ -158,11 +160,15 @@ class MarketPriceJobRunner:
         self.logger = logger
 
     def marketplace_attempts(self, price_key: MarketPriceKey, provider_marketplace: str) -> tuple[LocalMarketConfig, ...]:
+        # Home-market only. Cross-marketplace comps must never populate another
+        # market's canonical cache, even if MARKET_EBAY_FALLBACK_MARKETPLACES is set.
+        # That env remains parsed for diagnostics/compat but is not used for lookups.
+        _ = self.config.ebay_fallback_marketplaces
         return ebay_marketplace_fallback_order(
             requested_market_country=price_key.market_country,
             requested_currency=price_key.currency,
             marketplace=provider_marketplace,
-            configured_order=self.config.ebay_fallback_marketplaces,
+            configured_order=(),
         )
 
     def build_provider_request(
@@ -201,7 +207,25 @@ class MarketPriceJobRunner:
             CurrencyConversion,
             list[dict[str, Any]],
         ] | None = None
+        home_config = resolve_marketplace_config(
+            market_country=price_key.market_country,
+            currency=price_key.currency,
+            marketplace=provider_marketplace,
+        )
         for fallback_level, market_config in enumerate(self.marketplace_attempts(price_key, provider_marketplace)):
+            if market_config.provider_marketplace_id != home_config.provider_marketplace_id:
+                # Defense in depth: never accept a foreign marketplace for this cache key.
+                attempts.append(
+                    {
+                        "fallbackLevel": fallback_level,
+                        "providerMarketplaceId": market_config.provider_marketplace_id,
+                        "marketCountry": market_config.market_country,
+                        "currency": market_config.currency,
+                        "skipped": True,
+                        "skipReason": "cross_marketplace_lookup_disabled",
+                    }
+                )
+                continue
             provider_key = replace(
                 price_key,
                 market_country=market_config.market_country.lower(),
@@ -254,6 +278,15 @@ class MarketPriceJobRunner:
                     rate_source=self.config.currency_rate_source,
                     now=now,
                 )
+                if conversion.source_currency.upper() != home_config.currency.upper():
+                    raise ValueError(
+                        "Refusing to cache a price whose source currency does not match "
+                        f"the requested market ({home_config.currency})"
+                    )
+                if conversion.rate != 1:
+                    raise ValueError(
+                        "Refusing cross-currency conversion into a different pricing market cache"
+                    )
                 display_stats = convert_pricing_stats(source_stats, conversion)
                 return (
                     provider_request,
@@ -264,7 +297,12 @@ class MarketPriceJobRunner:
                     conversion,
                     attempts,
                 )
-            except (ProviderBlockedError, ProviderAuthenticationRequiredError):
+            except (
+                ProviderBlockedError,
+                ProviderAuthenticationRequiredError,
+                ProviderMarketplaceMismatchError,
+                ProviderUnsupportedMarketError,
+            ):
                 raise
             except Exception as exc:
                 if first_error is None:
@@ -333,7 +371,7 @@ class MarketPriceJobRunner:
                 "providerFingerprint": provider_result.provider_fingerprint,
                 "pricingAsOf": utc_iso(now),
                 "staleAfter": utc_iso(pricing_stats.stale_after),
-                "pricingPolicy": "ebay_first_backend_marketplace_fallback",
+                "pricingPolicy": "ebay_home_marketplace_only",
                 "evidenceType": "completed_sale",
                 "requestedMarketplace": f"EBAY_{requested_key.market_country.upper()}",
                 "marketplaceActuallyUsed": provider_request.provider_marketplace_id,

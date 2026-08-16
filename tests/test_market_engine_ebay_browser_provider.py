@@ -26,6 +26,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     EbayBrowserProviderConfig,
     EbayBrowserSoldCompsProvider,
     appears_to_be_personal_chrome_profile,
+    assert_final_url_matches_requested_marketplace,
     build_quality_summary,
     classify_browser_page_state,
     contains_block_marker,
@@ -44,6 +45,7 @@ from cardscanr_market_engine.providers.errors import (  # noqa: E402
     ProviderBlockedError,
     ProviderDisabledError,
     ProviderIdentityUnavailableError,
+    ProviderMarketplaceMismatchError,
     sanitize_provider_diagnostics,
 )
 from cardscanr_market_engine.providers.errors import ProviderUnsupportedMarketError  # noqa: E402
@@ -1455,6 +1457,24 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(is_ebay_authentication_url("https://signin.ebay.com/ws/eBayISAPI.dll?SignIn"))
         self.assertTrue(is_ebay_authentication_url("https://www.ebay.com.au/signin/"))
         self.assertFalse(is_ebay_authentication_url("https://example.com/login"))
+
+    def test_final_url_must_match_requested_marketplace_domain(self) -> None:
+        assert_final_url_matches_requested_marketplace(
+            final_url="https://www.ebay.com/sch/i.html?_nkw=Pikachu&LH_Sold=1&LH_Complete=1",
+            expected_provider_domain="ebay.com",
+            requested_market_country="US",
+            requested_currency="USD",
+        )
+        with self.assertRaises(ProviderMarketplaceMismatchError) as raised:
+            assert_final_url_matches_requested_marketplace(
+                final_url="https://www.ebay.com.au/sch/i.html?_nkw=Pikachu&LH_Sold=1&LH_Complete=1",
+                expected_provider_domain="ebay.com",
+                requested_market_country="US",
+                requested_currency="USD",
+            )
+        self.assertEqual(raised.exception.error_code, "provider_marketplace_mismatch")
+        self.assertEqual(raised.exception.diagnostics["finalUrlHost"], "ebay.com.au")
+        self.assertEqual(raised.exception.diagnostics["expectedProviderDomain"], "ebay.com")
 
     def test_price_parser_handles_aud_usd_gbp_cad_examples(self) -> None:
         examples = [
