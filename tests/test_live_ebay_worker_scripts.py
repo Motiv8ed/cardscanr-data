@@ -38,7 +38,16 @@ def test_live_worker_launcher_preserves_guards() -> None:
     assert "CONFIRM_LIVE_EBAY_WORKER=true" in runner
 
 
-def test_config_check_is_non_mutating() -> None:
+def test_worker_wrapper_treats_supervised_stop_as_non_fatal() -> None:
+    wrapper = read_script("scripts/run_market_price_worker.ps1")
+    ensure = read_script("scripts/ensure_live_ebay_pricing_runtime.ps1")
+
+    assert "worker_stop_intent.json" in wrapper
+    assert "Not treating as a pricing crash" in wrapper
+    assert "STATUS_CONTROL_C_EXIT" in wrapper
+    assert "Write-StopIntent" in ensure
+    assert "ensure_runtime_stop" in ensure
+
     checker_ps1 = read_script("scripts/check_live_ebay_worker_config.ps1")
     checker_py = read_script("scripts/check_live_ebay_worker_config.py")
 
