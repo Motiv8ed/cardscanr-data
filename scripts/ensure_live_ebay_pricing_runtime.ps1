@@ -46,16 +46,43 @@ function Write-StateFile {
     ($Payload | ConvertTo-Json -Depth 6) | Set-Content -Path $Path -Encoding utf8
 }
 
+function Write-StopIntent {
+    param(
+        [Parameter(Mandatory = $true)][string]$Component,
+        [Parameter(Mandatory = $true)][int]$ProcessId,
+        [Parameter(Mandatory = $true)][string]$Reason
+    )
+    $path = Join-Path $stateDir ("{0}_stop_intent.json" -f $Component)
+    Write-StateFile -Path $path -Payload @{
+        component = $Component
+        pid = $ProcessId
+        reason = $Reason
+        requestedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+    }
+}
+
 function Stop-Component {
     param(
         [Parameter(Mandatory = $true)][string]$Needle,
         [Parameter(Mandatory = $true)][string]$StatePath,
-        [Parameter(Mandatory = $true)][string]$Label
+        [Parameter(Mandatory = $true)][string]$Label,
+        [string]$Reason = "ensure_runtime_stop"
     )
     $procs = @(Get-MatchingPythonProcesses -CommandNeedle $Needle)
     foreach ($proc in $procs) {
-        Write-Host "[runtime] Stopping $Label PID=$($proc.ProcessId)"
-        Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+        Write-Host "[runtime] Stopping $Label PID=$($proc.ProcessId) reason=$Reason"
+        $intentName = if ($Label -eq "worker") { "worker" } else { "scheduler" }
+        Write-StopIntent -Component $intentName -ProcessId ([int]$proc.ProcessId) -Reason $Reason
+        # Prefer a non-force stop first so wrappers can observe a cleaner exit when possible.
+        try {
+            Stop-Process -Id $proc.ProcessId -ErrorAction Stop
+        } catch {
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Milliseconds 400
+        if (Get-Process -Id $proc.ProcessId -ErrorAction SilentlyContinue) {
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+        }
     }
     if (Test-Path $StatePath) {
         Remove-Item -Force $StatePath
@@ -176,10 +203,10 @@ function Write-HealthReportBestEffort {
 
 if ($Stop) {
     if ($Component -in @("worker", "both")) {
-        Stop-Component -Needle "workers/market_price_worker.py" -StatePath $workerStatePath -Label "worker"
+        Stop-Component -Needle "workers/market_price_worker.py" -StatePath $workerStatePath -Label "worker" -Reason "ensure_runtime_stop"
     }
     if ($Component -in @("scheduler", "both")) {
-        Stop-Component -Needle "workers/market_price_scheduler.py" -StatePath $schedulerStatePath -Label "scheduler"
+        Stop-Component -Needle "workers/market_price_scheduler.py" -StatePath $schedulerStatePath -Label "scheduler" -Reason "ensure_runtime_stop"
     }
     Show-Status
     return
