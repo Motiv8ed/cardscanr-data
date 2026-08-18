@@ -25,7 +25,7 @@ const ALLOWED_ORIGINS = new Set([
 
 type CloudTable = {
   table: string
-  column: 'user_id' | 'id'
+  column: 'user_id' | 'id' | 'owner_user_id'
 }
 
 /** Legacy production mobile tables (children before parents). */
@@ -44,6 +44,14 @@ const BETA_TABLES: ReadonlyArray<CloudTable> = [
   { table: 'beta_analytics_events', column: 'user_id' },
   { table: 'beta_device_installations', column: 'user_id' },
   { table: 'beta_profiles', column: 'user_id' },
+]
+
+/** Extra customer rows if purge RPC is older than 20260819090000. */
+const CUSTOMER_FALLBACK_TABLES: ReadonlyArray<CloudTable> = [
+  { table: 'customer_binder_slots', column: 'user_id' },
+  { table: 'customer_binder_pages', column: 'user_id' },
+  { table: 'customer_binder_plans', column: 'user_id' },
+  { table: 'customer_share_links', column: 'owner_user_id' },
 ]
 
 function corsHeaders(req: Request): Record<string, string> {
@@ -155,6 +163,10 @@ Deno.serve(async (req) => {
 
     for (const entry of BETA_TABLES) {
       // Optional beta/request rows — ignore missing tables and row errors.
+      await bestEffortDeleteRows(admin, entry, userId)
+    }
+
+    for (const entry of CUSTOMER_FALLBACK_TABLES) {
       await bestEffortDeleteRows(admin, entry, userId)
     }
 
