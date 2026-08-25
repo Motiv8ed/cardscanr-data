@@ -195,6 +195,31 @@ def run_worker_loop(
         )
         write_json(config.latest_report_path, summary)
         append_jsonl(config.runs_report_path, summary)
+        try:
+            if hasattr(runner.client, "upsert_pipeline_heartbeat"):
+                completed = sum(1 for row in results if str(row.get("status") or "") == "completed")
+                failed = sum(1 for row in results if str(row.get("status") or "") == "failed")
+                runner.client.upsert_pipeline_heartbeat(
+                    component="worker",
+                    worker_id=config.worker_id,
+                    state="processing" if results else "idle",
+                    meta={
+                        "startedAtUtc": started_at,
+                        "finishedAtUtc": summary.get("finishedAtUtc"),
+                        "jobCount": len(results),
+                        "jobsCompleted": completed,
+                        "jobsFailed": failed,
+                        "provider": config.provider_name,
+                        "cycle": cycle,
+                    },
+                )
+            if hasattr(runner.client, "recover_abandoned_refresh_jobs") and cycle % 5 == 1:
+                runner.client.recover_abandoned_refresh_jobs(
+                    stale_after_minutes=int(os.getenv("MARKET_WORKER_STALE_LOCK_MINUTES", "90")),
+                    max_jobs=10,
+                )
+        except Exception as heartbeat_exc:  # pragma: no cover - ops telemetry must not stop worker
+            logger(f"[market-engine] heartbeat_warning={heartbeat_exc.__class__.__name__}")
         logger(f"[market-engine] cycle={cycle} jobCount={len(results)} report={config.latest_report_path}")
 
         if args.once:

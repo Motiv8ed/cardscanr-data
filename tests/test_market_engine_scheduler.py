@@ -14,6 +14,11 @@ from cardscanr_market_engine.scheduler import (
     sanitize_scheduler_report,
 )
 
+try:
+    from unittest.mock import patch
+except ImportError:  # pragma: no cover
+    from mock import patch  # type: ignore
+
 
 class FakeSchedulerClient:
     def __init__(
@@ -27,12 +32,29 @@ class FakeSchedulerClient:
         self.stale_rows = stale_rows or []
         self.active_jobs = active_jobs or {}
         self.enqueued: list[dict] = []
+        self.recovered: list[dict] = []
+        self.heartbeats: list[dict] = []
 
     def list_missing_cache_keys(self, **_kwargs) -> list[dict]:
         return list(self.missing_rows)
 
     def list_stale_cache_keys(self, **_kwargs) -> list[dict]:
         return list(self.stale_rows)
+
+    def list_cache_refresh_candidates(self, **kwargs) -> list[dict]:
+        due_before = kwargs.get("due_before_iso")
+        rows: list[dict] = []
+        for row in self.stale_rows:
+            due = row.get("next_refresh_due_at") or row.get("stale_after")
+            if row.get("current_market_price") is None:
+                rows.append(row)
+            elif str(row.get("refresh_status") or "").lower() == "failed":
+                rows.append(row)
+            elif due_before and due and str(due) <= str(due_before):
+                rows.append(row)
+            elif due_before is None:
+                rows.append(row)
+        return rows[: kwargs.get("limit", 100)]
 
     def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict]:
         return {key: value for key, value in self.active_jobs.items() if key in set(price_key_ids)}
@@ -48,6 +70,13 @@ class FakeSchedulerClient:
         }
         self.enqueued.append(payload)
         return payload
+
+    def recover_abandoned_refresh_jobs(self, **_kwargs) -> list[dict]:
+        return list(self.recovered)
+
+    def upsert_pipeline_heartbeat(self, **kwargs) -> dict:
+        self.heartbeats.append(dict(kwargs))
+        return {"component": kwargs.get("component"), "state": kwargs.get("state")}
 
 
 def fixed_config(*, dry_run: bool = False, max_enqueues: int = 50, allowed_markets: list[str] | None = None) -> MarketSchedulerConfig:
@@ -75,6 +104,12 @@ def iso(dt: datetime) -> str:
 class MarketEngineSchedulerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.now = datetime(2026, 5, 25, tzinfo=timezone.utc)
+        self._cooldown_patch = patch(
+            "cardscanr_market_engine.scheduler.get_active_cooldown",
+            return_value=None,
+        )
+        self._cooldown_patch.start()
+        self.addCleanup(self._cooldown_patch.stop)
 
     def scheduler_for(self, client: FakeSchedulerClient, *, dry_run: bool = False, max_enqueues: int = 50) -> MarketPriceRefreshScheduler:
         return MarketPriceRefreshScheduler(
@@ -151,6 +186,7 @@ class MarketEngineSchedulerTests(unittest.TestCase):
                 "id": "k1",
                 "has_cache": True,
                 "stale_after": iso(self.now + timedelta(hours=8)),
+                "next_refresh_due_at": iso(self.now + timedelta(hours=8)),
                 "last_updated_at": iso(self.now - timedelta(hours=1)),
                 "current_market_price": 25,
                 "recommended_price": 24,
@@ -160,7 +196,7 @@ class MarketEngineSchedulerTests(unittest.TestCase):
             now=self.now,
         )
         self.assertFalse(decision.should_enqueue)
-        self.assertEqual(decision.reason, "fresh_cache")
+        self.assertEqual(decision.reason, "not_due_yet")
 
     def test_scheduler_uses_policy_cooldown_for_cache_freshness(self) -> None:
         scheduler = self.scheduler_for(FakeSchedulerClient())
@@ -187,7 +223,8 @@ class MarketEngineSchedulerTests(unittest.TestCase):
             {
                 "id": "k1",
                 "has_cache": True,
-                "stale_after": iso(self.now + timedelta(hours=8)),
+                "stale_after": iso(self.now - timedelta(hours=1)),
+                "next_refresh_due_at": iso(self.now - timedelta(hours=1)),
                 "last_updated_at": iso(self.now - timedelta(hours=3)),
                 "current_market_price": 150,
                 "recommended_price": 145,
@@ -199,6 +236,161 @@ class MarketEngineSchedulerTests(unittest.TestCase):
         self.assertTrue(decision.should_enqueue)
         self.assertEqual(decision.priority, 80)
         self.assertEqual(decision.details["cooldown_hours"], 2)
+
+    def test_future_next_refresh_due_at_is_not_selected(self) -> None:
+        scheduler = self.scheduler_for(FakeSchedulerClient())
+        decision = scheduler.evaluate_candidate(
+            {
+                "id": "k1",
+                "has_cache": True,
+                "stale_after": iso(self.now + timedelta(hours=8)),
+                "next_refresh_due_at": iso(self.now + timedelta(hours=8)),
+                "last_updated_at": iso(self.now - timedelta(hours=3)),
+                "current_market_price": 150,
+                "recommended_price": 145,
+                "popularity_score": 10,
+                "inventory_count": 0,
+            },
+            now=self.now,
+        )
+        self.assertFalse(decision.should_enqueue)
+        self.assertEqual(decision.reason, "not_due_yet")
+
+    def test_missing_price_with_cache_row_is_selected(self) -> None:
+        scheduler = self.scheduler_for(FakeSchedulerClient())
+        decision = scheduler.evaluate_candidate(
+            {
+                "id": "k1",
+                "has_cache": True,
+                "current_market_price": None,
+                "recommended_price": None,
+                "popularity_score": 2,
+                "inventory_count": 1,
+                "last_seen_at": iso(self.now),
+            },
+            now=self.now,
+        )
+        self.assertTrue(decision.should_enqueue)
+        self.assertEqual(decision.priority, 50)
+        self.assertEqual(decision.reason, "missing_price_recent")
+
+    def test_failed_retryable_price_is_selected(self) -> None:
+        scheduler = self.scheduler_for(FakeSchedulerClient())
+        decision = scheduler.evaluate_candidate(
+            {
+                "id": "k1",
+                "has_cache": True,
+                "current_market_price": 12,
+                "recommended_price": 11,
+                "refresh_status": "failed",
+                "last_updated_at": iso(self.now - timedelta(hours=12)),
+                "stale_after": iso(self.now - timedelta(hours=1)),
+                "next_refresh_due_at": iso(self.now - timedelta(hours=1)),
+                "popularity_score": 1,
+                "inventory_count": 0,
+            },
+            now=self.now,
+        )
+        self.assertTrue(decision.should_enqueue)
+        self.assertEqual(decision.reason, "failed_retryable")
+
+    def test_refresh_loop_regression_fresh_keys_not_repeated_while_overdue_remain(self) -> None:
+        """Mandatory regression: 2 freshly refreshed keys must not monopolize enqueue."""
+        fresh_ids = {"golbat", "umbreon"}
+        overdue_ids = [f"overdue-{idx}" for idx in range(126)]
+        stale_rows = []
+        for key_id in fresh_ids:
+            stale_rows.append(
+                {
+                    "id": key_id,
+                    "fingerprint": f"f-{key_id}",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "marketplace": "EBAY_AU",
+                    "popularity_score": 0,
+                    "inventory_count": 0,
+                    "last_seen_at": iso(self.now),
+                    "last_updated_at": iso(self.now - timedelta(minutes=10)),
+                    "stale_after": iso(self.now + timedelta(hours=12)),
+                    "next_refresh_due_at": iso(self.now + timedelta(hours=12)),
+                    "current_market_price": 10 if key_id == "golbat" else 600,
+                    "recommended_price": 10 if key_id == "golbat" else 600,
+                    "refresh_status": "completed",
+                }
+            )
+        for key_id in overdue_ids:
+            stale_rows.append(
+                {
+                    "id": key_id,
+                    "fingerprint": f"f-{key_id}",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "marketplace": "EBAY_AU",
+                    "popularity_score": 0,
+                    "inventory_count": 0,
+                    "last_seen_at": iso(self.now - timedelta(days=20)),
+                    "last_updated_at": iso(self.now - timedelta(days=5)),
+                    "stale_after": iso(self.now - timedelta(days=1)),
+                    "next_refresh_due_at": iso(self.now - timedelta(days=1)),
+                    "current_market_price": 5,
+                    "recommended_price": 5,
+                    "refresh_status": "completed",
+                }
+            )
+
+        client = FakeSchedulerClient(stale_rows=stale_rows, missing_rows=[])
+        enqueued_across_runs: list[str] = []
+        for _ in range(5):
+            report = self.scheduler_for(client, max_enqueues=2).run_once()
+            enqueued_across_runs.extend(job["price_key_id"] for job in report["enqueuedJobs"])
+            client.active_jobs = {}
+            client.enqueued = []
+        self.assertTrue(enqueued_across_runs)
+        self.assertTrue(set(enqueued_across_runs).isdisjoint(fresh_ids))
+        self.assertGreaterEqual(len(set(enqueued_across_runs)), 2)
+
+    def test_completed_historical_job_does_not_block_future_due_refresh(self) -> None:
+        key_id = "k-due"
+        client = FakeSchedulerClient(
+            stale_rows=[
+                {
+                    "id": key_id,
+                    "fingerprint": "f-due",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "marketplace": "EBAY_AU",
+                    "popularity_score": 0,
+                    "inventory_count": 0,
+                    "last_seen_at": iso(self.now),
+                    "last_updated_at": iso(self.now - timedelta(days=2)),
+                    "stale_after": iso(self.now - timedelta(hours=1)),
+                    "next_refresh_due_at": iso(self.now - timedelta(hours=1)),
+                    "current_market_price": 20,
+                    "recommended_price": 19,
+                }
+            ]
+        )
+        report = self.scheduler_for(client).run_once()
+        self.assertEqual(report["summary"]["jobsEnqueued"], 1)
+        self.assertEqual(client.enqueued[0]["dedupe_key"], f"scheduler:auto:{key_id}")
+
+    def test_stable_auto_dedupe_key_used(self) -> None:
+        client = FakeSchedulerClient(
+            missing_rows=[
+                {
+                    "id": "k1",
+                    "fingerprint": "f1",
+                    "market_country": "au",
+                    "currency": "aud",
+                    "popularity_score": 1,
+                    "inventory_count": 1,
+                    "last_seen_at": iso(self.now),
+                }
+            ]
+        )
+        report = self.scheduler_for(client).run_once()
+        self.assertEqual(client.enqueued[0]["dedupe_key"], "scheduler:auto:k1")
+        self.assertEqual(report["enqueuedJobs"][0]["dedupe_key"], "scheduler:auto:k1")
 
     def test_active_job_is_skipped_and_reported(self) -> None:
         key_id = "k-active"

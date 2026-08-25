@@ -278,20 +278,34 @@ class SupabaseMarketEngineClient:
         min_popularity_score: int = 0,
         min_inventory_count: int = 0,
     ) -> list[dict[str, Any]]:
-        return self._table_get(
+        """Return price keys that have no market_price_cache row.
+
+        PostgREST anti-join must filter the embed itself (`market_price_cache=is.null`).
+        Filtering `market_price_cache.price_key_id=is.null` incorrectly returns keys that
+        already have cache rows (empty embed because no row has a null PK/FK).
+        """
+        rows = self._table_get(
             "market_price_keys",
             params={
                 "select": (
                     "id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at,"
                     "market_price_cache!left(price_key_id,marketplace)"
                 ),
-                "market_price_cache.price_key_id": "is.null",
+                "market_price_cache": "is.null",
                 "popularity_score": f"gte.{max(0, min_popularity_score)}",
                 "inventory_count": f"gte.{max(0, min_inventory_count)}",
                 "order": "last_seen_at.desc.nullslast,updated_at.desc",
-                "limit": max(1, min(limit, 1000)),
+                "limit": max(1, min(limit * 2, 1000)),
             },
         )
+        missing: list[dict[str, Any]] = []
+        for row in rows:
+            embed = row.get("market_price_cache")
+            if embed in (None, [], {}):
+                missing.append(row)
+            if len(missing) >= max(1, min(limit, 1000)):
+                break
+        return missing
 
     def list_stale_cache_keys(
         self,
@@ -346,29 +360,55 @@ class SupabaseMarketEngineClient:
         limit: int,
         min_popularity_score: int = 0,
         min_inventory_count: int = 0,
+        due_before_iso: str | None = None,
     ) -> list[dict[str, Any]]:
-        rows = self._table_get(
-            "market_price_cache",
-            params={
-                "select": (
-                    "price_key_id,stale_after,current_market_price,recommended_price,last_updated_at,marketplace,"
-                    "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at)"
-                ),
-                "market_price_keys.popularity_score": f"gte.{max(0, min_popularity_score)}",
-                "market_price_keys.inventory_count": f"gte.{max(0, min_inventory_count)}",
-                "order": "last_updated_at.asc.nullsfirst,stale_after.asc.nullsfirst",
-                "limit": max(1, min(limit, 1000)),
-            },
+        """Return cache rows that need refresh: missing price, failed, or overdue."""
+        now_iso = due_before_iso or _iso_or_none(datetime.now(timezone.utc))
+        fetch_limit = max(1, min(limit, 1000))
+        select = (
+            "price_key_id,stale_after,next_refresh_due_at,current_market_price,recommended_price,"
+            "last_updated_at,marketplace,refresh_status,last_error_message,"
+            "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at)"
         )
-        normalized: list[dict[str, Any]] = []
-        for row in rows:
-            key = row.get("market_price_keys")
-            if isinstance(key, list):
-                key = key[0] if key else None
-            if not isinstance(key, dict):
-                continue
-            normalized.append(
-                {
+        base_params = {
+            "select": select,
+            "market_price_keys.popularity_score": f"gte.{max(0, min_popularity_score)}",
+            "market_price_keys.inventory_count": f"gte.{max(0, min_inventory_count)}",
+            "limit": fetch_limit,
+        }
+        queries = [
+            {**base_params, "current_market_price": "is.null", "order": "last_updated_at.asc.nullsfirst"},
+            {**base_params, "refresh_status": "eq.failed", "order": "last_updated_at.asc.nullsfirst"},
+            {
+                **base_params,
+                "next_refresh_due_at": f"lte.{now_iso}",
+                "order": "next_refresh_due_at.asc.nullsfirst",
+            },
+            {
+                **base_params,
+                "next_refresh_due_at": "is.null",
+                "stale_after": f"lte.{now_iso}",
+                "order": "stale_after.asc.nullsfirst",
+            },
+            {
+                **base_params,
+                "next_refresh_due_at": "is.null",
+                "stale_after": "is.null",
+                "order": "last_updated_at.asc.nullsfirst",
+            },
+        ]
+        by_id: dict[str, dict[str, Any]] = {}
+        for params in queries:
+            for row in self._table_get("market_price_cache", params=params):
+                key = row.get("market_price_keys")
+                if isinstance(key, list):
+                    key = key[0] if key else None
+                if not isinstance(key, dict):
+                    continue
+                key_id = str(key.get("id") or "").strip()
+                if not key_id or key_id in by_id:
+                    continue
+                by_id[key_id] = {
                     "id": key.get("id"),
                     "fingerprint": key.get("fingerprint"),
                     "popularity_score": key.get("popularity_score"),
@@ -378,12 +418,30 @@ class SupabaseMarketEngineClient:
                     "currency": key.get("currency"),
                     "marketplace": row.get("marketplace"),
                     "stale_after": row.get("stale_after"),
+                    "next_refresh_due_at": row.get("next_refresh_due_at"),
                     "current_market_price": row.get("current_market_price"),
                     "recommended_price": row.get("recommended_price"),
                     "last_updated_at": row.get("last_updated_at"),
+                    "refresh_status": row.get("refresh_status"),
+                    "last_error_message": row.get("last_error_message"),
                 }
-            )
-        return normalized
+                if len(by_id) >= fetch_limit:
+                    break
+            if len(by_id) >= fetch_limit:
+                break
+
+        def _sort_key(item: dict[str, Any]) -> tuple[int, float]:
+            has_price = item.get("current_market_price") is not None
+            failed = str(item.get("refresh_status") or "").lower() == "failed"
+            due = item.get("next_refresh_due_at") or item.get("stale_after") or ""
+            rank = 0 if not has_price else 1 if failed else 2
+            try:
+                due_ts = datetime.fromisoformat(str(due).replace("Z", "+00:00")).timestamp()
+            except Exception:
+                due_ts = float("inf")
+            return (rank, due_ts)
+
+        return sorted(by_id.values(), key=_sort_key)[:fetch_limit]
 
     def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict[str, Any]]:
         clean_ids = [
@@ -496,3 +554,95 @@ class SupabaseMarketEngineClient:
                 "p_max_attempts": 3,
             },
         )
+
+    def recover_abandoned_refresh_jobs(
+        self,
+        *,
+        stale_after_minutes: int = 90,
+        max_jobs: int = 25,
+    ) -> list[dict[str, Any]]:
+        """Fail running jobs whose lock is older than the stale threshold."""
+        try:
+            rows = self._rpc(
+                "recover_abandoned_market_price_refresh_jobs",
+                {
+                    "p_stale_after_minutes": max(15, int(stale_after_minutes)),
+                    "p_max_jobs": max(1, min(int(max_jobs), 100)),
+                },
+            )
+        except SupabaseRpcError as exc:
+            # Fallback for environments that have not applied the recovery RPC yet.
+            if exc.status_code != 404:
+                raise
+            cutoff = datetime.now(timezone.utc).timestamp() - (max(15, int(stale_after_minutes)) * 60)
+            cutoff_iso = datetime.fromtimestamp(cutoff, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            stuck = self._table_get(
+                "market_price_refresh_jobs",
+                params={
+                    "select": "id,price_key_id,status,locked_at,started_at,worker_id,reason",
+                    "status": "eq.running",
+                    "or": f"(locked_at.lt.{cutoff_iso},and(locked_at.is.null,started_at.lt.{cutoff_iso}))",
+                    "order": "locked_at.asc.nullsfirst",
+                    "limit": max(1, min(int(max_jobs), 100)),
+                },
+            )
+            recovered: list[dict[str, Any]] = []
+            for row in stuck:
+                job_id = str(row.get("id") or "").strip()
+                if not job_id:
+                    continue
+                recovered.append(
+                    self.fail_job(
+                        job_id=job_id,
+                        error_message="abandoned_stale_lock:worker_lock_exceeded_threshold",
+                    )
+                )
+            return recovered
+        if rows is None:
+            return []
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
+        if isinstance(rows, dict):
+            return [rows]
+        return []
+
+    def upsert_pipeline_heartbeat(
+        self,
+        *,
+        component: str,
+        worker_id: str,
+        state: str,
+        meta: dict[str, Any] | None = None,
+        version: str | None = None,
+    ) -> dict[str, Any] | None:
+        payload = {
+            "component": str(component).strip()[:64],
+            "worker_id": str(worker_id or "unknown").strip()[:128],
+            "state": str(state).strip()[:64],
+            "version": (str(version).strip()[:128] if version else None),
+            "last_heartbeat_at": _iso_or_none(datetime.now(timezone.utc)),
+            "meta": meta or {},
+            "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+        }
+        try:
+            rows = self._table_post(
+                "market_price_pipeline_heartbeats",
+                payload,
+                prefer="resolution=merge-duplicates,return=representation",
+                on_conflict="component",
+            )
+        except requests.HTTPError as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status in {404, 42}:
+                return None
+            # Table may not exist yet before migration; do not break scheduling.
+            if status == 400:
+                body = ""
+                try:
+                    body = (exc.response.text or "").lower()  # type: ignore[union-attr]
+                except Exception:
+                    body = ""
+                if "market_price_pipeline_heartbeats" in body or "could not find" in body:
+                    return None
+            raise
+        return rows[0] if rows else None

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import REPORTS_DIR, supabase_secret_key_from_env
+from .marketplace_ops_state import get_active_cooldown
 from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
 
@@ -169,10 +170,18 @@ class MarketPriceRefreshScheduler:
     def _is_old(self, last_seen_at: datetime | None, *, now: datetime) -> bool:
         return bool(last_seen_at and last_seen_at <= (now - timedelta(days=60)))
 
-    def _candidate_sort_key(self, item: dict[str, Any]) -> tuple[int, float, str]:
+    def _candidate_sort_key(self, item: dict[str, Any]) -> tuple[int, float, float, str]:
         seen = _parse_utc(item.get("last_seen_at"))
         seen_ts = seen.timestamp() if seen else float("-inf")
-        return (0 if item.get("candidate_type") == "missing_cache" else 1, -seen_ts, str(item.get("id")))
+        due = _parse_utc(item.get("next_refresh_due_at")) or _parse_utc(item.get("stale_after"))
+        due_ts = due.timestamp() if due else float("-inf")
+        type_rank = {
+            "missing_cache": 0,
+            "missing_price": 0,
+            "failed_cache": 1,
+            "stale_cache": 2,
+        }.get(str(item.get("candidate_type") or ""), 3)
+        return (type_rank, due_ts, -seen_ts, str(item.get("id")))
 
     def evaluate_candidate(self, candidate: dict[str, Any], *, now: datetime) -> SchedulerDecision:
         market_country = str(candidate.get("market_country") or "").strip().upper()
@@ -187,8 +196,6 @@ class MarketPriceRefreshScheduler:
                     "allowed_markets": list(self.config.allowed_markets),
                 },
             )
-        from .marketplace_ops_state import get_active_cooldown
-
         cooldown = get_active_cooldown(market_country, now=now) if market_country else None
         if cooldown is not None:
             return SchedulerDecision(
@@ -205,11 +212,16 @@ class MarketPriceRefreshScheduler:
             )
         has_cache = bool(candidate.get("has_cache"))
         stale_after = _parse_utc(candidate.get("stale_after"))
+        next_refresh_due_at = _parse_utc(candidate.get("next_refresh_due_at"))
+        due_at = next_refresh_due_at or stale_after
+        is_due = bool(due_at and due_at <= now)
         is_stale = bool(stale_after and stale_after <= now)
         popularity_score = max(0, int(candidate.get("popularity_score") or 0))
         inventory_count = max(0, int(candidate.get("inventory_count") or 0))
         last_seen_at = _parse_utc(candidate.get("last_seen_at"))
-        current_market_price = _float_or_zero(candidate.get("current_market_price"))
+        current_market_price_raw = candidate.get("current_market_price")
+        current_market_price = _float_or_zero(current_market_price_raw)
+        has_usable_price = current_market_price_raw is not None and current_market_price_raw is not False
         recommended_price = _float_or_zero(candidate.get("recommended_price"))
         value_signal = max(current_market_price, recommended_price)
         high_value = value_signal >= 100
@@ -217,10 +229,13 @@ class MarketPriceRefreshScheduler:
         recently_seen = self._is_recent(last_seen_at, now=now)
         very_old = self._is_old(last_seen_at, now=now)
         last_updated_at = _parse_utc(candidate.get("last_updated_at"))
+        refresh_status = str(candidate.get("refresh_status") or "").strip().lower()
         score = 0
-        if not has_cache:
+        if not has_cache or not has_usable_price:
             score += 1000
-        if is_stale:
+        if refresh_status == "failed":
+            score += 700
+        if is_due or is_stale:
             score += 450
         score += min(popularity_score * 5, 250)
         score += min(inventory_count * 4, 180)
@@ -229,13 +244,20 @@ class MarketPriceRefreshScheduler:
             score += 125
         if high_value:
             score += 75
+        if due_at is not None:
+            # Prefer oldest overdue first within the same priority band.
+            overdue_hours = max(0.0, (now - due_at).total_seconds() / 3600.0)
+            score += min(int(overdue_hours), 200)
 
         details = {
             "has_cache": has_cache,
+            "has_usable_price": has_usable_price,
             "stale_after": utc_iso(stale_after) if stale_after else None,
+            "next_refresh_due_at": utc_iso(next_refresh_due_at) if next_refresh_due_at else None,
+            "is_due": is_due,
             "is_stale": is_stale,
             "last_updated_at": utc_iso(last_updated_at) if last_updated_at else None,
-            "current_market_price": current_market_price,
+            "current_market_price": current_market_price if has_usable_price else None,
             "recommended_price": recommended_price,
             "value_signal": value_signal,
             "popularity_score": popularity_score,
@@ -243,13 +265,18 @@ class MarketPriceRefreshScheduler:
             "last_seen_at": utc_iso(last_seen_at) if last_seen_at else None,
             "recently_seen": recently_seen,
             "very_old": very_old,
+            "refresh_status": refresh_status or None,
             "score": score,
             "market_country": market_country or None,
             "allowed_markets": list(self.config.allowed_markets),
         }
 
+        # Priority 1: no usable current price / no cache row.
         if not has_cache:
             reason = "missing_cache_recent" if recently_seen else "missing_cache"
+            return SchedulerDecision(should_enqueue=True, priority=50, reason=reason, score=score, details=details)
+        if not has_usable_price:
+            reason = "missing_price_recent" if recently_seen else "missing_price"
             return SchedulerDecision(should_enqueue=True, priority=50, reason=reason, score=score, details=details)
 
         policy = calculate_refresh_policy(
@@ -277,11 +304,47 @@ class MarketPriceRefreshScheduler:
             }
         )
 
+        # Never auto-refresh while next due remains in the future.
+        if due_at is not None and due_at > now and refresh_status != "failed":
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="not_due_yet",
+                score=score,
+                details=details,
+            )
+
+        if refresh_status == "failed":
+            if policy.is_in_cooldown:
+                return SchedulerDecision(
+                    should_enqueue=False,
+                    priority=None,
+                    reason="failed_in_cooldown",
+                    score=score,
+                    details=details,
+                )
+            return SchedulerDecision(
+                should_enqueue=True,
+                priority=60,
+                reason="failed_retryable",
+                score=score,
+                details=details,
+            )
+
         if not policy.can_refresh:
             return SchedulerDecision(
                 should_enqueue=False,
                 priority=None,
                 reason="fresh_cache",
+                score=score,
+                details=details,
+            )
+
+        if not is_due and not is_stale:
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="not_due_yet",
                 score=score,
                 details=details,
             )
@@ -341,8 +404,10 @@ class MarketPriceRefreshScheduler:
                     "last_seen_at": row.get("last_seen_at"),
                     "has_cache": False,
                     "stale_after": None,
+                    "next_refresh_due_at": None,
                     "current_market_price": None,
                     "recommended_price": None,
+                    "refresh_status": None,
                     "candidate_type": "missing_cache",
                 }
         if self.config.include_stale_cache:
@@ -351,6 +416,7 @@ class MarketPriceRefreshScheduler:
                     limit=fetch_limit,
                     min_popularity_score=self.config.min_popularity_score,
                     min_inventory_count=self.config.min_inventory_count,
+                    due_before_iso=utc_iso(now),
                 )
             else:
                 cache_rows = self.client.list_stale_cache_keys(
@@ -363,6 +429,17 @@ class MarketPriceRefreshScheduler:
                 key_id = str(row.get("id", "")).strip()
                 if not key_id:
                     continue
+                has_price = row.get("current_market_price") is not None
+                refresh_status = str(row.get("refresh_status") or "").strip().lower()
+                if not has_price:
+                    candidate_type = "missing_price"
+                elif refresh_status == "failed":
+                    candidate_type = "failed_cache"
+                else:
+                    candidate_type = "stale_cache"
+                # Prefer missing-cache classification if already present.
+                if key_id in rows and rows[key_id].get("candidate_type") == "missing_cache":
+                    continue
                 rows[key_id] = {
                     "id": key_id,
                     "fingerprint": row.get("fingerprint"),
@@ -374,20 +451,30 @@ class MarketPriceRefreshScheduler:
                     "last_seen_at": row.get("last_seen_at"),
                     "has_cache": True,
                     "stale_after": row.get("stale_after"),
+                    "next_refresh_due_at": row.get("next_refresh_due_at"),
                     "current_market_price": row.get("current_market_price"),
                     "recommended_price": row.get("recommended_price"),
                     "last_updated_at": row.get("last_updated_at"),
-                    "candidate_type": "stale_cache",
+                    "refresh_status": row.get("refresh_status"),
+                    "candidate_type": candidate_type,
                 }
         candidates = list(rows.values())
-        candidates.sort(
-            key=self._candidate_sort_key,
-        )
+        candidates.sort(key=self._candidate_sort_key)
         return candidates[: self.config.max_keys_per_run]
 
     def run_once(self) -> dict[str, Any]:
         now = self.now_func()
         started_at = utc_iso(now)
+        recovered_jobs: list[dict[str, Any]] = []
+        if hasattr(self.client, "recover_abandoned_refresh_jobs") and not self.config.dry_run:
+            try:
+                recovered_jobs = self.client.recover_abandoned_refresh_jobs(
+                    stale_after_minutes=int(os.getenv("MARKET_SCHEDULER_STALE_LOCK_MINUTES", "90")),
+                    max_jobs=25,
+                )
+            except Exception as exc:  # pragma: no cover - defensive ops path
+                recovered_jobs = [{"error": str(exc)[:300]}]
+
         raw_candidates = self._load_candidates(now=now)
         active_jobs = self.client.get_active_jobs_for_keys(price_key_ids=[str(item["id"]) for item in raw_candidates])
         decisions: list[dict[str, Any]] = []
@@ -423,6 +510,7 @@ class MarketPriceRefreshScheduler:
         skipped_limits = 0
         skipped_fresh = 0
         skipped_market = 0
+        skipped_deduped = 0
         dry_run_candidates = 0
         enqueued_jobs: list[dict[str, Any]] = []
         top_reason_counts: dict[str, int] = {}
@@ -446,6 +534,9 @@ class MarketPriceRefreshScheduler:
                 skipped_limits += 1
                 continue
 
+            # Stable automatic dedupe key: one active automatic job per key.
+            dedupe_key = f"scheduler:auto:{item['price_key_id']}"
+
             if self.config.dry_run:
                 dry_run_candidates += 1
                 enqueues_done += 1
@@ -460,6 +551,7 @@ class MarketPriceRefreshScheduler:
                         "reason": decision.reason,
                         "status": "dry_run_only",
                         "score": decision.score,
+                        "dedupe_key": dedupe_key,
                     }
                 )
                 continue
@@ -468,8 +560,12 @@ class MarketPriceRefreshScheduler:
                 price_key_id=item["price_key_id"],
                 reason=f"scheduler:{decision.reason}",
                 priority=int(decision.priority or 100),
-                dedupe_key=f"scheduler:{started_at}:{item['price_key_id']}",
+                dedupe_key=dedupe_key,
             )
+            # If the unique active-job index returned an existing job, count as deduped.
+            existing_status = str(job_row.get("status", "unknown"))
+            if existing_status in {"queued", "running"} and str(job_row.get("dedupe_key") or "") != dedupe_key:
+                skipped_deduped += 1
             enqueues_done += 1
             enqueued_jobs.append(
                 {
@@ -480,12 +576,14 @@ class MarketPriceRefreshScheduler:
                     "marketplace": item.get("marketplace"),
                     "priority": decision.priority,
                     "reason": decision.reason,
-                    "status": str(job_row.get("status", "unknown")),
+                    "status": existing_status,
                     "job_id": str(job_row.get("id", "")),
                     "score": decision.score,
+                    "dedupe_key": dedupe_key,
                 }
             )
 
+        eligible_count = sum(1 for item in decisions if item["decision"].should_enqueue)
         report = {
             "status": "success",
             "startedAtUtc": started_at,
@@ -502,13 +600,28 @@ class MarketPriceRefreshScheduler:
             },
             "summary": {
                 "candidatesScanned": len(raw_candidates),
+                "keysEligible": eligible_count,
                 "jobsEnqueued": 0 if self.config.dry_run else enqueues_done,
                 "jobsSkippedAlreadyActive": skipped_active,
                 "jobsSkippedByLimit": skipped_limits,
                 "jobsSkippedFresh": skipped_fresh,
                 "jobsSkippedMarket": skipped_market,
+                "jobsSkippedDeduped": skipped_deduped,
                 "jobsDryRunOnly": dry_run_candidates,
+                "abandonedJobsRecovered": len(
+                    [row for row in recovered_jobs if isinstance(row, dict) and "error" not in row]
+                ),
             },
+            "recoveredAbandonedJobs": [
+                {
+                    "id": row.get("id"),
+                    "price_key_id": row.get("price_key_id"),
+                    "status": row.get("status"),
+                    "error_message": row.get("error_message"),
+                }
+                for row in recovered_jobs
+                if isinstance(row, dict)
+            ][:25],
             "topPriorityReasons": [
                 {"reason": reason, "count": count}
                 for reason, count in sorted(top_reason_counts.items(), key=lambda item: (-item[1], item[0]))
@@ -534,6 +647,25 @@ class MarketPriceRefreshScheduler:
                 for item in decisions[: self.config.max_keys_per_run]
             ],
         }
+        if hasattr(self.client, "upsert_pipeline_heartbeat"):
+            try:
+                self.client.upsert_pipeline_heartbeat(
+                    component="scheduler",
+                    worker_id=os.getenv("MARKET_SCHEDULER_WORKER_ID", "market-price-scheduler"),
+                    state="idle" if enqueues_done == 0 else "enqueued",
+                    meta={
+                        "startedAtUtc": started_at,
+                        "finishedAtUtc": report["finishedAtUtc"],
+                        "candidatesScanned": len(raw_candidates),
+                        "keysEligible": eligible_count,
+                        "jobsEnqueued": report["summary"]["jobsEnqueued"],
+                        "jobsSkippedDeduped": skipped_deduped,
+                        "abandonedJobsRecovered": report["summary"]["abandonedJobsRecovered"],
+                        "dryRun": self.config.dry_run,
+                    },
+                )
+            except Exception:
+                pass
         return report
 
     def run_and_write_reports(self) -> dict[str, Any]:
