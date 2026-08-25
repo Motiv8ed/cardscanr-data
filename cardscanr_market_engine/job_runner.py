@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 from dataclasses import replace
 import os
@@ -40,6 +41,18 @@ def utc_now() -> datetime:
 
 def utc_iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def rejection_reason_counts(evaluated_comps: list[EvaluatedComp]) -> dict[str, int]:
+    counts = Counter(str(item.rejection_reason) for item in evaluated_comps if item.rejection_reason)
+    return {reason: int(count) for reason, count in counts.most_common()}
+
+
+def dominant_rejection_reason(evaluated_comps: list[EvaluatedComp]) -> str | None:
+    counts = rejection_reason_counts(evaluated_comps)
+    if not counts:
+        return None
+    return next(iter(counts))
 
 
 def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
@@ -459,6 +472,8 @@ class MarketPriceJobRunner:
                     for item in evaluated_comps
                     if item.rejection_reason
                 },
+                "rejectionReasonCounts": rejection_reason_counts(evaluated_comps),
+                "dominantRejectionReason": dominant_rejection_reason(evaluated_comps),
                 "price_spread_ratio": pricing_stats.price_spread_ratio,
                 "confidence_warnings": list(pricing_stats.confidence_warnings),
                 "included_price_distribution": list(pricing_stats.included_price_distribution),

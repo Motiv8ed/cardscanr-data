@@ -5,6 +5,7 @@ import hashlib
 from typing import Any
 import unicodedata
 
+from ..catalogue_identity import is_generic_alias
 from ..models import ProviderRequest
 
 
@@ -76,7 +77,7 @@ def analyze_latin_ratio(value: object) -> ScriptAnalysis:
 
 def is_safe_latin_alias(value: object) -> bool:
     text = _clean(value)
-    if not text:
+    if not text or is_generic_alias(text):
         return False
     analysis = analyze_latin_ratio(text)
     return bool(analysis.latin_count > 0 and analysis.latin_ratio >= LATIN_ALIAS_MIN_RATIO)

@@ -4,6 +4,15 @@ import re
 from statistics import median
 from typing import Any
 
+from .catalogue_identity import (
+    allows_regional_listing_language,
+    compact_set_search_name,
+    external_set_code_hint,
+    is_generic_alias,
+    is_internal_set_code,
+    searchable_set_label,
+    uses_catalogue_collector_identity,
+)
 from .fingerprints import normalize_collector_number, normalize_market_variant, normalize_name, normalize_text
 from .models import EvaluatedComp, MarketPriceKey, SoldComp
 
@@ -93,6 +102,10 @@ SNIPPET_IDENTITY_BOUNDARY_RE = re.compile(
 )
 SOLD_PREFIX_RE = re.compile(
     r"^sold\s+(?:[0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4}|[A-Za-z]{3,9}\s+[0-9]{1,2},\s+[0-9]{4})\s*",
+    flags=re.IGNORECASE,
+)
+PREMIUM_CARD_SUFFIX_RE = re.compile(
+    r"\b(?:gx|ex|vmax|vstar|v-union|v|lv\.?\s*x|break|prime|legend)\b",
     flags=re.IGNORECASE,
 )
 
@@ -220,7 +233,9 @@ def _language_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | 
         if japanese or chinese or english:
             return "wrong_language"
     elif requested == "en":
-        allows_cross_language = bool(price_key.raw.get("allow_cross_language_fallback") or price_key.raw.get("includeEnglishEquivalent"))
+        allows_cross_language = allows_regional_listing_language(price_key) or bool(
+            price_key.raw.get("allow_cross_language_fallback") or price_key.raw.get("includeEnglishEquivalent")
+        )
         if not allows_cross_language and (japanese or korean or chinese):
             return "wrong_language"
     return None
@@ -255,10 +270,10 @@ def _alias_candidates(raw: dict[str, Any]) -> list[object]:
 def _canonical_card_name(price_key: MarketPriceKey) -> str:
     for candidate in _alias_candidates(price_key.raw):
         text = _clean(candidate)
-        if text:
+        if text and not is_generic_alias(text):
             return text
     normalized = _clean(price_key.normalized_card_name).replace("_", " ")
-    if normalized and normalized != "unknown":
+    if normalized and not is_generic_alias(normalized):
         return normalized
     return _clean(price_key.card_name)
 
@@ -272,9 +287,12 @@ def _canonical_card_names(price_key: MarketPriceKey) -> tuple[str, ...]:
     if original:
         names.append(original)
     normalized = _clean(price_key.normalized_card_name).replace("_", " ")
-    if normalized and normalized != "unknown":
+    if normalized and not is_generic_alias(normalized):
         names.append(normalized)
     normalized_names = []
+    original_normalized = normalize_text(original)
+    if original_normalized:
+        normalized_names.append(original_normalized)
     for name in names:
         text = normalize_name(name).replace("_", " ")
         if text and text not in normalized_names:
@@ -340,6 +358,13 @@ def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[st
 
 def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
     requested, short, has_full_number = _requested_collector_parts(price_key)
+    if uses_catalogue_collector_identity(price_key):
+        return {
+            "matches": True,
+            "quality": "catalogue_id_skipped",
+            "requested": requested,
+            "detected": [],
+        }
     if not requested:
         return {"matches": True, "quality": "not_requested", "requested": "", "detected": []}
     requested_lower = requested.lower()
@@ -367,9 +392,45 @@ def _collector_number_matches(price_key: MarketPriceKey, normalized_title: str) 
     return bool(_collector_number_match_info(price_key, normalized_title)["matches"])
 
 
+def _card_name_title_variants(name: str) -> tuple[str, ...]:
+    variants: list[str] = []
+    for candidate in (name, normalize_name(name).replace("_", " ")):
+        text = _clean(candidate)
+        if not text or text in variants:
+            continue
+        variants.append(text)
+        apostrophe_variants = {
+            text,
+            text.replace("'", ""),
+            text.replace("'s", "s"),
+            text.replace("'s", ""),
+            re.sub(r"[''`]s\b", "s", text),
+        }
+        for apostrophe_variant in apostrophe_variants:
+            if apostrophe_variant and apostrophe_variant not in variants:
+                variants.append(apostrophe_variant)
+        possessive = re.sub(r"(\w+)\s+s\b", r"\1s", text)
+        if possessive != text and possessive not in variants:
+            variants.append(possessive)
+        spaced = re.sub(r"[-/](?=\w)", " ", text)
+        if spaced != text and spaced not in variants:
+            variants.append(spaced)
+        compressed = re.sub(r"[\s\-_/']+", "", text)
+        if compressed and compressed not in variants:
+            variants.append(compressed)
+    return tuple(variants)
+
+
 def _card_name_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
     names = _canonical_card_names(price_key)
-    return not names or any(name in normalized_title for name in names)
+    if not names:
+        return True
+    compact_title = normalized_title.replace(" ", "")
+    for name in names:
+        for variant in _card_name_title_variants(name):
+            if variant in normalized_title or variant.replace(" ", "") in compact_title:
+                return True
+    return False
 
 
 def _set_code_conflicts(price_key: MarketPriceKey, normalized_title: str) -> bool:
@@ -382,14 +443,20 @@ def _set_code_conflicts(price_key: MarketPriceKey, normalized_title: str) -> boo
 
 
 def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
-    set_name = normalize_name(price_key.set_name).replace("_", " ")
-    set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+    compact_name = compact_set_search_name(price_key.set_name)
+    set_name = normalize_name(compact_name or price_key.set_name).replace("_", " ")
+    raw_set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+    set_code = "" if is_internal_set_code(raw_set_code) else raw_set_code
+    set_hint = external_set_code_hint(price_key.set_code).lower()
     normalized_compact = normalized_title.replace(" ", "")
     code_match = bool(set_code and set_code in normalized_compact)
+    hint_match = bool(set_hint and set_hint in normalized_compact)
     name_match = bool(set_name and set_name in normalized_title)
-    conflict = _set_code_conflicts(price_key, normalized_title)
+    conflict = False if is_internal_set_code(price_key.set_code) else _set_code_conflicts(price_key, normalized_title)
     if code_match:
         quality = "set_code"
+    elif hint_match:
+        quality = "set_code_hint"
     elif name_match:
         quality = "set_name"
     elif conflict:
@@ -397,11 +464,11 @@ def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -
     else:
         quality = "missing"
     return {
-        "matches": code_match or name_match,
+        "matches": code_match or hint_match or name_match,
         "quality": quality,
         "conflict": conflict,
         "requested_set_name": set_name,
-        "requested_set_code": set_code,
+        "requested_set_code": set_code or set_hint,
     }
 
 
@@ -419,10 +486,22 @@ def _collector_number_references(normalized_title: str) -> set[str]:
 
 
 def _has_many_card_numbers(price_key: MarketPriceKey, normalized_title: str) -> bool:
-    requested, _short, _has_full_number = _requested_collector_parts(price_key)
+    if uses_catalogue_collector_identity(price_key):
+        return False
+    requested, short, has_full_number = _requested_collector_parts(price_key)
     detected = _collector_number_references(normalized_title)
-    detected = {value for value in detected if not _collector_equivalent(value, requested)}
-    return len(detected) >= 1
+    conflicting: set[str] = set()
+    for value in detected:
+        if _collector_equivalent(value, requested):
+            continue
+        if short and _collector_equivalent(short, value):
+            continue
+        if has_full_number and "/" in requested:
+            total = requested.split("/", 1)[1]
+            if _collector_equivalent(total, value):
+                continue
+        conflicting.add(value)
+    return len(conflicting) >= 2
 
 
 def detect_listing_variant(title: str) -> str:
@@ -438,10 +517,19 @@ def detect_listing_variant(title: str) -> str:
     return "non_holo"
 
 
+def _is_premium_card_name(price_key: MarketPriceKey) -> bool:
+    names = " ".join(_canonical_card_names(price_key))
+    return bool(PREMIUM_CARD_SUFFIX_RE.search(names))
+
+
 def _variant_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
     requested = normalize_market_variant(price_key.variant)
     detected = detect_listing_variant(_evidence_text(comp))
     if requested == "raw":
+        return None
+    if requested == "non_holo" and _is_premium_card_name(price_key):
+        if detected == "reverse_holo":
+            return "wrong_variant_reverse_holo"
         return None
     if requested == "non_holo":
         if detected == "reverse_holo":
@@ -470,6 +558,8 @@ def score_comp(price_key: MarketPriceKey, comp: SoldComp) -> float:
         score += 0.3
     elif collector_info["quality"] == "short_from_full":
         score += 0.22
+    elif collector_info["quality"] == "catalogue_id_skipped":
+        score += 0.2
     elif collector_info["quality"] == "not_requested":
         score += 0.08
     set_info = _set_identity_match_info(price_key, normalized_title)
@@ -524,7 +614,11 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
     set_info = _set_identity_match_info(price_key, normalized_identity)
     if set_info["conflict"]:
         return "wrong_set"
-    if _language_family(price_key.language) == "jp" and not set_info["matches"]:
+    if (
+        _language_family(price_key.language) == "jp"
+        and not set_info["matches"]
+        and not uses_catalogue_collector_identity(price_key)
+    ):
         return "wrong_set"
     if not _card_name_matches(price_key, normalized_identity):
         return "wrong_card_name"

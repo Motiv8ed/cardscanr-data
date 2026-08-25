@@ -3,6 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from urllib.parse import urlencode
 
+from ..catalogue_identity import (
+    compact_set_search_name,
+    external_set_code_hint,
+    is_generic_alias,
+    is_internal_set_code,
+    searchable_collector_number,
+    searchable_set_label,
+)
 from ..fingerprints import normalize_market_variant
 from ..models import ProviderRequest
 from .errors import ProviderIdentityUnavailableError
@@ -135,9 +143,20 @@ def build_provider_search_queries(
         "holo": "positive_holo_filter_reverse_later",
     }.get(variant, "broad_variant_unknown_filter_later")
     search_card_name = _clean(identity_guard.search_card_name)
-    collector_full, collector_short, collector_has_full_number = _collector_parts(key.collector_number)
-    set_name = _clean(key.set_name)
+    if is_generic_alias(search_card_name):
+        for original_name in _original_name_candidates(key.raw):
+            if not is_generic_alias(original_name):
+                search_card_name = _clean(original_name)
+                break
+        if is_generic_alias(search_card_name):
+            search_card_name = _clean(key.card_name)
+    collector_full = searchable_collector_number(key.collector_number, set_code=key.set_code)
+    collector_short = collector_full.split("/", 1)[0] if "/" in collector_full else collector_full
+    collector_has_full_number = "/" in collector_full
+    set_name = searchable_set_label(key.set_name, key.set_code)
     set_code = _clean(key.set_code)
+    if is_internal_set_code(set_code):
+        set_code = external_set_code_hint(set_code)
 
     include_terms = tuple(
         item
@@ -178,6 +197,7 @@ def build_provider_search_queries(
     short_number = _unquoted_query_term(collector_short)
     readable_set = _unquoted_query_term(set_name)
     set_code_text = _unquoted_query_term(set_code.upper() if set_code else "")
+    uses_catalogue_collector = not collector_full and bool(_clean(key.collector_number))
     quoted_base_name = _quote_query_term(search_card_name)
     quoted_full_number = _quote_query_term(collector_full)
     pokemon = "Pokemon"
@@ -250,19 +270,47 @@ def build_provider_search_queries(
                 )
             )
     else:
+        if uses_catalogue_collector and readable_set:
+            attempts.append(
+                (
+                    "catalogue_name_set",
+                    [base_name, readable_set, pokemon_card],
+                    {
+                        "queryStyle": "unquoted_discovery",
+                        "usesSetName": True,
+                        "usesSetCode": False,
+                        "usesFullCollectorNumber": False,
+                        "usesCatalogueCollectorFallback": True,
+                        "primaryDiscoveryQuery": True,
+                    },
+                )
+            )
         attempts.append(
             (
                 "broad_number_unquoted",
-                [base_name, full_number, pokemon],
+                [base_name, full_number, pokemon] if full_number else [base_name, pokemon],
                 {
                     "queryStyle": "unquoted_discovery",
                     "usesSetName": False,
                     "usesSetCode": False,
                     "usesFullCollectorNumber": bool(collector_full),
-                    "primaryDiscoveryQuery": True,
+                    "primaryDiscoveryQuery": not uses_catalogue_collector,
                 },
             )
         )
+        if readable_set and (uses_catalogue_collector or not full_number):
+            attempts.append(
+                (
+                    "name_set_unquoted",
+                    [base_name, readable_set, pokemon_card],
+                    {
+                        "queryStyle": "unquoted_discovery",
+                        "usesSetName": True,
+                        "usesSetCode": False,
+                        "usesFullCollectorNumber": False,
+                    },
+                )
+            )
         if variant_terms:
             attempts.append(
                 (
