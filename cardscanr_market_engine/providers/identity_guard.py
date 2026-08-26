@@ -7,6 +7,7 @@ import unicodedata
 
 from ..catalogue_identity import is_generic_alias
 from ..models import ProviderRequest
+from ..species_names import resolve_english_species_name
 
 
 ENGLISH_MARKET_COUNTRIES = frozenset({"AU", "US", "GB", "CA"})
@@ -23,6 +24,8 @@ RAW_ALIAS_FIELDS = (
     "nameEn",
     "en_name",
     "enName",
+    "canonical_name_en",
+    "canonicalNameEn",
     "canonical_english_name",
     "canonicalEnglishName",
     "canonical_card_name",
@@ -107,6 +110,17 @@ def _raw_alias_candidates(raw: dict[str, Any]) -> list[tuple[str, object]]:
         english = aliases.get("en") or aliases.get("EN")
         if english:
             candidates.append(("raw.aliases.en", english))
+    elif isinstance(aliases, list):
+        for index, item in enumerate(aliases):
+            if isinstance(item, str):
+                candidates.append((f"raw.aliases[{index}]", item))
+            elif isinstance(item, dict):
+                for field in RAW_ALIAS_FIELDS:
+                    if field in item:
+                        candidates.append((f"raw.aliases[{index}].{field}", item.get(field)))
+                english = item.get("en") or item.get("EN") or item.get("name")
+                if english:
+                    candidates.append((f"raw.aliases[{index}].en", english))
     return candidates
 
 
@@ -121,6 +135,14 @@ def _english_alias_for_request(request: ProviderRequest) -> tuple[str, str] | No
     normalized_name = _clean(key.normalized_card_name).replace("_", " ")
     if normalized_name and normalized_name != _clean(key.card_name) and is_safe_latin_alias(normalized_name):
         return normalized_name, "normalized_card_name"
+    species = resolve_english_species_name(key.card_name)
+    if species and is_safe_latin_alias(species):
+        return species, "species_names_ja_en"
+    original_ja = _clean(key.raw.get("original_name_ja"))
+    if original_ja and original_ja != _clean(key.card_name):
+        species_from_original = resolve_english_species_name(original_ja)
+        if species_from_original and is_safe_latin_alias(species_from_original):
+            return species_from_original, "species_names_ja_en.original_name_ja"
     return None
 
 
@@ -153,6 +175,8 @@ def evaluate_english_market_identity(request: ProviderRequest) -> IdentityGuardR
         diagnostics["blocked_reason"] = ENGLISH_MARKET_IDENTITY_UNAVAILABLE
     elif alias:
         diagnostics["english_alias_available"] = True
+        if str(alias[1]).startswith("species_names"):
+            diagnostics["speciesNameResolved"] = True
     return IdentityGuardResult(
         blocked=blocked,
         reason=ENGLISH_MARKET_IDENTITY_UNAVAILABLE if blocked else None,

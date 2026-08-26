@@ -375,8 +375,8 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
         request = sample_request(
             country="AU",
             currency="AUD",
-            card_name="ハスブレロ",
-            normalized_card_name="ハスブレロ",
+            card_name="未知のカード名テスト",
+            normalized_card_name="未知のカード名テスト",
         )
         with patch.object(provider, "_wait_for_request_slot") as wait_for_slot:
             with patch.object(provider, "_fetch_with_playwright") as fetch:
@@ -388,7 +388,7 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
         self.assertEqual(ctx.exception.diagnostics["provider_marketplace"], "EBAY_AU")
         self.assertTrue(ctx.exception.diagnostics["non_latin_detected"])
         self.assertLess(ctx.exception.diagnostics["latin_ratio"], 0.5)
-        self.assertNotIn("ハスブレロ", str(ctx.exception.diagnostics))
+        self.assertNotIn("未知のカード名テスト", str(ctx.exception.diagnostics))
         wait_for_slot.assert_not_called()
         fetch.assert_not_called()
 
@@ -400,8 +400,8 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
                 request = sample_request(
                     country=country,
                     currency=currency,
-                    card_name="ハスブレロ",
-                    normalized_card_name="ハスブレロ",
+                    card_name="未知のカード名テスト",
+                    normalized_card_name="未知のカード名テスト",
                 )
                 with patch.object(provider, "_fetch_with_playwright") as fetch:
                     with self.assertRaises(ProviderIdentityUnavailableError) as ctx:
@@ -410,13 +410,28 @@ class EnglishMarketIdentityGuardTests(unittest.TestCase):
                 self.assertEqual(ctx.exception.diagnostics["market_country"], country)
                 fetch.assert_not_called()
 
+    def test_known_japanese_species_name_resolves_without_blocking(self) -> None:
+        request = sample_request(
+            country="AU",
+            currency="AUD",
+            card_name="ハスブレロ",
+            normalized_card_name="unknown",
+        )
+        guard = evaluate_english_market_identity(request)
+        self.assertFalse(guard.blocked)
+        self.assertEqual(guard.search_card_name, "Lombre")
+        self.assertEqual(guard.search_name_source, "species_names_ja_en")
+        query = build_provider_search_query(request)
+        self.assertIn("Lombre", query.query_text)
+        self.assertNotIn("ハスブレロ", query.query_text)
+
     def test_japanese_card_name_is_not_globally_blocked_for_future_jp_market(self) -> None:
         request = replace(
             sample_request(
                 country="AU",
                 currency="AUD",
-                card_name="ハスブレロ",
-                normalized_card_name="ハスブレロ",
+                card_name="未知のカード名テスト",
+                normalized_card_name="未知のカード名テスト",
             ),
             market_country="JP",
             currency="JPY",
@@ -466,7 +481,7 @@ class QueryBuilderTests(unittest.TestCase):
         )
         self.assertEqual(
             queries[0].query_text,
-            "Pancham Japanese Battle Partners 050/100 non holo Pokemon card",
+            "Pancham Japanese battle partners 050/100 non holo Pokemon card",
         )
         self.assertEqual(
             queries[1].query_text,
@@ -495,7 +510,7 @@ class QueryBuilderTests(unittest.TestCase):
 
         self.assertEqual(
             queries[0].query_text,
-            "Umbreon ex Japanese Terastal Festival ex 217/187 Pokemon card",
+            "Umbreon ex Japanese terastal festival ex 217/187 Pokemon card",
         )
         self.assertEqual(
             queries[1].query_text,
@@ -503,7 +518,7 @@ class QueryBuilderTests(unittest.TestCase):
         )
         self.assertEqual(
             queries[2].query_text,
-            "\u30d6\u30e9\u30c3\u30ad\u30fcex Terastal Festival ex 217/187 Pokemon card",
+            "\u30d6\u30e9\u30c3\u30ad\u30fcex terastal festival ex 217/187 Pokemon card",
         )
         self.assertEqual(queries[2].query_source, "japanese_original_name_fallback")
         self.assertEqual(
@@ -535,7 +550,7 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertFalse(any("ハスブレロ" in query.query_text for query in queries))
         self.assertEqual(
             queries[0].query_text,
-            "Lombre Japanese Battle Partners 022/100 non holo Pokemon card",
+            "Lombre Japanese battle partners 022/100 non holo Pokemon card",
         )
         self.assertEqual(
             queries[1].query_text,
@@ -649,7 +664,7 @@ class QueryBuilderTests(unittest.TestCase):
         queries = build_provider_search_queries(request)
         self.assertEqual(
             queries[0].query_text,
-            "Pancham Japanese Battle Partners 050/100 non holo Pokemon card",
+            "Pancham Japanese battle partners 050/100 non holo Pokemon card",
         )
         self.assertEqual(
             queries[1].query_text,

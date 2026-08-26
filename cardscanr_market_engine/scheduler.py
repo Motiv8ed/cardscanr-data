@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import REPORTS_DIR, supabase_secret_key_from_env
+from .failure_policy import is_identity_error_message
 from .marketplace_ops_state import get_active_cooldown
 from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
@@ -272,10 +273,31 @@ class MarketPriceRefreshScheduler:
         }
 
         # Priority 1: no usable current price / no cache row.
+        # Deterministic failures must still honour next_refresh_due_at backoff.
         if not has_cache:
             reason = "missing_cache_recent" if recently_seen else "missing_cache"
             return SchedulerDecision(should_enqueue=True, priority=50, reason=reason, score=score, details=details)
         if not has_usable_price:
+            last_error = str(candidate.get("last_error_message") or "")
+            details["last_error_message"] = last_error or None
+            if due_at is not None and due_at > now:
+                return SchedulerDecision(
+                    should_enqueue=False,
+                    priority=None,
+                    reason="failure_backoff",
+                    score=score,
+                    details=details,
+                )
+            # Defense in depth: identity failures without a future due stamp still
+            # get a soft cooldown from last_updated_at so they cannot starve others.
+            if is_identity_error_message(last_error) and last_updated_at and last_updated_at > (now - timedelta(hours=6)):
+                return SchedulerDecision(
+                    should_enqueue=False,
+                    priority=None,
+                    reason="identity_soft_backoff",
+                    score=score,
+                    details=details,
+                )
             reason = "missing_price_recent" if recently_seen else "missing_price"
             return SchedulerDecision(should_enqueue=True, priority=50, reason=reason, score=score, details=details)
 
@@ -584,6 +606,19 @@ class MarketPriceRefreshScheduler:
             )
 
         eligible_count = sum(1 for item in decisions if item["decision"].should_enqueue)
+        enqueued_key_ids = [str(job.get("price_key_id") or "") for job in enqueued_jobs if job.get("price_key_id")]
+        unique_enqueued_keys = len(set(enqueued_key_ids))
+        starvation_detected = bool(
+            enqueues_done >= 2
+            and eligible_count >= 10
+            and unique_enqueued_keys > 0
+            and (enqueues_done / max(unique_enqueued_keys, 1)) >= 3.0
+        )
+        backoff_skipped = sum(
+            1
+            for item in decisions
+            if item["decision"].reason in {"failure_backoff", "identity_soft_backoff"}
+        )
         report = {
             "status": "success",
             "startedAtUtc": started_at,
@@ -602,12 +637,15 @@ class MarketPriceRefreshScheduler:
                 "candidatesScanned": len(raw_candidates),
                 "keysEligible": eligible_count,
                 "jobsEnqueued": 0 if self.config.dry_run else enqueues_done,
+                "uniqueKeysEnqueued": unique_enqueued_keys,
                 "jobsSkippedAlreadyActive": skipped_active,
                 "jobsSkippedByLimit": skipped_limits,
                 "jobsSkippedFresh": skipped_fresh,
                 "jobsSkippedMarket": skipped_market,
                 "jobsSkippedDeduped": skipped_deduped,
+                "jobsSkippedFailureBackoff": backoff_skipped,
                 "jobsDryRunOnly": dry_run_candidates,
+                "schedulerStarvationDetected": starvation_detected,
                 "abandonedJobsRecovered": len(
                     [row for row in recovered_jobs if isinstance(row, dict) and "error" not in row]
                 ),

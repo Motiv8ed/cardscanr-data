@@ -9,6 +9,7 @@ from typing import Any
 from .cache_writer import build_cache_payload
 from .config import MarketEngineConfig
 from .currency_conversion import CurrencyConversion, resolve_currency_conversion
+from .failure_policy import build_failure_policy, failure_policy_diagnostics
 from .filters import filter_comps
 from .marketplaces import LocalMarketConfig, ebay_marketplace_fallback_order, resolve_marketplace_config
 from .models import (
@@ -643,17 +644,50 @@ class MarketPriceJobRunner:
                     now=now,
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
+            error_message = str(exc)
+            consecutive = 1
+            try:
+                consecutive = 1 + int(
+                    self.client.count_recent_same_failures(
+                        price_key_id=job.price_key_id,
+                        error_message=error_message,
+                    )
+                )
+            except Exception as count_exc:
+                self.logger(f"[market-engine] failure count lookup failed job={job.id}: {count_exc}")
+            policy = build_failure_policy(
+                exc if isinstance(exc, Exception) else error_message,
+                now=now,
+                consecutive_same_failures=consecutive,
+            )
             fail_job_error: str | None = None
             try:
-                self.client.fail_job(job_id=job.id, error_message=str(exc))
+                self.client.fail_job(
+                    job_id=job.id,
+                    error_message=error_message,
+                    retryable=policy.retryable,
+                    retry_delay_minutes=max(1, int(policy.backoff.total_seconds() // 60)),
+                )
             except Exception as fail_exc:
                 fail_job_error = str(fail_exc)
                 self.logger(f"[market-engine] fail_job rpc failed job={job.id}: {fail_job_error}")
+            try:
+                self.client.mark_cache_failure(
+                    price_key_id=job.price_key_id,
+                    error_message=error_message,
+                    next_refresh_due_at=policy.next_refresh_due_at,
+                    market_country=(price_key.market_country if price_key is not None else None),
+                    currency=(price_key.currency if price_key is not None else None),
+                )
+            except Exception as cache_exc:
+                self.logger(f"[market-engine] mark_cache_failure failed job={job.id}: {cache_exc}")
             result = {
                 "jobId": job.id,
                 "priceKeyId": job.price_key_id,
                 "status": "failed",
-                "error": str(exc),
+                "error": error_message,
+                "failurePolicy": failure_policy_diagnostics(policy),
+                "consecutiveSameFailures": consecutive,
             }
             if provider_diagnostics:
                 result["providerDiagnostics"] = provider_diagnostics

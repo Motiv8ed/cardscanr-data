@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
 
@@ -377,8 +376,18 @@ class SupabaseMarketEngineClient:
             "limit": fetch_limit,
         }
         queries = [
-            {**base_params, "current_market_price": "is.null", "order": "last_updated_at.asc.nullsfirst"},
-            {**base_params, "refresh_status": "eq.failed", "order": "last_updated_at.asc.nullsfirst"},
+            {
+                **base_params,
+                "current_market_price": "is.null",
+                "or": f"(next_refresh_due_at.is.null,next_refresh_due_at.lte.{now_iso})",
+                "order": "last_updated_at.asc.nullsfirst",
+            },
+            {
+                **base_params,
+                "refresh_status": "eq.failed",
+                "or": f"(next_refresh_due_at.is.null,next_refresh_due_at.lte.{now_iso})",
+                "order": "last_updated_at.asc.nullsfirst",
+            },
             {
                 **base_params,
                 "next_refresh_due_at": f"lte.{now_iso}",
@@ -543,17 +552,77 @@ class SupabaseMarketEngineClient:
             },
         )
 
-    def fail_job(self, *, job_id: str, error_message: str) -> dict[str, Any]:
+    def fail_job(
+        self,
+        *,
+        job_id: str,
+        error_message: str,
+        retryable: bool = True,
+        retry_delay_minutes: int = 15,
+        max_attempts: int = 3,
+    ) -> dict[str, Any]:
         return self._rpc(
             "fail_market_price_refresh_job",
             {
                 "p_job_id": job_id,
                 "p_error_message": error_message[:1000],
-                "p_retryable": True,
-                "p_retry_delay_minutes": 15,
-                "p_max_attempts": 3,
+                "p_retryable": bool(retryable),
+                "p_retry_delay_minutes": max(1, int(retry_delay_minutes)),
+                "p_max_attempts": max(1, int(max_attempts)),
             },
         )
+
+    def mark_cache_failure(
+        self,
+        *,
+        price_key_id: str,
+        error_message: str,
+        next_refresh_due_at: datetime,
+        market_country: str | None = None,
+        currency: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a failed attempt and push next eligibility into the future."""
+        payload = {
+            "price_key_id": price_key_id,
+            "refresh_status": "failed",
+            "last_error_message": (error_message or "")[:1000] or None,
+            "next_refresh_due_at": _iso_or_none(next_refresh_due_at),
+            "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+        }
+        if market_country:
+            payload["market_country"] = str(market_country).upper()
+        if currency:
+            payload["currency"] = str(currency).upper()
+        return self.upsert_cache(payload)
+
+    def count_recent_same_failures(
+        self,
+        *,
+        price_key_id: str,
+        error_message: str,
+        lookback_hours: int = 168,
+    ) -> int:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, int(lookback_hours)))
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={
+                "select": "id,error_message,status,completed_at",
+                "price_key_id": f"eq.{price_key_id}",
+                "status": "eq.failed",
+                "completed_at": f"gte.{_iso_or_none(cutoff)}",
+                "order": "completed_at.desc",
+                "limit": "50",
+            },
+        )
+        needle = (error_message or "").strip().lower()
+        count = 0
+        for row in rows:
+            message = str(row.get("error_message") or "").strip().lower()
+            if needle and needle in message:
+                count += 1
+            elif not needle and message:
+                count += 1
+        return count
 
     def recover_abandoned_refresh_jobs(
         self,
