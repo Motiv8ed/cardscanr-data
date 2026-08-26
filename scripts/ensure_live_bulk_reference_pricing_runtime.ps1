@@ -1,4 +1,4 @@
-"""Ensure recurring bulk/reference pricing sync runtime on Windows."""
+# Ensure recurring bulk/reference pricing sync runtime on Windows.
 [CmdletBinding()]
 param(
     [ValidateSet("start", "status", "stop", "run-once")]
