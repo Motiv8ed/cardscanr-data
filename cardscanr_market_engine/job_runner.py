@@ -10,6 +10,7 @@ from .cache_writer import build_cache_payload
 from .config import MarketEngineConfig
 from .currency_conversion import CurrencyConversion, resolve_currency_conversion
 from .failure_policy import build_failure_policy, failure_policy_diagnostics
+from .price_movement_guard import evaluate_price_movement, movement_diagnostics
 from .filters import filter_comps
 from .marketplaces import LocalMarketConfig, ebay_marketplace_fallback_order, resolve_marketplace_config
 from .models import (
@@ -553,6 +554,45 @@ class MarketPriceJobRunner:
             if not price_key.fingerprint:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
             self._assert_market_allowed_for_worker(price_key)
+            prior_cache = None
+            if hasattr(self.client, "get_cache_row"):
+                try:
+                    prior_cache = self.client.get_cache_row(price_key_id=price_key.id)
+                except Exception:
+                    prior_cache = None
+            force = "force" in str(job.reason or "").lower()
+            due_raw = (prior_cache or {}).get("next_refresh_due_at") or (prior_cache or {}).get("stale_after")
+            due = None
+            if due_raw:
+                try:
+                    due = datetime.fromisoformat(str(due_raw).replace("Z", "+00:00"))
+                except ValueError:
+                    due = None
+            if not force and due is not None and due > now:
+                self.logger(f"[market-engine] skipped_already_fresh job={job.id} due={due_raw}")
+                self.client.fail_job(
+                    job_id=job.id,
+                    error_message="skipped_already_fresh",
+                    retryable=False,
+                    retry_delay_minutes=max(1, int((due - now).total_seconds() // 60) or 1),
+                )
+                if hasattr(self.client, "mark_cache_failure"):
+                    try:
+                        self.client.mark_cache_failure(
+                            price_key_id=price_key.id,
+                            error_message="skipped_already_fresh",
+                            next_refresh_due_at=due,
+                            market_country=price_key.market_country,
+                            currency=price_key.currency,
+                        )
+                    except Exception as cache_exc:
+                        self.logger(f"[market-engine] skip cache update failed job={job.id}: {cache_exc}")
+                return {
+                    "jobId": job.id,
+                    "priceKeyId": price_key.id,
+                    "status": "skipped_already_fresh",
+                    "nextRefreshDueAt": due.isoformat().replace("+00:00", "Z"),
+                }
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
             (
@@ -568,6 +608,27 @@ class MarketPriceJobRunner:
                 provider_marketplace=provider_marketplace,
                 now=now,
             )
+            movement = evaluate_price_movement(
+                old_price=(prior_cache or {}).get("current_market_price"),
+                new_price=pricing_stats.recommended_price,
+                included_count=int(pricing_stats.included_count or 0),
+                confidence=pricing_stats.confidence,
+            )
+            provider_result.raw_metadata["priceMovement"] = movement_diagnostics(movement)
+            if movement.action == "pending_verification" and pricing_stats.recommended_price is not None:
+                # Keep prior trusted price in cache; still store snapshot/evidence for audit.
+                pricing_stats = replace(
+                    pricing_stats,
+                    recommended_price=(prior_cache or {}).get("current_market_price"),
+                    median_price=pricing_stats.median_price,
+                )
+                provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_pending_verification"
+            elif movement.action == "reject_weak":
+                pricing_stats = replace(
+                    pricing_stats,
+                    recommended_price=(prior_cache or {}).get("current_market_price"),
+                )
+                provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_reject_weak"
             provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
             provider_result.raw_metadata["requestedMarketplace"] = f"EBAY_{price_key.market_country.upper()}"
             provider_result.raw_metadata["marketplaceActuallyUsed"] = provider_request.provider_marketplace_id

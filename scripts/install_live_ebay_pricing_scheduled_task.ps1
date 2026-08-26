@@ -31,10 +31,16 @@ if (-not $PSCmdlet.ShouldProcess($taskName, "Register CardScanR live eBay pricin
 
 Remove-ExistingTask
 
-# Hidden PowerShell that only ensures one worker + one AU/US scheduler are alive.
+# Hidden VBS → hidden PowerShell. Task Scheduler Interactive + powershell.exe still flashes a console.
+$vbsLauncher = Join-Path $repoRoot "scripts\ensure_live_ebay_pricing_runtime_hidden.vbs"
+if (-not (Test-Path $vbsLauncher)) {
+    throw "Missing hidden launcher: $vbsLauncher"
+}
+
 $action = New-ScheduledTaskAction `
-    -Execute "powershell.exe" `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ensureScript`" -Component both"
+    -Execute "wscript.exe" `
+    -Argument "//B //Nologo `"$vbsLauncher`"" `
+    -WorkingDirectory $repoRoot
 
 $logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $repeatTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) `
@@ -46,7 +52,8 @@ $settings = New-ScheduledTaskSettingsSet `
     -DontStopIfGoingOnBatteries `
     -StartWhenAvailable `
     -MultipleInstances IgnoreNew `
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+    -ExecutionTimeLimit (New-TimeSpan -Minutes 10) `
+    -Hidden
 
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
 
@@ -61,7 +68,7 @@ try {
 } catch {
     Write-Host "[runtime] Register-ScheduledTask failed: $($_.Exception.Message)"
     Write-Host "[runtime] Falling back to schtasks.exe current-user registration..."
-    $tr = "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ensureScript`" -Component both"
+    $tr = "wscript.exe //B //Nologo `"$vbsLauncher`""
     # At logon for current user
     & schtasks.exe /Create /TN $taskName /TR $tr /SC ONLOGON /RL LIMITED /F | Out-Host
     if ($LASTEXITCODE -ne 0) {

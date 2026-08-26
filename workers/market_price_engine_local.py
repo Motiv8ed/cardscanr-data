@@ -119,6 +119,8 @@ def _build_scheduler_config(
         supabase_service_role_key=supabase_service_role_key,
         max_keys_per_run=max(1, max_keys),
         max_enqueues_per_run=max(1, max_enqueues),
+        queue_low_watermark=0,
+        queue_high_watermark=0,
         include_missing_cache=True,
         include_stale_cache=True,
         min_popularity_score=0,

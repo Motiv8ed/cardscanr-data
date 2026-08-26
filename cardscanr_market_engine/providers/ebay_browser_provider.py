@@ -638,6 +638,8 @@ class EbayBrowserProviderConfig:
     max_requests_per_day: int = 100
     provider_error_cache_hours: int = 1
     challenge_cache_hours: int = 12
+    reuse_context: bool = False
+    recycle_after_navigations: int = 20
 
     @classmethod
     def from_env(cls) -> "EbayBrowserProviderConfig":
@@ -678,6 +680,8 @@ class EbayBrowserProviderConfig:
             max_requests_per_day=_parse_positive_int("EBAY_BROWSER_MAX_REQUESTS_PER_DAY", 100),
             provider_error_cache_hours=_parse_positive_int("MARKET_CACHE_PROVIDER_ERROR_HOURS", 1),
             challenge_cache_hours=_parse_positive_int("MARKET_CACHE_PROVIDER_CHALLENGE_HOURS", 12),
+            reuse_context=_parse_bool("EBAY_BROWSER_REUSE_CONTEXT", False),
+            recycle_after_navigations=_parse_positive_int("EBAY_BROWSER_RECYCLE_AFTER_NAVIGATIONS", 20),
         )
         config.validate()
         return config
@@ -732,6 +736,8 @@ class EbayBrowserProviderConfig:
                 "maxRequestsPerDay": self.max_requests_per_day,
                 "providerErrorCacheHours": self.provider_error_cache_hours,
                 "challengeCacheHours": self.challenge_cache_hours,
+                "reuseContext": self.reuse_context,
+                "recycleAfterNavigations": self.recycle_after_navigations,
             }
         )
 
@@ -1422,6 +1428,11 @@ class EbayBrowserSoldCompsProvider:
 
     def __init__(self, *, config: EbayBrowserProviderConfig | None = None) -> None:
         self.config = config or EbayBrowserProviderConfig.from_env()
+        self._pw: Any | None = None
+        self._context: Any | None = None
+        self._page: Any | None = None
+        self._session_navs = 0
+        self._session_locale: str | None = None
 
     def _wait_for_request_slot(self) -> None:
         min_wait = max(self.config.cooldown_seconds, self.config.min_seconds_between_requests)
@@ -1432,9 +1443,81 @@ class EbayBrowserSoldCompsProvider:
                 time.sleep(min_wait - elapsed)
             self.__class__._last_request_monotonic = time.monotonic()
 
+    def _close_browser_session(self) -> None:
+        page = self._page
+        context = self._context
+        pw = self._pw
+        self._page = None
+        self._context = None
+        self._pw = None
+        self._session_navs = 0
+        self._session_locale = None
+        for closer in (page, context):
+            if closer is None:
+                continue
+            try:
+                closer.close()
+            except Exception:
+                pass
+        if pw is not None:
+            try:
+                pw.stop()
+            except Exception:
+                pass
+
+    def _ensure_browser_session(self, *, request: ProviderRequest) -> tuple[Any, Any]:
+        """Return (context, page), launching or recycling when configured."""
+        from playwright.sync_api import sync_playwright
+
+        needs_recycle = (
+            self._context is None
+            or self._page is None
+            or self._pw is None
+            or self._session_navs >= max(1, int(self.config.recycle_after_navigations))
+            or (self._session_locale and self._session_locale != request.search_locale)
+        )
+        if needs_recycle and self._pw is not None:
+            self._close_browser_session()
+        if self._context is not None and self._page is not None:
+            return self._context, self._page
+
+        launch_timeout_ms = self.config.launch_timeout_seconds * 1000
+        timeout_ms = self.config.timeout_seconds * 1000
+        profile_dir = self.config.ensure_profile_dir()
+        pw = sync_playwright().start()
+        try:
+            context = pw.chromium.launch_persistent_context(
+                str(profile_dir),
+                channel=self.config.channel,
+                headless=self.config.headless,
+                locale=request.search_locale,
+                viewport={"width": 1366, "height": 900},
+                timeout=launch_timeout_ms,
+            )
+            page = context.new_page()
+            page.set_default_timeout(timeout_ms)
+        except Exception:
+            try:
+                pw.stop()
+            except Exception:
+                pass
+            raise
+        self._pw = pw
+        self._context = context
+        self._page = page
+        self._session_navs = 0
+        self._session_locale = request.search_locale
+        return context, page
+
     def fetch_comps(self, request: ProviderRequest) -> ProviderResult:
         with self._lookup_lock:
-            return self._fetch_comps_serial(request)
+            try:
+                return self._fetch_comps_serial(request)
+            except Exception:
+                # Poisoned/challenge sessions must not leak into later jobs.
+                if self.config.reuse_context:
+                    self._close_browser_session()
+                raise
 
     def _fetch_comps_serial(self, request: ProviderRequest) -> ProviderResult:
         lookup_timings = StageTimings()
@@ -1684,20 +1767,15 @@ class EbayBrowserSoldCompsProvider:
         timeout_ms = self.config.timeout_seconds * 1000
         launch_timeout_ms = self.config.launch_timeout_seconds * 1000
         stage_timings = StageTimings()
-        with sync_playwright() as playwright:
-            context: Any = None
-            try:
-                profile_dir = self.config.ensure_profile_dir()
+        reuse = bool(self.config.reuse_context)
+        owned_pw: Any | None = None
+        context: Any = None
+        page: Any = None
+        try:
+            if reuse:
                 try:
                     with _StageTimer(stage_timings, "launch_browser"):
-                        context = playwright.chromium.launch_persistent_context(
-                            str(profile_dir),
-                            channel=self.config.channel,
-                            headless=self.config.headless,
-                            locale=request.search_locale,
-                            viewport={"width": 1366, "height": 900},
-                            timeout=launch_timeout_ms,
-                        )
+                        context, page = self._ensure_browser_session(request=request)
                 except Exception as exc:
                     raise ProviderTemporaryError(
                         "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
@@ -1707,13 +1785,55 @@ class EbayBrowserSoldCompsProvider:
                             "browserConfig": self.config.safe_diagnostics(),
                             "timedOutStage": "launch_browser" if _looks_like_timeout(exc) else None,
                             "stageTimings": stage_timings.snapshot(),
+                            "reuseContext": True,
                         },
                     ) from exc
-                page = context.new_page()
                 page.set_default_timeout(timeout_ms)
-                with _StageTimer(stage_timings, "open_ebay_page"):
-                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
-                if is_ebay_authentication_url(page.url):
+            else:
+                owned_pw = sync_playwright().start()
+                try:
+                    profile_dir = self.config.ensure_profile_dir()
+                    try:
+                        with _StageTimer(stage_timings, "launch_browser"):
+                            context = owned_pw.chromium.launch_persistent_context(
+                                str(profile_dir),
+                                channel=self.config.channel,
+                                headless=self.config.headless,
+                                locale=request.search_locale,
+                                viewport={"width": 1366, "height": 900},
+                                timeout=launch_timeout_ms,
+                            )
+                    except Exception as exc:
+                        raise ProviderTemporaryError(
+                            "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
+                            "Install Google Chrome, then verify Playwright support with: python -m playwright install chromium",
+                            diagnostics={
+                                "errorType": type(exc).__name__,
+                                "browserConfig": self.config.safe_diagnostics(),
+                                "timedOutStage": "launch_browser" if _looks_like_timeout(exc) else None,
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        ) from exc
+                    page = context.new_page()
+                    page.set_default_timeout(timeout_ms)
+                except Exception:
+                    if context is not None:
+                        try:
+                            context.close()
+                        except Exception:
+                            pass
+                        context = None
+                    try:
+                        owned_pw.stop()
+                    except Exception:
+                        pass
+                    owned_pw = None
+                    raise
+            with _StageTimer(stage_timings, "open_ebay_page"):
+                page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+            if reuse:
+                self._session_navs += 1
+            if is_ebay_authentication_url(page.url):
                     current_url = urlparse(page.url)
                     raise ProviderAuthenticationRequiredError(
                         "eBay redirected the public sold-listing search to authentication; sign-in is not attempted",
@@ -1725,24 +1845,24 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
-                assert_final_url_matches_requested_marketplace(
+            assert_final_url_matches_requested_marketplace(
                     final_url=page.url,
                     expected_provider_domain=search_query.provider_domain,
                     requested_market_country=search_query.market_country,
                     requested_currency=search_query.currency,
                 )
-                with _StageTimer(stage_timings, "apply_sold_completed_filters"):
+            with _StageTimer(stage_timings, "apply_sold_completed_filters"):
                     if "LH_Sold=1" not in search_query.search_url or "LH_Complete=1" not in search_query.search_url:
                         raise ProviderParseError(
                             "eBay search URL is missing sold/completed filters",
                             diagnostics={"searchUrl": search_query.search_url},
                         )
-                try:
+            try:
                     with _StageTimer(stage_timings, "wait_for_network_idle"):
                         page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 15000))
-                except PlaywrightTimeoutError:
+            except PlaywrightTimeoutError:
                     pass
-                if is_ebay_authentication_url(page.url):
+            if is_ebay_authentication_url(page.url):
                     current_url = urlparse(page.url)
                     raise ProviderAuthenticationRequiredError(
                         "eBay redirected the public sold-listing search to authentication; sign-in is not attempted",
@@ -1754,17 +1874,17 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
-                assert_final_url_matches_requested_marketplace(
+            assert_final_url_matches_requested_marketplace(
                     final_url=page.url,
                     expected_provider_domain=search_query.provider_domain,
                     requested_market_country=search_query.market_country,
                     requested_currency=search_query.currency,
                 )
 
-                try:
+            try:
                     with _StageTimer(stage_timings, "wait_for_result_container"):
                         page.wait_for_selector(RESULT_CONTAINER_SELECTOR, timeout=timeout_ms)
-                except PlaywrightTimeoutError as exc:
+            except PlaywrightTimeoutError as exc:
                     title = _safe_page_title(page)
                     body_text = _safe_body_text(page)
                     selector_counts = count_candidate_selectors(page)
@@ -1863,16 +1983,16 @@ class EbayBrowserSoldCompsProvider:
                         },
                     ) from exc
 
-                title = page.title()
-                body_text = page.locator("body").inner_text(timeout=5000)
-                selector_counts = count_candidate_selectors(page)
-                page_state = classify_browser_page_state(
+            title = page.title()
+            body_text = page.locator("body").inner_text(timeout=5000)
+            selector_counts = count_candidate_selectors(page)
+            page_state = classify_browser_page_state(
                     title=title,
                     body_text=body_text,
                     selector_counts=selector_counts,
                 )
-                detected_block = page_state["outcome"] in {"challenge_detected", "access_blocked"}
-                if page_state["outcome"] in {"challenge_detected", "access_blocked", "authentication_required"}:
+            detected_block = page_state["outcome"] in {"challenge_detected", "access_blocked"}
+            if page_state["outcome"] in {"challenge_detected", "access_blocked", "authentication_required"}:
                     self._write_debug_artifacts(
                         page=page,
                         request=request,
@@ -1908,20 +2028,20 @@ class EbayBrowserSoldCompsProvider:
                         },
                     )
 
-                with _StageTimer(stage_timings, "parse_result_rows"):
+            with _StageTimer(stage_timings, "parse_result_rows"):
                     comps, parser_errors, visible_sample = self._parse_page(
                         page=page,
                         request=request,
                         search_query=search_query,
                     )
-                quality_summary = build_quality_summary(comps, request=request)
-                for error in parser_errors:
+            quality_summary = build_quality_summary(comps, request=request)
+            for error in parser_errors:
                     url_quality = error.get("url_quality")
                     if url_quality == "generic_non_item":
                         quality_summary["generic_url_count"] += 1
                     elif url_quality in {"missing", "malformed_or_non_ebay"}:
                         quality_summary["missing_url_count"] += 1
-                self._write_debug_artifacts(
+            self._write_debug_artifacts(
                     page=page,
                     request=request,
                     search_query=search_query,
@@ -1935,7 +2055,7 @@ class EbayBrowserSoldCompsProvider:
                     quality_summary=quality_summary,
                     stage_timings=stage_timings.snapshot(),
                 )
-                return ProviderResult(
+            return ProviderResult(
                     provider_name=self.provider_name,
                     marketplace=search_query.provider_marketplace_id,
                     provider_fingerprint=self._provider_fingerprint(search_query),
@@ -1963,12 +2083,23 @@ class EbayBrowserSoldCompsProvider:
                             "parserErrors": parser_errors[:20],
                             "visibleResultTextSample": visible_sample,
                             "stageTimings": stage_timings.snapshot(),
+                            "browserSessionNavs": self._session_navs if reuse else 1,
+                            "browserReuseContext": reuse,
                         }
                     ),
                 )
-            finally:
+        finally:
+            if not reuse:
                 if context is not None:
-                    context.close()
+                    try:
+                        context.close()
+                    except Exception:
+                        pass
+                if owned_pw is not None:
+                    try:
+                        owned_pw.stop()
+                    except Exception:
+                        pass
 
     def _parse_page(
         self,

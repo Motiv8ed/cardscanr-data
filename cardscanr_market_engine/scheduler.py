@@ -9,6 +9,7 @@ from typing import Any
 from .config import REPORTS_DIR, supabase_secret_key_from_env
 from .failure_policy import is_identity_error_message
 from .marketplace_ops_state import get_active_cooldown
+from .queue_capacity import QueueWatermarks, enqueue_budget
 from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
 
@@ -101,6 +102,8 @@ class MarketSchedulerConfig:
     supabase_service_role_key: str
     max_keys_per_run: int
     max_enqueues_per_run: int
+    queue_low_watermark: int
+    queue_high_watermark: int
     include_missing_cache: bool
     include_stale_cache: bool
     min_popularity_score: int
@@ -125,6 +128,8 @@ class MarketSchedulerConfig:
             supabase_service_role_key=supabase_service_role_key,
             max_keys_per_run=_parse_positive_int("MARKET_SCHEDULER_MAX_KEYS_PER_RUN", 100),
             max_enqueues_per_run=_parse_positive_int("MARKET_SCHEDULER_MAX_ENQUEUES_PER_RUN", 50),
+            queue_low_watermark=_parse_non_negative_int("MARKET_SCHEDULER_QUEUE_LOW_WATERMARK", 0),
+            queue_high_watermark=_parse_non_negative_int("MARKET_SCHEDULER_QUEUE_HIGH_WATERMARK", 0),
             include_missing_cache=_parse_bool("MARKET_SCHEDULER_INCLUDE_MISSING_CACHE", True),
             include_stale_cache=_parse_bool("MARKET_SCHEDULER_INCLUDE_STALE_CACHE", True),
             min_popularity_score=_parse_non_negative_int("MARKET_SCHEDULER_MIN_POPULARITY_SCORE", 0),
@@ -537,6 +542,22 @@ class MarketPriceRefreshScheduler:
         enqueued_jobs: list[dict[str, Any]] = []
         top_reason_counts: dict[str, int] = {}
 
+        queue_depth = 0
+        if hasattr(self.client, "count_refresh_queue_depth"):
+            try:
+                queue_depth = int(self.client.count_refresh_queue_depth() or 0)
+            except Exception:
+                queue_depth = 0
+        watermarks = QueueWatermarks(
+            low=int(self.config.queue_low_watermark),
+            high=int(self.config.queue_high_watermark),
+        )
+        enqueue_limit = enqueue_budget(
+            queue_depth=queue_depth,
+            watermarks=watermarks,
+            max_enqueues_per_run=self.config.max_enqueues_per_run,
+        )
+
         for item in decisions:
             decision: SchedulerDecision = item["decision"]
             reason_key = decision.reason
@@ -552,7 +573,7 @@ class MarketPriceRefreshScheduler:
             if item["active_job"] is not None:
                 skipped_active += 1
                 continue
-            if enqueues_done >= self.config.max_enqueues_per_run:
+            if enqueues_done >= enqueue_limit:
                 skipped_limits += 1
                 continue
 
@@ -627,6 +648,10 @@ class MarketPriceRefreshScheduler:
             "limits": {
                 "maxKeysPerRun": self.config.max_keys_per_run,
                 "maxEnqueuesPerRun": self.config.max_enqueues_per_run,
+                "queueLowWatermark": self.config.queue_low_watermark,
+                "queueHighWatermark": self.config.queue_high_watermark,
+                "effectiveEnqueueBudget": enqueue_limit,
+                "queueDepthAtStart": queue_depth,
                 "includeMissingCache": self.config.include_missing_cache,
                 "includeStaleCache": self.config.include_stale_cache,
                 "minPopularityScore": self.config.min_popularity_score,
@@ -646,6 +671,8 @@ class MarketPriceRefreshScheduler:
                 "jobsSkippedFailureBackoff": backoff_skipped,
                 "jobsDryRunOnly": dry_run_candidates,
                 "schedulerStarvationDetected": starvation_detected,
+                "queueDepthAtStart": queue_depth,
+                "effectiveEnqueueBudget": enqueue_limit,
                 "abandonedJobsRecovered": len(
                     [row for row in recovered_jobs if isinstance(row, dict) and "error" not in row]
                 ),

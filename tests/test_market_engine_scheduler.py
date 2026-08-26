@@ -59,6 +59,9 @@ class FakeSchedulerClient:
     def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict]:
         return {key: value for key, value in self.active_jobs.items() if key in set(price_key_ids)}
 
+    def count_refresh_queue_depth(self) -> int:
+        return len(self.active_jobs)
+
     def enqueue_refresh_job(self, *, price_key_id: str, reason: str, priority: int, dedupe_key: str | None) -> dict:
         payload = {
             "id": f"job-{len(self.enqueued) + 1}",
@@ -85,6 +88,8 @@ def fixed_config(*, dry_run: bool = False, max_enqueues: int = 50, allowed_marke
         supabase_service_role_key="secret",
         max_keys_per_run=100,
         max_enqueues_per_run=max_enqueues,
+        queue_low_watermark=0,
+        queue_high_watermark=0,
         include_missing_cache=True,
         include_stale_cache=True,
         min_popularity_score=0,

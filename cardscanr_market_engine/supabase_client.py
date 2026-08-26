@@ -452,6 +452,32 @@ class SupabaseMarketEngineClient:
 
         return sorted(by_id.values(), key=_sort_key)[:fetch_limit]
 
+    def count_refresh_queue_depth(self) -> int:
+        """Count queued+running refresh jobs for scheduler watermarks."""
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={
+                "select": "id",
+                "status": "in.(queued,running)",
+                "limit": "1000",
+            },
+        )
+        return len(rows)
+
+    def get_cache_row(self, *, price_key_id: str) -> dict[str, Any] | None:
+        rows = self._table_get(
+            "market_price_cache",
+            params={
+                "select": (
+                    "price_key_id,current_market_price,recommended_price,next_refresh_due_at,"
+                    "stale_after,latest_snapshot_id,confidence,sample_size,refresh_status"
+                ),
+                "price_key_id": f"eq.{price_key_id}",
+                "limit": "1",
+            },
+        )
+        return rows[0] if rows else None
+
     def get_active_jobs_for_keys(self, *, price_key_ids: list[str]) -> dict[str, dict[str, Any]]:
         clean_ids = [
             value.strip()

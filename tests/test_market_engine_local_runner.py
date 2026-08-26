@@ -41,6 +41,8 @@ def _fixed_scheduler_config() -> MarketSchedulerConfig:
         supabase_service_role_key="secret",
         max_keys_per_run=10,
         max_enqueues_per_run=5,
+        queue_low_watermark=0,
+        queue_high_watermark=0,
         include_missing_cache=True,
         include_stale_cache=True,
         min_popularity_score=0,

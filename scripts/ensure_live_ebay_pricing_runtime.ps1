@@ -107,15 +107,19 @@ function Ensure-Worker {
     $env:MARKET_WORKER_ALLOWED_MARKETS = "AU,US,GB,CA"
     $env:MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS = "NONE"
     $env:MARKET_WORKER_CONCURRENCY = "1"
-    $env:MARKET_WORKER_MAX_JOBS_PER_RUN = "1"
-    $env:MARKET_WORKER_POLL_SECONDS = "30"
+    $env:MARKET_WORKER_MAX_JOBS_PER_RUN = "4"
+    $env:MARKET_WORKER_POLL_SECONDS = "5"
+    # Keep single-browser safety; throughput gains come from fuller queue + less idle poll.
+    $env:EBAY_BROWSER_MAX_CONCURRENCY = "1"
+    $env:EBAY_BROWSER_REUSE_CONTEXT = "true"
+    $env:EBAY_BROWSER_RECYCLE_AFTER_NAVIGATIONS = "20"
 
     $stdout = Join-Path $stateDir "live_ebay_worker.out.log"
     $stderr = Join-Path $stateDir "live_ebay_worker.err.log"
     $argList = @(
         "workers/market_price_worker.py",
-        "--max-jobs", "1",
-        "--poll-seconds", "30"
+        "--max-jobs", "4",
+        "--poll-seconds", "5"
     )
     $proc = Start-Process -FilePath $pythonPath -ArgumentList $argList `
         -WorkingDirectory $repoRoot -WindowStyle Hidden `
@@ -147,9 +151,11 @@ function Ensure-Scheduler {
     }
 
     $env:MARKET_SCHEDULER_ALLOWED_MARKETS = "AU,US,GB,CA"
-    $env:MARKET_SCHEDULER_MAX_KEYS_PER_RUN = "25"
-    $env:MARKET_SCHEDULER_MAX_ENQUEUES_PER_RUN = "2"
-    $env:MARKET_SCHEDULER_POLL_SECONDS = "900"
+    $env:MARKET_SCHEDULER_MAX_KEYS_PER_RUN = "50"
+    $env:MARKET_SCHEDULER_MAX_ENQUEUES_PER_RUN = "10"
+    $env:MARKET_SCHEDULER_QUEUE_LOW_WATERMARK = "4"
+    $env:MARKET_SCHEDULER_QUEUE_HIGH_WATERMARK = "12"
+    $env:MARKET_SCHEDULER_POLL_SECONDS = "60"
     $env:MARKET_SCHEDULER_DRY_RUN = "false"
     $env:MARKET_SCHEDULER_INCLUDE_MISSING_CACHE = "true"
     $env:MARKET_SCHEDULER_INCLUDE_STALE_CACHE = "true"
@@ -158,7 +164,7 @@ function Ensure-Scheduler {
     $stderr = Join-Path $stateDir "live_ebay_scheduler.err.log"
     $argList = @(
         "workers/market_price_scheduler.py",
-        "--poll-seconds", "900"
+        "--poll-seconds", "60"
     )
     $proc = Start-Process -FilePath $pythonPath -ArgumentList $argList `
         -WorkingDirectory $repoRoot -WindowStyle Hidden `
@@ -172,7 +178,10 @@ function Ensure-Scheduler {
         stdoutLog = $stdout
         stderrLog = $stderr
         allowedMarkets = "AU,US,GB,CA"
-        maxEnqueuesPerRun = 2
+        maxEnqueuesPerRun = 10
+        queueLowWatermark = 4
+        queueHighWatermark = 12
+        pollSeconds = 60
     }
     Write-Host "[runtime] Started scheduler PID=$($proc.Id)"
 }
