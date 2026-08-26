@@ -23,6 +23,24 @@ def normalize_collector_number(value: object) -> str:
     return text
 
 
+def canonical_collector_number(value: object) -> str:
+    """Normalize collector numbers for cross-source matching (e.g. 028/131 -> 28)."""
+    text = normalize_collector_number(value)
+    if "/" in text:
+        text = text.split("/", 1)[0]
+    if text.isdigit():
+        return str(int(text))
+    return text
+
+
+def collector_numbers_match(requested: object, candidate: object) -> bool:
+    left = canonical_collector_number(requested)
+    right = canonical_collector_number(candidate)
+    if not left or not right:
+        return False
+    return left == right or normalize_collector_number(requested) == normalize_collector_number(candidate)
+
+
 def normalize_market_variant(value: object) -> str:
     text = normalize_text(value).replace("-", " ").replace("_", " ")
     text = re.sub(r"\s+", " ", text).strip()

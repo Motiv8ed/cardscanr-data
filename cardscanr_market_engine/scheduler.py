@@ -358,6 +358,27 @@ class MarketPriceRefreshScheduler:
                 details=details,
             )
 
+        # Reference-only keys with fresh bulk pricing do not need eBay verification.
+        display_source = str(candidate.get("display_price_source") or "").strip().lower()
+        verification_required = bool(candidate.get("verification_required"))
+        provider_name = str(candidate.get("provider") or "").strip().lower()
+        if (
+            not verification_required
+            and display_source == "reference"
+            and provider_name in {"static_reference", "tcgdex_reference", "tcgdex_tcgplayer", "tcgdex_cardmarket", "pokemon_tcg_api", "pokemon_tcg_api_reference"}
+            and has_usable_price
+            and not is_due
+            and not is_stale
+            and refresh_status != "failed"
+        ):
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="reference_sufficient",
+                score=score,
+                details={**details, "display_price_source": display_source, "provider": provider_name},
+            )
+
         if not policy.can_refresh:
             return SchedulerDecision(
                 should_enqueue=False,

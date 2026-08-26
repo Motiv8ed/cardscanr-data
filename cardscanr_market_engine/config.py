@@ -57,6 +57,34 @@ def _parse_json_object(name: str) -> dict[str, float]:
     return parsed
 
 
+# Mirrors card_scanner_app ExchangeRateService offline fallback rates (last reviewed 2026-05-07).
+_DEFAULT_RATES_TO_AUD: dict[str, float] = {
+    "AUD": 1.0,
+    "USD": 1.55,
+    "EUR": 1.72,
+    "GBP": 1.98,
+    "NZD": 0.91,
+    "JPY": 0.0104,
+    "CAD": 1.13,
+}
+
+
+def default_currency_pair_rates() -> dict[str, float]:
+    """Build FX pair rates for MARKET_CURRENCY_RATES_JSON when env is unset."""
+    rates: dict[str, float] = {}
+    for source, source_to_aud in _DEFAULT_RATES_TO_AUD.items():
+        if source == "AUD":
+            continue
+        rates[f"{source}:AUD"] = source_to_aud
+    return rates
+
+
+def resolve_currency_rates(env_rates: dict[str, float]) -> dict[str, float]:
+    if env_rates:
+        return env_rates
+    return default_currency_pair_rates()
+
+
 def _parse_browser_user_data_dir() -> str:
     raw = os.getenv("EBAY_BROWSER_USER_DATA_DIR", "").strip()
     if not raw:
@@ -161,7 +189,7 @@ class MarketEngineConfig:
                 "MARKET_EBAY_FALLBACK_MARKETPLACES",
                 "",
             ),
-            currency_rates=_parse_json_object("MARKET_CURRENCY_RATES_JSON"),
+            currency_rates=resolve_currency_rates(_parse_json_object("MARKET_CURRENCY_RATES_JSON")),
             currency_rate_source=os.getenv("MARKET_CURRENCY_RATE_SOURCE", "configured_static_rates").strip()
             or "configured_static_rates",
             enable_live_ebay_scheduler=_parse_bool("ENABLE_LIVE_EBAY_SCHEDULER", False),

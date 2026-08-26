@@ -366,7 +366,8 @@ class SupabaseMarketEngineClient:
         fetch_limit = max(1, min(limit, 1000))
         select = (
             "price_key_id,stale_after,next_refresh_due_at,current_market_price,recommended_price,"
-            "last_updated_at,marketplace,refresh_status,last_error_message,"
+            "last_updated_at,marketplace,refresh_status,last_error_message,provider,display_price_source,"
+            "verification_required,verification_reason,reference_price,reference_provider,"
             "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at)"
         )
         base_params = {
@@ -433,6 +434,12 @@ class SupabaseMarketEngineClient:
                     "last_updated_at": row.get("last_updated_at"),
                     "refresh_status": row.get("refresh_status"),
                     "last_error_message": row.get("last_error_message"),
+                    "provider": row.get("provider"),
+                    "display_price_source": row.get("display_price_source"),
+                    "verification_required": row.get("verification_required"),
+                    "verification_reason": row.get("verification_reason"),
+                    "reference_price": row.get("reference_price"),
+                    "reference_provider": row.get("reference_provider"),
                 }
                 if len(by_id) >= fetch_limit:
                     break
@@ -620,6 +627,34 @@ class SupabaseMarketEngineClient:
         if currency:
             payload["currency"] = str(currency).upper()
         return self.upsert_cache(payload)
+
+    def record_provider_sync_run(
+        self,
+        *,
+        provider: str,
+        status: str,
+        counters: dict[str, Any],
+        duration_ms: int,
+    ) -> dict[str, Any]:
+        payload = {
+            "provider": provider,
+            "finished_at": _iso_or_none(datetime.now(timezone.utc)),
+            "status": status,
+            "keys_scanned": int(counters.get("keysScanned") or 0),
+            "keys_matched": int(counters.get("keysMatched") or 0),
+            "keys_updated": int(counters.get("keysUpdated") or 0),
+            "keys_unchanged": int(counters.get("keysUnchanged") or 0),
+            "keys_quarantined": int(counters.get("keysQuarantined") or 0),
+            "keys_unresolved": int(counters.get("keysUnresolved") or 0),
+            "keys_ambiguous": int(counters.get("keysAmbiguous") or 0),
+            "verification_enqueued": int(counters.get("verificationEnqueued") or 0),
+            "errors": int(counters.get("errors") or 0),
+            "duration_ms": int(duration_ms),
+            "bulk_keys_per_hour": counters.get("bulkKeysPerHour"),
+            "diagnostics_json": counters,
+        }
+        rows = self._table_post("market_price_provider_sync_runs", payload)
+        return rows[0] if rows else payload
 
     def count_recent_same_failures(
         self,
