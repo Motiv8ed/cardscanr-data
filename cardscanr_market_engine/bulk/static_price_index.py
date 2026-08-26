@@ -18,23 +18,10 @@ from ..fingerprints import (
     normalize_text,
 )
 from .price_semantics import MappingStatus, ReferencePriceObservation
+from .set_id_aliases import resolve_static_set_id
 
 
 CURRENT_PRICE_ROOT = ROOT / "public" / "v1" / "prices" / "current"
-
-
-def resolve_static_set_id(set_code: str | None) -> str | None:
-    code = str(set_code or "").strip()
-    if not code:
-        return None
-    for prefix in (
-        "tcgdex:international:set:",
-        "pokemon-asia-my-official:set:",
-        "tcgdex:",
-    ):
-        if code.startswith(prefix):
-            code = code.split(":")[-1]
-    return code or None
 
 
 def static_language_folder(language: str) -> str:
@@ -45,7 +32,7 @@ def static_language_folder(language: str) -> str:
 
 
 def static_set_file_path(*, game: str, language: str, set_code: str | None) -> Path | None:
-    resolved = resolve_static_set_id(set_code)
+    resolved = resolve_static_set_id(set_code, language=language)
     if not resolved:
         return None
     lang = static_language_folder(language)
@@ -68,6 +55,36 @@ def _variant_matches(requested: str, candidate: str) -> bool:
     if req == cand:
         return True
     return cand in _VARIANT_GROUPS.get(req, {req})
+
+
+def _pick_best_price_row(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    def _sort_key(row: dict[str, Any]) -> tuple[int, float]:
+        source = str(row.get("source") or "").lower()
+        source_rank = 0 if "tcgplayer" in source or source == "pokemon_tcg_api" else 1
+        price = float(row.get("marketPrice") or 0)
+        return (source_rank, -price)
+
+    return sorted(rows, key=_sort_key)[0]
+
+
+def _resolve_candidate_rows(
+    exact_name: list[dict[str, Any]],
+    loose_name: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], MappingStatus]:
+    if len(exact_name) == 1:
+        return exact_name, "exact"
+    if len(exact_name) > 1:
+        return [_pick_best_price_row(exact_name)], "canonical"
+    if len(loose_name) == 1:
+        return loose_name, "canonical"
+    if len(loose_name) > 1:
+        return [_pick_best_price_row(loose_name)], "canonical"
+    if len(candidates) == 1:
+        return candidates, "canonical"
+    if len(candidates) > 1:
+        return [_pick_best_price_row(candidates)], "canonical"
+    return candidates, "ambiguous"
 
 
 @dataclass
@@ -142,26 +159,7 @@ def lookup_static_reference(
         elif target_name and (target_name in row_name or row_name in target_name):
             loose_name.append(row)
 
-    chosen: list[dict[str, Any]]
-    status: MappingStatus
-    if len(exact_name) == 1:
-        chosen = exact_name
-        status = "exact"
-    elif len(exact_name) > 1:
-        chosen = exact_name
-        status = "ambiguous"
-    elif len(loose_name) == 1:
-        chosen = loose_name
-        status = "canonical"
-    elif len(loose_name) > 1:
-        chosen = loose_name
-        status = "ambiguous"
-    elif len(candidates) == 1:
-        chosen = candidates
-        status = "canonical"
-    else:
-        chosen = candidates
-        status = "ambiguous"
+    chosen, status = _resolve_candidate_rows(exact_name, loose_name, candidates)
 
     if status == "ambiguous":
         return ReferencePriceObservation(

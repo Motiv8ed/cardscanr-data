@@ -13,10 +13,12 @@ from ..currency_conversion import resolve_currency_conversion
 from ..models import MarketPriceKey
 from ..refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from ..supabase_client import SupabaseMarketEngineClient
+from .coverage_diagnostic import CoverageProbeResult, aggregate_coverage, classify_key
 from .display_price_policy import DisplayPriceDecision, decide_display_price
 from .price_semantics import ReferencePriceObservation
-from .set_id_aliases import resolve_tcgdex_set_id
-from .static_price_index import lookup_static_reference, resolve_static_set_id
+from .set_id_aliases import is_synthetic_set_code, resolve_static_set_id, resolve_tcgdex_set_id
+from .static_price_index import lookup_static_reference
+from .sync_lock import acquire_bulk_sync_lock, release_bulk_sync_lock
 from .tcgdex_client import TcgdexRunCache, lookup_tcgdex_reference
 from .verification_router import VerificationRouteDecision, route_verification
 
@@ -36,6 +38,7 @@ class BulkRefreshCounters:
     keys_ambiguous: int = 0
     verification_enqueued: int = 0
     errors: int = 0
+    error_details: list[dict[str, Any]] = field(default_factory=list)
     provider_hits: dict[str, int] = field(default_factory=dict)
 
 
@@ -230,6 +233,8 @@ class BulkReferenceRefreshRunner:
     ) -> dict[str, Any]:
         counters.keys_scanned += 1
         now = self.now_func()
+        if is_synthetic_set_code(key.set_code, key.set_name):
+            return {"status": "skipped_synthetic", "priceKeyId": key.id}
         observation = self._lookup_reference(key)
         if observation is None:
             counters.keys_unresolved += 1
@@ -346,13 +351,29 @@ class BulkReferenceRefreshRunner:
         return {str(row["price_key_id"]): row for row in rows if row.get("price_key_id")}
 
     def run(self) -> dict[str, Any]:
+        lock = acquire_bulk_sync_lock()
+        if not lock.acquired:
+            return {
+                "status": "skipped",
+                "reason": "overlap_lock",
+                "lockHolderPid": lock.holder_pid,
+                "lockStartedAtUtc": lock.started_at_utc,
+            }
         started = time.monotonic()
         now = self.now_func()
         counters = BulkRefreshCounters()
+        try:
+            return self._run_locked(started=started, now=now, counters=counters)
+        finally:
+            release_bulk_sync_lock()
+
+    def _run_locked(self, *, started: float, now: datetime, counters: BulkRefreshCounters) -> dict[str, Any]:
         keys = self.list_keys()
         cache_map = self.load_cache_map([key.id for key in keys])
         verification_budget = [self.refresh_config.verification_budget_per_run]
         samples: list[dict[str, Any]] = []
+
+        coverage_rows: list[CoverageProbeResult] = []
 
         if self.refresh_config.enable_live_tcgdex:
             unique_sets: set[tuple[str, str]] = set()
@@ -373,8 +394,32 @@ class BulkReferenceRefreshRunner:
                 )
                 if len(samples) < 25:
                     samples.append(outcome)
+                prior = cache_map.get(key.id)
+                converted = None
+                if outcome.get("provider"):
+                    try:
+                        obs = self._lookup_reference(key)
+                        if obs and obs.is_usable:
+                            converted = self._convert_price(obs, key.currency, now)
+                    except Exception:
+                        converted = None
+                coverage_rows.append(
+                    classify_key(
+                        key,
+                        tcgdx_cache=self.tcgdex_cache,
+                        prior_cache=prior,
+                        converted_price=converted,
+                    )
+                )
             except Exception as exc:
                 counters.errors += 1
+                detail = {
+                    "priceKeyId": key.id,
+                    "setCode": key.set_code,
+                    "stage": "process_key",
+                    "error": str(exc),
+                }
+                counters.error_details.append(detail)
                 self.logger(f"[bulk-reference] key={key.id} error={exc}")
 
         elapsed_ms = int((time.monotonic() - started) * 1000)
@@ -382,6 +427,7 @@ class BulkReferenceRefreshRunner:
         if elapsed_ms > 0:
             keys_per_hour = round((counters.keys_scanned / elapsed_ms) * 3_600_000, 2)
 
+        coverage = aggregate_coverage(coverage_rows)
         report = {
             "status": "success",
             "dryRun": self.refresh_config.dry_run,
@@ -396,8 +442,10 @@ class BulkReferenceRefreshRunner:
             "keysAmbiguous": counters.keys_ambiguous,
             "verificationEnqueued": counters.verification_enqueued,
             "errors": counters.errors,
+            "errorDetails": counters.error_details,
             "providerHits": counters.provider_hits,
             "bulkKeysPerHour": keys_per_hour,
+            "coverage": coverage,
             "sampleOutcomes": samples,
         }
 
@@ -405,7 +453,7 @@ class BulkReferenceRefreshRunner:
             try:
                 self.client.record_provider_sync_run(
                     provider="bulk_reference",
-                    status="success",
+                    status="success" if counters.errors == 0 else "failed",
                     counters=report,
                     duration_ms=elapsed_ms,
                 )

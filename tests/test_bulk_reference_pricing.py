@@ -79,7 +79,7 @@ class StaticPriceIndexTests(unittest.TestCase):
                     {
                         "collectorNumber": "10",
                         "variant": "normal",
-                        "normalizedName": "pikachu",
+                        "normalizedName": "raichu",
                         "marketPrice": 2.0,
                         "sourceCurrency": "USD",
                         "currency": "USD",
@@ -100,7 +100,8 @@ class StaticPriceIndexTests(unittest.TestCase):
                 )
         self.assertIsNotNone(obs)
         assert obs is not None
-        self.assertEqual(obs.mapping_status, "ambiguous")
+        self.assertEqual(obs.mapping_status, "exact")
+        self.assertEqual(obs.market_price, 1.0)
 
 
 class DisplayPolicyTests(unittest.TestCase):

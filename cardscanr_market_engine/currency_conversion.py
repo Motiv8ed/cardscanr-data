@@ -50,7 +50,13 @@ def resolve_currency_conversion(
     key = f"{source}:{target}"
     rate = rates.get(key)
     if rate is None:
-        raise ValueError(f"Missing currency conversion rate for {key}")
+        source_to_aud = rates.get(f"{source}:AUD")
+        target_to_aud = rates.get(f"{target}:AUD")
+        if source_to_aud is not None and target_to_aud is not None and target_to_aud > 0:
+            rate = source_to_aud / target_to_aud
+            rate_source = f"{rate_source}_via_aud"
+        else:
+            raise ValueError(f"Missing currency conversion rate for {key}")
     if rate <= 0:
         raise ValueError(f"Currency conversion rate for {key} must be > 0")
     return CurrencyConversion(

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -11,7 +10,6 @@ from typing import Any
 from ..fingerprints import (
     canonical_collector_number,
     collector_numbers_match,
-    normalize_collector_number,
     normalize_name,
     normalize_text,
 )
@@ -23,7 +21,7 @@ def tcgdex_language(language: str) -> str:
     lang = normalize_text(language)
     if lang in {"ja", "jp", "japanese"}:
         return "ja"
-    if lang in {"en", "it", "fr", "de", "es"}:
+    if lang in {"en", "it", "fr", "de", "es", "unknown"}:
         return "en"
     return lang[:2] if lang else "en"
 
@@ -38,12 +36,16 @@ class TcgdexRunCache:
         cached = self.set_cards.get(key)
         if cached is not None:
             return cached
-        list_url = f"https://api.tcgdex.net/v2/{key[0]}/sets/{set_id}/cards"
+        # TCGdex v2 exposes set cards on GET /sets/{id}, not /sets/{id}/cards.
+        set_url = f"https://api.tcgdex.net/v2/{key[0]}/sets/{set_id}"
+        cards: list[dict[str, Any]] = []
         try:
-            cards = _http_get_json(list_url)
+            payload = _http_get_json(set_url)
+            if isinstance(payload, dict):
+                raw_cards = payload.get("cards")
+                if isinstance(raw_cards, list):
+                    cards = [row for row in raw_cards if isinstance(row, dict)]
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
-            cards = []
-        if not isinstance(cards, list):
             cards = []
         self.set_cards[key] = cards
         return cards
@@ -71,7 +73,10 @@ class TcgdexRunCache:
 
 
 def _http_get_json(url: str, *, timeout: int = 15) -> Any:
-    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "CardScanR-BulkPricing/1.0"})
+    request = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "CardScanR-BulkPricing/1.0"},
+    )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -90,7 +95,7 @@ def _extract_variant_price(pricing_root: dict[str, Any], variant: str) -> tuple[
         prices = market.get("prices") if isinstance(market.get("prices"), dict) else market
         if not isinstance(prices, dict):
             continue
-        for key in (alias, variant_key, "normal", "holofoil", "reverseHolofoil"):
+        for key in (alias, variant_key, "normal", "holofoil", "reverseHolofoil", "reverse"):
             entry = prices.get(key)
             if not isinstance(entry, dict):
                 continue
@@ -116,7 +121,6 @@ def lookup_tcgdex_reference(
     card_name: str,
     normalized_card_name: str,
     variant: str,
-    min_delay_seconds: float = 0.0,
     cache: TcgdexRunCache | None = None,
 ) -> ReferencePriceObservation | None:
     set_id = resolve_tcgdex_set_id(set_code)
@@ -124,15 +128,15 @@ def lookup_tcgdex_reference(
         return None
     run_cache = cache or TcgdexRunCache()
     cards = run_cache.preload_set(language=language, set_id=set_id)
+    if not cards:
+        return None
 
-    target_number = canonical_collector_number(collector_number)
     target_name = normalize_name(normalized_card_name or card_name)
     strict: list[str] = []
     loose: list[str] = []
     for candidate in cards:
         if not isinstance(candidate, dict):
             continue
-        local_id = canonical_collector_number(candidate.get("localId"))
         if not collector_numbers_match(collector_number, candidate.get("localId")):
             continue
         card_id = str(candidate.get("id") or "")
@@ -157,7 +161,7 @@ def lookup_tcgdex_reference(
             high_price=None,
             confidence="low",
             mapping_status="ambiguous",
-            diagnostics={"candidateIds": strict},
+            diagnostics={"candidateIds": strict, "tcgdexSetId": set_id},
         )
     elif len(loose) == 1:
         card_id = loose[0]
@@ -165,8 +169,6 @@ def lookup_tcgdex_reference(
     else:
         return None
 
-    if min_delay_seconds > 0 and cache is None:
-        time.sleep(min_delay_seconds)
     card_data = run_cache.get_card_detail(language=language, card_id=card_id)
     if not isinstance(card_data, dict):
         return None
