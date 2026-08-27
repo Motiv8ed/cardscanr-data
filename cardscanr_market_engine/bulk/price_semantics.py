@@ -4,8 +4,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-PriceEvidenceKind = Literal["reference", "verified_au"]
-DisplayPriceSource = Literal["reference", "verified_au", "pending_verification"]
+PriceEvidenceKind = Literal["reference", "verified_au", "international_estimate"]
+DisplayPriceSource = Literal[
+    "reference",
+    "verified_au",
+    "verified_local",
+    "local_verified",
+    "international_estimate",
+    "pending_verification",
+    "unavailable",
+]
+PriceClass = Literal[
+    "local_verified",
+    "reference",
+    "international_estimate",
+    "unavailable",
+    "pending_verification",
+]
 MappingStatus = Literal["exact", "canonical", "alias", "unresolved", "ambiguous"]
 
 REFERENCE_PROVIDERS = frozenset(

@@ -368,7 +368,8 @@ class SupabaseMarketEngineClient:
             "price_key_id,stale_after,next_refresh_due_at,current_market_price,recommended_price,"
             "last_updated_at,marketplace,refresh_status,last_error_message,provider,display_price_source,"
             "verification_required,verification_reason,reference_price,reference_provider,"
-            "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,last_seen_at)"
+            "market_price_keys!inner(id,fingerprint,market_country,currency,popularity_score,inventory_count,"
+            "last_seen_at,language,game,card_name,normalized_card_name,set_name,set_code,collector_number,variant,condition)"
         )
         base_params = {
             "select": select,
@@ -426,6 +427,15 @@ class SupabaseMarketEngineClient:
                     "last_seen_at": key.get("last_seen_at"),
                     "market_country": key.get("market_country"),
                     "currency": key.get("currency"),
+                    "language": key.get("language"),
+                    "game": key.get("game"),
+                    "card_name": key.get("card_name"),
+                    "normalized_card_name": key.get("normalized_card_name"),
+                    "set_name": key.get("set_name"),
+                    "set_code": key.get("set_code"),
+                    "collector_number": key.get("collector_number"),
+                    "variant": key.get("variant"),
+                    "condition": key.get("condition"),
                     "marketplace": row.get("marketplace"),
                     "stale_after": row.get("stale_after"),
                     "next_refresh_due_at": row.get("next_refresh_due_at"),
@@ -459,6 +469,55 @@ class SupabaseMarketEngineClient:
 
         return sorted(by_id.values(), key=_sort_key)[:fetch_limit]
 
+    def list_international_fallback_candidates(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Return null-price keys for international fallback (ignores local refresh cooldown)."""
+        fetch_limit = max(1, min(limit, 200))
+        rows = self._table_get(
+            "market_price_cache",
+            params={
+                "select": (
+                    "price_key_id,current_market_price,display_price_source,provider,"
+                    "verification_required,next_refresh_due_at,stale_after,last_error_message,"
+                    "market_price_keys!inner(id,fingerprint,market_country,currency,language,game,"
+                    "card_name,normalized_card_name,set_name,set_code,collector_number,variant,condition)"
+                ),
+                "current_market_price": "is.null",
+                "limit": str(fetch_limit),
+            },
+        )
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            key = row.get("market_price_keys")
+            if isinstance(key, list):
+                key = key[0] if key else None
+            if not isinstance(key, dict):
+                continue
+            out.append(
+                {
+                    "id": key.get("id"),
+                    "fingerprint": key.get("fingerprint"),
+                    "market_country": key.get("market_country"),
+                    "currency": key.get("currency"),
+                    "language": key.get("language"),
+                    "game": key.get("game"),
+                    "card_name": key.get("card_name"),
+                    "normalized_card_name": key.get("normalized_card_name"),
+                    "set_name": key.get("set_name"),
+                    "set_code": key.get("set_code"),
+                    "collector_number": key.get("collector_number"),
+                    "variant": key.get("variant"),
+                    "condition": key.get("condition"),
+                    "current_market_price": row.get("current_market_price"),
+                    "display_price_source": row.get("display_price_source"),
+                    "provider": row.get("provider"),
+                    "verification_required": row.get("verification_required"),
+                    "next_refresh_due_at": row.get("next_refresh_due_at"),
+                    "stale_after": row.get("stale_after"),
+                    "last_error_message": row.get("last_error_message"),
+                }
+            )
+        return out
+
     def count_refresh_queue_depth(self) -> int:
         """Count queued+running refresh jobs for scheduler watermarks."""
         rows = self._table_get(
@@ -477,7 +536,9 @@ class SupabaseMarketEngineClient:
             params={
                 "select": (
                     "price_key_id,current_market_price,recommended_price,next_refresh_due_at,"
-                    "stale_after,latest_snapshot_id,confidence,sample_size,refresh_status"
+                    "stale_after,latest_snapshot_id,confidence,sample_size,refresh_status,"
+                    "display_price_source,provider,verification_required,reference_price,reference_provider,"
+                    "last_error_message,source_market_country,source_currency,source_price,fx_rate,fx_rate_timestamp"
                 ),
                 "price_key_id": f"eq.{price_key_id}",
                 "limit": "1",

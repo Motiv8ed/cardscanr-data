@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
-from cardscanr_market_engine.job_runner import MarketPriceJobRunner
+from cardscanr_market_engine.international.fallback_runner import InternationalMarketPriceJobRunner
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
@@ -143,7 +143,7 @@ def run_worker_loop(
     *,
     args: argparse.Namespace,
     config: MarketEngineConfig,
-    runner: MarketPriceJobRunner,
+    runner: InternationalMarketPriceJobRunner,
     poll_seconds: int,
     max_jobs: int,
     sleep_func: Any = time.sleep,
@@ -253,7 +253,7 @@ def main() -> int:
         supabase_url=config.supabase_url,
         service_role_key=config.supabase_service_role_key,
     )
-    runner = MarketPriceJobRunner(
+    runner = InternationalMarketPriceJobRunner(
         client=client,
         provider=create_market_comps_provider(config.provider_name),
         config=config,
