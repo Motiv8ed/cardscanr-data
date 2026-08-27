@@ -82,7 +82,35 @@ def default_currency_pair_rates() -> dict[str, float]:
 def resolve_currency_rates(env_rates: dict[str, float]) -> dict[str, float]:
     if env_rates:
         return env_rates
+    # Prefer shared ECB cache when healthy; static defaults remain only as a
+    # non-production fallback for same-currency / bulk paths that do not mint
+    # international estimates.
+    try:
+        from .international.fx_cache import load_production_pair_rates
+
+        rates, _fx, _cache = load_production_pair_rates()
+        if rates:
+            return rates
+    except Exception:
+        pass
     return default_currency_pair_rates()
+
+
+def resolve_currency_rate_source(env_source: str | None = None) -> str:
+    explicit = str(env_source or "").strip()
+    if explicit and explicit.lower() not in {"configured_static_rates", "static"}:
+        return explicit
+    try:
+        from datetime import datetime, timezone
+
+        from .international.fx_cache import evaluate_ecb_fx_freshness, load_fx_cache
+
+        fx = evaluate_ecb_fx_freshness(cache=load_fx_cache(), now=datetime.now(timezone.utc))
+        if fx.allows_conversion and str(fx.source).upper() == "ECB":
+            return "ECB"
+    except Exception:
+        pass
+    return explicit or "configured_static_rates"
 
 
 def _parse_browser_user_data_dir() -> str:
@@ -190,8 +218,9 @@ class MarketEngineConfig:
                 "",
             ),
             currency_rates=resolve_currency_rates(_parse_json_object("MARKET_CURRENCY_RATES_JSON")),
-            currency_rate_source=os.getenv("MARKET_CURRENCY_RATE_SOURCE", "configured_static_rates").strip()
-            or "configured_static_rates",
+            currency_rate_source=resolve_currency_rate_source(
+                os.getenv("MARKET_CURRENCY_RATE_SOURCE", "").strip() or None
+            ),
             enable_live_ebay_scheduler=_parse_bool("ENABLE_LIVE_EBAY_SCHEDULER", False),
             confirm_live_ebay_scheduler=_parse_bool("CONFIRM_LIVE_EBAY_SCHEDULER", False),
             live_ebay_scheduler_markets=os.getenv("LIVE_EBAY_SCHEDULER_MARKETS", "AU").strip() or "AU",

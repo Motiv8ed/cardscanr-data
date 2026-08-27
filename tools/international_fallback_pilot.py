@@ -204,7 +204,7 @@ def main() -> int:
             target = item["firstFallbackMarket"]
             if not target:
                 continue
-            reason = f"international_fallback:{target}"
+            reason = f"international_fallback:{target}:force"
             job = client.enqueue_refresh_job(
                 price_key_id=item["priceKeyId"],
                 reason=reason,

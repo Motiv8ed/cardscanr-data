@@ -152,12 +152,12 @@ class FxConversionTests(unittest.TestCase):
             rate_source="configured_static_rates",
             rate_timestamp=None,
             now=now,
+            cache={"source": "configured_static_rates"},
         )
         self.assertTrue(freshness.stale)
         self.assertFalse(freshness.allows_conversion)
         self.assertEqual(freshness.health, "STALE")
         self.assertEqual(freshness.block_reason, "FX_RATE_STALE_NO_SAFE_CONVERSION")
-        self.assertGreater(freshness.age_hours, 24)
 
     def test_same_currency_conversion_always_allowed(self) -> None:
         now = datetime(2026, 8, 27, tzinfo=timezone.utc)
@@ -170,16 +170,17 @@ class FxConversionTests(unittest.TestCase):
         self.assertTrue(freshness.allows_conversion)
         self.assertEqual(freshness.health, "HEALTHY")
 
-    def test_operator_supplied_fresh_timestamp_allows_conversion(self) -> None:
+    def test_missing_ecb_cache_blocks_conversion(self) -> None:
         now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
         freshness = evaluate_fx_freshness(
-            rate_source="operator_supplied_rates",
-            rate_timestamp=now - timedelta(hours=6),
+            rate_source="ECB",
+            rate_timestamp=None,
             now=now,
+            cache={},
         )
-        self.assertFalse(freshness.stale)
-        self.assertTrue(freshness.allows_conversion)
-        self.assertEqual(freshness.health, "HEALTHY")
+        self.assertTrue(freshness.stale)
+        self.assertFalse(freshness.allows_conversion)
+        self.assertEqual(freshness.health, "STALE")
 
 
 if __name__ == "__main__":

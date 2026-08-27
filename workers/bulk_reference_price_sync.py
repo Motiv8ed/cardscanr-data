@@ -24,6 +24,20 @@ def main() -> int:
     load_supabase_env()
     engine_config = MarketEngineConfig.from_env()
     refresh_config = BulkRefreshConfig.from_env()
+
+    # Shared ECB FX refresh with TTL — not per card; keeps international conversion healthy.
+    try:
+        from cardscanr_market_engine.international.fx_cache import maybe_refresh_ecb_fx_cache
+
+        fx_payload = maybe_refresh_ecb_fx_cache()
+        print(
+            f"[bulk-reference] fx_source={fx_payload.get('source')} "
+            f"provider_rate_date={fx_payload.get('providerRateDate')} "
+            f"fetched_at={fx_payload.get('fetchedAt')}",
+            flush=True,
+        )
+    except Exception as exc:
+        print(f"[bulk-reference] fx_refresh_skipped error={exc}", flush=True)
     if args.dry_run:
         refresh_config = BulkRefreshConfig(
             dry_run=True,

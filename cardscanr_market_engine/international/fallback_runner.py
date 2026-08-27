@@ -27,8 +27,8 @@ from .fallback_eligibility import evaluate_international_fallback_eligibility
 from .fx_freshness import (
     assert_fx_allows_international_conversion,
     evaluate_fx_freshness,
-    resolve_rate_timestamp,
 )
+from .fx_cache import load_production_pair_rates
 from .market_fallback_policy import market_display_name, parse_international_job_reason
 
 
@@ -83,6 +83,8 @@ def build_international_cache_payload(
             "fx_rate": conversion.rate,
             "fx_rate_timestamp": conversion.rate_timestamp.isoformat().replace("+00:00", "Z"),
             "fx_rate_source": conversion.rate_source,
+            "fx_provider_rate_date": fx_freshness.get("providerRateDate"),
+            "fx_fetched_at": fx_freshness.get("fetchedAt") or fx_freshness.get("rateTimestamp"),
             "stale_after": stale_iso,
             "next_refresh_due_at": stale_iso,
             "verification_required": False,
@@ -162,27 +164,32 @@ class InternationalFallbackMixin:
                 )
                 if source_stats.included_count <= 0 or source_stats.recommended_price is None:
                     continue
-                conversion = resolve_currency_conversion(
-                    source_currency=provider_request.currency,
-                    target_currency=price_key.currency,
-                    rates=self.config.currency_rates,
-                    rate_source=self.config.currency_rate_source,
-                    now=now,
+                same_currency = (
+                    str(provider_request.currency).upper() == str(price_key.currency).upper()
                 )
-                conversion = replace(
-                    conversion,
-                    rate_timestamp=resolve_rate_timestamp(
-                        rate_source=conversion.rate_source,
+                if same_currency:
+                    conversion = resolve_currency_conversion(
+                        source_currency=provider_request.currency,
+                        target_currency=price_key.currency,
+                        rates={},
+                        rate_source="same_currency",
                         now=now,
-                    ),
-                )
-                same_currency = conversion.source_currency == conversion.target_currency
-                fx = evaluate_fx_freshness(
-                    rate_source=conversion.rate_source,
-                    rate_timestamp=conversion.rate_timestamp,
-                    now=now,
-                    same_currency=same_currency,
-                )
+                    )
+                    fx = evaluate_fx_freshness(same_currency=True, now=now)
+                else:
+                    rates, fx, _cache = load_production_pair_rates(now=now)
+                    assert_fx_allows_international_conversion(fx)
+                    conversion = resolve_currency_conversion(
+                        source_currency=provider_request.currency,
+                        target_currency=price_key.currency,
+                        rates=rates,
+                        rate_source="ECB",
+                        now=now,
+                    )
+                    conversion = replace(
+                        conversion,
+                        rate_timestamp=fx.fetched_at or fx.rate_timestamp,
+                    )
                 # Never publish a newly converted user-facing international estimate
                 # with FX outside the approved freshness window.
                 assert_fx_allows_international_conversion(fx)
@@ -196,6 +203,15 @@ class InternationalFallbackMixin:
                         "allowsConversion": fx.allows_conversion,
                         "ageHours": fx.age_hours,
                         "rateTimestamp": fx.rate_timestamp.isoformat().replace("+00:00", "Z"),
+                        "providerRateDate": (
+                            fx.provider_rate_date.isoformat() if fx.provider_rate_date else None
+                        ),
+                        "fetchedAt": (
+                            fx.fetched_at.isoformat().replace("+00:00", "Z")
+                            if fx.fetched_at
+                            else None
+                        ),
+                        "source": fx.source,
                         "blockReason": fx.block_reason,
                     },
                 }
@@ -332,11 +348,7 @@ class InternationalFallbackMixin:
             }
 
         # Fail closed on FX before any foreign-market browser search.
-        fx_probe = evaluate_fx_freshness(
-            rate_source=self.config.currency_rate_source,
-            rate_timestamp=None,
-            now=now,
-        )
+        fx_probe = evaluate_fx_freshness(now=now)
         if not fx_probe.allows_conversion:
             message = fx_probe.block_reason or "FX_RATE_STALE_NO_SAFE_CONVERSION"
             backoff = now + timedelta(hours=6)
@@ -415,8 +427,6 @@ class InternationalFallbackMixin:
             provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_pending_verification"
 
         fx = evaluate_fx_freshness(
-            rate_source=currency_conversion.rate_source,
-            rate_timestamp=currency_conversion.rate_timestamp,
             now=now,
             same_currency=currency_conversion.source_currency
             == currency_conversion.target_currency,
@@ -459,7 +469,14 @@ class InternationalFallbackMixin:
                 "stale": fx.stale,
                 "ageHours": fx.age_hours,
                 "rateTimestamp": fx.rate_timestamp.isoformat().replace("+00:00", "Z"),
+                "providerRateDate": (
+                    fx.provider_rate_date.isoformat() if fx.provider_rate_date else None
+                ),
+                "fetchedAt": (
+                    fx.fetched_at.isoformat().replace("+00:00", "Z") if fx.fetched_at else None
+                ),
                 "source": fx.source,
+                "health": fx.health,
             },
         )
         cache = self.client.upsert_cache(cache_payload)
