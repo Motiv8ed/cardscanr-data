@@ -2,6 +2,12 @@
 """Idempotent EN catalogue repair: drop PokéWallet collector duplicates and clone sets.
 
 Default mode is dry-run. Pass --apply to write changes.
+
+Safety rule (2026-08-30 hardened):
+  Cards only collide when collector identity keys match AND names are compatible
+  (accent/punctuation tolerant). This prevents collapsing Celebrations Classic /
+  McDonald's lettered decks / other sets that reuse local numbers for distinct
+  physical printings.
 """
 
 from __future__ import annotations
@@ -16,42 +22,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from cardscanr_catalogue_identity import (  # noqa: E402
+    collector_identity_key,
+    names_compatible,
+    normalize_card_name,
+    variant_token,
+)
+
 DEFAULT_EN_ROOT = Path(r"D:\cardscanr-data\public\v1\catalog\pokemon\en")
 DEFAULT_REPORT = Path(
     r"D:\CardScanR\reports\catalogue_integrity_20260830\dedup_repair_report.json"
 )
 
-_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
-_DIGIT_GROUP = re.compile(r"\d+")
-_SPACE = re.compile(r"\s+")
-_SEPARATORS = re.compile(r"[/.\-\s]+")
-_PURE_NUMERIC = re.compile(r"^(\d+)(?:/(\d+))?$")
-# letter prefix + one or more zeros + digits (me03, sv001 style set ids)
 _ZERO_PADDED_SET = re.compile(r"^([A-Za-z]+)0+(\d+)$")
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def collector_identity_key(value: object) -> str:
-    """Collector identity used for duplicate collision.
-
-    Strips spaces; strips leading zeros from each digit group; for pure numeric
-    or numeric/numeric forms uses the numerator only (so ``24`` and ``024/086``
-    collide). Other forms keep letter prefixes after separator stripping.
-    """
-    raw = unicodedata.normalize("NFKC", str(value or ""))
-    raw = raw.translate(_FULLWIDTH_DIGITS).strip()
-    if not raw:
-        return ""
-    raw = _SPACE.sub("", raw)
-    zero_stripped = _DIGIT_GROUP.sub(lambda match: str(int(match.group(0))), raw)
-    match = _PURE_NUMERIC.match(zero_stripped)
-    if match:
-        return match.group(1)
-    compact = _SEPARATORS.sub("", zero_stripped).casefold()
-    return compact
 
 
 def _urls_of(card: dict[str, Any]) -> str:
@@ -64,7 +55,6 @@ def _urls_of(card: dict[str, Any]) -> str:
 
 
 def keep_rank(card: dict[str, Any], index: int) -> tuple[int, int, int]:
-    """Lower is better: pokemon_tcg source, then non-pokewallet URLs, then first."""
     source = str(card.get("imageSource") or "").casefold()
     is_tcg = source == "pokemon_tcg_api" or "pokemon_tcg" in source
     urls = _urls_of(card)
@@ -77,39 +67,60 @@ def keep_rank(card: dict[str, Any], index: int) -> tuple[int, int, int]:
 
 
 def dedupe_cards(cards: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Drop duplicates only when collector keys collide AND names are compatible."""
     groups: dict[str, list[tuple[int, dict[str, Any]]]] = defaultdict(list)
     for index, card in enumerate(cards):
         key = collector_identity_key(card.get("collectorNumber"))
         groups[key].append((index, card))
 
-    kept: list[dict[str, Any]] = []
-    dropped: list[dict[str, Any]] = []
-    # Preserve original relative order of winners.
     winners_by_index: dict[int, dict[str, Any]] = {}
+    dropped: list[dict[str, Any]] = []
+
     for key, members in groups.items():
         if not key:
             for index, card in members:
                 winners_by_index[index] = card
             continue
-        ranked = sorted(members, key=lambda item: keep_rank(item[1], item[0]))
-        winner_index, winner = ranked[0]
-        winners_by_index[winner_index] = winner
-        for loser_index, loser in ranked[1:]:
-            dropped.append(
-                {
-                    "identityKey": key,
-                    "keptCollectorNumber": winner.get("collectorNumber"),
-                    "keptName": winner.get("name"),
-                    "keptImageSource": winner.get("imageSource"),
-                    "droppedCollectorNumber": loser.get("collectorNumber"),
-                    "droppedName": loser.get("name"),
-                    "droppedImageSource": loser.get("imageSource"),
-                    "droppedCanonicalBaseId": loser.get("canonicalBaseId"),
-                    "originalIndex": loser_index,
-                }
-            )
-    for index in sorted(winners_by_index):
-        kept.append(winners_by_index[index])
+
+        # Cluster by name-compatibility AND variant_token so distinct printings
+        # that share a local number (Celebrations Classic, Prize Pack stamps,
+        # Trainer Kit finishes, etc.) are not collapsed by permissive name matching.
+        clusters: list[list[tuple[int, dict[str, Any]]]] = []
+        for member in members:
+            placed = False
+            member_variant = variant_token(member[1])
+            for cluster in clusters:
+                head = cluster[0][1]
+                if variant_token(head) != member_variant:
+                    continue
+                if names_compatible(head.get("name"), member[1].get("name")):
+                    cluster.append(member)
+                    placed = True
+                    break
+            if not placed:
+                clusters.append([member])
+        for cluster in clusters:
+            ranked = sorted(cluster, key=lambda item: keep_rank(item[1], item[0]))
+            winner_index, winner = ranked[0]
+            winners_by_index[winner_index] = winner
+            for loser_index, loser in ranked[1:]:
+                dropped.append(
+                    {
+                        "identityKey": key,
+                        "keptCollectorNumber": winner.get("collectorNumber"),
+                        "keptName": winner.get("name"),
+                        "keptImageSource": winner.get("imageSource"),
+                        "keptCanonicalBaseId": winner.get("canonicalBaseId"),
+                        "droppedCollectorNumber": loser.get("collectorNumber"),
+                        "droppedName": loser.get("name"),
+                        "droppedImageSource": loser.get("imageSource"),
+                        "droppedCanonicalBaseId": loser.get("canonicalBaseId"),
+                        "originalIndex": loser_index,
+                        "nameCompatible": True,
+                    }
+                )
+
+    kept = [winners_by_index[index] for index in sorted(winners_by_index)]
     return kept, dropped
 
 
@@ -133,15 +144,11 @@ def find_clone_sets(
     set_ids: set[str],
     cards_by_set: dict[str, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
-    """Detect whole-set PokéWallet clones of official sets (me03 → me3, etc.)."""
     clones: list[dict[str, Any]] = []
-    # Case-insensitive lookup for canon ids present in catalogue.
     lower_map = {sid.casefold(): sid for sid in set_ids}
     for set_id in sorted(set_ids):
         canon = canonical_set_id(set_id)
-        if not canon:
-            continue
-        if canon.casefold() == set_id.casefold():
+        if not canon or canon.casefold() == set_id.casefold():
             continue
         official_id = lower_map.get(canon.casefold())
         if not official_id:
@@ -198,157 +205,121 @@ def repair_catalogue(*, en_root: Path, apply: bool, report_path: Path) -> dict[s
     cards_by_set: dict[str, list[dict[str, Any]]] = {}
     card_docs: dict[str, dict[str, Any]] = {}
     for path in card_files:
-        doc = load_json(path)
-        set_id = str(doc.get("setId") or path.stem)
-        cards_by_set[set_id] = list(doc.get("cards") or [])
-        card_docs[set_id] = doc
+        payload = load_json(path)
+        if not isinstance(payload, dict):
+            continue
+        cards = [card for card in (payload.get("cards") or []) if isinstance(card, dict)]
+        cards_by_set[path.stem] = cards
+        card_docs[path.stem] = payload
 
-    all_set_ids = set(cards_by_set) | set_ids_in_index
-
-    per_set_dedupe: list[dict[str, Any]] = []
+    cards_before = sum(len(cards) for cards in cards_by_set.values())
+    per_set: list[dict[str, Any]] = []
     total_dropped = 0
-    total_before = 0
-    total_after = 0
-    rewritten_sets: list[str] = []
+    rewritten: dict[str, list[dict[str, Any]]] = {}
 
-    for set_id in sorted(cards_by_set):
-        before_cards = cards_by_set[set_id]
-        total_before += len(before_cards)
-        kept, dropped = dedupe_cards(before_cards)
-        total_after += len(kept)
-        total_dropped += len(dropped)
-        cards_by_set[set_id] = kept
+    for set_id, cards in sorted(cards_by_set.items()):
+        kept, dropped = dedupe_cards(cards)
+        rewritten[set_id] = kept
         if dropped:
-            per_set_dedupe.append(
+            total_dropped += len(dropped)
+            per_set.append(
                 {
                     "setId": set_id,
-                    "beforeCount": len(before_cards),
+                    "beforeCount": len(cards),
                     "afterCount": len(kept),
                     "droppedCount": len(dropped),
-                    "droppedSamples": dropped[:20],
+                    "droppedSamples": dropped[:50],
                 }
             )
-            rewritten_sets.append(set_id)
 
-    clones = find_clone_sets(all_set_ids, cards_by_set)
-    removed_clone_ids = [item["cloneSetId"] for item in clones]
-    clone_cards_removed = sum(len(cards_by_set.get(clone_id) or []) for clone_id in removed_clone_ids)
+    clones = find_clone_sets(set(cards_by_set), rewritten)
+    clone_card_total = 0
+    for clone in clones:
+        clone_id = clone["cloneSetId"]
+        clone_card_total += len(rewritten.get(clone_id) or [])
+        rewritten.pop(clone_id, None)
 
-    # Apply in-memory: drop clone sets from card map and sets index.
-    for clone_id in removed_clone_ids:
-        cards_by_set.pop(clone_id, None)
-        card_docs.pop(clone_id, None)
-
-    remaining_sets = [item for item in sets_list if str(item.get("id")) not in removed_clone_ids]
-    # Recompute aggregates from remaining indexed set card files.
-    indexed_ids = {str(item.get("id")) for item in remaining_sets if item.get("id")}
-    aggregate_card_count = 0
-    for set_id in indexed_ids:
-        aggregate_card_count += len(cards_by_set.get(set_id) or [])
-    cards_after = total_after - clone_cards_removed
-
-    report: dict[str, Any] = {
+    cards_after = sum(len(cards) for cards in rewritten.values())
+    report = {
         "generatedAtUtc": utc_now(),
         "dryRun": not apply,
         "enRoot": str(en_root),
+        "duplicateRule": {
+            "collectorIdentity": "numerator-only for pure numeric/N/M; prefixed forms keep letters",
+            "nameGate": "NFKD accent-fold + punctuation tolerant; require compatible names",
+            "keepPreference": "pokemon_tcg_api over pokewallet URLs over first",
+            "languagesTouched": ["en"],
+            "doesNotMergeAcrossSets": True,
+            "doesNotMergePrefixedWithBareNumeric": True,
+        },
         "summary": {
             "setFilesScanned": len(card_files),
-            "setsInIndexBefore": len(sets_list),
-            "setsInIndexAfter": len(remaining_sets),
-            "cardsBefore": total_before,
-            "cardsAfterDedupe": cards_after,
+            "setsInIndexBefore": len(set_ids_in_index),
+            "setsInIndexAfter": len(set_ids_in_index) - sum(
+                1 for clone in clones if clone["cloneSetId"] in set_ids_in_index
+            ),
+            "cardsBefore": cards_before,
+            "cardsAfterDedupe": cards_after + clone_card_total,
             "duplicateCardsDropped": total_dropped,
-            "cloneCardsRemoved": clone_cards_removed,
-            "setsWithDuplicates": len(per_set_dedupe),
-            "cloneSetsRemoved": len(removed_clone_ids),
-            "aggregateCardCountAfter": aggregate_card_count,
+            "cloneCardsRemoved": clone_card_total,
+            "setsWithDuplicates": len(per_set),
+            "cloneSetsRemoved": len(clones),
+            "aggregateCardCountAfter": sum(
+                len(rewritten[sid]) for sid in rewritten if sid in set_ids_in_index
+            ),
         },
         "cloneSets": clones,
-        "perSetDedupe": per_set_dedupe,
-        "rewrittenSetIds": rewritten_sets,
-        "removedCloneSetIds": removed_clone_ids,
+        "perSetDedupe": per_set,
     }
 
-    print(
-        f"[repair] dry_run={not apply} scanned_sets={len(card_files)} "
-        f"dropped_dupes={total_dropped} clone_sets={len(removed_clone_ids)} "
-        f"cards {total_before} -> {cards_after}"
-    )
-    for clone in clones:
-        print(
-            f"[repair] clone {clone['cloneSetId']} -> keep {clone['canonicalSetId']} "
-            f"(overlap={clone['overlapPct']:.0%}, "
-            f"counts={clone['cloneCardCount']}/{clone['canonicalCardCount']})"
-        )
-
     if apply:
-        for set_id in rewritten_sets:
-            if set_id in removed_clone_ids:
-                continue
-            doc = card_docs[set_id]
-            doc["cards"] = cards_by_set[set_id]
-            doc["cardCount"] = len(doc["cards"])
-            dump_json(cards_dir / f"{set_id}.json", doc)
-            print(f"[repair] wrote {set_id}.json cardCount={doc['cardCount']}")
-
-        for clone_id in removed_clone_ids:
-            clone_path = cards_dir / f"{clone_id}.json"
-            if clone_path.exists():
-                clone_path.unlink()
-                print(f"[repair] removed clone file {clone_path.name}")
-
-        sets_doc["sets"] = remaining_sets
-        sets_doc["setCount"] = len(remaining_sets)
-        sets_doc["cardCount"] = aggregate_card_count
+        for set_id, cards in rewritten.items():
+            path = cards_dir / f"{set_id}.json"
+            payload = card_docs.get(set_id) or {
+                "schemaVersion": "1.0.0",
+                "game": "pokemon",
+                "language": "en",
+                "setId": set_id,
+            }
+            payload = dict(payload)
+            payload["cards"] = cards
+            payload["cardCount"] = len(cards)
+            dump_json(path, payload)
+            print(f"[repair] wrote {set_id}.json cardCount={len(cards)}")
+        for clone in clones:
+            path = cards_dir / f"{clone['cloneSetId']}.json"
+            if path.exists():
+                path.unlink()
+                print(f"[repair] removed clone file {clone['cloneSetId']}.json")
+        remaining_ids = set(rewritten)
+        sets_doc["sets"] = [item for item in sets_list if str(item.get("id")) in remaining_ids]
+        sets_doc["setCount"] = len(sets_doc["sets"])
+        sets_doc["cardCount"] = sum(
+            len(rewritten[str(item.get("id"))]) for item in sets_doc["sets"] if item.get("id")
+        )
         dump_json(sets_path, sets_doc)
         print(
             f"[repair] wrote sets.json setCount={sets_doc['setCount']} "
             f"cardCount={sets_doc['cardCount']}"
         )
-    else:
-        print("[repair] dry-run only; pass --apply to write changes")
 
     dump_json(report_path, report)
+    print(
+        f"[repair] dry_run={not apply} scanned_sets={len(card_files)} "
+        f"dropped_dupes={total_dropped} clone_sets={len(clones)} "
+        f"cards {cards_before} -> {cards_after}"
+    )
     print(f"[repair] report -> {report_path}")
     return report
 
 
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Repair EN catalogue PokéWallet collector duplicates and clone sets."
-    )
-    parser.add_argument(
-        "--en-root",
-        type=Path,
-        default=DEFAULT_EN_ROOT,
-        help="EN catalogue root containing sets.json and cards/",
-    )
-    parser.add_argument(
-        "--report",
-        type=Path,
-        default=DEFAULT_REPORT,
-        help="Path for JSON repair report",
-    )
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
-        "--dry-run",
-        dest="dry_run",
-        action="store_true",
-        default=True,
-        help="Do not write catalogue files (default)",
-    )
-    mode.add_argument(
-        "--apply",
-        dest="dry_run",
-        action="store_false",
-        help="Write deduped card files and updated sets.json",
-    )
-    return parser.parse_args(argv)
-
-
-def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
-    repair_catalogue(en_root=args.en_root, apply=not args.dry_run, report_path=args.report)
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--en-root", type=Path, default=DEFAULT_EN_ROOT)
+    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--apply", action="store_true", help="Write changes (default dry-run)")
+    args = parser.parse_args()
+    repair_catalogue(en_root=args.en_root, apply=args.apply, report_path=args.report)
     return 0
 
 

@@ -195,32 +195,77 @@ def iter_set_records(catalogue_root: Path, *, language: str) -> list[SetRecord]:
     return records
 
 
+def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> dict[str, SetRecord]:
+    """Optional explicit supplemental registry — never directory-scan orphans.
+
+    File: catalog/pokemon/<lang>/approved_supplemental_sets.json
+    Shape: { \"sets\": [ {\"id\", \"name\", \"searchInclusion\": \"approved_supplemental\", ...} ] }
+    Only entries with searchInclusion == approved_supplemental are indexed.
+    """
+    path = catalogue_root / "catalog" / "pokemon" / language / "approved_supplemental_sets.json"
+    if not path.exists():
+        return {}
+    payload = load_json(path)
+    out: dict[str, SetRecord] = {}
+    for item in payload.get("sets") or []:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        if str(item.get("searchInclusion") or "").strip() != "approved_supplemental":
+            continue
+        set_id = str(item["id"]).strip()
+        name = str(item.get("name") or set_id).strip()
+        out[set_id] = SetRecord(
+            set_id=set_id,
+            language=language,
+            name=name,
+            normalized_set_name=normalize_set_name(name),
+            total=_optional_int(item.get("total")),
+            printed_total=_optional_int(item.get("printedTotal")),
+            release_date=str(item.get("releaseDate") or "").strip() or None,
+            ptcgo_code=str(item.get("ptcgoCode") or "").strip() or None,
+            series=str(item.get("series") or item.get("productType") or "").strip() or None,
+        )
+    return out
+
+
 def iter_catalogue_cards(
     catalogue_root: Path = DEFAULT_CATALOGUE_ROOT,
     *,
     languages: tuple[str, ...] = SUPPORTED_LANGUAGES,
 ) -> Iterator[CardRecord]:
+    """Index only sets.json + explicitly approved supplemental sets.
+
+    Quarantined / unresolved provider card files must NOT enter user search
+    merely because they exist under cards/*.json.
+    """
     for language in languages:
         set_index = {item.set_id: item for item in iter_set_records(catalogue_root, language=language)}
+        supplemental = _approved_supplemental_set_ids(catalogue_root, language=language)
+        allowed = {**set_index, **{k: v for k, v in supplemental.items() if k not in set_index}}
         cards_dir = catalogue_root / "catalog" / "pokemon" / language / "cards"
-        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+        for set_id, set_meta in sorted(allowed.items(), key=lambda kv: kv[0].lower()):
+            path = cards_dir / f"{set_id}.json"
+            if not path.exists():
+                continue
             payload = load_json(path)
             if not isinstance(payload, dict):
                 continue
-            set_id = str(payload.get("setId") or path.stem)
-            set_meta = set_index.get(set_id) or SetRecord(
-                set_id=set_id,
-                language=language,
-                name=str(payload.get("setName") or set_id),
-                normalized_set_name=normalize_set_name(str(payload.get("setName") or set_id)),
-                total=None,
-                printed_total=None,
-                release_date=None,
-                ptcgo_code=None,
-                series=None,
-            )
             file_generated_at = str(payload.get("generatedAtUtc") or "")
             file_schema_version = str(payload.get("schemaVersion") or "1.0.0")
+            # Prefer file display name when sets.json name is sparse.
+            file_name = str(payload.get("setName") or "").strip()
+            if file_name and set_id in supplemental:
+                set_meta = SetRecord(
+                    set_id=set_meta.set_id,
+                    language=set_meta.language,
+                    name=file_name,
+                    normalized_set_name=normalize_set_name(file_name),
+                    total=set_meta.total,
+                    printed_total=set_meta.printed_total,
+                    release_date=set_meta.release_date,
+                    ptcgo_code=set_meta.ptcgo_code,
+                    series=set_meta.series,
+                )
             for card in payload.get("cards") or []:
                 if not isinstance(card, dict):
                     continue
@@ -239,13 +284,23 @@ def collect_catalogue_snapshot(catalogue_root: Path = DEFAULT_CATALOGUE_ROOT) ->
     for language in SUPPORTED_LANGUAGES:
         sets_path = catalogue_root / "catalog" / "pokemon" / language / "sets.json"
         snapshot.source_hashes[f"catalog/pokemon/{language}/sets.json"] = sha256_file(sets_path)
+        supp_path = catalogue_root / "catalog" / "pokemon" / language / "approved_supplemental_sets.json"
+        if supp_path.exists():
+            snapshot.source_hashes[
+                f"catalog/pokemon/{language}/approved_supplemental_sets.json"
+            ] = sha256_file(supp_path)
+        set_index = {item.set_id for item in iter_set_records(catalogue_root, language=language)}
+        set_index |= set(_approved_supplemental_set_ids(catalogue_root, language=language))
         cards_dir = catalogue_root / "catalog" / "pokemon" / language / "cards"
-        for path in sorted(cards_dir.glob("*.json"), key=lambda item: item.name.lower()):
+        for set_id in sorted(set_index):
+            path = cards_dir / f"{set_id}.json"
+            if not path.exists():
+                continue
             rel = f"catalog/pokemon/{language}/cards/{path.name}"
             snapshot.source_hashes[rel] = sha256_file(path)
     counts = {language: 0 for language in SUPPORTED_LANGUAGES}
     for record in iter_catalogue_cards(catalogue_root):
         counts[record.language] = counts.get(record.language, 0) + 1
         snapshot.total_cards += 1
-    snapshot.per_language_counts = counts
+        snapshot.per_language_counts = counts
     return snapshot
