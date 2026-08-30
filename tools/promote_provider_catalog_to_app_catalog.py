@@ -231,6 +231,27 @@ def provider_card_count(language: str) -> int:
     return len(iter_provider_records([language]))
 
 
+def expand_set_tokens(value: Any) -> set[str]:
+    """Build lookup tokens for set ids/names/codes, including zero-stripped forms."""
+    tokens: set[str] = set()
+    raw = str(value or "").strip()
+    if not raw:
+        return tokens
+    base = normalize_token(raw)
+    if base:
+        tokens.add(base)
+    # ME03 / me03 / SV01 → me3 / sv1
+    match = re.fullmatch(r"([a-z]+)0*([1-9][0-9]*)([a-z0-9]*)", base)
+    if match:
+        tokens.add(f"{match.group(1)}{match.group(2)}{match.group(3)}")
+    # "ME03: Perfect Order" → perfectorder
+    if ":" in raw:
+        tail = normalize_token(raw.split(":", 1)[1])
+        if tail:
+            tokens.add(tail)
+    return {token for token in tokens if token}
+
+
 def build_app_set_token_map(app_sets: dict[str, Any]) -> dict[str, str]:
     mapping: dict[str, str] = {}
     sets = app_sets.get("sets")
@@ -242,14 +263,11 @@ def build_app_set_token_map(app_sets: dict[str, Any]) -> dict[str, str]:
         set_id = str(item.get("id") or "").strip()
         if not set_id:
             continue
-        tokens = {
-            normalize_token(set_id),
-            normalize_token(item.get("name")),
-            normalize_token(item.get("ptcgoCode")),
-        }
+        tokens = set()
+        for value in (set_id, item.get("name"), item.get("ptcgoCode")):
+            tokens |= expand_set_tokens(value)
         for token in tokens:
-            if token:
-                mapping.setdefault(token, set_id)
+            mapping.setdefault(token, set_id)
     return mapping
 
 
@@ -297,11 +315,22 @@ def make_position_key(language: str, set_id: str, collector: str) -> str:
 
 
 def collector_identity_key(value: Any) -> str:
-    raw = normalize_number(value).lower()
-    compact = re.sub(r"\s+", "", raw)
-    if re.fullmatch(r"\d+", compact or ""):
-        return compact.lstrip("0") or "0"
-    return raw
+    """Normalize collector numbers so 024/086 and 24 share one set position.
+
+    Pure numeric / numeric-fraction forms collapse to the local (numerator)
+    number. Prefixed forms keep designators with zero-stripped digit groups
+    (TG01/TG30 → tg1/tg30).
+    """
+    raw = unicodedata.normalize("NFKC", str(value or "")).strip()
+    if not raw:
+        return ""
+    raw = re.sub(r"\s*([/.-])\s*", r"\1", raw)
+    raw = re.sub(r"\s+", "", raw)
+    normalized = re.sub(r"\d+", lambda match: str(int(match.group(0))), raw).lower()
+    pure = re.fullmatch(r"(\d+)(?:/(\d+))?", normalized)
+    if pure:
+        return pure.group(1)
+    return normalized
 
 
 def short_identity_token(value: Any, *, fallback: str) -> str:
@@ -359,9 +388,9 @@ def provider_set_identity(record: ProviderRecord, app_set_map: dict[str, str]) -
     raw_name = card.get("providerSetName") or record.file_set_name or raw_code
     provider_set_id = card.get("providerSetId") or record.file_set_id
     for value in [raw_code, raw_name, provider_set_id]:
-        token = normalize_token(value)
-        if token and token in app_set_map:
-            return app_set_map[token], str(raw_name or app_set_map[token]), "mapped_existing_set"
+        for token in expand_set_tokens(value):
+            if token in app_set_map:
+                return app_set_map[token], str(raw_name or app_set_map[token]), "mapped_existing_set"
     fallback = raw_code or raw_name
     safe_id = safe_set_id(fallback, language=record.language)
     if not safe_id:

@@ -4,11 +4,20 @@ import re
 import unicodedata
 
 _FRACTION_PATTERN = re.compile(r"^(\d+)\s*/\s*(\d+)$")
+_PREFIXED_FRACTION_PATTERN = re.compile(
+    r"^([A-Za-z]+)?(\d+)\s*/\s*([A-Za-z]+)?(\d+)$"
+)
+_DIGIT_GROUP = re.compile(r"\d+")
+_SPACE_AROUND_SEPARATORS = re.compile(r"\s*([/.-])\s*")
 _PUNCT_TO_SPACE = re.compile(r"[\u2019\u2018'`´’‘]+")
 _DASH_VARIANTS = re.compile(r"[\u2010\u2011\u2012\u2013\u2014\u2212-]+")
 _NON_ALNUM = re.compile(r"[^\w\s]+", re.UNICODE)
 _WHITESPACE = re.compile(r"\s+")
 _FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+_EMBEDDED_COLLECTOR = re.compile(
+    r"(?<![A-Za-z0-9])((?:[A-Za-z]{1,4})?\d{1,4}\s*/\s*(?:[A-Za-z]{1,4})?\d{1,4}|\d{1,4})(?![A-Za-z0-9])"
+)
+_COLLECTOR_QUERY = re.compile(r"^[\w./-]+$", re.UNICODE)
 
 
 def nfkc(text: str) -> str:
@@ -39,19 +48,29 @@ def normalize_ascii_token(text: str) -> str:
 
 
 def normalize_collector_number(value: str) -> str:
+    """Normalize collector numbers losslessly for search identity.
+
+    Strips leading zeros from *every* digit group while preserving letter
+    prefixes/suffixes (TG01/TG30 → tg1/tg30, SV001 → sv1, 024/086 → 24/86).
+    """
     raw = nfkc(value).translate(_FULLWIDTH_DIGITS).strip()
     if not raw:
         return ""
-    match = _FRACTION_PATTERN.match(raw)
-    if match:
-        local = match.group(1).lstrip("0") or "0"
-        return f"{local}/{match.group(2)}"
-    if raw.isdigit():
-        return raw.lstrip("0") or "0"
-    return raw.casefold()
+    raw = _SPACE_AROUND_SEPARATORS.sub(r"\1", raw)
+    raw = re.sub(r"\s+", "", raw)
+    stripped = _DIGIT_GROUP.sub(lambda match: str(int(match.group(0))), raw)
+    return stripped.casefold()
 
 
-_COLLECTOR_QUERY = re.compile(r"^[\w./-]+$", re.UNICODE)
+def split_collector_number(value: str) -> tuple[str, str | None]:
+    """Return (numerator, optional denominator) after normalization."""
+    normalized = normalize_collector_number(value)
+    if not normalized:
+        return "", None
+    if "/" not in normalized:
+        return normalized, None
+    left, right = normalized.split("/", 1)
+    return left, right or None
 
 
 def is_collector_number_query(value: str) -> bool:
@@ -60,8 +79,12 @@ def is_collector_number_query(value: str) -> bool:
         return False
     if raw.isdigit():
         return True
-    if _FRACTION_PATTERN.match(raw):
+    compact = re.sub(r"\s+", "", raw)
+    if _FRACTION_PATTERN.match(compact):
         return True
+    if _PREFIXED_FRACTION_PATTERN.match(compact):
+        if len(compact) <= 12 and any(ch.isdigit() for ch in compact):
+            return True
     if len(raw) > 12:
         return False
     if not _COLLECTOR_QUERY.match(raw):
@@ -72,6 +95,22 @@ def is_collector_number_query(value: str) -> bool:
     return len(raw) <= 8
 
 
+def extract_collector_number_from_query(value: str) -> str | None:
+    """Pull a collector-number token out of a mixed name/set/number query."""
+    raw = nfkc(value).translate(_FULLWIDTH_DIGITS).strip()
+    if not raw:
+        return None
+    if is_collector_number_query(raw):
+        return raw
+    matches = list(_EMBEDDED_COLLECTOR.finditer(raw))
+    if not matches:
+        return None
+    fractions = [match.group(1) for match in matches if "/" in match.group(1)]
+    if fractions:
+        return fractions[-1]
+    return matches[-1].group(1)
+
+
 def collector_number_variants(value: str) -> list[str]:
     raw = nfkc(value).translate(_FULLWIDTH_DIGITS).strip()
     if not raw:
@@ -79,16 +118,21 @@ def collector_number_variants(value: str) -> list[str]:
     variants = {raw, raw.casefold()}
     normalized = normalize_collector_number(raw)
     variants.add(normalized)
+    local, total = split_collector_number(raw)
+    if local:
+        variants.add(local)
+    if local and total:
+        variants.add(f"{local}/{total}")
     if raw.isdigit():
         variants.add(raw.zfill(3))
         variants.add(raw.lstrip("0") or "0")
-    match = _FRACTION_PATTERN.match(raw)
+    match = _FRACTION_PATTERN.match(re.sub(r"\s+", "", raw))
     if match:
         left = match.group(1)
         right = match.group(2)
         variants.add(f"{left}/{right}")
-        variants.add(f"{left.lstrip('0') or '0'}/{right}")
-        variants.add(f"{left.zfill(3)}/{right}")
+        variants.add(f"{left.lstrip('0') or '0'}/{right.lstrip('0') or '0'}")
+        variants.add(f"{left.zfill(3)}/{right.zfill(3)}")
     return sorted({item for item in variants if item})
 
 

@@ -147,7 +147,17 @@ class NormalizationTests(unittest.TestCase):
         self.assertEqual(normalize_collector_number("004"), "4")
 
     def test_fraction_collector(self) -> None:
-        self.assertEqual(normalize_collector_number("001/081"), "1/081")
+        self.assertEqual(normalize_collector_number("001/081"), "1/81")
+
+    def test_fraction_leading_zeros_both_sides(self) -> None:
+        self.assertEqual(normalize_collector_number("024/086"), "24/86")
+
+    def test_prefixed_fraction_collector(self) -> None:
+        self.assertEqual(normalize_collector_number("TG01/TG30"), "tg1/tg30")
+
+    def test_letter_prefix_collector(self) -> None:
+        self.assertEqual(normalize_collector_number("SV001"), "sv1")
+        self.assertEqual(normalize_collector_number("SWSH001"), "swsh1")
 
     def test_collector_query_detection(self) -> None:
         from cardscanr_search_index.normalization import is_collector_number_query
