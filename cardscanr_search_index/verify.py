@@ -29,7 +29,17 @@ REQUIRED_INDEXES = (
     "idx_cards_set_name",
     "idx_cards_set_name_canon",
     "idx_cards_set_name_localized",
+    "idx_cards_physical_printing",
+    "idx_cards_base_reference",
     "idx_aliases_normalized",
+)
+REQUIRED_PHYSICAL_COLUMNS = (
+    "physical_printing_id",
+    "identity_model_version",
+    "base_card_reference",
+    "printing_class",
+    "product_family",
+    "variant_signature",
 )
 
 
@@ -40,6 +50,8 @@ class VerifyResult:
     total_rows: int
     per_language_counts: dict[str, int]
     duplicate_canonical_ids: int
+    duplicate_physical_printing_ids: int
+    missing_physical_printing_ids: int
     manifest_sha256_matches: bool
     deterministic_rebuild_matches: bool
     rollback_available: bool
@@ -104,6 +116,11 @@ def verify_search_index(
         if not _index_exists(conn, index):
             issues.append(f"missing_index:{index}")
 
+    card_columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(cards)")}
+    for column in REQUIRED_PHYSICAL_COLUMNS:
+        if column not in card_columns:
+            issues.append(f"missing_physical_column:{column}")
+
     fts_healthy = False
     try:
         conn.execute("SELECT COUNT(*) FROM cards_fts").fetchone()
@@ -123,6 +140,28 @@ def verify_search_index(
     )
     if duplicate_canonical_ids:
         issues.append("duplicate_canonical_base_id")
+
+    duplicate_physical_printing_ids = int(
+        conn.execute(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT physical_printing_id FROM cards
+              WHERE physical_printing_id IS NOT NULL AND trim(physical_printing_id) <> ''
+              GROUP BY physical_printing_id HAVING COUNT(*) > 1
+            )
+            """
+        ).fetchone()[0]
+    )
+    if duplicate_physical_printing_ids:
+        issues.append("duplicate_physical_printing_id")
+
+    missing_physical_printing_ids = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM cards WHERE physical_printing_id IS NULL OR trim(physical_printing_id) = ''"
+        ).fetchone()[0]
+    )
+    if missing_physical_printing_ids:
+        issues.append(f"missing_physical_printing_id:{missing_physical_printing_ids}")
 
     snapshot = collect_catalogue_snapshot(catalogue_root)
     if total_rows != snapshot.total_cards:
@@ -153,6 +192,8 @@ def verify_search_index(
         total_rows=total_rows,
         per_language_counts=per_language,
         duplicate_canonical_ids=duplicate_canonical_ids,
+        duplicate_physical_printing_ids=duplicate_physical_printing_ids,
+        missing_physical_printing_ids=missing_physical_printing_ids,
         manifest_sha256_matches=manifest_sha256_matches,
         deterministic_rebuild_matches=deterministic_rebuild_matches,
         rollback_available=rollback_available,
