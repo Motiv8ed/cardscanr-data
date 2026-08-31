@@ -73,12 +73,16 @@ class CardRecord:
     set_release_date: str | None
     set_ptcgo_code: str | None
     physical_printing_id: str | None = None
+    identity_model_version: str | None = None
     base_card_reference: str | None = None
     printing_class: str | None = None
     variant_signature: str | None = None
     product_family: str | None = None
     stamp_type: str | None = None
     card_size: str | None = None
+    edition: str | None = None
+    deck_variant: str | None = None
+    event_context: str | None = None
 
 
 @dataclass
@@ -170,9 +174,16 @@ def _card_to_record(
     provider_set_id = promo.get("providerSetId")
     provider_set_id = str(provider_set_id).strip() if provider_set_id else None
     provider_ids = card.get("providerIds") if isinstance(card.get("providerIds"), dict) else {}
+
+    # productFamily is identity-bearing when it represents the physical product
+    # and no more-specific productVariant is present. Keep variantSignature
+    # consistent with physical_printing_id() so downstream comparison is exact.
+    card_for_sig = dict(card)
+    if card.get("productFamily") and not card.get("productVariant"):
+        card_for_sig.setdefault("productVariant", card.get("productFamily"))
     v_sig = (
         str(card.get("variantSignature") or "").strip()
-        or (variant_signature(card) if variant_signature else None)
+        or (variant_signature(card_for_sig) if variant_signature else None)
     )
     persisted_p_pid = str(card.get("physicalPrintingId") or "").strip() or None
     persisted_version = str(card.get("identityModelVersion") or "").strip()
@@ -189,6 +200,11 @@ def _card_to_record(
         p_pid = persisted_p_pid
     else:
         p_pid = None
+    identity_version = (
+        persisted_version
+        if p_pid and persisted_p_pid == p_pid and persisted_version == IDENTITY_MODEL_VERSION
+        else (IDENTITY_MODEL_VERSION if p_pid else None)
+    )
     aliases = build_search_aliases(
         name=name,
         normalized_name=normalized_name,
@@ -229,12 +245,16 @@ def _card_to_record(
         set_release_date=set_meta.release_date,
         set_ptcgo_code=set_meta.ptcgo_code,
         physical_printing_id=p_pid,
+        identity_model_version=identity_version,
         base_card_reference=str(card.get("baseCardReference") or "").strip() or None,
         printing_class=str(card.get("printingClass") or "").strip() or None,
         variant_signature=v_sig,
         product_family=str(card.get("productFamily") or "").strip() or None,
         stamp_type=str(card.get("stampType") or "").strip() or None,
         card_size=str(card.get("cardSize") or "").strip() or None,
+        edition=str(card.get("edition") or "").strip() or None,
+        deck_variant=str(card.get("deckVariant") or "").strip() or None,
+        event_context=str(card.get("eventContext") or "").strip() or None,
     )
 
 
