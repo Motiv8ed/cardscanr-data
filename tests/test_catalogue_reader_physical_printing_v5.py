@@ -136,6 +136,10 @@ class CatalogueReaderPhysicalPrintingV5Tests(unittest.TestCase):
                             "language": "en",
                             "collectorNumber": "1",
                             "name": "Good",
+                            "baseCardReference": "pokemon|en|base1|1|good",
+                            "printingClass": "PRIZE_PACK",
+                            "productFamily": "Prize Pack Series One",
+                            "stampType": "prize_pack",
                         },
                         {
                             "canonicalBaseId": "pokemon|en|other|2|wrong-set",
@@ -171,13 +175,36 @@ class CatalogueReaderPhysicalPrintingV5Tests(unittest.TestCase):
                 "physical-printing-v1|en|cel25c|15/102|normal",
             )
             self.assertEqual(
+                by_id["pokemon|en|cel25c|15-102|venusaur"].identity_model_version,
+                IDENTITY_MODEL_VERSION,
+            )
+            self.assertEqual(
                 by_id["pokemon|en|cel25c|2|persisted"].physical_printing_id,
                 "persisted-physical-id",
+            )
+            self.assertEqual(
+                by_id["pokemon|en|cel25c|2|persisted"].identity_model_version,
+                IDENTITY_MODEL_VERSION,
             )
             self.assertNotEqual(
                 by_id["pokemon|en|cel25c|3|stale"].physical_printing_id,
                 "stale-physical-id",
             )
+            self.assertEqual(
+                by_id["pokemon|en|cel25c|3|stale"].identity_model_version,
+                IDENTITY_MODEL_VERSION,
+            )
+            supplemental = by_id["pokemon|en|supp|1|good"]
+            self.assertEqual(supplemental.printing_class, "PRIZE_PACK")
+            self.assertEqual(supplemental.product_family, "Prize Pack Series One")
+            self.assertEqual(supplemental.stamp_type, "prize_pack")
+            self.assertEqual(
+                supplemental.base_card_reference,
+                "pokemon|en|base1|1|good",
+            )
+            self.assertIn("printingClass:prize_pack", supplemental.variant_signature or "")
+            self.assertIn("productVariant:prize_pack_series_one", supplemental.variant_signature or "")
+            self.assertIn("stampType:prize_pack", supplemental.variant_signature or "")
             self.assertIn("pokemon|en|supp|1|good", by_id)
             self.assertNotIn("pokemon|en|other|2|wrong-set", by_id)
             self.assertNotIn("pokemon|jp|supp|3|wrong-language", by_id)
