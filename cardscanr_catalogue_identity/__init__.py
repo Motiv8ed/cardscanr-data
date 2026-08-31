@@ -462,3 +462,134 @@ def classify_pair(
         return "TRUE_DUPLICATE"
     # Same position + incompatible name ⇒ legitimate distinct printing collapsed.
     return "FALSE_MERGE"
+
+
+_VARIANT_SIGNATURE_FIELDS = (
+    "variant",
+    "variantType",
+    "finish",
+    "raritySubtype",
+    "subset",
+    "printingClass",
+    "stampType",
+    "cardSize",
+    "productVariant",
+    "deckVariant",
+)
+
+
+def _normalize_variant_part(value: object) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, list):
+        parts = [str(v).strip() for v in value if str(v).strip()]
+        if not parts:
+            return None
+        value = ",".join(parts)
+    text = normalize_card_name(str(value)).replace(" ", "_")
+    return text or None
+
+
+def variant_signature(card: dict[str, Any] | None = None, *, explicit: object = None) -> str:
+    """Composite deterministic variant identity from all populated identity fields."""
+    if explicit not in (None, ""):
+        return _normalize_variant_part(explicit) or "normal"
+    card = card or {}
+    parts: list[str] = []
+    for key in _VARIANT_SIGNATURE_FIELDS:
+        norm = _normalize_variant_part(card.get(key))
+        if norm:
+            parts.append(f"{key}:{norm}")
+    if not parts:
+        return "normal"
+    return "|".join(sorted(parts))
+
+
+def identity_collector_key(
+    collector_number: object,
+    *,
+    numbering_policy: str = "SEQUENTIAL_FRACTION",
+    set_printed_total: int | None = None,
+) -> str:
+    """Numbering-policy-aware collector identity for physical printing keys."""
+    policy = str(numbering_policy or "SEQUENTIAL_FRACTION")
+    if policy in ("ORIGINAL_REPRINT_NUMBERING", "LETTERED_VARIANT", "MULTI_DENOMINATOR"):
+        return collector_fraction_key(collector_number)
+    parsed = parse_collector_number(collector_number)
+    if not parsed.parse_ok:
+        return parsed.position_key or str(collector_number or "").casefold().strip()
+    if parsed.denominator is not None:
+        return collector_fraction_key(collector_number)
+    if set_printed_total is not None and parsed.numerator is not None:
+        return str(parsed.numerator)
+    return parsed.position_key
+
+
+def physical_printing_id(
+    *,
+    language: str,
+    set_id: str,
+    collector_number: object,
+    card: dict[str, Any] | None = None,
+    numbering_policy: str = "SEQUENTIAL_FRACTION",
+    set_printed_total: int | None = None,
+) -> str:
+    """Stable physical printing identity — survives harmless metadata drift."""
+    card = card or {}
+    collector_key = identity_collector_key(
+        collector_number,
+        numbering_policy=numbering_policy,
+        set_printed_total=set_printed_total,
+    )
+    parts = [
+        str(language or "").casefold(),
+        str(set_id or "").casefold(),
+        collector_key,
+        variant_signature(card),
+    ]
+    for key in ("printingClass", "stampType", "cardSize", "productFamily"):
+        norm = _normalize_variant_part(card.get(key))
+        if norm:
+            parts.append(f"{key}:{norm}")
+    return "|".join(parts)
+
+
+def assert_classification_evidence(classification: str, evidence: str) -> None:
+    """Every PROVEN_* classification must carry PROVEN evidence."""
+    if classification.startswith("PROVEN_") and evidence != "PROVEN":
+        raise ValueError(
+            f"classification {classification!r} requires evidence PROVEN, got {evidence!r}"
+        )
+
+
+def destructive_dedup_allowed(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    *,
+    set_id: str,
+    numbering_policy: str = "SEQUENTIAL_FRACTION",
+    set_printed_total: int | None = None,
+    provider_equivalence: bool = False,
+) -> bool:
+    """Automatic destructive dedup requires exact physical-printing equivalence."""
+    if str(left.get("setId") or set_id) != str(right.get("setId") or set_id):
+        return False
+    if not provider_equivalence:
+        return False
+    lk = identity_collector_key(
+        left.get("collectorNumber"),
+        numbering_policy=numbering_policy,
+        set_printed_total=set_printed_total,
+    )
+    rk = identity_collector_key(
+        right.get("collectorNumber"),
+        numbering_policy=numbering_policy,
+        set_printed_total=set_printed_total,
+    )
+    if lk != rk:
+        return False
+    if variant_signature(left) != variant_signature(right):
+        return False
+    if not names_compatible(left.get("name"), right.get("name")):
+        return False
+    return True

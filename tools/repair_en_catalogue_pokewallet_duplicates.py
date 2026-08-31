@@ -28,9 +28,10 @@ if str(ROOT) not in sys.path:
 
 from cardscanr_catalogue_identity import (  # noqa: E402
     collector_identity_key,
+    name_fingerprint,
     names_compatible,
     normalize_card_name,
-    variant_token,
+    variant_signature,
 )
 
 DEFAULT_EN_ROOT = Path(r"D:\cardscanr-data\public\v1\catalog\pokemon\en")
@@ -67,7 +68,10 @@ def keep_rank(card: dict[str, Any], index: int) -> tuple[int, int, int]:
 
 
 def dedupe_cards(cards: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Drop duplicates only when collector keys collide AND names are compatible."""
+    """Drop duplicates only with proven physical-printing equivalence.
+
+    Fuzzy name compatibility may form review candidates but MUST NOT authorize deletion.
+    """
     groups: dict[str, list[tuple[int, dict[str, Any]]]] = defaultdict(list)
     for index, card in enumerate(cards):
         key = collector_identity_key(card.get("collectorNumber"))
@@ -75,6 +79,7 @@ def dedupe_cards(cards: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], lis
 
     winners_by_index: dict[int, dict[str, Any]] = {}
     dropped: list[dict[str, Any]] = []
+    review_candidates: list[dict[str, Any]] = []
 
     for key, members in groups.items():
         if not key:
@@ -82,43 +87,59 @@ def dedupe_cards(cards: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], lis
                 winners_by_index[index] = card
             continue
 
-        # Cluster by name-compatibility AND variant_token so distinct printings
-        # that share a local number (Celebrations Classic, Prize Pack stamps,
-        # Trainer Kit finishes, etc.) are not collapsed by permissive name matching.
         clusters: list[list[tuple[int, dict[str, Any]]]] = []
         for member in members:
             placed = False
-            member_variant = variant_token(member[1])
+            member_variant = variant_signature(member[1])
             for cluster in clusters:
                 head = cluster[0][1]
-                if variant_token(head) != member_variant:
+                if variant_signature(head) != member_variant:
                     continue
-                if names_compatible(head.get("name"), member[1].get("name")):
+                if name_fingerprint(head.get("name")) == name_fingerprint(member[1].get("name")):
                     cluster.append(member)
                     placed = True
                     break
             if not placed:
                 clusters.append([member])
+
         for cluster in clusters:
+            if len(cluster) == 1:
+                winners_by_index[cluster[0][0]] = cluster[0][1]
+                continue
             ranked = sorted(cluster, key=lambda item: keep_rank(item[1], item[0]))
             winner_index, winner = ranked[0]
             winners_by_index[winner_index] = winner
             for loser_index, loser in ranked[1:]:
-                dropped.append(
-                    {
-                        "identityKey": key,
-                        "keptCollectorNumber": winner.get("collectorNumber"),
-                        "keptName": winner.get("name"),
-                        "keptImageSource": winner.get("imageSource"),
-                        "keptCanonicalBaseId": winner.get("canonicalBaseId"),
-                        "droppedCollectorNumber": loser.get("collectorNumber"),
-                        "droppedName": loser.get("name"),
-                        "droppedImageSource": loser.get("imageSource"),
-                        "droppedCanonicalBaseId": loser.get("canonicalBaseId"),
-                        "originalIndex": loser_index,
-                        "nameCompatible": True,
-                    }
-                )
+                exact = name_fingerprint(winner.get("name")) == name_fingerprint(loser.get("name"))
+                if exact and variant_signature(winner) == variant_signature(loser):
+                    dropped.append(
+                        {
+                            "identityKey": key,
+                            "keptCollectorNumber": winner.get("collectorNumber"),
+                            "keptName": winner.get("name"),
+                            "keptCanonicalBaseId": winner.get("canonicalBaseId"),
+                            "droppedCollectorNumber": loser.get("collectorNumber"),
+                            "droppedName": loser.get("name"),
+                            "droppedCanonicalBaseId": loser.get("canonicalBaseId"),
+                            "originalIndex": loser_index,
+                            "dedupeAuthorized": True,
+                            "reason": "exact_name_and_variant_same_local",
+                        }
+                    )
+                else:
+                    winners_by_index[loser_index] = loser
+                    review_candidates.append(
+                        {
+                            "identityKey": key,
+                            "candidateCollectorNumber": loser.get("collectorNumber"),
+                            "candidateName": loser.get("name"),
+                            "winnerCollectorNumber": winner.get("collectorNumber"),
+                            "winnerName": winner.get("name"),
+                            "nameCompatibleOnly": names_compatible(winner.get("name"), loser.get("name")),
+                            "dedupeAuthorized": False,
+                            "reason": "fuzzy_or_variant_mismatch_review_only",
+                        }
+                    )
 
     kept = [winners_by_index[index] for index in sorted(winners_by_index)]
     return kept, dropped
@@ -175,6 +196,8 @@ def find_clone_sets(
                 "canonicalCardCount": official_n,
                 "overlappingLocalNumbers": overlap,
                 "overlapPct": round(overlap_pct, 4),
+                "autoDeleteAllowed": False,
+                "reason": "heuristic_overlap_insufficient_for_deletion",
             }
         )
     return clones
@@ -234,7 +257,9 @@ def repair_catalogue(*, en_root: Path, apply: bool, report_path: Path) -> dict[s
 
     clones = find_clone_sets(set(cards_by_set), rewritten)
     clone_card_total = 0
-    for clone in clones:
+    clone_auto_delete = [c for c in clones if c.get("autoDeleteAllowed")]
+    # Destructive clone-set deletion disabled — report candidates only.
+    for clone in clone_auto_delete:
         clone_id = clone["cloneSetId"]
         clone_card_total += len(rewritten.get(clone_id) or [])
         rewritten.pop(clone_id, None)
@@ -263,7 +288,9 @@ def repair_catalogue(*, en_root: Path, apply: bool, report_path: Path) -> dict[s
             "duplicateCardsDropped": total_dropped,
             "cloneCardsRemoved": clone_card_total,
             "setsWithDuplicates": len(per_set),
-            "cloneSetsRemoved": len(clones),
+            "cloneSetsRemoved": len(clone_auto_delete),
+            "cloneSetAutoDeleteCandidates": len(clone_auto_delete),
+            "cloneSetReviewCandidates": len(clones),
             "aggregateCardCountAfter": sum(
                 len(rewritten[sid]) for sid in rewritten if sid in set_ids_in_index
             ),
@@ -286,7 +313,7 @@ def repair_catalogue(*, en_root: Path, apply: bool, report_path: Path) -> dict[s
             payload["cardCount"] = len(cards)
             dump_json(path, payload)
             print(f"[repair] wrote {set_id}.json cardCount={len(cards)}")
-        for clone in clones:
+        for clone in clone_auto_delete:
             path = cards_dir / f"{clone['cloneSetId']}.json"
             if path.exists():
                 path.unlink()

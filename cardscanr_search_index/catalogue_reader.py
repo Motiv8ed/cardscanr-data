@@ -15,6 +15,12 @@ from .normalization import (
     normalize_set_name,
 )
 
+try:
+    from cardscanr_catalogue_identity import physical_printing_id, variant_signature
+except ImportError:  # pragma: no cover - package co-located in monorepo checkout
+    physical_printing_id = None  # type: ignore[assignment]
+    variant_signature = None  # type: ignore[assignment]
+
 
 @dataclass(frozen=True)
 class SetRecord:
@@ -58,6 +64,13 @@ class CardRecord:
     release_date: str | None
     set_release_date: str | None
     set_ptcgo_code: str | None
+    physical_printing_id: str | None = None
+    base_card_reference: str | None = None
+    printing_class: str | None = None
+    variant_signature: str | None = None
+    product_family: str | None = None
+    stamp_type: str | None = None
+    card_size: str | None = None
 
 
 @dataclass
@@ -129,6 +142,18 @@ def _card_to_record(
     provider_set_id = promo.get("providerSetId")
     provider_set_id = str(provider_set_id).strip() if provider_set_id else None
     provider_ids = card.get("providerIds") if isinstance(card.get("providerIds"), dict) else {}
+    v_sig = (
+        str(card.get("variantSignature") or "").strip()
+        or (variant_signature(card) if variant_signature else None)
+    )
+    p_pid = str(card.get("physicalPrintingId") or "").strip() or None
+    if not p_pid and physical_printing_id:
+        p_pid = physical_printing_id(
+            language=language,
+            set_id=set_id,
+            collector_number=collector_number,
+            card=card,
+        )
     aliases = build_search_aliases(
         name=name,
         normalized_name=normalized_name,
@@ -168,6 +193,13 @@ def _card_to_record(
         release_date=set_meta.release_date,
         set_release_date=set_meta.release_date,
         set_ptcgo_code=set_meta.ptcgo_code,
+        physical_printing_id=p_pid,
+        base_card_reference=str(card.get("baseCardReference") or "").strip() or None,
+        printing_class=str(card.get("printingClass") or "").strip() or None,
+        variant_signature=v_sig,
+        product_family=str(card.get("productFamily") or "").strip() or None,
+        stamp_type=str(card.get("stampType") or "").strip() or None,
+        card_size=str(card.get("cardSize") or "").strip() or None,
     )
 
 
@@ -195,6 +227,17 @@ def iter_set_records(catalogue_root: Path, *, language: str) -> list[SetRecord]:
     return records
 
 
+def _supplemental_search_gates_ok(item: dict[str, Any]) -> bool:
+    required_bools = ("languageVerified", "physicalProductVerified", "rosterVerified")
+    for key in required_bools:
+        if item.get(key) is not True:
+            return False
+    for key in ("identityModelVersion", "authorityEvidenceId"):
+        if not str(item.get(key) or "").strip():
+            return False
+    return str(item.get("searchInclusion") or "").strip() == "approved_supplemental"
+
+
 def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> dict[str, SetRecord]:
     """Optional explicit supplemental registry — never directory-scan orphans.
 
@@ -211,6 +254,8 @@ def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> di
         if not isinstance(item, dict) or not item.get("id"):
             continue
         if str(item.get("searchInclusion") or "").strip() != "approved_supplemental":
+            continue
+        if not _supplemental_search_gates_ok(item):
             continue
         set_id = str(item["id"]).strip()
         name = str(item.get("name") or set_id).strip()
@@ -269,6 +314,13 @@ def iter_catalogue_cards(
             for card in payload.get("cards") or []:
                 if not isinstance(card, dict):
                     continue
+                card_set_id = str(card.get("setId") or set_id).strip()
+                card_lang = str(card.get("language") or set_meta.language).strip().lower()
+                if set_id in supplemental:
+                    if card_set_id != set_id:
+                        continue
+                    if card_lang != language:
+                        continue
                 record = _card_to_record(
                     card,
                     set_meta=set_meta,
