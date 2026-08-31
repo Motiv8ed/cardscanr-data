@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Extract physical-printing descriptors from provider card names (V5.2).
+"""Structured provider card-name parser for physical-printing descriptors (V5.3).
 
-Descriptors are accepted only as known provider *suffix* structures after an
-optional embedded collector token — never as generic mid-title word matches.
+Understands:
+  CARD_NAME [COLLECTOR] [SET/PRODUCT CONTEXT] [EVENT CONTEXT] [PHYSICAL DESCRIPTORS]
+
+Descriptors and contexts are peeled as trailing structures only. Legitimate card
+titles such as Target Whistle / League Staff never receive false descriptors.
 """
 
 from __future__ import annotations
@@ -13,7 +16,6 @@ from typing import Any
 
 from . import normalize_card_name, parse_collector_number
 
-# Longest-first suffix descriptor patterns (trailing metadata only).
 _SUFFIX_DESCRIPTOR_SPECS: tuple[tuple[str, str, str], ...] = (
     (r"prerelease\s+staff", "prerelease_staff", "stampType"),
     (r"worlds\s+staff", "worlds_staff", "stampType"),
@@ -41,19 +43,51 @@ _SUFFIX_DESCRIPTOR_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = tupl
     for pattern, token, field_key in _SUFFIX_DESCRIPTOR_SPECS
 )
 
-_TRAILING_COLLECTOR = re.compile(
-    r"^(?P<head>.+?)\s+(?P<collector>[A-Za-z]{2,6}\d+[A-Za-z]?)$"
+# Event / championship contexts (longest first). Captured separately from base name.
+_EVENT_CONTEXT_SPECS: tuple[tuple[str, str], ...] = (
+    (r"world\s+championships?\s+20\d{2}", "world_championships"),
+    (r"worlds?\s+20\d{2}", "worlds"),
+    (r"worlds?\s+\d{2}\b", "worlds"),  # Worlds 11 → 2011-style short year
+    (r"national\s+championships?", "national_championships"),
+    (r"regional\s+championships?", "regional_championships"),
+    (r"state\s+championships?", "state_championships"),
+    (r"city\s+championships?", "city_championships"),
+    (r"origins?\s+game\s+fair", "origins_game_fair"),
+    (r"team\s+plasma", "team_plasma"),
+    (r"eb\s+games", "eb_games"),
+)
+
+_EVENT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(rf"^(?P<head>.+?)\s+(?P<ctx>{pattern})$", re.I), token)
+    for pattern, token in _EVENT_CONTEXT_SPECS
+)
+
+# Product/set context fragments often left after collector strip.
+_PRODUCT_CONTEXT_SPECS: tuple[tuple[str, str], ...] = (
+    (r"sm\s+unbroken\s+bonds", "sm_unbroken_bonds"),
+    (r"sm\s+unified\s+minds", "sm_unified_minds"),
+    (r"sm\s+cosmic\s+eclipse", "sm_cosmic_eclipse"),
+    (r"xy\s+evolutions", "xy_evolutions"),
+    (r"black\s+and\s+white", "black_and_white"),
+    (r"sword\s+(?:&|and)\s+shield", "sword_and_shield"),
+    (r"scarlet\s+(?:&|and)\s+violet", "scarlet_and_violet"),
+)
+
+_PRODUCT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = tuple(
+    (re.compile(rf"^(?P<head>.+?)\s+(?P<ctx>{pattern})$", re.I), token)
+    for pattern, token in _PRODUCT_CONTEXT_SPECS
+)
+
+_PROMO_COLLECTOR = re.compile(r"^(?P<head>.+?)\s+(?P<collector>[A-Za-z]{2,6}\d+[A-Za-z]?)$")
+_SPACED_FRACTION = re.compile(
+    r"^(?P<head>.+?)\s+(?P<n1>\d{1,3})\s+(?P<n2>\d{2,3})$"
+)
+_SLASH_FRACTION = re.compile(
+    r"^(?P<head>.+?)\s+(?P<collector>\d{1,3}/\d{2,3})$"
 )
 
 _GENERIC_SINGLE_TOKENS = frozenset(
-    {
-        "staff",
-        "target",
-        "league",
-        "championship",
-        "exclusive",
-        "stamped",
-    }
+    {"staff", "target", "league", "championship", "exclusive", "stamped"}
 )
 
 _EXACT_CARD_TITLES_NO_DESCRIPTOR = frozenset(
@@ -84,6 +118,9 @@ class ProviderPrintingDescriptorParse:
     meaningful_physical_descriptor: bool
     ambiguous_descriptor: bool
     descriptor_in_card_title: bool
+    event_context: tuple[str, ...] = ()
+    product_context: tuple[str, ...] = ()
+    base_name_parse_clean: bool = False
     evidence: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -107,8 +144,32 @@ def _build_variant_signature(
     return "|".join(parts) if parts else "normal"
 
 
+def _peel_suffix(
+    text: str,
+    patterns: tuple[tuple[re.Pattern[str], str], ...],
+) -> tuple[str, list[str]]:
+    remaining = text.strip()
+    found_rev: list[str] = []
+    progressed = True
+    while progressed and remaining:
+        progressed = False
+        for item in patterns:
+            pattern = item[0]
+            token = item[1]
+            match = pattern.match(remaining)
+            if not match:
+                continue
+            head = match.group("head").strip()
+            if not head:
+                continue
+            remaining = head
+            found_rev.append(token)
+            progressed = True
+            break
+    return remaining, list(reversed(found_rev))
+
+
 def _peel_suffix_descriptors(text: str) -> tuple[str, list[str], dict[str, list[str]]]:
-    """Peel known descriptor suffixes from the end only (repeatable)."""
     remaining = text.strip()
     tokens_rev: list[str] = []
     fields: dict[str, list[str]] = {}
@@ -135,14 +196,95 @@ def _peel_suffix_descriptors(text: str) -> tuple[str, list[str], dict[str, list[
     return remaining, tokens, fields
 
 
-def _strip_trailing_collector(text: str) -> tuple[str, str | None]:
-    match = _TRAILING_COLLECTOR.match(text.strip())
-    if not match:
-        return text.strip(), None
-    candidate = match.group("collector").strip()
-    if not parse_collector_number(candidate).parse_ok:
-        return text.strip(), None
-    return match.group("head").strip(), candidate
+def _normalize_worlds_short_year(raw: str, token: str) -> str:
+    """Map 'Worlds 11' → worlds_2011 style token when short year is present."""
+    if token != "worlds":
+        return token
+    match = re.search(r"worlds?\s+(\d{2})\b", raw, re.I)
+    if match and not re.search(r"worlds?\s+20\d{2}", raw, re.I):
+        year = int(match.group(1))
+        return f"worlds_20{year:02d}"
+    match = re.search(r"worlds?\s+(20\d{2})\b", raw, re.I)
+    if match:
+        return f"worlds_{match.group(1)}"
+    match = re.search(r"world\s+championships?\s+(20\d{2})", raw, re.I)
+    if match:
+        return f"world_championships_{match.group(1)}"
+    return token
+
+
+def _strip_collector(
+    text: str,
+    *,
+    collector_number: str | None,
+) -> tuple[str, str | None]:
+    remaining = text.strip()
+    supplied = str(collector_number or "").strip()
+
+    # Prefer supplied collector as strong evidence for spaced fractions.
+    if supplied:
+        slash = supplied.replace(" ", "/")
+        parsed = parse_collector_number(slash if "/" in slash else supplied)
+        if parsed.parse_ok:
+            # "Zeraora 60 214 ..." with collector 60/214
+            spaced = _SPACED_FRACTION.match(remaining)
+            if spaced and parsed.numerator is not None and parsed.denominator is not None:
+                if (
+                    int(spaced.group("n1")) == parsed.numerator
+                    and int(spaced.group("n2")) == parsed.denominator
+                ):
+                    return spaced.group("head").strip(), (
+                        f"{parsed.numerator}/{parsed.denominator}"
+                    )
+            slash_m = _SLASH_FRACTION.match(remaining)
+            if slash_m:
+                left = parse_collector_number(slash_m.group("collector"))
+                if (
+                    left.parse_ok
+                    and left.numerator == parsed.numerator
+                    and left.denominator == parsed.denominator
+                ):
+                    return slash_m.group("head").strip(), slash_m.group("collector")
+            promo = _PROMO_COLLECTOR.match(remaining)
+            if promo and parse_collector_number(promo.group("collector")).parse_ok:
+                cand = promo.group("collector")
+                if cand.casefold() == supplied.casefold() or cand.casefold() == (
+                    parsed.prefix or ""
+                ).casefold() + str(parsed.numerator):
+                    return promo.group("head").strip(), cand
+
+    spaced = _SPACED_FRACTION.match(remaining)
+    if spaced:
+        collector = f"{int(spaced.group('n1'))}/{int(spaced.group('n2'))}"
+        if parse_collector_number(collector).parse_ok:
+            return spaced.group("head").strip(), collector
+
+    slash_m = _SLASH_FRACTION.match(remaining)
+    if slash_m and parse_collector_number(slash_m.group("collector")).parse_ok:
+        return slash_m.group("head").strip(), slash_m.group("collector")
+
+    promo = _PROMO_COLLECTOR.match(remaining)
+    if promo and parse_collector_number(promo.group("collector")).parse_ok:
+        return promo.group("head").strip(), promo.group("collector")
+
+    return remaining, None
+
+
+def _looks_clean_base(base: str) -> bool:
+    text = base.strip()
+    if not text:
+        return False
+    if re.search(r"\b\d{1,3}\s+\d{2,3}\b", text):
+        return False
+    if re.search(r"\b[A-Za-z]{2,6}\d+[A-Za-z]?\b", text):
+        return False
+    if re.search(
+        r"\b(worlds?|championships?|city|state|national|regional|unbroken bonds)\b",
+        text,
+        re.I,
+    ):
+        return False
+    return True
 
 
 def parse_provider_printing_descriptors(
@@ -151,7 +293,7 @@ def parse_provider_printing_descriptors(
     collector_number: str | None = None,
     exact_canonical_titles: set[str] | None = None,
 ) -> ProviderPrintingDescriptorParse:
-    """Parse provider card name into base name and trailing printing descriptors."""
+    """Parse provider card name into base name, contexts, and descriptors."""
     raw = str(raw_name or "").strip()
     normalized_full = normalize_card_name(raw).strip()
     title_blocklist = set(_EXACT_CARD_TITLES_NO_DESCRIPTOR)
@@ -160,97 +302,96 @@ def parse_provider_printing_descriptors(
             normalize_card_name(title).strip() for title in exact_canonical_titles
         }
 
+    empty = ProviderPrintingDescriptorParse(
+        raw_name=raw,
+        base_card_name=normalized_full,
+        collector_from_name=(str(collector_number).strip() if collector_number else None),
+        printing_descriptors=(),
+        descriptor_fields={},
+        variant_signature="normal",
+        meaningful_physical_descriptor=False,
+        ambiguous_descriptor=False,
+        descriptor_in_card_title=False,
+        event_context=(),
+        product_context=(),
+        base_name_parse_clean=False,
+        evidence={"normalizedTitle": normalized_full},
+    )
+
     if normalized_full in title_blocklist:
         return ProviderPrintingDescriptorParse(
-            raw_name=raw,
-            base_card_name=normalized_full,
-            collector_from_name=(
-                str(collector_number).strip() if collector_number else None
-            ),
-            printing_descriptors=(),
-            descriptor_fields={},
-            variant_signature="normal",
-            meaningful_physical_descriptor=False,
-            ambiguous_descriptor=False,
-            descriptor_in_card_title=True,
-            evidence={
-                "reason": "exact_card_title_no_descriptor",
-                "normalizedTitle": normalized_full,
-            },
+            **{
+                **empty.to_dict(),
+                "descriptor_in_card_title": True,
+                "evidence": {
+                    "reason": "exact_card_title_no_descriptor",
+                    "normalizedTitle": normalized_full,
+                },
+            }
         )
 
-    # 1) Peel trailing known descriptor suffixes from the full provider name.
     after_desc, tokens, fields = _peel_suffix_descriptors(raw)
-    # 2) Then strip an embedded trailing collector token from the remainder.
-    base_raw, embedded_collector = _strip_trailing_collector(after_desc)
+    after_event, events = _peel_suffix(after_desc, _EVENT_PATTERNS)
+    events = [_normalize_worlds_short_year(raw, token) for token in events]
+    after_product, products = _peel_suffix(after_event, _PRODUCT_PATTERNS)
+    base_raw, embedded_collector = _strip_collector(
+        after_product, collector_number=collector_number
+    )
+    # Sometimes collector sits before event/product; try again on earlier remainder.
+    if embedded_collector is None:
+        base_raw2, embedded_collector = _strip_collector(
+            after_desc, collector_number=collector_number
+        )
+        if embedded_collector is not None:
+            # Re-peel contexts from the collector-stripped remainder.
+            after_event, events = _peel_suffix(base_raw2, _EVENT_PATTERNS)
+            events = [_normalize_worlds_short_year(raw, token) for token in events]
+            after_product, products = _peel_suffix(after_event, _PRODUCT_PATTERNS)
+            base_raw = after_product
+
     base_name = normalize_card_name(base_raw).strip()
 
     if not tokens:
         return ProviderPrintingDescriptorParse(
-            raw_name=raw,
-            base_card_name=normalized_full,
-            collector_from_name=(
-                embedded_collector
-                or (str(collector_number).strip() if collector_number else None)
-            ),
-            printing_descriptors=(),
-            descriptor_fields={},
-            variant_signature="normal",
-            meaningful_physical_descriptor=False,
-            ambiguous_descriptor=False,
-            descriptor_in_card_title=False,
-            evidence={
-                "reason": "no_structured_suffix_descriptor",
-                "normalizedTitle": normalized_full,
-            },
+            **{
+                **empty.to_dict(),
+                "evidence": {
+                    "reason": "no_structured_suffix_descriptor",
+                    "normalizedTitle": normalized_full,
+                },
+            }
         )
 
     if not base_name:
         return ProviderPrintingDescriptorParse(
-            raw_name=raw,
-            base_card_name=normalized_full,
-            collector_from_name=(
-                embedded_collector
-                or (str(collector_number).strip() if collector_number else None)
-            ),
-            printing_descriptors=(),
-            descriptor_fields={},
-            variant_signature="normal",
-            meaningful_physical_descriptor=False,
-            ambiguous_descriptor=True,
-            descriptor_in_card_title=False,
-            evidence={"reason": "suffix_peel_left_empty_base"},
+            **{
+                **empty.to_dict(),
+                "ambiguous_descriptor": True,
+                "evidence": {"reason": "suffix_peel_left_empty_base"},
+            }
         )
 
-    # Structured gate: require collector embedding OR a compound descriptor.
-    # Reject bare titles like "League Staff" / lone "Target …" card names.
     compound = any("_" in token for token in tokens)
     has_collector = bool(embedded_collector) or bool(str(collector_number or "").strip())
     meaningful = True
-    if not has_collector and not compound:
+    if not has_collector and not compound and not events and not products:
         if len(tokens) == 1 and tokens[0] in _GENERIC_SINGLE_TOKENS:
             meaningful = False
 
     if not meaningful:
         return ProviderPrintingDescriptorParse(
-            raw_name=raw,
-            base_card_name=normalized_full,
-            collector_from_name=(
-                str(collector_number).strip() if collector_number else None
-            ),
-            printing_descriptors=(),
-            descriptor_fields={},
-            variant_signature="normal",
-            meaningful_physical_descriptor=False,
-            ambiguous_descriptor=False,
-            descriptor_in_card_title=False,
-            evidence={
-                "reason": "generic_trailing_token_without_collector_structure",
-                "rejectedTokens": tokens,
-            },
+            **{
+                **empty.to_dict(),
+                "evidence": {
+                    "reason": "generic_trailing_token_without_collector_structure",
+                    "rejectedTokens": tokens,
+                },
+            }
         )
 
     token_tuple = tuple(tokens)
+    clean = _looks_clean_base(base_name)
+    ambiguous = not clean
     return ProviderPrintingDescriptorParse(
         raw_name=raw,
         base_card_name=base_name,
@@ -262,12 +403,17 @@ def parse_provider_printing_descriptors(
         descriptor_fields=fields,
         variant_signature=_build_variant_signature(token_tuple, fields),
         meaningful_physical_descriptor=True,
-        ambiguous_descriptor=False,
+        ambiguous_descriptor=ambiguous,
         descriptor_in_card_title=False,
+        event_context=tuple(events),
+        product_context=tuple(products),
+        base_name_parse_clean=clean,
         evidence={
             "embeddedCollectorFromName": embedded_collector,
             "normalizedTitle": normalized_full,
-            "parseMode": "suffix_structure_v5_2",
+            "parseMode": "structured_provider_name_v5_3",
+            "eventContext": list(events),
+            "productContext": list(products),
         },
     )
 
@@ -276,7 +422,6 @@ def canonical_has_descriptor_coverage(
     canonical_card: dict[str, Any] | None,
     parsed: ProviderPrintingDescriptorParse,
 ) -> bool:
-    """Return True when canonical metadata already covers provider descriptors."""
     if not parsed.meaningful_physical_descriptor:
         return True
     card = canonical_card or {}
@@ -306,7 +451,6 @@ def supplemental_classification_for_descriptor_match(
     mapping_evidence: str,
     card_evidence: str,
 ) -> tuple[str, str]:
-    """Choose supplemental class when set/collector/base match but descriptors differ."""
     if mapping_evidence == "PROVEN" and card_evidence == "PROVEN":
         return "SUPPLEMENTAL_PHYSICAL_PRINTING_CANDIDATE", "PROVEN"
     if mapping_evidence in {"PROVEN", "STRONG_EVIDENCE"} and card_evidence in {
