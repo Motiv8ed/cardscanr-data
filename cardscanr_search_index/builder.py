@@ -55,6 +55,17 @@ CREATE TABLE cards (
   schema_version TEXT NOT NULL,
   generated_at TEXT NOT NULL,
   canonical_base_id TEXT NOT NULL UNIQUE,
+  physical_printing_id TEXT,
+  identity_model_version TEXT,
+  base_card_reference TEXT,
+  printing_class TEXT,
+  product_family TEXT,
+  variant_signature TEXT,
+  stamp_type TEXT,
+  card_size TEXT,
+  edition TEXT,
+  deck_variant TEXT,
+  event_context TEXT,
   canonical_english_name TEXT,
   localized_name TEXT,
   normalized_canonical_name TEXT NOT NULL,
@@ -103,6 +114,8 @@ CREATE INDEX idx_cards_localized_name ON cards(language, normalized_localized_na
 CREATE INDEX idx_cards_set_name ON cards(language, normalized_set_name);
 CREATE INDEX idx_cards_set_name_canon ON cards(language, normalized_set_name, normalized_canonical_name);
 CREATE INDEX idx_cards_set_name_localized ON cards(language, normalized_set_name, normalized_localized_name);
+CREATE UNIQUE INDEX idx_cards_physical_printing ON cards(physical_printing_id) WHERE physical_printing_id IS NOT NULL;
+CREATE INDEX idx_cards_base_reference ON cards(base_card_reference) WHERE base_card_reference IS NOT NULL;
 CREATE INDEX idx_aliases_normalized ON card_aliases(normalized_alias);
 """
 
@@ -161,18 +174,33 @@ def _insert_card(conn: sqlite3.Connection, record: CardRecord) -> None:
     conn.execute(
         """
         INSERT INTO cards (
-          schema_version, generated_at, canonical_base_id, canonical_english_name, localized_name,
+          schema_version, generated_at, canonical_base_id,
+          physical_printing_id, identity_model_version, base_card_reference,
+          printing_class, product_family, variant_signature, stamp_type, card_size,
+          edition, deck_variant, event_context,
+          canonical_english_name, localized_name,
           normalized_canonical_name, normalized_localized_name, language, set_id, set_name,
           normalized_set_name, provider_set_codes_json, collector_number, normalized_collector_number,
           local_number, set_total, rarity, thumbnail_url, large_image_url, image_source, image_cached,
           provider_ids_json, promotion_provider_set_id, release_date, set_release_date, set_ptcgo_code,
           search_aliases_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             record.schema_version,
             record.generated_at,
             record.canonical_base_id,
+            record.physical_printing_id,
+            record.identity_model_version,
+            record.base_card_reference,
+            record.printing_class,
+            record.product_family,
+            record.variant_signature,
+            record.stamp_type,
+            record.card_size,
+            record.edition,
+            record.deck_variant,
+            record.event_context,
             record.canonical_english_name,
             record.localized_name,
             record.normalized_canonical_name,
@@ -209,6 +237,9 @@ def _insert_card(conn: sqlite3.Connection, record: CardRecord) -> None:
             record.normalized_set_name,
             record.collector_number,
             record.normalized_collector_number,
+            record.printing_class or "",
+            record.product_family or "",
+            record.variant_signature or "",
             " ".join(record.provider_set_codes),
             " ".join(record.search_aliases),
         ]
@@ -293,6 +324,7 @@ def build_search_index(
         "catalogue_schema_version": CATALOGUE_SCHEMA_VERSION,
         "supported_languages": ",".join(SUPPORTED_LANGUAGES),
         "total_cards": str(snapshot.total_cards),
+        "physical_printing_identity": "physicalPrintingId additive; canonicalBaseId semantics preserved",
     }
     conn.executemany("INSERT INTO meta (key, value) VALUES (?, ?)", list(meta.items()))
 
@@ -347,6 +379,11 @@ def build_search_index(
         "minimumCompatibleAppVersion": MINIMUM_COMPATIBLE_APP_VERSION,
         "previousDatabaseUrl": previous_manifest.get("databaseUrl") if previous_manifest else None,
         "previousSha256": previous_manifest.get("sha256") if previous_manifest else previous_sha256,
+        "physicalPrintingIdentity": {
+            "supported": True,
+            "field": "physical_printing_id",
+            "fallbackField": "canonical_base_id",
+        },
         "updatePolicy": "download_verified_immutable_r2_object_then_atomic_activate",
         "rollbackPolicy": (
             "if current database activation fails checksum or schema validation, "
@@ -389,7 +426,9 @@ def _content_fingerprint(db_path: Path) -> str:
     conn = sqlite3.connect(db_path)
     rows = conn.execute(
         """
-        SELECT canonical_base_id, language, set_id, collector_number, normalized_canonical_name
+        SELECT canonical_base_id, physical_printing_id, identity_model_version,
+               variant_signature, language, set_id, collector_number,
+               normalized_canonical_name
         FROM cards
         ORDER BY canonical_base_id
         """
