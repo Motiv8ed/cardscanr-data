@@ -507,6 +507,79 @@ def variant_signature(card: dict[str, Any] | None = None, *, explicit: object = 
 
 IDENTITY_MODEL_VERSION = "physical-printing-v1"
 
+# Stamp / finish tokens that are also printingClass values.
+_PRINTING_CLASS_FROM_STAMP = {
+    "staff",
+    "prerelease",
+    "prerelease_staff",
+    "prize_pack",
+    "shadowless",
+    "first_edition",
+    "jumbo",
+    "cosmos_holo",
+    "cracked_ice",
+    "world_championship",
+    "trainer_kit",
+    "product_exclusive",
+}
+
+# Set-level product labels that must not enter variantSignature when the
+# physicalProductId already encodes the promo/product family.
+_SET_LEVEL_PRODUCT_VARIANTS = {
+    "black_star_promo",
+    "black_star_promos",
+    "promo",
+    "promos",
+}
+
+
+def normalize_physical_printing_card_view(
+    card: dict[str, Any] | None = None,
+    *,
+    descriptor_tokens: list[str] | None = None,
+    product_type: object = None,
+) -> dict[str, Any]:
+    """Single canonical card-view builder for variantSignature + physicalPrintingId.
+
+    All candidate audits, fixtures, catalogue reads, and staging proofs must use
+    this (or physical_printing_id which calls it) so dimensions are never omitted
+    or duplicated across paths.
+    """
+    view: dict[str, Any] = dict(card or {})
+    tokens = [str(t).strip().casefold().replace(" ", "_") for t in (descriptor_tokens or []) if str(t).strip()]
+
+    for token in tokens:
+        if token in _PRINTING_CLASS_FROM_STAMP or "holo" in token:
+            view.setdefault("printingClass", token)
+            if token in {"staff", "prerelease_staff", "prerelease", "prize_pack"}:
+                view.setdefault("stampType", token)
+        elif token:
+            view.setdefault("stampType", token)
+
+    # Mirror stamp into printingClass when stamp alone names the printing class.
+    stamp = _normalize_variant_part(view.get("stampType"))
+    if stamp and stamp in _PRINTING_CLASS_FROM_STAMP:
+        view.setdefault("printingClass", stamp)
+
+    pc = _normalize_variant_part(view.get("printingClass"))
+    if pc and pc in {"staff", "prerelease_staff", "prerelease", "prize_pack"}:
+        view.setdefault("stampType", pc)
+
+    # productFamily may feed productVariant once; drop set-level promo noise.
+    if view.get("productFamily") and not view.get("productVariant"):
+        view["productVariant"] = view.get("productFamily")
+    if product_type not in (None, "") and not view.get("productVariant"):
+        view["productVariant"] = product_type
+
+    pv = _normalize_variant_part(view.get("productVariant"))
+    if pv in _SET_LEVEL_PRODUCT_VARIANTS:
+        view.pop("productVariant", None)
+    pf = _normalize_variant_part(view.get("productFamily"))
+    if pf in _SET_LEVEL_PRODUCT_VARIANTS:
+        view.pop("productFamily", None)
+
+    return view
+
 
 def identity_collector_key(
     collector_number: object,
@@ -519,6 +592,9 @@ def identity_collector_key(
     For SEQUENTIAL_FRACTION with known set printedTotal, bare and matching
     fraction forms collapse to the numerator (24 == 024/086 when total=86).
     A contradictory denominator is preserved and flagged via fraction key.
+
+    Prefixed promo/TG/SV policies use position_key so BW40 stays ``bw40``
+    (never ``bw/40``) across every execution path.
     """
     policy = str(numbering_policy or "SEQUENTIAL_FRACTION")
     if policy in ("ORIGINAL_REPRINT_NUMBERING", "LETTERED_VARIANT", "MULTI_DENOMINATOR"):
@@ -531,10 +607,10 @@ def identity_collector_key(
         "GALARIAN_GALLERY",
         "ENERGY_SERIES",
     ):
-        # Preserve full meaningful collector form (prefix + number [+ den])
-        return collector_fraction_key(collector_number) or parse_collector_number(
-            collector_number
-        ).position_key
+        parsed = parse_collector_number(collector_number)
+        if not parsed.parse_ok:
+            return parsed.position_key or str(collector_number or "").casefold().strip()
+        return parsed.position_key
 
     parsed = parse_collector_number(collector_number)
     if not parsed.parse_ok:
@@ -543,9 +619,7 @@ def identity_collector_key(
     if policy == "SEQUENTIAL_FRACTION":
         if parsed.denominator is not None and set_printed_total is not None:
             if parsed.denominator != set_printed_total:
-                # Contradiction — do not collapse away
                 return collector_fraction_key(collector_number)
-            # Matching fraction or bare → numerator identity
             if parsed.numerator is not None:
                 suf = (parsed.suffix or "").lower()
                 pref = (parsed.prefix or "").lower()
@@ -570,28 +644,38 @@ def physical_printing_id(
     numbering_policy: str = "SEQUENTIAL_FRACTION",
     set_printed_total: int | None = None,
     identity_model_version: str = IDENTITY_MODEL_VERSION,
+    descriptor_tokens: list[str] | None = None,
+    product_type: object = None,
 ) -> str:
     """Stable physical printing identity — non-redundant, versioned.
 
     Format: v1|language|set_id|collector_key|variant_signature
-    productFamily is included only when not already represented in variant_signature.
+
+    ``set_id`` MUST be a stable CardScanR physicalProductId / canonical set id,
+    never a raw numeric provider orphan id.
     """
     card = card or {}
-    # Prefer persisted ID when present and version matches
     persisted = str(card.get("physicalPrintingId") or "").strip()
     persisted_ver = str(card.get("identityModelVersion") or "").strip()
     if persisted and persisted_ver == identity_model_version:
         return persisted
+
+    if str(set_id or "").strip().isdigit():
+        raise ValueError(
+            f"physical_printing_id refuses numeric provider set id {set_id!r}; "
+            "resolve via physical product identity registry first"
+        )
 
     collector_key = identity_collector_key(
         collector_number,
         numbering_policy=numbering_policy,
         set_printed_total=set_printed_total,
     )
-    # Build a printing-aware card view so productFamily participates once
-    card_for_sig = dict(card)
-    if card.get("productFamily") and not card.get("productVariant"):
-        card_for_sig.setdefault("productVariant", card.get("productFamily"))
+    card_for_sig = normalize_physical_printing_card_view(
+        card,
+        descriptor_tokens=descriptor_tokens,
+        product_type=product_type,
+    )
     sig = variant_signature(card_for_sig)
     return "|".join(
         [
