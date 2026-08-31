@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -16,10 +16,17 @@ from .normalization import (
 )
 
 try:
-    from cardscanr_catalogue_identity import physical_printing_id, variant_signature
+    from cardscanr_catalogue_identity import (
+        IDENTITY_MODEL_VERSION,
+        physical_printing_id,
+        variant_signature,
+    )
 except ImportError:  # pragma: no cover - package co-located in monorepo checkout
+    IDENTITY_MODEL_VERSION = "physical-printing-v1"
     physical_printing_id = None  # type: ignore[assignment]
     variant_signature = None  # type: ignore[assignment]
+
+DEFAULT_NUMBERING_POLICY = "SEQUENTIAL_FRACTION"
 
 
 @dataclass(frozen=True)
@@ -33,6 +40,7 @@ class SetRecord:
     release_date: str | None
     ptcgo_code: str | None
     series: str | None
+    numbering_policy: str = DEFAULT_NUMBERING_POLICY
 
 
 @dataclass(frozen=True)
@@ -83,6 +91,26 @@ class CatalogueSnapshot:
 def load_json(path: Path) -> Any:
     with open(path, encoding="utf-8-sig") as handle:
         return json.load(handle)
+
+
+def load_numbering_policies(path: Path | None) -> dict[str, str]:
+    """Load set-id to numbering-policy mappings from the optional registry."""
+    if path is None or not path.is_file():
+        return {}
+    payload = load_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Numbering policy registry must be an object: {path}")
+    set_policies = payload.get("setPolicies")
+    if not isinstance(set_policies, dict):
+        return {}
+    policies: dict[str, str] = {}
+    for set_id, entry in set_policies.items():
+        if set_id == "defaultMainExpansion" or not isinstance(entry, dict):
+            continue
+        policy = str(entry.get("numberingPolicy") or "").strip()
+        if policy:
+            policies[str(set_id)] = policy
+    return policies
 
 
 def sha256_file(path: Path) -> str:
@@ -146,14 +174,21 @@ def _card_to_record(
         str(card.get("variantSignature") or "").strip()
         or (variant_signature(card) if variant_signature else None)
     )
-    p_pid = str(card.get("physicalPrintingId") or "").strip() or None
-    if not p_pid and physical_printing_id:
+    persisted_p_pid = str(card.get("physicalPrintingId") or "").strip() or None
+    persisted_version = str(card.get("identityModelVersion") or "").strip()
+    if physical_printing_id:
         p_pid = physical_printing_id(
             language=language,
             set_id=set_id,
             collector_number=collector_number,
             card=card,
+            numbering_policy=set_meta.numbering_policy,
+            set_printed_total=set_meta.printed_total,
         )
+    elif persisted_p_pid and persisted_version == IDENTITY_MODEL_VERSION:
+        p_pid = persisted_p_pid
+    else:
+        p_pid = None
     aliases = build_search_aliases(
         name=name,
         normalized_name=normalized_name,
@@ -203,17 +238,24 @@ def _card_to_record(
     )
 
 
-def iter_set_records(catalogue_root: Path, *, language: str) -> list[SetRecord]:
+def iter_set_records(
+    catalogue_root: Path,
+    *,
+    language: str,
+    numbering_policies: Mapping[str, str] | None = None,
+) -> list[SetRecord]:
     sets_path = catalogue_root / "catalog" / "pokemon" / language / "sets.json"
     payload = load_json(sets_path)
+    policies = numbering_policies or {}
     records: list[SetRecord] = []
     for item in payload.get("sets") or []:
         if not isinstance(item, dict) or not item.get("id"):
             continue
+        set_id = str(item["id"]).strip()
         name = str(item.get("name") or item.get("id")).strip()
         records.append(
             SetRecord(
-                set_id=str(item["id"]).strip(),
+                set_id=set_id,
                 language=language,
                 name=name,
                 normalized_set_name=normalize_set_name(name),
@@ -222,6 +264,7 @@ def iter_set_records(catalogue_root: Path, *, language: str) -> list[SetRecord]:
                 release_date=str(item.get("releaseDate") or "").strip() or None,
                 ptcgo_code=str(item.get("ptcgoCode") or "").strip() or None,
                 series=str(item.get("series") or "").strip() or None,
+                numbering_policy=policies.get(set_id, DEFAULT_NUMBERING_POLICY),
             )
         )
     return records
@@ -238,7 +281,12 @@ def _supplemental_search_gates_ok(item: dict[str, Any]) -> bool:
     return str(item.get("searchInclusion") or "").strip() == "approved_supplemental"
 
 
-def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> dict[str, SetRecord]:
+def _approved_supplemental_set_ids(
+    catalogue_root: Path,
+    *,
+    language: str,
+    numbering_policies: Mapping[str, str] | None = None,
+) -> dict[str, SetRecord]:
     """Optional explicit supplemental registry — never directory-scan orphans.
 
     File: catalog/pokemon/<lang>/approved_supplemental_sets.json
@@ -249,6 +297,7 @@ def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> di
     if not path.exists():
         return {}
     payload = load_json(path)
+    policies = numbering_policies or {}
     out: dict[str, SetRecord] = {}
     for item in payload.get("sets") or []:
         if not isinstance(item, dict) or not item.get("id"):
@@ -269,6 +318,7 @@ def _approved_supplemental_set_ids(catalogue_root: Path, *, language: str) -> di
             release_date=str(item.get("releaseDate") or "").strip() or None,
             ptcgo_code=str(item.get("ptcgoCode") or "").strip() or None,
             series=str(item.get("series") or item.get("productType") or "").strip() or None,
+            numbering_policy=policies.get(set_id, DEFAULT_NUMBERING_POLICY),
         )
     return out
 
@@ -277,15 +327,29 @@ def iter_catalogue_cards(
     catalogue_root: Path = DEFAULT_CATALOGUE_ROOT,
     *,
     languages: tuple[str, ...] = SUPPORTED_LANGUAGES,
+    numbering_policy_path: Path | None = None,
 ) -> Iterator[CardRecord]:
     """Index only sets.json + explicitly approved supplemental sets.
 
     Quarantined / unresolved provider card files must NOT enter user search
-    merely because they exist under cards/*.json.
+    merely because they exist under cards/*.json. When supplied,
+    ``numbering_policy_path`` controls policy-aware physical printing IDs.
     """
+    numbering_policies = load_numbering_policies(numbering_policy_path)
     for language in languages:
-        set_index = {item.set_id: item for item in iter_set_records(catalogue_root, language=language)}
-        supplemental = _approved_supplemental_set_ids(catalogue_root, language=language)
+        set_index = {
+            item.set_id: item
+            for item in iter_set_records(
+                catalogue_root,
+                language=language,
+                numbering_policies=numbering_policies,
+            )
+        }
+        supplemental = _approved_supplemental_set_ids(
+            catalogue_root,
+            language=language,
+            numbering_policies=numbering_policies,
+        )
         allowed = {**set_index, **{k: v for k, v in supplemental.items() if k not in set_index}}
         cards_dir = catalogue_root / "catalog" / "pokemon" / language / "cards"
         for set_id, set_meta in sorted(allowed.items(), key=lambda kv: kv[0].lower()):
@@ -297,6 +361,11 @@ def iter_catalogue_cards(
                 continue
             file_generated_at = str(payload.get("generatedAtUtc") or "")
             file_schema_version = str(payload.get("schemaVersion") or "1.0.0")
+            if set_id in supplemental:
+                file_set_id = str(payload.get("setId") or set_id).strip()
+                file_language = str(payload.get("language") or language).strip().lower()
+                if file_set_id != set_id or file_language != language:
+                    continue
             # Prefer file display name when sets.json name is sparse.
             file_name = str(payload.get("setName") or "").strip()
             if file_name and set_id in supplemental:
@@ -310,6 +379,7 @@ def iter_catalogue_cards(
                     release_date=set_meta.release_date,
                     ptcgo_code=set_meta.ptcgo_code,
                     series=set_meta.series,
+                    numbering_policy=set_meta.numbering_policy,
                 )
             for card in payload.get("cards") or []:
                 if not isinstance(card, dict):

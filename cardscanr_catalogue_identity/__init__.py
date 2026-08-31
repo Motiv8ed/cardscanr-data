@@ -505,23 +505,59 @@ def variant_signature(card: dict[str, Any] | None = None, *, explicit: object = 
     return "|".join(sorted(parts))
 
 
+IDENTITY_MODEL_VERSION = "physical-printing-v1"
+
+
 def identity_collector_key(
     collector_number: object,
     *,
     numbering_policy: str = "SEQUENTIAL_FRACTION",
     set_printed_total: int | None = None,
 ) -> str:
-    """Numbering-policy-aware collector identity for physical printing keys."""
+    """Numbering-policy-aware collector identity for physical printing keys.
+
+    For SEQUENTIAL_FRACTION with known set printedTotal, bare and matching
+    fraction forms collapse to the numerator (24 == 024/086 when total=86).
+    A contradictory denominator is preserved and flagged via fraction key.
+    """
     policy = str(numbering_policy or "SEQUENTIAL_FRACTION")
     if policy in ("ORIGINAL_REPRINT_NUMBERING", "LETTERED_VARIANT", "MULTI_DENOMINATOR"):
         return collector_fraction_key(collector_number)
+    if policy in (
+        "PROMO_PREFIX",
+        "PREFIXED_SEQUENTIAL",
+        "TRAINER_GALLERY",
+        "SHINY_VAULT",
+        "GALARIAN_GALLERY",
+        "ENERGY_SERIES",
+    ):
+        # Preserve full meaningful collector form (prefix + number [+ den])
+        return collector_fraction_key(collector_number) or parse_collector_number(
+            collector_number
+        ).position_key
+
     parsed = parse_collector_number(collector_number)
     if not parsed.parse_ok:
         return parsed.position_key or str(collector_number or "").casefold().strip()
-    if parsed.denominator is not None:
-        return collector_fraction_key(collector_number)
-    if set_printed_total is not None and parsed.numerator is not None:
-        return str(parsed.numerator)
+
+    if policy == "SEQUENTIAL_FRACTION":
+        if parsed.denominator is not None and set_printed_total is not None:
+            if parsed.denominator != set_printed_total:
+                # Contradiction — do not collapse away
+                return collector_fraction_key(collector_number)
+            # Matching fraction or bare → numerator identity
+            if parsed.numerator is not None:
+                suf = (parsed.suffix or "").lower()
+                pref = (parsed.prefix or "").lower()
+                core = f"{parsed.numerator}{suf}"
+                return f"{pref}{core}" if pref else core
+        if parsed.denominator is not None and set_printed_total is None:
+            return collector_fraction_key(collector_number)
+        if parsed.numerator is not None:
+            suf = (parsed.suffix or "").lower()
+            pref = (parsed.prefix or "").lower()
+            core = f"{parsed.numerator}{suf}"
+            return f"{pref}{core}" if pref else core
     return parsed.position_key
 
 
@@ -533,30 +569,45 @@ def physical_printing_id(
     card: dict[str, Any] | None = None,
     numbering_policy: str = "SEQUENTIAL_FRACTION",
     set_printed_total: int | None = None,
+    identity_model_version: str = IDENTITY_MODEL_VERSION,
 ) -> str:
-    """Stable physical printing identity — survives harmless metadata drift."""
+    """Stable physical printing identity — non-redundant, versioned.
+
+    Format: v1|language|set_id|collector_key|variant_signature
+    productFamily is included only when not already represented in variant_signature.
+    """
     card = card or {}
+    # Prefer persisted ID when present and version matches
+    persisted = str(card.get("physicalPrintingId") or "").strip()
+    persisted_ver = str(card.get("identityModelVersion") or "").strip()
+    if persisted and persisted_ver == identity_model_version:
+        return persisted
+
     collector_key = identity_collector_key(
         collector_number,
         numbering_policy=numbering_policy,
         set_printed_total=set_printed_total,
     )
-    parts = [
-        str(language or "").casefold(),
-        str(set_id or "").casefold(),
-        collector_key,
-        variant_signature(card),
-    ]
-    for key in ("printingClass", "stampType", "cardSize", "productFamily"):
-        norm = _normalize_variant_part(card.get(key))
-        if norm:
-            parts.append(f"{key}:{norm}")
-    return "|".join(parts)
+    # Build a printing-aware card view so productFamily participates once
+    card_for_sig = dict(card)
+    if card.get("productFamily") and not card.get("productVariant"):
+        card_for_sig.setdefault("productVariant", card.get("productFamily"))
+    sig = variant_signature(card_for_sig)
+    return "|".join(
+        [
+            identity_model_version,
+            str(language or "").casefold(),
+            str(set_id or "").casefold(),
+            collector_key,
+            sig,
+        ]
+    )
 
 
 def assert_classification_evidence(classification: str, evidence: str) -> None:
-    """Every PROVEN_* classification must carry PROVEN evidence."""
-    if classification.startswith("PROVEN_") and evidence != "PROVEN":
+    """Every classification containing PROVEN must carry PROVEN evidence."""
+    cls = str(classification or "")
+    if "PROVEN" in cls and evidence != "PROVEN":
         raise ValueError(
             f"classification {classification!r} requires evidence PROVEN, got {evidence!r}"
         )
