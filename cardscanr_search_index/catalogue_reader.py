@@ -281,6 +281,14 @@ def _supplemental_search_gates_ok(item: dict[str, Any]) -> bool:
     return str(item.get("searchInclusion") or "").strip() == "approved_supplemental"
 
 
+def _card_search_included(card: dict[str, Any]) -> bool:
+    """Exclude authority-pending cards from user-facing staging search."""
+    status = str(card.get("authorityStatus") or "").strip()
+    if status == "ROSTER_AUTHORITY_PENDING":
+        return False
+    return True
+
+
 def _approved_supplemental_set_ids(
     catalogue_root: Path,
     *,
@@ -383,6 +391,8 @@ def iter_catalogue_cards(
                 )
             for card in payload.get("cards") or []:
                 if not isinstance(card, dict):
+                    continue
+                if not _card_search_included(card):
                     continue
                 card_set_id = str(card.get("setId") or set_id).strip()
                 card_lang = str(card.get("language") or set_meta.language).strip().lower()
