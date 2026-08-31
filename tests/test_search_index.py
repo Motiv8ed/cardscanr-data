@@ -73,6 +73,7 @@ def _write_min_catalogue(root: Path) -> None:
                 "imageSmall": "https://example.test/base1/4.png",
                 "imageLarge": "https://example.test/base1/4_hires.png",
                 "providerIds": {"pokemonTcgApi": "base1-4"},
+                "printingClass": "ORDINARY",
             },
             {
                 "canonicalBaseId": "pokemon|en|base1|004|energy",
@@ -186,6 +187,8 @@ class SearchIndexBuildTests(unittest.TestCase):
                 expected_fingerprint=first.content_fingerprint,
             )
             self.assertTrue(verify.passed, verify.issues)
+            self.assertEqual(verify.duplicate_physical_printing_ids, 0)
+            self.assertEqual(verify.missing_physical_printing_ids, 0)
             self.assertEqual(first.content_fingerprint, second.content_fingerprint)
             self.assertTrue((output_dir / "catalog_search_v1.previous.sqlite").exists())
 
@@ -193,18 +196,35 @@ class SearchIndexBuildTests(unittest.TestCase):
             try:
                 hits = search_cards(conn, SearchRequest(query_text="charizard", language="en", limit=10))
                 self.assertGreaterEqual(len(hits), 2)
+                self.assertTrue(all(hit.physical_printing_id for hit in hits))
                 exact = lookup_exact_identity(conn, language="en", set_id="base1", collector_number="4")
                 assert exact is not None
                 self.assertEqual(exact.canonical_base_id, "pokemon|en|base1|4|charizard")
+                self.assertEqual(exact.identity_model_version, "physical-printing-v1")
+                self.assertEqual(exact.printing_class, "ORDINARY")
+                self.assertEqual(
+                    exact.physical_printing_id,
+                    "physical-printing-v1|en|base1|4|printingClass:ordinary",
+                )
                 jp_hits = search_cards(conn, SearchRequest(query_text="クヌギダマ", language="jp", limit=5))
                 self.assertEqual(jp_hits[0].canonical_base_id, "pokemon|jp|SV10|001|クヌギダマ")
             finally:
                 conn.close()
 
+            raw = sqlite3.connect(output_dir / "catalog_search_v1.sqlite")
+            columns = {row[1] for row in raw.execute("PRAGMA table_info(cards)")}
+            raw.close()
+            self.assertIn("physical_printing_id", columns)
+            self.assertIn("identity_model_version", columns)
+            self.assertIn("base_card_reference", columns)
+            self.assertIn("variant_signature", columns)
+
             manifest = json.loads((output_dir / "catalog_search_v1.manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["sha256"], sha256_file(output_dir / "catalog_search_v1.sqlite"))
+            self.assertEqual(manifest["searchIndexSchemaVersion"], "1.1.0")
+            self.assertTrue(manifest["physicalPrintingIdentity"]["supported"])
 
-    def test_no_duplicate_canonical_rows(self) -> None:
+    def test_no_duplicate_canonical_or_physical_rows(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             catalogue_root = Path(tmp) / "v1"
             output_dir = Path(tmp) / "search"
@@ -214,8 +234,12 @@ class SearchIndexBuildTests(unittest.TestCase):
             duplicate_count = conn.execute(
                 "SELECT COUNT(*) FROM (SELECT canonical_base_id FROM cards GROUP BY canonical_base_id HAVING COUNT(*) > 1)"
             ).fetchone()[0]
+            duplicate_physical = conn.execute(
+                "SELECT COUNT(*) FROM (SELECT physical_printing_id FROM cards GROUP BY physical_printing_id HAVING COUNT(*) > 1)"
+            ).fetchone()[0]
             conn.close()
             self.assertEqual(duplicate_count, 0)
+            self.assertEqual(duplicate_physical, 0)
 
     def test_malformed_card_is_skipped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
