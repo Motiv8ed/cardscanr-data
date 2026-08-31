@@ -78,7 +78,15 @@ CREATE TABLE cards (
   release_date TEXT,
   set_release_date TEXT,
   set_ptcgo_code TEXT,
-  search_aliases_json TEXT NOT NULL
+  search_aliases_json TEXT NOT NULL,
+  physical_printing_id TEXT,
+  identity_model_version TEXT,
+  base_card_reference TEXT,
+  printing_class TEXT,
+  product_family TEXT,
+  variant_signature TEXT,
+  stamp_type TEXT,
+  card_size TEXT
 );
 
 CREATE TABLE card_aliases (
@@ -104,6 +112,7 @@ CREATE INDEX idx_cards_set_name ON cards(language, normalized_set_name);
 CREATE INDEX idx_cards_set_name_canon ON cards(language, normalized_set_name, normalized_canonical_name);
 CREATE INDEX idx_cards_set_name_localized ON cards(language, normalized_set_name, normalized_localized_name);
 CREATE INDEX idx_aliases_normalized ON card_aliases(normalized_alias);
+CREATE INDEX idx_cards_physical_printing ON cards(physical_printing_id);
 """
 
 
@@ -166,8 +175,10 @@ def _insert_card(conn: sqlite3.Connection, record: CardRecord) -> None:
           normalized_set_name, provider_set_codes_json, collector_number, normalized_collector_number,
           local_number, set_total, rarity, thumbnail_url, large_image_url, image_source, image_cached,
           provider_ids_json, promotion_provider_set_id, release_date, set_release_date, set_ptcgo_code,
-          search_aliases_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          search_aliases_json,
+          physical_printing_id, identity_model_version, base_card_reference, printing_class,
+          product_family, variant_signature, stamp_type, card_size
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             record.schema_version,
@@ -197,6 +208,14 @@ def _insert_card(conn: sqlite3.Connection, record: CardRecord) -> None:
             record.set_release_date,
             record.set_ptcgo_code,
             json.dumps(record.search_aliases, ensure_ascii=False),
+            record.physical_printing_id,
+            "physical-printing-v1" if record.physical_printing_id else None,
+            record.base_card_reference,
+            record.printing_class,
+            record.product_family,
+            record.variant_signature,
+            record.stamp_type,
+            record.card_size,
         ),
     )
     search_text = " ".join(
@@ -308,6 +327,31 @@ def build_search_index(
         with conn:
             for item in batch:
                 _insert_card(conn, item)
+
+    # Fail loud if EN catalogue still contains name-compatible collector duplicates.
+    duplicate_rows = conn.execute(
+        """
+        SELECT language, set_id, local_number, normalized_canonical_name, COUNT(*) AS c
+        FROM cards
+        WHERE language = 'en'
+          AND local_number IS NOT NULL
+          AND TRIM(local_number) != ''
+        GROUP BY language, set_id, local_number, normalized_canonical_name
+        HAVING c > 1
+        LIMIT 20
+        """
+    ).fetchall()
+    if duplicate_rows:
+        sample = ", ".join(
+            f"{r['set_id']}#{r['local_number']}:{r['normalized_canonical_name']}x{r['c']}"
+            for r in duplicate_rows
+        )
+        conn.close()
+        raise RuntimeError(
+            "Search index build refused: duplicate EN (set, local_number, name) rows: "
+            + sample
+        )
+
     conn.execute("INSERT INTO cards_fts(cards_fts) VALUES('optimize')")
     conn.commit()
     conn.close()
