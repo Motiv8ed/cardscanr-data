@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .normalization import (
@@ -46,12 +46,32 @@ class SearchHit:
     image_cached: bool
     match_class: int
     score: float
+    physical_printing_id: str | None = None
+    identity_model_version: str | None = None
+    base_card_reference: str | None = None
+    printing_class: str | None = None
+    product_family: str | None = None
+    variant_signature: str | None = None
+    stamp_type: str | None = None
+    card_size: str | None = None
+    edition: str | None = None
+    deck_variant: str | None = None
+    event_context: str | None = None
+
+    @property
+    def identity_key(self) -> str:
+        """Exact-printing identity when known, legacy base identity otherwise."""
+        return self.physical_printing_id or self.canonical_base_id
 
 
 def connect_readonly(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _row_optional(row: sqlite3.Row, key: str) -> Any:
+    return row[key] if key in row.keys() else None
 
 
 def _card_row_to_hit(row: sqlite3.Row, *, match_class: int, score: float) -> SearchHit:
@@ -69,6 +89,17 @@ def _card_row_to_hit(row: sqlite3.Row, *, match_class: int, score: float) -> Sea
         image_cached=bool(row["image_cached"]),
         match_class=match_class,
         score=score,
+        physical_printing_id=_row_optional(row, "physical_printing_id"),
+        identity_model_version=_row_optional(row, "identity_model_version"),
+        base_card_reference=_row_optional(row, "base_card_reference"),
+        printing_class=_row_optional(row, "printing_class"),
+        product_family=_row_optional(row, "product_family"),
+        variant_signature=_row_optional(row, "variant_signature"),
+        stamp_type=_row_optional(row, "stamp_type"),
+        card_size=_row_optional(row, "card_size"),
+        edition=_row_optional(row, "edition"),
+        deck_variant=_row_optional(row, "deck_variant"),
+        event_context=_row_optional(row, "event_context"),
     )
 
 
@@ -91,11 +122,12 @@ def _fetch(conn: sqlite3.Connection, sql: str, params: list[Any], *, match_class
 def _merge_hits(hits: list[SearchHit]) -> list[SearchHit]:
     best_by_id: dict[str, SearchHit] = {}
     for hit in hits:
-        existing = best_by_id.get(hit.canonical_base_id)
+        identity_key = hit.identity_key
+        existing = best_by_id.get(identity_key)
         if existing is None or hit.score > existing.score or (
             hit.score == existing.score and hit.match_class < existing.match_class
         ):
-            best_by_id[hit.canonical_base_id] = hit
+            best_by_id[identity_key] = hit
     return sorted(
         best_by_id.values(),
         key=lambda item: (
@@ -104,7 +136,7 @@ def _merge_hits(hits: list[SearchHit]) -> list[SearchHit]:
             0 if item.language == "en" else 1,
             item.set_id,
             item.collector_number,
-            item.canonical_base_id,
+            item.identity_key,
         ),
     )
 
@@ -239,23 +271,7 @@ def search_cards(conn: sqlite3.Connection, request: SearchRequest) -> list[Searc
                     ]
                 )
                 if all(token in hay for token in tokens):
-                    filtered.append(
-                        SearchHit(
-                            canonical_base_id=hit.canonical_base_id,
-                            language=hit.language,
-                            set_id=hit.set_id,
-                            collector_number=hit.collector_number,
-                            name=hit.name,
-                            localized_name=hit.localized_name,
-                            set_name=hit.set_name,
-                            thumbnail_url=hit.thumbnail_url,
-                            large_image_url=hit.large_image_url,
-                            image_source=hit.image_source,
-                            image_cached=hit.image_cached,
-                            match_class=hit.match_class,
-                            score=hit.score + 25.0,
-                        )
-                    )
+                    filtered.append(replace(hit, score=hit.score + 25.0))
             if filtered:
                 hits = filtered
             else:
@@ -449,6 +465,17 @@ def lookup_exact_identity(
 def hit_to_dict(hit: SearchHit) -> dict[str, Any]:
     return {
         "canonicalBaseId": hit.canonical_base_id,
+        "physicalPrintingId": hit.physical_printing_id,
+        "identityModelVersion": hit.identity_model_version,
+        "baseCardReference": hit.base_card_reference,
+        "printingClass": hit.printing_class,
+        "productFamily": hit.product_family,
+        "variantSignature": hit.variant_signature,
+        "stampType": hit.stamp_type,
+        "cardSize": hit.card_size,
+        "edition": hit.edition,
+        "deckVariant": hit.deck_variant,
+        "eventContext": hit.event_context,
         "language": hit.language,
         "setId": hit.set_id,
         "collectorNumber": hit.collector_number,
