@@ -108,6 +108,17 @@ DIAGNOSTIC_STAGES = (
     "estimate_normalized",
     "complete",
 )
+# Process-local Timeout A instrumentation (feature-flagged recording; lightweight fields always on timeout).
+WAIT_DURATION_BUCKETS_MS = (
+    ("lt_5s", 5_000),
+    ("lt_15s", 15_000),
+    ("lt_30s", 30_000),
+    ("lt_60s", 60_000),
+    ("gte_60s", None),
+)
+_WAIT_FOR_RESULT_CONTAINER_BUCKET_COUNTS: Counter[str] = Counter()
+_BROWSER_SESSION_RECYCLE_EVENTS = 0
+_TIMEOUT_INSTRUMENTATION_LOCK = threading.Lock()
 MARKET_COUNTRY_NAMES = {
     "AU": ("australia", "australian"),
     "US": ("united states", "usa", "us "),
@@ -143,6 +154,85 @@ def _parse_positive_int(name: str, default: int) -> int:
 def _parse_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name, "true" if default else "false").strip().lower()
     return raw in {"1", "true", "yes", "y", "on"}
+
+
+def timeout_instrumentation_enabled() -> bool:
+    """EBAY_BROWSER_TIMEOUT_INSTRUMENTATION=1 enables histogram recording (default OFF)."""
+    return _parse_bool("EBAY_BROWSER_TIMEOUT_INSTRUMENTATION", False)
+
+
+def wait_duration_bucket(duration_ms: float) -> str:
+    for label, upper_ms in WAIT_DURATION_BUCKETS_MS:
+        if upper_ms is None or duration_ms < upper_ms:
+            return label
+    return "gte_60s"
+
+
+def record_wait_for_result_container_duration(duration_ms: float) -> str:
+    """Record a wait duration into process-local buckets when instrumentation is enabled."""
+    bucket = wait_duration_bucket(duration_ms)
+    if timeout_instrumentation_enabled():
+        with _TIMEOUT_INSTRUMENTATION_LOCK:
+            _WAIT_FOR_RESULT_CONTAINER_BUCKET_COUNTS[bucket] += 1
+    return bucket
+
+
+def snapshot_wait_for_result_container_histogram() -> dict[str, int]:
+    with _TIMEOUT_INSTRUMENTATION_LOCK:
+        return {label: int(_WAIT_FOR_RESULT_CONTAINER_BUCKET_COUNTS.get(label, 0)) for label, _ in WAIT_DURATION_BUCKETS_MS}
+
+
+def reset_timeout_instrumentation_counters() -> None:
+    """Test helper: clear process-local Timeout A counters."""
+    global _BROWSER_SESSION_RECYCLE_EVENTS
+    with _TIMEOUT_INSTRUMENTATION_LOCK:
+        _WAIT_FOR_RESULT_CONTAINER_BUCKET_COUNTS.clear()
+        _BROWSER_SESSION_RECYCLE_EVENTS = 0
+
+
+def note_browser_session_recycle() -> None:
+    global _BROWSER_SESSION_RECYCLE_EVENTS
+    with _TIMEOUT_INSTRUMENTATION_LOCK:
+        _BROWSER_SESSION_RECYCLE_EVENTS += 1
+
+
+def browser_session_recycle_events() -> int:
+    with _TIMEOUT_INSTRUMENTATION_LOCK:
+        return int(_BROWSER_SESSION_RECYCLE_EVENTS)
+
+
+def build_result_container_timeout_diagnostics(
+    *,
+    page_url: str | None,
+    wait_duration_ms: float | None,
+    browser_session_navs: int,
+    timeout_ms: int,
+    timeout_seconds: int,
+    stage_timings: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Lightweight timeout diagnostics always attached; histogram when flag is on."""
+    duration_ms = float(wait_duration_ms) if wait_duration_ms is not None else None
+    if duration_ms is None and isinstance(stage_timings, dict):
+        durations = stage_timings.get("stageDurationsMs")
+        if isinstance(durations, dict) and "wait_for_result_container" in durations:
+            try:
+                duration_ms = float(durations["wait_for_result_container"])
+            except (TypeError, ValueError):
+                duration_ms = None
+    bucket = record_wait_for_result_container_duration(duration_ms) if duration_ms is not None else None
+    payload: dict[str, Any] = {
+        "lastUrl": page_url,
+        "browserSessionNavs": int(browser_session_navs),
+        "browserSessionRecycleEvents": browser_session_recycle_events(),
+        "timeoutMs": int(timeout_ms),
+        "timeoutSeconds": int(timeout_seconds),
+        "waitForResultContainerDurationMs": duration_ms,
+        "waitForResultContainerBucket": bucket,
+        "timeoutInstrumentationEnabled": timeout_instrumentation_enabled(),
+    }
+    if timeout_instrumentation_enabled():
+        payload["waitForResultContainerHistogram"] = snapshot_wait_for_result_container_histogram()
+    return payload
 
 
 def assert_final_url_matches_requested_marketplace(
@@ -827,6 +917,15 @@ def _safe_page_title(page: Any) -> str:
         return ""
 
 
+def _safe_page_url(page: Any) -> str | None:
+    try:
+        url = getattr(page, "url", None)
+        text = str(url or "").strip()
+        return text or None
+    except Exception:
+        return None
+
+
 def _safe_body_text(page: Any) -> str:
     try:
         return str(page.locator("body").inner_text(timeout=5000))
@@ -1477,6 +1576,7 @@ class EbayBrowserSoldCompsProvider:
             or (self._session_locale and self._session_locale != request.search_locale)
         )
         if needs_recycle and self._pw is not None:
+            note_browser_session_recycle()
             self._close_browser_session()
         if self._context is not None and self._page is not None:
             return self._context, self._page
@@ -1884,6 +1984,10 @@ class EbayBrowserSoldCompsProvider:
             try:
                     with _StageTimer(stage_timings, "wait_for_result_container"):
                         page.wait_for_selector(RESULT_CONTAINER_SELECTOR, timeout=timeout_ms)
+                    if timeout_instrumentation_enabled():
+                        wait_ms = stage_timings.fields.get("stageDurationsMs", {}).get("wait_for_result_container")
+                        if wait_ms is not None:
+                            record_wait_for_result_container_duration(float(wait_ms))
             except PlaywrightTimeoutError as exc:
                     title = _safe_page_title(page)
                     body_text = _safe_body_text(page)
@@ -1970,6 +2074,15 @@ class EbayBrowserSoldCompsProvider:
                                 "stageTimings": stage_timings.snapshot(),
                             },
                         ) from exc
+                    stage_snapshot = stage_timings.snapshot()
+                    timeout_instrumentation = build_result_container_timeout_diagnostics(
+                        page_url=_safe_page_url(page),
+                        wait_duration_ms=None,
+                        browser_session_navs=self._session_navs if reuse else 1,
+                        timeout_ms=timeout_ms,
+                        timeout_seconds=self.config.timeout_seconds,
+                        stage_timings=stage_snapshot,
+                    )
                     raise ProviderTemporaryError(
                         "Timed out waiting for eBay result container",
                         diagnostics={
@@ -1977,9 +2090,10 @@ class EbayBrowserSoldCompsProvider:
                             "providerOutcome": "timeout",
                             "browserPageState": page_state,
                             "timedOutStage": "wait_for_result_container",
-                            "stageTimings": stage_timings.snapshot(),
+                            "stageTimings": stage_snapshot,
                             "candidateSelectorCounts": selector_counts,
                             "debugArtifacts": self._debug_artifact_paths(),
+                            **timeout_instrumentation,
                         },
                     ) from exc
 

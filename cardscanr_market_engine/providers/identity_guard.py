@@ -54,6 +54,23 @@ def _clean(value: object) -> str:
     return " ".join(str(value or "").strip().split())
 
 
+def normalize_pokemon_language_tag(value: object) -> str:
+    """Normalize Pokémon language tags so fingerprint `jp` and request `ja` agree.
+
+    JP catalogue fingerprints use ``jp``; TCGdex / request paths often use ``ja``.
+    Treat both as Japanese (``ja``) for identity evaluation diagnostics and gates.
+    """
+    text = str(value or "").strip().lower().replace("_", "-")
+    if not text:
+        return ""
+    primary = text.split("-", 1)[0]
+    if primary in {"jp", "ja", "jpn", "japanese"}:
+        return "ja"
+    if primary in {"en", "eng", "english"}:
+        return "en"
+    return primary
+
+
 def analyze_latin_ratio(value: object) -> ScriptAnalysis:
     text = unicodedata.normalize("NFKC", str(value or ""))
     latin_count = 0
@@ -149,6 +166,8 @@ def _english_alias_for_request(request: ProviderRequest) -> tuple[str, str] | No
 def evaluate_english_market_identity(request: ProviderRequest) -> IdentityGuardResult:
     key = request.price_key
     market_country = str(request.market_country or "").upper()
+    language_raw = _clean(key.language) or _clean(key.raw.get("language"))
+    language_normalized = normalize_pokemon_language_tag(language_raw)
     card_name = _clean(key.card_name)
     analysis = analyze_latin_ratio(card_name)
     alias = _english_alias_for_request(request)
@@ -165,6 +184,8 @@ def evaluate_english_market_identity(request: ProviderRequest) -> IdentityGuardR
         "marketplace": request.marketplace,
         "provider_marketplace": request.provider_marketplace_id,
         "provider_domain": request.provider_domain,
+        "language": language_raw or None,
+        "languageNormalized": language_normalized or None,
         "original_card_name": _safe_original_card_name(card_name),
         "original_card_name_redacted": bool(analysis.non_latin_detected),
         "latin_ratio": analysis.latin_ratio,

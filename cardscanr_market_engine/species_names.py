@@ -7,6 +7,7 @@ Uses a static map derived from PokeAPI ``pokemon_species_names``
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,10 @@ from .fingerprints import normalize_text
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MAP_PATH = ROOT / "data" / "pokemon_species_names_ja_en.json"
+
+# Trainer/owner possessive: "ホップのウールー", "Nのシンボラー", "リーリエのキュワワー"
+_POSSESSIVE_NO_RE = re.compile(r"^(.+?)の(.+)$")
+_SPECIES_SUFFIXES = ("VSTAR", "VMAX", "LV.X", "GX", "EX", "ex", "V")
 
 
 def _clean(value: object) -> str:
@@ -44,6 +49,44 @@ def load_ja_en_species_map(path: str | None = None) -> dict[str, str]:
     return cleaned
 
 
+def _format_species_with_suffix(mapped: str, suffix: str) -> str:
+    if suffix.lower() == "ex":
+        return f"{mapped} ex"
+    return f"{mapped} {suffix}"
+
+
+def _resolve_with_suffix_strip(text: str, mapping: dict[str, str]) -> str | None:
+    for suffix in _SPECIES_SUFFIXES:
+        candidates: list[str] = []
+        for sep in (" ", "　", "-"):
+            token = f"{sep}{suffix}"
+            if text.endswith(token):
+                candidates.append(text[: -len(token)].strip())
+        # Glued JP forms such as ブラッキーex (no separator).
+        if text.endswith(suffix) and len(text) > len(suffix):
+            candidates.append(text[: -len(suffix)].strip())
+        for trimmed in candidates:
+            if not trimmed or trimmed == text:
+                continue
+            mapped = mapping.get(trimmed)
+            if mapped:
+                return _format_species_with_suffix(mapped, suffix)
+    return None
+
+
+def _resolve_after_possessive_strip(text: str, mapping: dict[str, str]) -> str | None:
+    match = _POSSESSIVE_NO_RE.match(text)
+    if not match:
+        return None
+    remainder = _clean(match.group(2))
+    if not remainder:
+        return None
+    direct = mapping.get(remainder)
+    if direct:
+        return direct
+    return _resolve_with_suffix_strip(remainder, mapping)
+
+
 def resolve_english_species_name(japanese_name: object, *, map_path: str | None = None) -> str | None:
     """Return canonical English species name for a Japanese card/species name."""
     text = _clean(japanese_name)
@@ -53,17 +96,13 @@ def resolve_english_species_name(japanese_name: object, *, map_path: str | None 
     direct = mapping.get(text)
     if direct:
         return direct
-    # Strip common trainer/suffix tokens that leave a base species name.
-    for suffix in ("ex", "EX", "V", "VMAX", "VSTAR", "GX", "LV.X"):
-        trimmed = text
-        for sep in (" ", "　", "-"):
-            if trimmed.endswith(f"{sep}{suffix}"):
-                trimmed = trimmed[: -len(suffix) - len(sep)].strip()
-                break
-        if trimmed != text:
-            mapped = mapping.get(trimmed)
-            if mapped:
-                return f"{mapped} {suffix}" if suffix.lower() != "ex" else f"{mapped} ex"
+    suffixed = _resolve_with_suffix_strip(text, mapping)
+    if suffixed:
+        return suffixed
+    # Safe possessive/trainer strip only: XのSpecies → Species when remainder maps.
+    possessive = _resolve_after_possessive_strip(text, mapping)
+    if possessive:
+        return possessive
     return None
 
 

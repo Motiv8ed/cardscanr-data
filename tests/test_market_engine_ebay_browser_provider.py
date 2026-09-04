@@ -28,6 +28,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     appears_to_be_personal_chrome_profile,
     assert_final_url_matches_requested_marketplace,
     build_quality_summary,
+    build_result_container_timeout_diagnostics,
     classify_browser_page_state,
     contains_block_marker,
     count_candidate_selectors,
@@ -39,6 +40,11 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     parse_price_text,
     parse_shipping_text,
     parse_sold_date_text,
+    record_wait_for_result_container_duration,
+    reset_timeout_instrumentation_counters,
+    snapshot_wait_for_result_container_histogram,
+    timeout_instrumentation_enabled,
+    wait_duration_bucket,
 )
 from cardscanr_market_engine.providers.identity_guard import evaluate_english_market_identity  # noqa: E402
 from cardscanr_market_engine.providers.errors import (  # noqa: E402
@@ -345,6 +351,98 @@ class ProviderFactoryTests(unittest.TestCase):
         provider = EbayBrowserSoldCompsProvider()
         with self.assertRaises(ProviderUnsupportedMarketError):
             provider.fetch_comps(sample_request(country="DE", currency="EUR"))
+
+
+class TimeoutAInstrumentationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        reset_timeout_instrumentation_counters()
+
+    def tearDown(self) -> None:
+        reset_timeout_instrumentation_counters()
+
+    def test_timeout_instrumentation_flag_default_off(self) -> None:
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("EBAY_BROWSER_TIMEOUT_INSTRUMENTATION", None)
+            self.assertFalse(timeout_instrumentation_enabled())
+
+    def test_wait_duration_buckets(self) -> None:
+        self.assertEqual(wait_duration_bucket(4_999), "lt_5s")
+        self.assertEqual(wait_duration_bucket(14_999), "lt_15s")
+        self.assertEqual(wait_duration_bucket(29_999), "lt_30s")
+        self.assertEqual(wait_duration_bucket(59_999), "lt_60s")
+        self.assertEqual(wait_duration_bucket(60_000), "gte_60s")
+
+    def test_timeout_diagnostics_include_instrumentation_keys_when_flag_on(self) -> None:
+        with patch.dict(os.environ, {"EBAY_BROWSER_TIMEOUT_INSTRUMENTATION": "1"}, clear=False):
+            reset_timeout_instrumentation_counters()
+            diagnostics = build_result_container_timeout_diagnostics(
+                page_url="https://www.ebay.com.au/sch/i.html?_nkw=wooloo",
+                wait_duration_ms=45_000.0,
+                browser_session_navs=3,
+                timeout_ms=45_000,
+                timeout_seconds=45,
+                stage_timings={"stageDurationsMs": {"wait_for_result_container": 45_000.0}},
+            )
+        self.assertEqual(diagnostics["lastUrl"], "https://www.ebay.com.au/sch/i.html?_nkw=wooloo")
+        self.assertEqual(diagnostics["browserSessionNavs"], 3)
+        self.assertIn("browserSessionRecycleEvents", diagnostics)
+        self.assertEqual(diagnostics["timeoutMs"], 45_000)
+        self.assertEqual(diagnostics["timeoutSeconds"], 45)
+        self.assertEqual(diagnostics["waitForResultContainerBucket"], "lt_60s")
+        self.assertTrue(diagnostics["timeoutInstrumentationEnabled"])
+        self.assertEqual(diagnostics["waitForResultContainerHistogram"]["lt_60s"], 1)
+        self.assertEqual(snapshot_wait_for_result_container_histogram()["lt_60s"], 1)
+
+    def test_timeout_diagnostics_lightweight_without_histogram_when_flag_off(self) -> None:
+        with patch.dict(os.environ, {"EBAY_BROWSER_TIMEOUT_INSTRUMENTATION": "0"}, clear=False):
+            reset_timeout_instrumentation_counters()
+            diagnostics = build_result_container_timeout_diagnostics(
+                page_url="https://www.ebay.com.au/sch/i.html",
+                wait_duration_ms=12_000.0,
+                browser_session_navs=1,
+                timeout_ms=45_000,
+                timeout_seconds=45,
+            )
+        self.assertEqual(diagnostics["lastUrl"], "https://www.ebay.com.au/sch/i.html")
+        self.assertEqual(diagnostics["browserSessionNavs"], 1)
+        self.assertEqual(diagnostics["waitForResultContainerBucket"], "lt_15s")
+        self.assertFalse(diagnostics["timeoutInstrumentationEnabled"])
+        self.assertNotIn("waitForResultContainerHistogram", diagnostics)
+        self.assertEqual(sum(snapshot_wait_for_result_container_histogram().values()), 0)
+
+    def test_timeout_budget_unchanged_from_config(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "EBAY_BROWSER_TIMEOUT_SECONDS": "45",
+                "EBAY_BROWSER_TIMEOUT_INSTRUMENTATION": "1",
+            },
+            clear=False,
+        ):
+            config = EbayBrowserProviderConfig.from_env()
+        self.assertEqual(config.timeout_seconds, 45)
+        timeout_ms = config.timeout_seconds * 1000
+        diagnostics = build_result_container_timeout_diagnostics(
+            page_url=None,
+            wait_duration_ms=float(timeout_ms),
+            browser_session_navs=0,
+            timeout_ms=timeout_ms,
+            timeout_seconds=config.timeout_seconds,
+        )
+        self.assertEqual(diagnostics["timeoutSeconds"], 45)
+        self.assertEqual(diagnostics["timeoutMs"], 45_000)
+        # wait_for_selector timeout must remain config-derived; instrumentation must not inflate it.
+        self.assertEqual(timeout_ms, 45_000)
+
+    def test_histogram_recording_respects_flag(self) -> None:
+        with patch.dict(os.environ, {"EBAY_BROWSER_TIMEOUT_INSTRUMENTATION": "0"}, clear=False):
+            reset_timeout_instrumentation_counters()
+            record_wait_for_result_container_duration(8_000)
+            self.assertEqual(sum(snapshot_wait_for_result_container_histogram().values()), 0)
+        with patch.dict(os.environ, {"EBAY_BROWSER_TIMEOUT_INSTRUMENTATION": "1"}, clear=False):
+            reset_timeout_instrumentation_counters()
+            record_wait_for_result_container_duration(8_000)
+            self.assertEqual(snapshot_wait_for_result_container_histogram()["lt_15s"], 1)
 
 
 class EnglishMarketIdentityGuardTests(unittest.TestCase):
