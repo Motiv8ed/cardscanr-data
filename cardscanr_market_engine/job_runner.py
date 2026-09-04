@@ -553,7 +553,8 @@ class MarketPriceJobRunner:
                 raise ValueError(f"Market price key row missing id for job {job.id}")
             if not price_key.fingerprint:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
-            self._assert_market_allowed_for_worker(price_key)
+            # Prefer already-fresh no-op before marketplace allow/cooldown gates so
+            # intentional skips never consume provider capacity or fail on ops cooldowns.
             prior_cache = None
             if hasattr(self.client, "get_cache_row"):
                 try:
@@ -569,30 +570,32 @@ class MarketPriceJobRunner:
                 except ValueError:
                     due = None
             if not force and due is not None and due > now:
+                # Already-fresh is an intentional no-op, not a fleet failure.
+                # Cancel the job (do not fail_job / mark_cache_failure) so admin
+                # failure-rate alerts exclude these rows.
                 self.logger(f"[market-engine] skipped_already_fresh job={job.id} due={due_raw}")
-                self.client.fail_job(
-                    job_id=job.id,
-                    error_message="skipped_already_fresh",
-                    retryable=False,
-                    retry_delay_minutes=max(1, int((due - now).total_seconds() // 60) or 1),
-                )
-                if hasattr(self.client, "mark_cache_failure"):
-                    try:
-                        self.client.mark_cache_failure(
-                            price_key_id=price_key.id,
-                            error_message="skipped_already_fresh",
-                            next_refresh_due_at=due,
-                            market_country=price_key.market_country,
-                            currency=price_key.currency,
-                        )
-                    except Exception as cache_exc:
-                        self.logger(f"[market-engine] skip cache update failed job={job.id}: {cache_exc}")
+                if hasattr(self.client, "cancel_job"):
+                    self.client.cancel_job(
+                        job_id=job.id,
+                        reason="skipped_already_fresh",
+                    )
+                else:
+                    self.client.fail_job(
+                        job_id=job.id,
+                        error_message="skipped_already_fresh",
+                        retryable=False,
+                        retry_delay_minutes=max(
+                            1, int((due - now).total_seconds() // 60) or 1
+                        ),
+                    )
                 return {
                     "jobId": job.id,
                     "priceKeyId": price_key.id,
                     "status": "skipped_already_fresh",
+                    "outcomeClass": "already_fresh_noop",
                     "nextRefreshDueAt": due.isoformat().replace("+00:00", "Z"),
                 }
+            self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
             (

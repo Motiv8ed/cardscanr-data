@@ -666,6 +666,42 @@ class SupabaseMarketEngineClient:
             },
         )
 
+    def cancel_job(
+        self,
+        *,
+        job_id: str,
+        reason: str = "cancelled",
+    ) -> dict[str, Any]:
+        """Mark a running job cancelled without failing the cache row.
+
+        Used for intentional no-ops such as skipped_already_fresh so they are
+        not counted as fleet failures.
+        """
+        try:
+            return self._rpc(
+                "cancel_market_price_refresh_job",
+                {
+                    "p_job_id": job_id,
+                    "p_reason": (reason or "cancelled")[:1000],
+                },
+            )
+        except Exception:
+            rows = self._table_patch(
+                "market_price_refresh_jobs",
+                {
+                    "status": "cancelled",
+                    "completed_at": _iso_or_none(datetime.now(timezone.utc)),
+                    "error_message": (reason or "cancelled")[:1000],
+                    "worker_id": None,
+                    "locked_at": None,
+                    "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+                },
+                params={"id": f"eq.{job_id}", "status": "eq.running", "select": "*"},
+            )
+            if not rows:
+                raise LookupError(f"running refresh job not found for id {job_id}") from None
+            return rows[0]
+
     def mark_cache_failure(
         self,
         *,

@@ -71,6 +71,7 @@ class _FakeClient:
         self.cache_payloads: list[dict] = []
         self.completed_jobs: list[dict] = []
         self.failed_jobs: list[dict] = []
+        self.cancelled_jobs: list[dict] = []
 
     def get_price_key(self, price_key_id: str) -> MarketPriceKey:
         self.requested_price_key_id = price_key_id
@@ -96,6 +97,13 @@ class _FakeClient:
     def fail_job(self, **kwargs: object) -> dict:
         self.failed_jobs.append(dict(kwargs))
         return {"status": "failed", **kwargs}
+
+    def cancel_job(self, **kwargs: object) -> dict:
+        self.cancelled_jobs.append(dict(kwargs))
+        return {"status": "cancelled", **kwargs}
+
+    def get_cache_row(self, *, price_key_id: str):
+        return getattr(self, "_cache_row", None)
 
 
 class _StaticProvider:
@@ -274,6 +282,28 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
         self.assertEqual(reasons["sealed"], "sealed_product_for_single_card_request")
         self.assertEqual(reasons["lot"], "likely_bundle_lot")
         self.assertEqual(reasons["graded"], "graded_for_raw_request")
+
+
+    def test_skipped_already_fresh_cancels_without_failing_cache(self) -> None:
+        client = _FakeClient(_riolu_key())
+        client._cache_row = {
+            "current_market_price": 4.25,
+            "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+        }
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=_StaticProvider([_sold_comp()]),
+            config=_config(),
+            now_func=lambda: datetime(2026, 6, 1, tzinfo=timezone.utc),
+            logger=lambda _message: None,
+        )
+        result = runner.run_job(_job())
+        self.assertEqual(result["status"], "skipped_already_fresh")
+        self.assertEqual(result.get("outcomeClass"), "already_fresh_noop")
+        self.assertEqual(len(client.cancelled_jobs), 1)
+        self.assertEqual(client.cancelled_jobs[0]["reason"], "skipped_already_fresh")
+        self.assertEqual(len(client.failed_jobs), 0)
+        self.assertEqual(len(client.cache_payloads), 0)
 
 
 if __name__ == "__main__":
