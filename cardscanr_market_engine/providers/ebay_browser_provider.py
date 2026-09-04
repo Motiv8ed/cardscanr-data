@@ -13,6 +13,7 @@ import time
 from typing import Any
 from urllib.parse import urljoin, urlparse, urlunparse
 
+from ..bulk.set_id_aliases import is_smoke_pricing_key
 from ..config import DEFAULT_EBAY_BROWSER_PROFILE_NAME, DEFAULT_EBAY_BROWSER_USER_DATA_DIR, ROOT, MarketEngineConfig
 from ..models import ProviderRequest, ProviderResult, SoldComp
 from .errors import (
@@ -159,6 +160,46 @@ def _parse_bool(name: str, default: bool) -> bool:
 def timeout_instrumentation_enabled() -> bool:
     """EBAY_BROWSER_TIMEOUT_INSTRUMENTATION=1 enables histogram recording (default OFF)."""
     return _parse_bool("EBAY_BROWSER_TIMEOUT_INSTRUMENTATION", False)
+
+
+def smoke_failfast_enabled() -> bool:
+    """CS-012e-B0: smoke empty-DOM fail-fast (default ON). Set EBAY_BROWSER_B0_SMOKE_FAILFAST=0 to disable."""
+    return _parse_bool("EBAY_BROWSER_B0_SMOKE_FAILFAST", True)
+
+
+def smoke_failfast_settle_ms(*, timeout_ms: int) -> int:
+    """Short settle budget for smoke keys — never exceeds the normal timeout."""
+    raw = os.getenv("EBAY_BROWSER_B0_SMOKE_SETTLE_MS", "3500").strip() or "3500"
+    try:
+        settle = int(raw)
+    except ValueError:
+        settle = 3500
+    settle = max(500, settle)
+    return min(int(timeout_ms), settle)
+
+
+def should_fail_fast_empty_result_dom(
+    *,
+    is_smoke: bool,
+    selector_counts: dict[str, int] | None,
+    page_state: dict[str, Any] | None,
+) -> bool:
+    """Tight gate: smoke + zero selectors + unknown/empty page state only."""
+    if not is_smoke:
+        return False
+    selectors = selector_counts or {}
+    if any(int(v or 0) > 0 for v in selectors.values()):
+        return False
+    state = page_state or {}
+    outcome = str(state.get("outcome") or "")
+    reason = str(state.get("reason") or "")
+    if outcome == "no_results":
+        return True
+    if outcome == "parsing_failure" and reason in {"unknown_page_state", "unknown_page_state"}:
+        return True
+    if outcome == "parsing_failure" and "unknown" in reason:
+        return True
+    return False
 
 
 def wait_duration_bucket(duration_ms: float) -> str:
@@ -1981,9 +2022,18 @@ class EbayBrowserSoldCompsProvider:
                     requested_currency=search_query.currency,
                 )
 
+            smoke_key = is_smoke_pricing_key(
+                    fingerprint=request.price_key.fingerprint,
+                    set_code=request.price_key.set_code,
+                    set_name=request.price_key.set_name,
+                    card_name=request.price_key.card_name,
+                    collector_number=request.price_key.collector_number,
+                )
+            b0_failfast = bool(smoke_key and smoke_failfast_enabled())
+            wait_budget_ms = smoke_failfast_settle_ms(timeout_ms=timeout_ms) if b0_failfast else timeout_ms
             try:
                     with _StageTimer(stage_timings, "wait_for_result_container"):
-                        page.wait_for_selector(RESULT_CONTAINER_SELECTOR, timeout=timeout_ms)
+                        page.wait_for_selector(RESULT_CONTAINER_SELECTOR, timeout=wait_budget_ms)
                     if timeout_instrumentation_enabled():
                         wait_ms = stage_timings.fields.get("stageDurationsMs", {}).get("wait_for_result_container")
                         if wait_ms is not None:
@@ -2009,7 +2059,9 @@ class EbayBrowserSoldCompsProvider:
                         parser_errors=[
                             {
                                 "errorType": "TimeoutError",
-                                "stage": "wait_for_result_container",
+                                "stage": "wait_for_result_container_failfast"
+                                if b0_failfast
+                                else "wait_for_result_container",
                                 "browserOutcome": page_state["outcome"],
                                 "browserReason": page_state["reason"],
                             }
@@ -2072,6 +2124,36 @@ class EbayBrowserSoldCompsProvider:
                                 "browserPageState": page_state,
                                 "providerDomain": search_query.provider_domain,
                                 "stageTimings": stage_timings.snapshot(),
+                            },
+                        ) from exc
+                    if should_fail_fast_empty_result_dom(
+                        is_smoke=b0_failfast,
+                        selector_counts=selector_counts,
+                        page_state=page_state,
+                    ):
+                        stage_snapshot = stage_timings.snapshot()
+                        timeout_instrumentation = build_result_container_timeout_diagnostics(
+                            page_url=_safe_page_url(page),
+                            wait_duration_ms=None,
+                            browser_session_navs=self._session_navs if reuse else 1,
+                            timeout_ms=wait_budget_ms,
+                            timeout_seconds=self.config.timeout_seconds,
+                            stage_timings=stage_snapshot,
+                        )
+                        raise ProviderTemporaryError(
+                            "Empty eBay result DOM for smoke/synthetic key (fail-fast)",
+                            diagnostics={
+                                "errorType": type(exc).__name__,
+                                "providerOutcome": "empty_result_dom",
+                                "browserPageState": page_state,
+                                "timedOutStage": "wait_for_result_container_failfast",
+                                "failFast": True,
+                                "smokeKey": True,
+                                "waitBudgetMs": wait_budget_ms,
+                                "stageTimings": stage_snapshot,
+                                "candidateSelectorCounts": selector_counts,
+                                "debugArtifacts": self._debug_artifact_paths(),
+                                **timeout_instrumentation,
                             },
                         ) from exc
                     stage_snapshot = stage_timings.snapshot()

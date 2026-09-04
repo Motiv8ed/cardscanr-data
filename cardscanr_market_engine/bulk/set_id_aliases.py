@@ -148,3 +148,30 @@ def is_synthetic_set_code(set_code: str | None, set_name: str | None = None) -> 
     if "smoke test" in name:
         return True
     return False
+
+
+def is_smoke_pricing_key(
+    *,
+    fingerprint: str | None = None,
+    set_code: str | None = None,
+    set_name: str | None = None,
+    card_name: str | None = None,
+    collector_number: str | None = None,
+) -> bool:
+    """True for synthetic smoke pricing keys (Charizard ex 001/999 nonsense, etc.)."""
+    if is_synthetic_set_code(set_code, set_name):
+        return True
+    fp = normalize_text(fingerprint)
+    if fp and ("smoke-test" in fp or "smoke_test" in fp or fp == "smoke"):
+        return True
+    card = normalize_text(card_name)
+    if card and "smoke test" in card:
+        return True
+    # Collector 001/999 alone is insufficient; require a smoke marker elsewhere.
+    num = normalize_text(collector_number)
+    if num in {"001/999", "1/999"} and (
+        (fp and "smoke" in fp) or (card and "smoke" in card) or is_synthetic_set_code(set_code, set_name)
+    ):
+        return True
+    return False
+

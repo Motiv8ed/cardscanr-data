@@ -10,6 +10,7 @@ from .config import REPORTS_DIR, supabase_secret_key_from_env
 from .failure_policy import is_identity_error_message
 from .marketplace_ops_state import get_active_cooldown
 from .queue_capacity import QueueWatermarks, enqueue_budget
+from .bulk.set_id_aliases import is_smoke_pricing_key
 from .refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from .smoke_utils import append_jsonl, sanitize_for_report, write_json
 
@@ -190,6 +191,25 @@ class MarketPriceRefreshScheduler:
         return (type_rank, due_ts, -seen_ts, str(item.get("id")))
 
     def evaluate_candidate(self, candidate: dict[str, Any], *, now: datetime) -> SchedulerDecision:
+        # CS-012e-B0: never enqueue synthetic smoke keys (they burn browser timeouts).
+        if is_smoke_pricing_key(
+            fingerprint=candidate.get("fingerprint"),
+            set_code=candidate.get("set_code"),
+            set_name=candidate.get("set_name"),
+            card_name=candidate.get("card_name"),
+            collector_number=candidate.get("collector_number"),
+        ):
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="skipped_synthetic_smoke",
+                score=0,
+                details={
+                    "fingerprint": candidate.get("fingerprint"),
+                    "set_code": candidate.get("set_code"),
+                    "card_name": candidate.get("card_name"),
+                },
+            )
         market_country = str(candidate.get("market_country") or "").strip().upper()
         if self.config.allowed_markets and market_country and market_country not in self.config.allowed_markets:
             return SchedulerDecision(
