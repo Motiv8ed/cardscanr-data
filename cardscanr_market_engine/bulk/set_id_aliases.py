@@ -51,6 +51,7 @@ _TCGDEX_SET_ALIASES: dict[str, str] = {
     "sv08": "sv08",
     "sv10": "sv10",
     "sv01": "sv01",
+    "sv1": "sv01",
     "sv04": "sv04",
     "base1": "base1",
     "swsh1": "swsh1",
@@ -63,6 +64,9 @@ _TCGDEX_SET_ALIASES: dict[str, str] = {
     "m3": "24600",
     "1433": "1433",
     "1375": "1375",
+    "mcd21": "2021swsh",
+    "mcd22": "2022swsh",
+    "mcd19": "2019sm",
 }
 
 # Numeric JP catalogue ids → PokeWallet provider set id (often same string).
@@ -121,6 +125,13 @@ def resolve_tcgdex_set_id(set_code: str | None, *, language: str | None = None) 
     if match:
         era, part = match.groups()
         return f"sv{int(era):02d}.{part}"
+    match = re.fullmatch(r"sv(\d+)", key)
+    if match:
+        return f"sv{int(match.group(1)):02d}"
+    match = re.fullmatch(r"me(\d+)pt(\d+)", key)
+    if match:
+        era, part = match.groups()
+        return f"me{int(era):02d}.{part}"
     match = re.fullmatch(r"me(\d+)", key)
     if match:
         return f"me{int(match.group(1)):02d}"

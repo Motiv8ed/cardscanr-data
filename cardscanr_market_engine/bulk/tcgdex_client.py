@@ -87,7 +87,44 @@ def _extract_variant_price(pricing_root: dict[str, Any], variant: str) -> tuple[
         "raw": "normal",
         "non_holo": "normal",
         "reverse_holo": "reverse",
+        "unknown": "normal",
+        "unreviewed": "normal",
     }.get(variant_key, variant_key)
+
+    # WotC-era TCGplayer finishes use unlimited / 1st-edition instead of normal.
+    # Prefer unlimited for Normal/raw; only use 1st-edition when variant asks for it.
+    if "1st" in variant_key or "first" in variant_key:
+        preferred_keys = (
+            "1st-edition",
+            "firstEdition",
+            "first-edition",
+            alias,
+            "holofoil",
+            "normal",
+            "unlimited",
+        )
+    elif alias in {"holofoil", "holo"} or "holo" in variant_key:
+        preferred_keys = (
+            "holofoil",
+            "holo",
+            alias,
+            "normal",
+            "unlimited",
+            "reverseHolofoil",
+            "reverse",
+        )
+    else:
+        preferred_keys = (
+            alias,
+            variant_key,
+            "normal",
+            "unlimited",
+            "holofoil",
+            "reverseHolofoil",
+            "reverse",
+            "reverse-holofoil",
+        )
+
     for market_key in ("tcgplayer", "cardmarket"):
         market = pricing_root.get(market_key)
         if not isinstance(market, dict):
@@ -95,7 +132,7 @@ def _extract_variant_price(pricing_root: dict[str, Any], variant: str) -> tuple[
         prices = market.get("prices") if isinstance(market.get("prices"), dict) else market
         if not isinstance(prices, dict):
             continue
-        for key in (alias, variant_key, "normal", "holofoil", "reverseHolofoil", "reverse"):
+        for key in preferred_keys:
             entry = prices.get(key)
             if not isinstance(entry, dict):
                 continue
@@ -110,6 +147,18 @@ def _extract_variant_price(pricing_root: dict[str, Any], variant: str) -> tuple[
                 currency = "USD" if market_key == "tcgplayer" else "EUR"
                 provider = "tcgdex_tcgplayer" if market_key == "tcgplayer" else "tcgdex_cardmarket"
                 return value, provider
+        # Cardmarket often stores avg/low on the market object itself.
+        if market_key == "cardmarket":
+            for field in ("avg", "trend", "low"):
+                market_price = prices.get(field)
+                if market_price is None:
+                    continue
+                try:
+                    value = float(market_price)
+                except (TypeError, ValueError):
+                    continue
+                if value > 0:
+                    return value, "tcgdex_cardmarket"
     return None, None
 
 
