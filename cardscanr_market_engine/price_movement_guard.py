@@ -31,6 +31,8 @@ def evaluate_price_movement(
     new_price: Any,
     included_count: int = 0,
     confidence: str | None = None,
+    prior_confidence: str | None = None,
+    prior_included_count: int | None = None,
     absolute_threshold: float = 15.0,
     percent_threshold: float = 50.0,
     low_price_floor: float = 2.0,
@@ -41,9 +43,30 @@ def evaluate_price_movement(
     Rules of thumb:
     - Tiny absolute moves on cheap cards: accept even if % is large ($0.20->$0.40).
     - Large absolute + large % moves ($65->$5): require stronger evidence or pending verification.
+    - Do not replace a prior MEDIUM/HIGH estimate with a weaker LOW/empty refresh.
     """
     old_v = _f(old_price)
     new_v = _f(new_price)
+    prior_conf = (prior_confidence or "").strip().lower()
+    new_conf = (confidence or "").strip().lower()
+    prior_n = int(prior_included_count or 0)
+    new_n = int(included_count or 0)
+    if old_v is not None and old_v > 0 and prior_conf in {"medium", "high"} and prior_n >= 3:
+        if new_v is None or new_n <= 0 or new_conf in {"", "low", "none"}:
+            return PriceMovementDecision(
+                action="reject_weak",
+                reason="preserve_prior_stronger_than_weak_refresh",
+                pct_change=None,
+                abs_change=None,
+                old_price=old_v,
+                new_price=new_v,
+                diagnostics={
+                    "priorConfidence": prior_conf,
+                    "newConfidence": new_conf,
+                    "priorIncludedCount": prior_n,
+                    "includedCount": new_n,
+                },
+            )
     if new_v is None:
         return PriceMovementDecision(
             action="accept",
@@ -71,8 +94,10 @@ def evaluate_price_movement(
         "absoluteThreshold": absolute_threshold,
         "percentThreshold": percent_threshold,
         "lowPriceFloor": low_price_floor,
-        "includedCount": int(included_count),
+        "includedCount": new_n,
         "confidence": confidence,
+        "priorConfidence": prior_conf or None,
+        "priorIncludedCount": prior_n or None,
         "minIncludedForLargeMove": min_included_for_large_move,
     }
 
@@ -102,8 +127,8 @@ def evaluate_price_movement(
 
     # Extreme moves (e.g. $65 -> $5) need a higher bar than ordinary large moves.
     extreme = pct_change >= 70.0 or abs_change >= 40.0
-    conf = (confidence or "").strip().lower()
-    included = int(included_count)
+    conf = new_conf
+    included = new_n
     if included <= 0:
         return PriceMovementDecision(
             action="reject_weak",

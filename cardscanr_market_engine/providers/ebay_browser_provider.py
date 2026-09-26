@@ -49,7 +49,16 @@ NO_RESULTS_TEXT_MARKERS = ("0 results", "no exact matches found", "no results fo
 RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category")
 BLOCK_TEXT_MARKERS = CHALLENGE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
 DEFAULT_SOLD_DATE = datetime(1970, 1, 1, tzinfo=timezone.utc)
-SUPPORTED_MARKET_ROUTES = {("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")}
+SUPPORTED_MARKET_ROUTES = {
+    ("AU", "AUD"),
+    ("US", "USD"),
+    ("GB", "GBP"),
+    ("CA", "CAD"),
+    ("DE", "EUR"),
+    ("FR", "EUR"),
+    ("IT", "EUR"),
+    ("ES", "EUR"),
+}
 DEBUG_REPORTS_DIR = ROOT / "reports" / "ebay_browser_debug"
 RESULT_SELECTOR_COUNTS = (
     "li.s-item",
@@ -68,6 +77,36 @@ GENERIC_TITLE_MARKERS = (
     "opens in a new window or tab",
     "new listing",
     "image not available",
+    "pre-owned",
+    "pre owned",
+    "brand new",
+    "best offer accepted",
+    "buy it now",
+)
+# Exact UI-control titles occasionally scraped from US sold-result cards.
+CHROME_ONLY_TITLES = frozenset(
+    {
+        "buy it now",
+        "best offer",
+        "best offer accepted",
+        "or",
+        "add to cart",
+        "shop now",
+        "watch",
+        "watching",
+        "bids",
+        "1 bid",
+        "2 bids",
+        "3 bids",
+        "sponsored",
+        "pre-owned",
+        "pre owned",
+        "brand new",
+        "new listing",
+        "see all",
+        "more options",
+        "make offer",
+    }
 )
 TITLE_UI_BOUNDARY_RE = re.compile(
     r"\s+(?:"
@@ -76,6 +115,10 @@ TITLE_UI_BOUNDARY_RE = re.compile(
     r"buy\s+it\s+now|best\s+offer|"
     r"view\s+similar\s+active\s+items|sell\s+one\s+like\s+this"
     r")\b",
+    flags=re.IGNORECASE,
+)
+SOLD_DATE_LINE_RE = re.compile(
+    r"^sold\s+(?:[0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4}|[A-Za-z]{3,9}\s+[0-9]{1,2},\s+[0-9]{4})",
     flags=re.IGNORECASE,
 )
 PICK_YOUR_CARD_PATTERNS = (
@@ -96,7 +139,16 @@ PICK_YOUR_CARD_PATTERNS = (
 LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ", " bulk ", " card lot ", " holo lot ", " mixed lot ")
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
-SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
+SUPPORTED_EBAY_DOMAINS = (
+    "ebay.com.au",
+    "ebay.com",
+    "ebay.co.uk",
+    "ebay.ca",
+    "ebay.de",
+    "ebay.fr",
+    "ebay.it",
+    "ebay.es",
+)
 EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity/")
 DEFAULT_MAX_QUERY_ATTEMPTS = 5
 RESULT_CONTAINER_SELECTOR = 'li.s-item, .srp-results, a[href*="/itm/"]'
@@ -586,33 +638,95 @@ def extract_location_text(text: str) -> str:
     return match.group(0).rstrip(".,| ") if match else ""
 
 
+def is_chrome_only_title(value: str) -> bool:
+    """True when the extracted string is only a purchase/control label, not a listing title."""
+    title = _normalise_text(value)
+    if not title:
+        return True
+    lowered = title.lower()
+    if lowered in CHROME_ONLY_TITLES:
+        return True
+    if any(marker in lowered for marker in PROMO_TITLE_MARKERS):
+        return True
+    if any(marker == lowered or lowered.startswith(f"{marker} ") for marker in GENERIC_TITLE_MARKERS):
+        return True
+    # Very short all-control tokens ("or", "bid", "new").
+    if len(lowered) <= 3 and not any(ch.isdigit() for ch in lowered):
+        return True
+    return False
+
+
 def clean_candidate_title(value: str) -> str:
     title = _normalise_text(value)
-    lowered = title.lower()
     if not title:
         return ""
+    # Strip leading "New listing" badge text that sometimes prefixes real titles.
+    title = re.sub(r"^(?:new\s+listing)\s*", "", title, flags=re.IGNORECASE).strip()
+    # Product-rating prefixes sometimes leave a leading dash before the real title.
+    title = re.sub(r"^[\-\u2013\u2014]+\s*", "", title).strip()
+    boundary = TITLE_UI_BOUNDARY_RE.search(title)
+    if boundary:
+        title = title[: boundary.start()].strip()
+    if not title:
+        return ""
+    if is_chrome_only_title(title):
+        return ""
+    lowered = title.lower()
     if any(marker in lowered for marker in PROMO_TITLE_MARKERS):
         return ""
-    if any(marker in lowered for marker in GENERIC_TITLE_MARKERS):
+    if any(marker in lowered for marker in GENERIC_TITLE_MARKERS) and len(title.split()) <= 4:
+        # Short strings that merely contain a chrome marker are not titles.
         return ""
     return title
 
 
+def _line_looks_like_listing_title(line: str) -> bool:
+    text = _normalise_text(line)
+    if not text or is_chrome_only_title(text):
+        return False
+    lowered = text.lower()
+    if SOLD_DATE_LINE_RE.match(text):
+        return False
+    # Reject pure shipping/seller lines, but keep titles that merely mention postage.
+    if re.match(r"^(?:delivery|shipping|postage|from|seller)\b", lowered):
+        return False
+    if any(token in lowered for token in ("free shipping", "free postage", "free delivery")) and len(text) < 40:
+        return False
+    # Prefer substantive titles: length, collector form, or card-ish tokens.
+    if len(text) >= 18:
+        return True
+    if re.search(r"\b\d+\s*/\s*\d+\b", text) or re.search(r"#\s*\d+\b", text):
+        return True
+    if any(token in lowered for token in ("pokemon", "pokémon", "base set", "tcg", "holo")):
+        return True
+    return False
+
+
 def extract_title_from_lines(lines: list[str], *, href_text: str = "", expected_currency: str = "AUD") -> str:
-    anchor_title = clean_candidate_title(href_text)
-    if anchor_title:
-        return anchor_title
+    """Pick a canonical listing title; never return purchase-control chrome."""
+    for candidate in (href_text,):
+        cleaned = clean_candidate_title(candidate)
+        if cleaned and _line_looks_like_listing_title(cleaned):
+            return cleaned
+        if cleaned and len(cleaned) >= 12 and not is_chrome_only_title(cleaned):
+            return cleaned
+
+    scored: list[tuple[int, str]] = []
     for line in lines:
         lowered = line.lower()
         candidate_line = line
-        if lowered.startswith("sold "):
+        if SOLD_DATE_LINE_RE.match(candidate_line):
+            candidate_line = SOLD_DATE_LINE_RE.sub("", candidate_line).strip()
+        elif lowered.startswith("sold "):
             candidate_line = re.sub(
                 r"^sold\s+(?:[0-9]{1,2}\s+[A-Za-z]{3,9}\s+[0-9]{4}|[A-Za-z]{3,9}\s+[0-9]{1,2},\s+[0-9]{4})\s*",
                 "",
                 candidate_line,
                 flags=re.IGNORECASE,
             )
-        elif "delivery" in lowered or "shipping" in lowered or "postage" in lowered:
+        elif any(token in lowered for token in ("delivery", "shipping", "postage")):
+            continue
+        if is_chrome_only_title(candidate_line):
             continue
         if _looks_like_price_line(candidate_line, expected_currency=expected_currency):
             price_matches = _iter_price_matches(candidate_line, expected_currency=expected_currency)
@@ -625,12 +739,21 @@ def extract_title_from_lines(lines: list[str], *, href_text: str = "", expected_
         if boundary:
             candidate_line = candidate_line[: boundary.start()]
         candidate_line = candidate_line.strip()
-        if not candidate_line:
-            continue
         title = clean_candidate_title(candidate_line)
-        if title:
-            return title
-    return ""
+        if not title:
+            continue
+        if not _line_looks_like_listing_title(title):
+            continue
+        score = len(title)
+        if re.search(r"\b\d+\s*/\s*\d+\b", title):
+            score += 40
+        if "pokemon" in title.lower() or "pokémon" in title.lower():
+            score += 20
+        scored.append((score, title))
+    if not scored:
+        return ""
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return scored[0][1]
 
 
 def parse_candidate_dict(
@@ -648,12 +771,26 @@ def parse_candidate_dict(
     raw_text = str(candidate.get("text") or "")
     lines = [_normalise_text(line) for line in raw_text.splitlines()]
     lines = [line for line in lines if line]
-    title = extract_title_from_lines(
-        lines,
-        href_text=str(candidate.get("title") or candidate.get("anchorText") or ""),
-        expected_currency=search_query.currency,
-    )
-    if not title:
+    structured_title = clean_candidate_title(str(candidate.get("title") or ""))
+    href_title = clean_candidate_title(str(candidate.get("anchorText") or ""))
+    # Prefer dedicated listing-title node, then safe aria/title attrs, then
+    # scored line extraction. Never prefer whole-card chrome first.
+    title = ""
+    title_source = "missing"
+    if structured_title and not is_chrome_only_title(structured_title):
+        title = structured_title
+        title_source = str(candidate.get("titleSource") or "s-item__title")
+    elif href_title and not is_chrome_only_title(href_title) and len(href_title) >= 12:
+        title = href_title
+        title_source = "anchor-attr"
+    else:
+        title = extract_title_from_lines(
+            lines,
+            href_text="",
+            expected_currency=search_query.currency,
+        )
+        title_source = "scored-lines" if title else "missing"
+    if not title or is_chrome_only_title(title):
         return None
     structured_price_text = _normalise_text(candidate.get("priceText") or "")
     fallback_price_text = ""
@@ -731,6 +868,7 @@ def parse_candidate_dict(
                 "shippingDiagnostics": shipping_diagnostics,
                 "soldDateText": sold_date_text,
                 "candidateSource": candidate.get("source"),
+                "titleSource": title_source,
                 "rawTextSnippet": _normalise_text(raw_text)[:500],
                 "identityTitle": title,
             }
@@ -979,17 +1117,49 @@ def collect_candidate_dicts(page: Any, *, max_results: int) -> list[dict[str, An
     ({ maxResults }) => {
       const norm = (value) => (value || '').replace(/\\s+/g, ' ').trim();
       const blockText = (value) => (value || '').replace(/\\r/g, '').trim();
+      const chromeExact = new Set([
+        'buy it now', 'best offer', 'best offer accepted', 'or', 'add to cart',
+        'shop now', 'watch', 'watching', 'bids', '1 bid', '2 bids', '3 bids',
+        'sponsored', 'pre-owned', 'pre owned', 'brand new', 'new listing',
+        'see all', 'more options', 'make offer', 'shop on ebay'
+      ]);
+      const isChrome = (value) => {
+        const t = norm(value).toLowerCase();
+        if (!t) return true;
+        if (chromeExact.has(t)) return true;
+        if (t.length <= 3 && !/\\d/.test(t)) return true;
+        return false;
+      };
       const textOf = (root, selectors) => {
         for (const selector of selectors) {
           const node = root.querySelector(selector);
-          const text = norm(node && node.innerText);
-          if (text) return text;
+          if (!node) continue;
+          // Prefer heading text; avoid nested CTA buttons inside the title node.
+          const heading = node.querySelector('[role="heading"]') || node;
+          let text = norm(heading.innerText || heading.textContent);
+          // Drop "New listing" badge prefixes.
+          text = text.replace(/^(?:new listing)\\s+/i, '').trim();
+          if (text && !isChrome(text)) return text;
         }
         return '';
       };
       const hrefOf = (root) => {
         const link = root.matches && root.matches('a[href*="/itm/"]') ? root : root.querySelector('a[href*="/itm/"]');
-        return link ? { href: link.href || '', anchorText: norm(link.innerText || link.getAttribute('aria-label')) } : { href: '', anchorText: '' };
+        if (!link) return { href: '', anchorText: '', titleSource: '' };
+        // Prefer title/aria attributes over innerText — US sold cards often put
+        // "Buy It Now" / "or" / "Best Offer" into the link's innerText.
+        const aria = norm(link.getAttribute('aria-label') || '');
+        const titleAttr = norm(link.getAttribute('title') || '');
+        let anchorText = '';
+        let titleSource = '';
+        for (const [candidate, source] of [[aria, 'aria-label'], [titleAttr, 'title-attr']]) {
+          if (candidate && !isChrome(candidate) && candidate.length >= 12) {
+            anchorText = candidate;
+            titleSource = source;
+            break;
+          }
+        }
+        return { href: link.href || '', anchorText, titleSource };
       };
       const usefulParent = (anchor) => {
         const selectors = ['li.s-item', '.s-item', '.srp-results li', '[data-view]'];
@@ -1008,15 +1178,29 @@ def collect_candidate_dicts(page: Any, *, max_results: int) -> list[dict[str, An
         const key = link.href.split('?')[0];
         if (seen.has(key)) return;
         seen.add(key);
+        const structuredTitle = textOf(node, [
+          'h3.s-item__title [role="heading"]',
+          'h3.s-item__title',
+          '.s-item__title [role="heading"]',
+          '.s-item__title span[role="heading"]',
+          '.s-item__title span',
+          '.s-item__title',
+          '[class*="s-card__title"] [role="heading"]',
+          '[class*="s-card__title"]',
+          'div[role="heading"]',
+          'h3[role="heading"]',
+          '.su-card-container__header [role="heading"]',
+        ]);
         const text = blockText(node.innerText);
         out.push({
           source,
           href: link.href,
           anchorText: link.anchorText,
-          title: textOf(node, ['.s-item__title span', '.s-item__title', 'a.s-item__link']),
+          title: structuredTitle,
+          titleSource: structuredTitle ? 's-item__title' : (link.titleSource || ''),
           priceText: textOf(node, ['.s-item__price', '.s-item__detail--primary']),
           shippingText: textOf(node, ['.s-item__shipping', '.s-item__logisticsCost']),
-          soldDateText: textOf(node, ['.s-item__title--tagblock .POSITIVE', '.s-item__caption--row']),
+          soldDateText: textOf(node, ['.s-item__title--tagblock .POSITIVE', '.s-item__caption--row', '.s-item__caption']),
           conditionText: textOf(node, ['.SECONDARY_INFO', '.s-item__subtitle']),
           itemLocationText: textOf(node, ['.s-item__location', '.s-item__itemLocation', '.s-item__seller-info-text']),
           text
@@ -1665,7 +1849,8 @@ class EbayBrowserSoldCompsProvider:
         route = (request.market_country.upper(), request.currency.upper())
         if route not in SUPPORTED_MARKET_ROUTES:
             raise ProviderUnsupportedMarketError(
-                "eBay browser provider currently supports AU/AUD, US/USD, GB/GBP, and CA/CAD only",
+                "eBay browser provider currently supports "
+                "AU/AUD, US/USD, GB/GBP, CA/CAD, DE/EUR, FR/EUR, IT/EUR, ES/EUR only",
                 diagnostics={"marketCountry": request.market_country, "currency": request.currency},
             )
         identity_guard = evaluate_english_market_identity(request)
@@ -2350,8 +2535,24 @@ class EbayBrowserSoldCompsProvider:
         search_query: ProviderSearchQuery,
     ) -> SoldComp | None:
         raw_text = _normalise_text(card.inner_text(timeout=3000))
-        title = self._first_inner_text(card, [".s-item__title span", ".s-item__title"])
-        if not title or "shop on ebay" in title.lower():
+        raw_title = self._first_inner_text(
+            card,
+            [
+                'h3.s-item__title [role="heading"]',
+                "h3.s-item__title",
+                '.s-item__title [role="heading"]',
+                ".s-item__title span",
+                ".s-item__title",
+            ],
+        )
+        title = clean_candidate_title(raw_title)
+        if not title:
+            title = extract_title_from_lines(
+                [_normalise_text(line) for line in raw_text.splitlines() if _normalise_text(line)],
+                href_text="",
+                expected_currency=search_query.currency,
+            )
+        if not title or is_chrome_only_title(title) or "shop on ebay" in title.lower():
             return None
         price_text = self._first_inner_text(card, [".s-item__price", ".s-item__detail--primary"])
         sold_price, detected_currency, price_diagnostics = parse_price_text(
