@@ -7,7 +7,13 @@ from datetime import datetime, timedelta, timezone
 from cardscanr_market_engine.international.display_price_resolver import resolve_price_presentation
 from cardscanr_market_engine.international.fallback_eligibility import evaluate_international_fallback_eligibility
 from cardscanr_market_engine.international.fx_freshness import evaluate_fx_freshness
-from cardscanr_market_engine.international.market_fallback_policy import fallback_markets_for_key
+from cardscanr_market_engine.international.market_fallback_policy import (
+    LOW_CONFIDENCE,
+    NO_RESULTS,
+    SUFFICIENT_FOREIGN_COMPS,
+    classify_foreign_market_attempt,
+    fallback_markets_for_key,
+)
 from cardscanr_market_engine.models import MarketPriceKey
 from cardscanr_market_engine.currency_conversion import resolve_currency_conversion
 
@@ -37,13 +43,45 @@ class InternationalFallbackPolicyTests(unittest.TestCase):
         markets = fallback_markets_for_key(_key())
         self.assertEqual(markets, ("US", "GB", "CA"))
 
-    def test_japanese_card_has_no_cross_language_fallback(self) -> None:
+    def test_japanese_card_may_search_same_printing_on_en_markets(self) -> None:
+        """JA printings: home AU first (separate job); intl may use EN-domain eBay
+        for the same Japanese identity — never an English printing substitute."""
         markets = fallback_markets_for_key(_key(language="ja", market_country="au", currency="aud"))
+        self.assertEqual(markets, ("US", "GB", "CA"))
+
+    def test_korean_card_has_no_browser_fallback_yet(self) -> None:
+        markets = fallback_markets_for_key(_key(language="ko", market_country="au", currency="aud"))
         self.assertEqual(markets, ())
 
     def test_us_fallback_order(self) -> None:
         markets = fallback_markets_for_key(_key(market_country="us", currency="usd"))
         self.assertEqual(markets[0], "CA")
+
+    def test_classify_foreign_market_attempt(self) -> None:
+        self.assertEqual(
+            classify_foreign_market_attempt(
+                included_count=0, recommended_price=None, confidence="low"
+            ),
+            NO_RESULTS,
+        )
+        self.assertEqual(
+            classify_foreign_market_attempt(
+                included_count=1,
+                recommended_price=10.0,
+                confidence="low",
+                evidence_outcome="unavailable",
+            ),
+            LOW_CONFIDENCE,
+        )
+        self.assertEqual(
+            classify_foreign_market_attempt(
+                included_count=8,
+                recommended_price=12.0,
+                confidence="high",
+                evidence_outcome="numeric_estimate",
+            ),
+            SUFFICIENT_FOREIGN_COMPS,
+        )
 
 
 class InternationalFallbackEligibilityTests(unittest.TestCase):

@@ -23,13 +23,18 @@ from ..marketplaces import LocalMarketConfig, resolve_marketplace_config
 from ..models import EvaluatedComp, MarketPriceKey, MarketPriceRefreshJob, PricingStats, ProviderRequest, ProviderResult
 from ..price_movement_guard import evaluate_price_movement, movement_diagnostics
 from ..pricing_stats import calculate_pricing_stats
+from .evidence_gate import evaluate_international_evidence_gate_from_stats
 from .fallback_eligibility import evaluate_international_fallback_eligibility
 from .fx_freshness import (
     assert_fx_allows_international_conversion,
     evaluate_fx_freshness,
 )
 from .fx_cache import load_production_pair_rates
-from .market_fallback_policy import market_display_name, parse_international_job_reason
+from .market_fallback_policy import (
+    classify_foreign_market_attempt,
+    market_display_name,
+    parse_international_job_reason,
+)
 
 
 INTERNATIONAL_TTL_HOURS = {
@@ -149,6 +154,13 @@ class InternationalFallbackMixin:
                 provider_result = self.provider.fetch_comps(provider_request)
                 evaluated_comps = filter_comps(provider_key, provider_result.comps)
                 source_stats = calculate_pricing_stats(evaluated_comps, now=now, config=self.config)
+                evidence = evaluate_international_evidence_gate_from_stats(source_stats)
+                attempt_status = classify_foreign_market_attempt(
+                    included_count=int(source_stats.included_count or 0),
+                    recommended_price=source_stats.recommended_price,
+                    confidence=source_stats.confidence,
+                    evidence_outcome=evidence.outcome,
+                )
                 attempts.append(
                     {
                         "fallbackLevel": fallback_level,
@@ -160,9 +172,14 @@ class InternationalFallbackMixin:
                         "recommendedPriceAvailable": source_stats.recommended_price is not None,
                         "confidence": source_stats.confidence,
                         "noReliablePriceReason": source_stats.no_reliable_price_reason,
+                        "attemptStatus": attempt_status,
+                        "evidenceGate": evidence.to_dict(),
+                        "shippingTreatment": "item_price_excluding_shipping",
+                        "destinationShipping": "unavailable_for_sold_comps",
                     }
                 )
-                if source_stats.included_count <= 0 or source_stats.recommended_price is None:
+                # Do not stop on weak foreign evidence — try the next market.
+                if not evidence.allows_user_facing_price:
                     continue
                 same_currency = (
                     str(provider_request.currency).upper() == str(price_key.currency).upper()
@@ -197,6 +214,8 @@ class InternationalFallbackMixin:
                 provider_result.raw_metadata["internationalFallback"] = {
                     "homeMarket": home_config.market_country,
                     "sourceMarket": market_config.market_country,
+                    "evidenceGate": evidence.to_dict(),
+                    "marketTrace": list(attempts),
                     "fxFreshness": {
                         "stale": fx.stale,
                         "health": fx.health,
@@ -233,6 +252,12 @@ class InternationalFallbackMixin:
                         "marketCountry": market_config.market_country,
                         "currency": market_config.currency,
                         "error": str(exc),
+                        "attemptStatus": classify_foreign_market_attempt(
+                            included_count=0,
+                            recommended_price=None,
+                            confidence=None,
+                            error=str(exc),
+                        ),
                     }
                 )
                 continue
@@ -419,6 +444,35 @@ class InternationalFallbackMixin:
             confidence=pricing_stats.confidence,
         )
         provider_result.raw_metadata["priceMovement"] = movement_diagnostics(movement)
+
+        # Final evidence gate before any user-facing international cache write.
+        evidence = evaluate_international_evidence_gate_from_stats(source_pricing_stats)
+        if not evidence.allows_user_facing_price:
+            message = f"international_fallback_insufficient_evidence:{evidence.reason}"
+            backoff = now + timedelta(hours=24)
+            self.client.fail_job(
+                job_id=job.id,
+                error_message=message,
+                retryable=True,
+                retry_delay_minutes=24 * 60,
+            )
+            if hasattr(self.client, "mark_cache_failure"):
+                self.client.mark_cache_failure(
+                    price_key_id=price_key.id,
+                    error_message=message,
+                    next_refresh_due_at=backoff,
+                    market_country=price_key.market_country,
+                    currency=price_key.currency,
+                )
+            return {
+                "jobId": job.id,
+                "priceKeyId": price_key.id,
+                "status": "failed",
+                "error": message,
+                "evidenceGate": evidence.to_dict(),
+                "fallbackAttempts": fallback_attempts,
+            }
+
         if movement.action in {"pending_verification", "reject_weak"}:
             pricing_stats = replace(
                 pricing_stats,
