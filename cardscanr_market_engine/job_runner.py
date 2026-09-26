@@ -616,6 +616,9 @@ class MarketPriceJobRunner:
                 new_price=pricing_stats.recommended_price,
                 included_count=int(pricing_stats.included_count or 0),
                 confidence=pricing_stats.confidence,
+                prior_confidence=(prior_cache or {}).get("confidence"),
+                prior_included_count=(prior_cache or {}).get("included_count")
+                or (prior_cache or {}).get("sample_size"),
             )
             provider_result.raw_metadata["priceMovement"] = movement_diagnostics(movement)
             if movement.action == "pending_verification" and pricing_stats.recommended_price is not None:

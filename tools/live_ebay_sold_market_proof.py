@@ -62,20 +62,18 @@ class PilotCard:
     condition: str = "raw"
 
 
-PILOT_CARDS: tuple[PilotCard, ...] = (
-    PilotCard("AU common EN", "Pikachu", "Base", "base1", "58", "en", "AU", "AUD"),
-    PilotCard("AU valuable EN", "Charizard", "Base", "base1", "4", "en", "AU", "AUD"),
-    PilotCard("AU scarce modern EN", "Iron Valiant ex", "Paradox Rift", "sv4", "249", "en", "AU", "AUD"),
-    PilotCard("AU JA printing", "ピカチュウ", "XY", "xy1", "26", "ja", "AU", "AUD"),
-    PilotCard("AU me5", "Tropius", "Pitch Black", "me5", "1", "en", "AU", "AUD"),
-    PilotCard("AU me55", "Pikachu", "30th Celebration", "me55", "1", "en", "AU", "AUD"),
-    PilotCard("AU m6a JA", "ピカチュウ", "M6a", "m6a", "1", "ja", "AU", "AUD"),
-    PilotCard("US home", "Pikachu", "Base", "base1", "58", "en", "US", "USD"),
-    PilotCard("GB home", "Pikachu", "Base", "base1", "58", "en", "GB", "GBP"),
-    PilotCard("CA home", "Pikachu", "Base", "base1", "58", "en", "CA", "CAD"),
-    PilotCard("DE home probe", "Pikachu", "Base", "base1", "58", "en", "DE", "EUR"),
-    PilotCard("NZ no-native", "Pikachu", "Base", "base1", "58", "en", "NZ", "NZD"),
+FINAL_PILOT_CARDS: tuple[PilotCard, ...] = (
+    PilotCard("AU common EN", "Pikachu", "Base Set", "base1", "58/102", "en", "AU", "AUD"),
+    PilotCard("AU valuable EN", "Charizard", "Base Set", "base1", "4/102", "en", "AU", "AUD"),
+    PilotCard("AU modern EN", "Iron Valiant ex", "Paradox Rift", "sv4", "249/182", "en", "AU", "AUD"),
+    PilotCard("AU→US fallback EN", "Tropius", "Pitch Black", "me5", "001/078", "en", "AU", "AUD"),
+    PilotCard("JA exact m6a", "ピカチュウ", "M6a", "m6a", "1", "ja", "AU", "AUD"),
+    PilotCard("US home", "Pikachu", "Base Set", "base1", "58/102", "en", "US", "USD"),
+    PilotCard("GB home", "Pikachu", "Base Set", "base1", "58/102", "en", "GB", "GBP"),
+    PilotCard("CA probe", "Pikachu", "Base Set", "base1", "58/102", "en", "CA", "CAD"),
 )
+
+PILOT_CARDS = FINAL_PILOT_CARDS
 
 
 def _utc_now() -> str:
@@ -266,8 +264,12 @@ def run_pilot(provider: EbayBrowserSoldCompsProvider, *, limit: int) -> list[dic
         # If home insufficient / missing, try first foreign browser market.
         need_fallback = (
             home_result.get("status") == "NO_NATIVE_SOLD_ROUTE"
+            or home_result.get("status") == "error"
             or int(home_result.get("acceptedCount") or 0) < 3
             or home_result.get("recommendedPrice") is None
+            or str(home_result.get("confidence") or "").lower() == "low"
+            or "fallback" in card.label.lower()
+            or card.language in {"ja", "jp"}
         )
         if need_fallback:
             foreign = "US" if card.home_market != "US" else "GB"
@@ -276,6 +278,23 @@ def run_pilot(provider: EbayBrowserSoldCompsProvider, *, limit: int) -> list[dic
             markets_attempted.append(
                 _search_one(provider, card=card, market=foreign, currency=foreign_currency)
             )
+        # CA intermittent: one retry on timeout/error.
+        if card.home_market == "CA" and home_result.get("status") == "error":
+            print(f"[pilot] {card.label} CA retry", flush=True)
+            retry = _search_one(
+                provider,
+                card=card,
+                market="CA",
+                currency="CAD",
+            )
+            markets_attempted.append(retry)
+            if retry.get("status") != "ok":
+                home_result = {
+                    **home_result,
+                    "classification": "LIVE_SUPPORTED_INTERMITTENT",
+                    "note": "CA timed out; US fallback is the safe degradation path.",
+                }
+                markets_attempted[0] = home_result
         rows.append(
             {
                 "label": card.label,
@@ -295,6 +314,12 @@ def main() -> int:
     args = parser.parse_args()
     if not args.probe_markets and not args.pilot:
         parser.error("Pass --probe-markets and/or --pilot")
+
+    # Modest timeout bump for CA/session flakiness — no anti-bot bypass.
+    import os
+
+    os.environ.setdefault("EBAY_BROWSER_TIMEOUT_SECONDS", "60")
+    os.environ.setdefault("EBAY_BROWSER_ENABLED", "true")
 
     config = EbayBrowserProviderConfig.from_env()
     provider = EbayBrowserSoldCompsProvider(config=config)

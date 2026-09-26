@@ -27,6 +27,15 @@ REJECTION_PATTERNS: dict[str, tuple[str, ...]] = {
         " card lot ",
         " holo lot ",
         " mixed lot ",
+        " binder ",
+        " buy 2 ",
+        " buy two ",
+        " get 1 free ",
+        " get one free ",
+        " x2 ",
+        " x3 ",
+        " x4 ",
+        " mixed cards ",
     ),
     "variation_or_pick": (
         " choose your card ",
@@ -56,10 +65,73 @@ REJECTION_PATTERNS: dict[str, tuple[str, ...]] = {
         " sealed ",
         " pack ",
         " tin ",
+        " box ",
+        " deck ",
     ),
     "oversized": (" jumbo ", " oversized ", " over sized ", " giant card "),
 }
-GRADED_TERMS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
+GRADED_TERMS = (
+    " psa ",
+    " bgs ",
+    " cgc ",
+    " sgc ",
+    " ace ",
+    " graded ",
+    " slab ",
+    " slabbed ",
+    " gem mint ",
+    " mint 10 ",
+    " psa 10 ",
+    " cgc 10 ",
+    " bgs 9.5 ",
+    " cgc 9.5 ",
+    " psa 9 ",
+)
+GRADED_SIGNAL_RE = re.compile(
+    r"\b(?:psa|bgs|cgc|sgc|ace)\s*(?:10|9\.5|9|8\.5|8)\b|\bgem\s+mint\b|\bmint\s*10\b|\bgraded\b|\bslabs?\b",
+    flags=re.IGNORECASE,
+)
+CONDITION_ONLY_TITLES = frozenset(
+    {
+        "pre owned",
+        "pre-owned",
+        "brand new",
+        "new",
+        "used",
+        "like new",
+        "very good",
+        "good",
+        "acceptable",
+        "or",
+        "buy it now",
+        "1 bid",
+        "2 bids",
+        "3 bids",
+        "best offer accepted",
+        "best offer",
+    }
+)
+NON_ENGLISH_LANGUAGE_RE = re.compile(
+    r"\b(?:"
+    r"french|fran[cç]ais|français|"
+    r"german|deutsch|"
+    r"italian|italiano|"
+    r"spanish|espa[nñ]ol|espanol|"
+    r"portuguese|portugu[eê]s|"
+    r"dutch|nederlands|"
+    r"japanese|japan|jpn|"
+    r"korean|china|chinese"
+    r")\b",
+    flags=re.IGNORECASE,
+)
+BASE_SET_CONFLICT_RE = re.compile(
+    r"\b(?:25th\s+anniversary|30th\s+celebrations?|celebrations?|classic\s+collection|metal\s+gold\s+card)\b",
+    flags=re.IGNORECASE,
+)
+NON_CARD_PRODUCT_RE = re.compile(
+    r"\b(?:sticker|vending|pin\b|plush|figure|toy|poster|playmat|sleeve|deck\s*box)\b",
+    flags=re.IGNORECASE,
+)
 REVERSE_HOLO_RE = re.compile(
     r"\b(?:reverse[\s-]+holo|rev[\s-]+holo|holofoil[\s-]+reverse|reverse[\s-]+foil|rh)\b",
     flags=re.IGNORECASE,
@@ -224,8 +296,9 @@ def _language_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | 
         ),
     )
     english = _has_explicit_language(evidence, (r"\benglish\b", r"\beng\b"))
+    other_european = bool(NON_ENGLISH_LANGUAGE_RE.search(evidence)) and not japanese and not korean and not chinese
     if requested == "jp":
-        if korean or chinese or english:
+        if korean or chinese or english or other_european:
             return "wrong_language"
         if not japanese:
             return "wrong_language"
@@ -238,6 +311,13 @@ def _language_reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | 
         )
         if not allows_cross_language and (japanese or korean or chinese):
             return "wrong_language"
+        # Explicit non-English European printings must not price EN cards.
+        if re.search(
+            r"\b(?:french|fran[cç]ais|français|german|deutsch|italian|italiano|spanish|espa[nñ]ol|espanol|portuguese|portugu[eê]s)\b",
+            evidence,
+            flags=re.IGNORECASE,
+        ):
+            return "wrong_language"
     return None
 
 
@@ -246,9 +326,201 @@ def _is_lot_or_bundle(normalized_evidence: str) -> bool:
         return True
     if re.search(r"\b(?:lot|bulk|bundle)s?\b", normalized_evidence, flags=re.IGNORECASE):
         return True
-    if MULTI_CARD_COUNT_RE.search(normalized_evidence) and re.search(r"\b(?:cards?|pokemon|holo|non holo|reverse)\b", normalized_evidence, flags=re.IGNORECASE):
+    if re.search(r"\bbuy\s+\d+\b", normalized_evidence, flags=re.IGNORECASE) and re.search(
+        r"\b(?:get|free|cards?)\b", normalized_evidence, flags=re.IGNORECASE
+    ):
+        return True
+    if MULTI_CARD_COUNT_RE.search(normalized_evidence) and re.search(
+        r"\b(?:cards?|pokemon|holo|non holo|reverse)\b", normalized_evidence, flags=re.IGNORECASE
+    ):
         return True
     return False
+
+
+def _is_condition_only_title(title: str) -> bool:
+    return normalize_text(title) in CONDITION_ONLY_TITLES
+
+
+def _is_graded_listing(normalized_evidence: str, condition_text: str) -> bool:
+    padded_condition = f" {normalize_text(condition_text)} "
+    if _contains_any(normalized_evidence, GRADED_TERMS) or _contains_any(padded_condition, GRADED_TERMS):
+        return True
+    return bool(GRADED_SIGNAL_RE.search(normalized_evidence) or GRADED_SIGNAL_RE.search(padded_condition))
+
+
+def _has_sold_price_obscured(comp: SoldComp) -> bool:
+    raw = comp.raw_metadata or {}
+    if raw.get("soldPriceObscured") or raw.get("sold_price_obscured") or raw.get("bestOfferAccepted"):
+        return True
+    price_text = normalize_text(raw.get("priceText") or "")
+    title = normalize_text(comp.title)
+    if "best offer accepted" in price_text or "price is unavailable" in price_text:
+        return True
+    if title in {"best offer accepted", "best offer", "or", "1 bid", "2 bids", "3 bids"}:
+        return True
+    if raw.get("askingPriceUsedAsSold"):
+        return True
+    return False
+
+
+def _is_ui_chrome_title(title: str) -> bool:
+    return normalize_text(title) in CONDITION_ONLY_TITLES
+
+
+def _short_number_token(value: str) -> str:
+    text = normalize_collector_number(value)
+    short = text.split("/", 1)[0] if "/" in text else text
+    return re.sub(r"^0+(\d)", r"\1", short)
+
+
+def _bounded_collector_hit(normalized_title: str, *, short: str, full: str | None = None) -> str | None:
+    """Return match quality for a bounded collector token, never substring collisions."""
+    short_token = _short_number_token(short)
+    if not short_token:
+        return None
+    if full and "/" in full:
+        total = _short_number_token(full.split("/", 1)[1])
+        full_re = re.compile(
+            rf"(?<![\w])0*{re.escape(short_token)}\s*/\s*0*{re.escape(total)}(?!\d)",
+            flags=re.IGNORECASE,
+        )
+        hyphen_re = re.compile(
+            rf"(?<![\w])0*{re.escape(short_token)}\s*-\s*0*{re.escape(total)}(?!\d)",
+            flags=re.IGNORECASE,
+        )
+        if full_re.search(normalized_title) or hyphen_re.search(normalized_title):
+            return "full"
+    # #4 or #004 — hash-prefixed short numbers are strong enough with set checks elsewhere.
+    hash_re = re.compile(rf"#\s*0*{re.escape(short_token)}(?!\d)\b", flags=re.IGNORECASE)
+    if hash_re.search(normalized_title):
+        return "short"
+    # Bare short number only when not embedded in a larger digit run.
+    bare_re = re.compile(rf"(?<![\w#])0*{re.escape(short_token)}(?!\d)\b", flags=re.IGNORECASE)
+    if bare_re.search(normalized_title):
+        return "short"
+    return None
+
+
+def _conflicting_hash_numbers(normalized_title: str, short: str) -> bool:
+    short_token = _short_number_token(short)
+    hashes = [
+        re.sub(r"^0+(\d)", r"\1", match)
+        for match in re.findall(r"#\s*0*(\d+)\b", normalized_title)
+    ]
+    if not hashes:
+        return False
+    return short_token not in hashes
+
+
+def _requested_collector_parts(price_key: MarketPriceKey) -> tuple[str, str, bool]:
+    requested = normalize_collector_number(price_key.collector_number)
+    short = requested.split("/", 1)[0] if "/" in requested else requested
+    return requested, short, bool("/" in requested)
+
+
+def _collector_reference_variants(price_key: MarketPriceKey) -> set[str]:
+    requested, short, has_full_number = _requested_collector_parts(price_key)
+    if not requested:
+        return set()
+    variants = {requested.lower()}
+    if has_full_number:
+        total = requested.split("/", 1)[1]
+        hyphen = f"{short}-{total}"
+        variants.add(hyphen.lower())
+        set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+        if set_code:
+            variants.add(f"{hyphen}-{set_code}".lower())
+            variants.add(f"{set_code} {short}".lower())
+            variants.add(f"{set_code}-{short}".lower())
+    return variants
+
+
+def _collector_key(value: object) -> str:
+    text = normalize_collector_number(str(value).replace("-", "/"))
+    parts = []
+    for part in text.split("/"):
+        parts.append(re.sub(r"^0+(\d)", r"\1", part))
+    return "/".join(parts)
+
+
+def _collector_equivalent(left: object, right: object) -> bool:
+    left_key = _collector_key(left)
+    right_key = _collector_key(right)
+    return bool(left_key and right_key and left_key == right_key)
+
+
+def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
+    full_numbers = {
+        normalize_collector_number(match)
+        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+    }
+    hyphen_numbers = {
+        normalize_collector_number(match.replace("-", "/"))
+        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
+    }
+    # Hash-prefixed shorts only — avoid harvesting every bare digit from titles.
+    short_numbers = {
+        normalize_collector_number(match)
+        for match in re.findall(r"#\s*([A-Za-z]*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+    }
+    full_numbers |= hyphen_numbers
+    full_numbers.discard("")
+    short_numbers.discard("")
+    return full_numbers, short_numbers
+
+
+def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
+    requested, short, has_full_number = _requested_collector_parts(price_key)
+    if uses_catalogue_collector_identity(price_key):
+        return {
+            "matches": True,
+            "quality": "catalogue_id_skipped",
+            "requested": requested,
+            "detected": [],
+        }
+    if not requested:
+        return {"matches": False, "quality": "not_requested", "requested": "", "detected": []}
+    full_numbers, short_numbers = _detected_collector_numbers(normalized_title)
+    detected = sorted(full_numbers | short_numbers)
+
+    # Prefer bounded full-form hits; never use naive substring membership for short nums.
+    bounded = _bounded_collector_hit(
+        normalized_title,
+        short=short,
+        full=requested if has_full_number else None,
+    )
+    if bounded == "full":
+        return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
+    if any(_collector_equivalent(requested, value) for value in full_numbers):
+        return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
+
+    # Conflicting hash numbers (#330 vs requested #1) are hard rejects.
+    if short and _conflicting_hash_numbers(normalized_title, short):
+        return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
+
+    set_code = normalize_text(price_key.set_code or "").replace(" ", "")
+    if set_code and short:
+        set_short_re = re.compile(
+            rf"\b{re.escape(set_code)}(?:-[a-z0-9]+)?[\s-]+0*{re.escape(_short_number_token(short))}\b",
+            flags=re.IGNORECASE,
+        )
+        if set_short_re.search(normalized_title):
+            return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
+
+    if bounded == "short" or (
+        not has_full_number and any(_collector_equivalent(requested, value) for value in short_numbers)
+    ):
+        return {"matches": True, "quality": "short", "requested": requested, "detected": detected}
+    if has_full_number and short and any(_collector_equivalent(short, value) for value in short_numbers):
+        return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
+
+    if not detected and bounded is None:
+        return {"matches": False, "quality": "missing", "requested": requested, "detected": []}
+    return {"matches": False, "quality": "conflict" if detected else "missing", "requested": requested, "detected": detected}
+
+
+def _collector_number_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
+    return bool(_collector_number_match_info(price_key, normalized_title)["matches"])
 
 
 def _alias_candidates(raw: dict[str, Any]) -> list[object]:
@@ -300,98 +572,6 @@ def _canonical_card_names(price_key: MarketPriceKey) -> tuple[str, ...]:
     return tuple(normalized_names)
 
 
-def _requested_collector_parts(price_key: MarketPriceKey) -> tuple[str, str, bool]:
-    requested = normalize_collector_number(price_key.collector_number)
-    short = requested.split("/", 1)[0] if "/" in requested else requested
-    return requested, short, bool("/" in requested)
-
-
-def _collector_reference_variants(price_key: MarketPriceKey) -> set[str]:
-    requested, short, has_full_number = _requested_collector_parts(price_key)
-    if not requested:
-        return set()
-    variants = {requested.lower()}
-    if has_full_number:
-        total = requested.split("/", 1)[1]
-        hyphen = f"{short}-{total}"
-        variants.add(hyphen.lower())
-        set_code = normalize_text(price_key.set_code or "").replace(" ", "")
-        if set_code:
-            variants.add(f"{hyphen}-{set_code}".lower())
-            variants.add(f"{set_code} {short}".lower())
-            variants.add(f"{set_code}-{short}".lower())
-    return variants
-
-
-def _collector_key(value: object) -> str:
-    text = normalize_collector_number(str(value).replace("-", "/"))
-    parts = []
-    for part in text.split("/"):
-        parts.append(re.sub(r"^0+(\d)", r"\1", part))
-    return "/".join(parts)
-
-
-def _collector_equivalent(left: object, right: object) -> bool:
-    left_key = _collector_key(left)
-    right_key = _collector_key(right)
-    return bool(left_key and right_key and left_key == right_key)
-
-
-def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
-    full_numbers = {
-        normalize_collector_number(match)
-        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
-    }
-    hyphen_numbers = {
-        normalize_collector_number(match.replace("-", "/"))
-        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
-    }
-    short_numbers = {
-        normalize_collector_number(match)
-        for match in re.findall(r"(?:#\s*)?\b([A-Za-z]*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
-    }
-    full_numbers |= hyphen_numbers
-    full_numbers.discard("")
-    short_numbers.discard("")
-    return full_numbers, short_numbers
-
-
-def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
-    requested, short, has_full_number = _requested_collector_parts(price_key)
-    if uses_catalogue_collector_identity(price_key):
-        return {
-            "matches": True,
-            "quality": "catalogue_id_skipped",
-            "requested": requested,
-            "detected": [],
-        }
-    if not requested:
-        return {"matches": True, "quality": "not_requested", "requested": "", "detected": []}
-    requested_lower = requested.lower()
-    if any(variant in normalized_title for variant in _collector_reference_variants(price_key)):
-        return {"matches": True, "quality": "full" if has_full_number else "short", "requested": requested, "detected": [requested]}
-    full_numbers, short_numbers = _detected_collector_numbers(normalized_title)
-    detected = sorted(full_numbers | short_numbers)
-    if any(_collector_equivalent(requested, value) for value in full_numbers):
-        return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
-    if not has_full_number and any(_collector_equivalent(requested, value) for value in short_numbers):
-        return {"matches": True, "quality": "short", "requested": requested, "detected": detected}
-    if has_full_number and short and any(_collector_equivalent(short, value) for value in short_numbers):
-        return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
-    set_code = normalize_text(price_key.set_code or "").replace(" ", "")
-    if set_code and short:
-        set_short_re = re.compile(rf"\b{re.escape(set_code)}(?:-[a-z0-9]+)?[\s-]+0*{re.escape(short.lstrip('0') or short)}\b", flags=re.IGNORECASE)
-        if set_short_re.search(normalized_title):
-            return {"matches": True, "quality": "short_from_full", "requested": requested, "detected": detected}
-    if not detected:
-        return {"matches": False, "quality": "missing", "requested": requested, "detected": []}
-    return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
-
-
-def _collector_number_matches(price_key: MarketPriceKey, normalized_title: str) -> bool:
-    return bool(_collector_number_match_info(price_key, normalized_title)["matches"])
-
-
 def _card_name_title_variants(name: str) -> tuple[str, ...]:
     variants: list[str] = []
     for candidate in (name, normalize_name(name).replace("_", " ")):
@@ -439,7 +619,12 @@ def _set_code_conflicts(price_key: MarketPriceKey, normalized_title: str) -> boo
         return False
     detected = set(re.findall(r"\b(?:sv|swsh|sm|xy|bw|base)\s*0?\d+\b", normalized_title, flags=re.IGNORECASE))
     normalized_detected = {normalize_text(value).replace(" ", "") for value in detected}
-    return bool(normalized_detected and requested.replace(" ", "") not in normalized_detected)
+    if normalized_detected and requested.replace(" ", "") not in normalized_detected:
+        return True
+    # Base Set printings must not accept Celebrations / 25th anniversary reprints.
+    if requested.replace(" ", "") in {"base1", "base"} and BASE_SET_CONFLICT_RE.search(normalized_title):
+        return True
+    return False
 
 
 def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -> dict[str, Any]:
@@ -452,6 +637,9 @@ def _set_identity_match_info(price_key: MarketPriceKey, normalized_title: str) -
     code_match = bool(set_code and set_code in normalized_compact)
     hint_match = bool(set_hint and set_hint in normalized_compact)
     name_match = bool(set_name and set_name in normalized_title)
+    # Common marketplace shorthand for Base Set.
+    if set_code in {"base1", "base"} and re.search(r"\bbase\s*set\b", normalized_title, flags=re.IGNORECASE):
+        name_match = True
     conflict = False if is_internal_set_code(price_key.set_code) else _set_code_conflicts(price_key, normalized_title)
     if code_match:
         quality = "set_code"
@@ -582,6 +770,8 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
     normalized_identity = _padded_normalized_identity(comp)
     if comp.currency.upper() != price_key.currency.upper():
         return "currency_mismatch"
+    if _has_sold_price_obscured(comp):
+        return "sold_price_obscured"
     language_rejection = _language_reject_reason(price_key, comp)
     if language_rejection:
         return language_rejection
@@ -603,17 +793,24 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "digital"
     if _contains_any(normalized_evidence, REJECTION_PATTERNS["oversized"]):
         return "oversized_or_jumbo"
-    if price_key.variant != "graded" and (
-        _contains_any(normalized_evidence, GRADED_TERMS) or _contains_any(f" {normalize_text(comp.condition_text)} ", GRADED_TERMS)
-    ):
+    if NON_CARD_PRODUCT_RE.search(normalized_evidence):
+        return "non_comparable_product"
+    if price_key.variant != "graded" and _is_graded_listing(normalized_evidence, comp.condition_text):
         return "graded_for_raw_request"
-    if price_key.variant not in {"sealed", "product"} and _contains_any(normalized_evidence, REJECTION_PATTERNS["sealed_product"]):
+    if price_key.variant not in {"sealed", "product"} and _contains_any(
+        normalized_evidence, REJECTION_PATTERNS["sealed_product"]
+    ):
         return "sealed_product_for_single_card_request"
-    if not _collector_number_matches(price_key, normalized_identity):
+    collector_info = _collector_number_match_info(price_key, normalized_identity)
+    if not collector_info["matches"]:
         return "wrong_collector_number"
     set_info = _set_identity_match_info(price_key, normalized_identity)
     if set_info["conflict"]:
         return "wrong_set"
+    # Short / missing-set matches are not strong enough for medium+ confidence later;
+    # require set identity whenever collector evidence is not a full N/M form.
+    if collector_info["quality"] in {"short", "short_from_full", "missing", "not_requested"} and not set_info["matches"]:
+        return "weak_set_identity"
     if (
         _language_family(price_key.language) == "jp"
         and not set_info["matches"]
@@ -622,6 +819,10 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "wrong_set"
     if not _card_name_matches(price_key, normalized_identity):
         return "wrong_card_name"
+    if _is_condition_only_title(comp.title) or _is_ui_chrome_title(comp.title):
+        # Condition/UI-chrome scrape titles need full collector + set evidence in identity text.
+        if collector_info["quality"] != "full" or not set_info["matches"]:
+            return "ambiguous_title"
     if _has_many_card_numbers(price_key, normalized_identity):
         return "multiple_card_numbers"
     if score_comp(price_key, comp) < MIN_INCLUDED_SCORE:

@@ -19,10 +19,19 @@ def round_money(value: float | None) -> float | None:
     return round(float(value), 2)
 
 
-def determine_confidence(*, included_count: int, average_match_score: float) -> str:
-    if included_count >= 8 and average_match_score >= 0.85:
+def determine_confidence(
+    *,
+    included_count: int,
+    average_match_score: float,
+    strong_exact_count: int | None = None,
+) -> str:
+    """Quality-first confidence. Count alone never upgrades noisy comps."""
+    strong = int(strong_exact_count if strong_exact_count is not None else included_count)
+    if included_count <= 0:
+        return "low"
+    if strong >= 8 and average_match_score >= 0.85:
         return "high"
-    if included_count >= 3:
+    if strong >= 3 and average_match_score >= 0.75:
         return "medium"
     return "low"
 
@@ -82,9 +91,27 @@ def calculate_pricing_stats(
     single_clean_comp_only = len(included) == 1
     stale_evidence_only = bool(included) and len(recent_included) == 0
     average_match_score = mean([item.match_score for item in included]) if included else 0.0
-    confidence = determine_confidence(included_count=len(included), average_match_score=average_match_score)
+    strong_exact_count = sum(
+        1
+        for item in included
+        if float(item.match_score or 0) >= 0.75
+        and str(item.comp.raw_metadata.get("collector_number_match_quality") or "") in {"full", "short_from_full", "short"}
+        and bool(item.comp.raw_metadata.get("set_name_match"))
+    )
+    confidence = determine_confidence(
+        included_count=len(included),
+        average_match_score=average_match_score,
+        strong_exact_count=strong_exact_count,
+    )
+    if any(
+        str(item.comp.raw_metadata.get("collector_number_match_quality") or "") in {"missing", "not_requested"}
+        for item in included
+    ):
+        confidence = "low"
+        confidence_warnings: list[str] = ["collector_number_absent_caps_confidence"]
+    else:
+        confidence_warnings = []
     spread_ratio = round(max(item_prices) / min(item_prices), 4) if item_prices and min(item_prices) > 0 else None
-    confidence_warnings: list[str] = []
     requested_variants = {
         normalize_market_variant(item.comp.raw_metadata.get("requested_variant"))
         for item in evaluated_comps

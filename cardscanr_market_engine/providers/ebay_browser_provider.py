@@ -77,6 +77,11 @@ GENERIC_TITLE_MARKERS = (
     "opens in a new window or tab",
     "new listing",
     "image not available",
+    "pre-owned",
+    "pre owned",
+    "brand new",
+    "best offer accepted",
+    "buy it now",
 )
 TITLE_UI_BOUNDARY_RE = re.compile(
     r"\s+(?:"
