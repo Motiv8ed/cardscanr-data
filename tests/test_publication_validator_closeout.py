@@ -117,3 +117,24 @@ class ProviderDuplicateCollapseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ShaNormalizationTests(unittest.TestCase):
+    def test_validate_and_refresh_hash_lf(self) -> None:
+        import hashlib
+        import importlib.util
+
+        def load(mod_name: str, rel: str):
+            spec = importlib.util.spec_from_file_location(mod_name, ROOT / rel)
+            assert spec and spec.loader
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            return mod
+
+        sample = ROOT / 'public/v1/catalog/pokemon/en/cards/sve.json'
+        raw = sample.read_bytes()
+        expected = hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest()
+        validate = load('validate_cache_mod', 'tools/validate_cache.py')
+        refresh = load('refresh_public_index_mod', 'tools/refresh_public_index.py')
+        self.assertEqual(validate.sha256_file(sample), expected)
+        self.assertEqual(refresh.sha256_file(sample), expected)
+
