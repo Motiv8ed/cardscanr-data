@@ -1,15 +1,15 @@
 {
-  "build_time_seconds": null,
-  "database_bytes": 180699136,
-  "manifest_bytes": 97344,
+  "build_time_seconds": 232.9504138000193,
+  "database_bytes": 124772352,
+  "manifest_bytes": 958,
   "queries": [
     {
       "label": "en_exact_name_charizard",
       "query": "charizard",
       "language": "en",
       "setId": null,
-      "coldLatencyMs": 2.654,
-      "warmMedianLatencyMs": 0.445,
+      "coldLatencyMs": 6.846,
+      "warmMedianLatencyMs": 1.098,
       "resultCount": 25
     },
     {
@@ -17,8 +17,8 @@
       "query": "pika",
       "language": "en",
       "setId": null,
-      "coldLatencyMs": 67.296,
-      "warmMedianLatencyMs": 73.18,
+      "coldLatencyMs": 31.164,
+      "warmMedianLatencyMs": 23.52,
       "resultCount": 25
     },
     {
@@ -27,7 +27,7 @@
       "language": "en",
       "setId": "base1",
       "coldLatencyMs": 0.682,
-      "warmMedianLatencyMs": 0.067,
+      "warmMedianLatencyMs": 0.233,
       "resultCount": 1
     },
     {
@@ -35,17 +35,17 @@
       "query": "base charizard",
       "language": "en",
       "setId": null,
-      "coldLatencyMs": 11.083,
-      "warmMedianLatencyMs": 6.983,
-      "resultCount": 5
+      "coldLatencyMs": 4.807,
+      "warmMedianLatencyMs": 2.616,
+      "resultCount": 2
     },
     {
       "label": "jp_printed_kunugidama",
       "query": "クヌギダマ",
       "language": "jp",
       "setId": null,
-      "coldLatencyMs": 1.057,
-      "warmMedianLatencyMs": 0.252,
+      "coldLatencyMs": 0.697,
+      "warmMedianLatencyMs": 0.253,
       "resultCount": 5
     },
     {
@@ -53,8 +53,8 @@
       "query": "ピカ",
       "language": "jp",
       "setId": null,
-      "coldLatencyMs": 91.814,
-      "warmMedianLatencyMs": 75.6,
+      "coldLatencyMs": 42.396,
+      "warmMedianLatencyMs": 33.045,
       "resultCount": 16
     },
     {
@@ -62,8 +62,8 @@
       "query": "charizard",
       "language": "en",
       "setId": "xy12",
-      "coldLatencyMs": 1.866,
-      "warmMedianLatencyMs": 0.181,
+      "coldLatencyMs": 0.726,
+      "warmMedianLatencyMs": 0.154,
       "resultCount": 1
     },
     {
@@ -71,8 +71,8 @@
       "query": "H3",
       "language": "en",
       "setId": "ecard2",
-      "coldLatencyMs": 0.914,
-      "warmMedianLatencyMs": 0.322,
+      "coldLatencyMs": 0.553,
+      "warmMedianLatencyMs": 0.21,
       "resultCount": 1
     },
     {
@@ -80,17 +80,17 @@
       "query": "001/081",
       "language": "jp",
       "setId": null,
-      "coldLatencyMs": 42.968,
-      "warmMedianLatencyMs": 44.671,
-      "resultCount": 2
+      "coldLatencyMs": 30.622,
+      "warmMedianLatencyMs": 28.363,
+      "resultCount": 4
     },
     {
       "label": "zero_results",
       "query": "zzznomatch999",
       "language": "en",
       "setId": null,
-      "coldLatencyMs": 1.084,
-      "warmMedianLatencyMs": 0.126,
+      "coldLatencyMs": 0.41,
+      "warmMedianLatencyMs": 0.116,
       "resultCount": 0
     },
     {
@@ -98,24 +98,24 @@
       "query": "pokemon",
       "language": "en",
       "setId": null,
-      "coldLatencyMs": 15.564,
-      "warmMedianLatencyMs": 14.891,
-      "resultCount": 25
+      "coldLatencyMs": 73.19,
+      "warmMedianLatencyMs": 72.999,
+      "resultCount": 0
     },
     {
       "label": "en_set_filter_sv10",
       "query": "ethan",
       "language": "en",
       "setId": "sv10",
-      "coldLatencyMs": 1.386,
-      "warmMedianLatencyMs": 0.577,
+      "coldLatencyMs": 0.865,
+      "warmMedianLatencyMs": 0.491,
       "resultCount": 16
     }
   ],
-  "cold_median_ms": 2.260100001876708,
-  "cold_p95_ms": 67.29629999608733,
-  "cold_p99_ms": 91.81429999443935,
-  "warm_median_ms": 0.5603499994322192,
-  "warm_p95_ms": 81.78069999848958,
-  "warm_p99_ms": 92.8291000018362
+  "cold_median_ms": 2.8363500023260713,
+  "cold_p95_ms": 42.39640000741929,
+  "cold_p99_ms": 73.19019999704324,
+  "warm_median_ms": 0.589250004850328,
+  "warm_p95_ms": 71.83870000881143,
+  "warm_p99_ms": 73.90300001134165
 }
