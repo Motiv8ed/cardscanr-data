@@ -109,8 +109,8 @@ class PublicationHelpersTest(unittest.TestCase):
                 database_path=db_path,
                 sha256="f" * 64,
                 byte_size=db_path.stat().st_size,
-                total_cards=74578,
-                per_language_counts={"en": 46417, "jp": 28161},
+                total_cards=49163,
+                per_language_counts={"en": 20710, "jp": 28453},
                 passed=True,
                 issues=[],
             )
@@ -179,8 +179,8 @@ class PublicationHelpersTest(unittest.TestCase):
                 database_path=db_path,
                 sha256="f" * 64,
                 byte_size=db_path.stat().st_size,
-                total_cards=74578,
-                per_language_counts={"en": 46417, "jp": 28161},
+                total_cards=49163,
+                per_language_counts={"en": 20710, "jp": 28453},
                 passed=True,
                 issues=[],
             )

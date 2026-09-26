@@ -42,7 +42,8 @@ def load_json(path: Path) -> Any:
 
 
 def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Hash LF-normalized bytes so Windows CRLF working trees match Git/CI checkouts.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def json_bytes(payload: Any) -> bytes:

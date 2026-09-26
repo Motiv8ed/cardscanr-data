@@ -38,8 +38,8 @@ DEFAULT_PAGES_BASE_URL = "https://cardscanr-cache.pages.dev"
 R2_OBJECT_PREFIX = "v1/catalog/pokemon/search"
 MANIFEST_ROLLBACK_BASENAME = "catalog_search_v1.manifest.previous.json"
 INTEGRITY_REPORT_BASENAME = "catalog_search_v1.integrity.json"
-EXPECTED_TOTAL_CARDS = 74578
-EXPECTED_LANGUAGE_COUNTS = {"en": 46417, "jp": 28161}
+EXPECTED_TOTAL_CARDS = 49163
+EXPECTED_LANGUAGE_COUNTS = {"en": 20710, "jp": 28453}
 
 SECRET_CONFIG_KEYS = frozenset(
     {
