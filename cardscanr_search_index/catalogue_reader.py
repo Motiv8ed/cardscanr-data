@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +15,10 @@ from .normalization import (
     normalize_search_text,
     normalize_set_name,
 )
+
+# PokéWallet-promoted JP sets often keep numeric provider ids in catalogue setId.
+# physical_printing_id refuses digit-only set ids; resolve to a stable code first.
+_SET_CODE_PREFIX = re.compile(r"^([A-Za-z][A-Za-z0-9._-]{0,31})\s*:")
 
 try:
     from cardscanr_catalogue_identity import (
@@ -147,6 +152,49 @@ def _provider_set_codes(card: dict[str, Any], set_meta: SetRecord) -> list[str]:
     return sorted(code for code in codes if code)
 
 
+def resolve_stable_set_id_for_physical_printing(
+    set_id: str,
+    *,
+    set_meta: SetRecord | None = None,
+    card: dict[str, Any] | None = None,
+) -> str:
+    """Map numeric provider set ids to a non-numeric physical-printing set component.
+
+    Preference order:
+    1. Non-numeric catalogue set id (already stable)
+    2. Provider set code from promotion metadata / card fields
+    3. Leading ``CODE:`` prefix in the set display name (e.g. ``SV1a: Triplet Beat``)
+    4. Namespaced ``pw-{id}`` fallback so indexing never uses a bare numeric orphan
+    """
+    raw = str(set_id or "").strip()
+    if not raw:
+        return raw
+    if not raw.isdigit():
+        return raw
+
+    card = card or {}
+    promo = card.get("promotionMetadata") if isinstance(card.get("promotionMetadata"), dict) else {}
+    for candidate in (
+        promo.get("providerSetCode"),
+        card.get("providerSetCode"),
+        set_meta.ptcgo_code if set_meta is not None else None,
+    ):
+        token = str(candidate or "").strip()
+        if token and not token.isdigit():
+            return token
+
+    name = ""
+    if set_meta is not None:
+        name = str(set_meta.name or "")
+    if not name:
+        name = str(card.get("setName") or "")
+    match = _SET_CODE_PREFIX.match(name.strip())
+    if match:
+        return match.group(1)
+
+    return f"pw-{raw}"
+
+
 def _card_to_record(
     card: dict[str, Any],
     *,
@@ -177,9 +225,12 @@ def _card_to_record(
     persisted_p_pid = str(card.get("physicalPrintingId") or "").strip() or None
     persisted_version = str(card.get("identityModelVersion") or "").strip()
     if physical_printing_id:
+        printing_set_id = resolve_stable_set_id_for_physical_printing(
+            set_id, set_meta=set_meta, card=card
+        )
         p_pid = physical_printing_id(
             language=language,
-            set_id=set_id,
+            set_id=printing_set_id,
             collector_number=collector_number,
             card=card,
             numbering_policy=set_meta.numbering_policy,

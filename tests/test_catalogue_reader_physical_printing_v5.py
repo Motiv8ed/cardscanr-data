@@ -182,6 +182,83 @@ class CatalogueReaderPhysicalPrintingV5Tests(unittest.TestCase):
             self.assertNotIn("pokemon|en|other|2|wrong-set", by_id)
             self.assertNotIn("pokemon|jp|supp|3|wrong-language", by_id)
 
+    def test_numeric_provider_set_id_resolves_via_set_name_prefix(self) -> None:
+        from cardscanr_search_index.catalogue_reader import (
+            resolve_stable_set_id_for_physical_printing,
+        )
+
+        meta = SetRecord(
+            set_id="23598",
+            language="jp",
+            name="SV1a: Triplet Beat",
+            normalized_set_name="sv1a triplet beat",
+            total=103,
+            printed_total=73,
+            release_date=None,
+            ptcgo_code=None,
+            series=None,
+        )
+        self.assertEqual(
+            resolve_stable_set_id_for_physical_printing("23598", set_meta=meta, card={}),
+            "SV1a",
+        )
+        self.assertEqual(
+            resolve_stable_set_id_for_physical_printing(
+                "99999",
+                set_meta=SetRecord(
+                    set_id="99999",
+                    language="jp",
+                    name="Orphan Provider Set",
+                    normalized_set_name="orphan provider set",
+                    total=1,
+                    printed_total=None,
+                    release_date=None,
+                    ptcgo_code=None,
+                    series=None,
+                ),
+                card={},
+            ),
+            "pw-99999",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            catalogue_root = Path(tmp) / "v1"
+            jp_root = catalogue_root / "catalog" / "pokemon" / "jp"
+            _write_json(
+                jp_root / "sets.json",
+                {
+                    "sets": [
+                        {
+                            "id": "23598",
+                            "name": "SV1a: Triplet Beat",
+                            "printedTotal": 73,
+                            "total": 103,
+                        }
+                    ]
+                },
+            )
+            _write_json(
+                jp_root / "cards" / "23598.json",
+                {
+                    "schemaVersion": "1.0.0",
+                    "setId": "23598",
+                    "language": "jp",
+                    "cards": [
+                        {
+                            "canonicalBaseId": "pokemon|jp|23598|001/073|tropius",
+                            "language": "jp",
+                            "setId": "23598",
+                            "collectorNumber": "001/073",
+                            "name": "Tropius",
+                            "normalizedName": "tropius",
+                        }
+                    ],
+                },
+            )
+            records = list(iter_catalogue_cards(catalogue_root, languages=("jp",)))
+            self.assertEqual(len(records), 1)
+            self.assertTrue(records[0].physical_printing_id.startswith("physical-printing-v1|jp|sv1a|"))
+
 
 if __name__ == "__main__":
     unittest.main()

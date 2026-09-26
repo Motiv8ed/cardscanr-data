@@ -1,0 +1,137 @@
+{
+  "dryRun": false,
+  "en": [
+    {
+      "cardPath": "public/v1/catalog/pokemon/en/cards/me5.json",
+      "catalogueStatus": "built",
+      "collisions": 0,
+      "expectedFloor": 120,
+      "images": {
+        "missing": 0,
+        "total": 120,
+        "withLarge": 120,
+        "withSmall": 120
+      },
+      "imported": 120,
+      "language": "en",
+      "printedTotal": 84,
+      "providerTotal": 120,
+      "releaseDate": "2026/07/17",
+      "setId": "me5",
+      "setName": "Pitch Black",
+      "source": "pokemon_tcg_api"
+    },
+    {
+      "cardPath": "public/v1/catalog/pokemon/en/cards/me55.json",
+      "catalogueStatus": "partial_built",
+      "collisions": 0,
+      "expectedFloor": 169,
+      "images": {
+        "missing": 0,
+        "total": 161,
+        "withLarge": 161,
+        "withSmall": 161
+      },
+      "imported": 161,
+      "language": "en",
+      "printedTotal": 128,
+      "providerTotal": 161,
+      "releaseDate": "2026/09/16",
+      "setId": "me55",
+      "setName": "30th Celebration",
+      "source": "pokemon_tcg_api"
+    },
+    {
+      "cardPath": "public/v1/catalog/pokemon/en/cards/me55c.json",
+      "catalogueStatus": "built",
+      "collisions": 0,
+      "expectedFloor": 30,
+      "images": {
+        "missing": 0,
+        "total": 30,
+        "withLarge": 30,
+        "withSmall": 30
+      },
+      "imported": 30,
+      "language": "en",
+      "printedTotal": null,
+      "providerTotal": 30,
+      "releaseDate": "2026/09/16",
+      "setId": "me55c",
+      "setName": "30th Celebration: Classic Collection",
+      "source": "pokemon_tcg_api"
+    }
+  ],
+  "errors": [],
+  "generatedAtUtc": "2026-09-25T21:38:05Z",
+  "jp": [
+    {
+      "blocked": 2,
+      "blockedSample": [
+        {
+          "cardNumber": "",
+          "name": "Storm Emeralda Booster Box",
+          "providerCardId": "pk_a51d3c0d740e8919eed7811a11e1be2b1d05049ac3e8418cfb292c74d7803e16e4f0e23bad87a3d61b9b",
+          "reason": "missing_collector_number"
+        },
+        {
+          "cardNumber": "",
+          "name": "Storm Emeralda Booster Pack",
+          "providerCardId": "pk_bafc29e958251979a7e352e53095f984702c041f64d991384dd877c0f345a19672333917a9c2e68eee4e",
+          "reason": "missing_collector_number"
+        }
+      ],
+      "cardPath": "public/v1/catalog/pokemon/jp/cards/m6.json",
+      "catalogueStatus": "partial_built",
+      "collisions": 0,
+      "expectedFloor": 113,
+      "images": {
+        "missing": 0,
+        "total": 116,
+        "withLarge": 116,
+        "withSmall": 116
+      },
+      "imported": 116,
+      "language": "jp",
+      "providerCards": 118,
+      "providerPath": "public/v1/provider-catalog/pokewallet/cards/jp/m6.json",
+      "providerSetCode": "m6",
+      "providerSetId": "24791",
+      "rateLimited": false,
+      "setId": "m6",
+      "setName": "ストームエメラルダ",
+      "source": "pokewallet"
+    },
+    {
+      "blocked": 1,
+      "blockedSample": [
+        {
+          "cardNumber": "",
+          "name": "30th CELEBRATION FUTURISTIC BOX",
+          "providerCardId": "pk_c2736d3e2440431c240a205d9ac7f458f86661604a4e5e8e26dcb71495639517e63e52c36cddd7762ba6",
+          "reason": "missing_collector_number"
+        }
+      ],
+      "cardPath": "public/v1/catalog/pokemon/jp/cards/m6a.json",
+      "catalogueStatus": "partial_built",
+      "collisions": 0,
+      "expectedFloor": 176,
+      "images": {
+        "missing": 0,
+        "total": 171,
+        "withLarge": 171,
+        "withSmall": 171
+      },
+      "imported": 171,
+      "language": "jp",
+      "providerCards": 172,
+      "providerPath": "public/v1/provider-catalog/pokewallet/cards/jp/m6a.json",
+      "providerSetCode": "m6a",
+      "providerSetId": "24721",
+      "rateLimited": false,
+      "setId": "m6a",
+      "setName": "30th CELEBRATION",
+      "source": "pokewallet"
+    }
+  ]
+}

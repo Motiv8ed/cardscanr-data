@@ -1,11 +1,11 @@
 {
-  "cardCount": 20745,
+  "cardCount": 20710,
   "cardsAvailable": true,
   "catalogueStatus": "partial_built",
   "failedSetCount": 0,
   "failedSetIds": [],
   "game": "pokemon",
-  "generatedAtUtc": "2026-06-14T20:31:38Z",
+  "generatedAtUtc": "2026-09-26T00:27:50Z",
   "language": "en",
   "notes": [
     "English catalogue is built from official PokemonTCG API endpoints.",
@@ -18,7 +18,7 @@
     "source": "pokewallet_provider_promotion"
   },
   "schemaVersion": "1.0.0",
-  "setCount": 173,
+  "setCount": 177,
   "sets": [
     {
       "id": "base1",
@@ -2464,6 +2464,21 @@
       "updatedAt": "2025/09/25 15:00:00"
     },
     {
+      "id": "mee",
+      "imageCached": false,
+      "imageSource": "pokemon_tcg_api",
+      "logoUrl": null,
+      "name": "Mega Evolution Energies",
+      "printedTotal": 16,
+      "promotionSource": "en_jp_freshness_closeout",
+      "ptcgoCode": "MEE",
+      "releaseDate": "2025/10/10",
+      "series": "Mega Evolution",
+      "symbolUrl": null,
+      "total": 16,
+      "updatedAt": null
+    },
+    {
       "id": "me2",
       "imageCached": false,
       "imageSource": "pokemon_tcg_api",
@@ -2520,6 +2535,51 @@
       "symbolUrl": "https://images.scrydex.com/pokemon/me4-symbol/symbol",
       "total": 122,
       "updatedAt": "2026/05/21 15:00:00"
+    },
+    {
+      "id": "me5",
+      "imageCached": false,
+      "imageSource": "pokemon_tcg_api",
+      "logoUrl": "https://images.scrydex.com/pokemon/me5-logo/logo",
+      "name": "Pitch Black",
+      "printedTotal": 84,
+      "promotionSource": "en_jp_catalogue_freshness_gapfill",
+      "ptcgoCode": "PBL",
+      "releaseDate": "2026/07/17",
+      "series": "Mega Evolution",
+      "symbolUrl": "https://images.scrydex.com/pokemon/me5-symbol/symbol",
+      "total": 120,
+      "updatedAt": "2026/07/16 15:00:00"
+    },
+    {
+      "id": "me55",
+      "imageCached": false,
+      "imageSource": "pokemon_tcg_api",
+      "logoUrl": "https://images.scrydex.com/pokemon/me55-logo/logo",
+      "name": "30th Celebration",
+      "printedTotal": 128,
+      "promotionSource": "en_jp_catalogue_freshness_gapfill",
+      "ptcgoCode": "30C",
+      "releaseDate": "2026/09/16",
+      "series": "Mega Evolution",
+      "symbolUrl": "https://images.scrydex.com/pokemon/me55-symbol/symbol",
+      "total": 161,
+      "updatedAt": "2026/09/14 15:00:00"
+    },
+    {
+      "id": "me55c",
+      "imageCached": false,
+      "imageSource": "pokemon_tcg_api",
+      "logoUrl": "https://images.scrydex.com/pokemon/me55c-logo/logo",
+      "name": "30th Celebration: Classic Collection",
+      "printedTotal": null,
+      "promotionSource": "en_jp_catalogue_freshness_gapfill",
+      "ptcgoCode": "30C",
+      "releaseDate": "2026/09/16",
+      "series": "Mega Evolution",
+      "symbolUrl": "https://images.scrydex.com/pokemon/me55c-symbol/symbol",
+      "total": 30,
+      "updatedAt": "2026/09/14 15:00:00"
     }
   ],
   "source": "pokemon_tcg_api"
