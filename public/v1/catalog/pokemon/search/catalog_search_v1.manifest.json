@@ -1,9 +1,9 @@
 {
-  "catalogueSchemaVersion": "1.0.0",
   "searchIndexSchemaVersion": "1.1.0",
-  "generatedAt": "2026-09-26T01:04:39Z",
-  "databaseFilename": "catalog_search_v1.sqlite",
-  "databaseUrl": "/v1/catalog/pokemon/search/catalog_search_v1.sqlite",
+  "catalogueSchemaVersion": "1.0.0",
+  "generatedAt": "2026-09-26T01:13:19Z",
+  "databaseFilename": "catalog_search_v1.e96b9b28fe2462fcf2d3250a62c37c028958476eeea762640336028f7370fcc8.sqlite",
+  "databaseUrl": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v1/catalog/pokemon/search/catalog_search_v1.e96b9b28fe2462fcf2d3250a62c37c028958476eeea762640336028f7370fcc8.sqlite",
   "sha256": "e96b9b28fe2462fcf2d3250a62c37c028958476eeea762640336028f7370fcc8",
   "byteSize": 124772352,
   "supportedLanguages": [
@@ -16,7 +16,7 @@
     "jp": 28453
   },
   "minimumCompatibleAppVersion": "1.0.0+21",
-  "previousDatabaseUrl": "/v1/catalog/pokemon/search/catalog_search_v1.sqlite",
+  "previousDatabaseUrl": "https://pub-258b8de1c4964f538a8cb08022761430.r2.dev/v1/catalog/pokemon/search/catalog_search_v1.1c02b21d73434603d28c75a40fc09b388109e6b57373e1f2957f4b030957b357.sqlite",
   "previousSha256": "1c02b21d73434603d28c75a40fc09b388109e6b57373e1f2957f4b030957b357",
   "updatePolicy": "download_verified_immutable_r2_object_then_atomic_activate",
   "rollbackPolicy": "if current database activation fails checksum or schema validation, download previousDatabaseUrl and activate that immutable object"
