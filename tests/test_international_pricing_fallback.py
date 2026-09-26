@@ -41,13 +41,13 @@ def _key(**overrides) -> MarketPriceKey:
 class InternationalFallbackPolicyTests(unittest.TestCase):
     def test_au_english_fallback_order(self) -> None:
         markets = fallback_markets_for_key(_key())
-        self.assertEqual(markets, ("US", "GB", "CA"))
+        self.assertEqual(markets, ("US", "GB", "CA", "DE", "FR"))
 
     def test_japanese_card_may_search_same_printing_on_en_markets(self) -> None:
         """JA printings: home AU first (separate job); intl may use EN-domain eBay
         for the same Japanese identity — never an English printing substitute."""
         markets = fallback_markets_for_key(_key(language="ja", market_country="au", currency="aud"))
-        self.assertEqual(markets, ("US", "GB", "CA"))
+        self.assertEqual(markets, ("US", "GB", "CA", "DE", "FR"))
 
     def test_korean_card_has_no_browser_fallback_yet(self) -> None:
         markets = fallback_markets_for_key(_key(language="ko", market_country="au", currency="aud"))
@@ -56,6 +56,26 @@ class InternationalFallbackPolicyTests(unittest.TestCase):
     def test_us_fallback_order(self) -> None:
         markets = fallback_markets_for_key(_key(market_country="us", currency="usd"))
         self.assertEqual(markets[0], "CA")
+
+    def test_nz_has_no_native_route_and_falls_back_foreign(self) -> None:
+        from cardscanr_market_engine.international.market_fallback_policy import (
+            NO_NATIVE_SOLD_ROUTE_MARKETS,
+            has_native_sold_route,
+        )
+
+        self.assertFalse(has_native_sold_route("NZ"))
+        self.assertIn("NZ", NO_NATIVE_SOLD_ROUTE_MARKETS)
+        markets = fallback_markets_for_key(_key(market_country="nz", currency="nzd"))
+        self.assertEqual(markets[0], "AU")
+        self.assertNotIn("NZ", markets)
+
+    def test_jp_has_no_native_route(self) -> None:
+        from cardscanr_market_engine.international.market_fallback_policy import has_native_sold_route
+
+        self.assertFalse(has_native_sold_route("JP"))
+        markets = fallback_markets_for_key(_key(market_country="jp", currency="jpy", language="ja"))
+        self.assertEqual(markets[0], "US")
+        self.assertNotIn("JP", markets)
 
     def test_classify_foreign_market_attempt(self) -> None:
         self.assertEqual(

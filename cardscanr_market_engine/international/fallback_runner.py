@@ -568,6 +568,10 @@ def _market_currency(market_country: str) -> str:
         "US": "USD",
         "GB": "GBP",
         "CA": "CAD",
+        "DE": "EUR",
+        "FR": "EUR",
+        "IT": "EUR",
+        "ES": "EUR",
     }[market_country.upper()]
 
 

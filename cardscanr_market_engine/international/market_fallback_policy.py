@@ -8,22 +8,29 @@ from ..marketplaces import browser_supported_market_routes, normalize_market_cou
 from ..models import MarketPriceKey
 
 # Home market -> ordered fallback markets (browser-supported only).
-# NZ/JP/EU browser sold routes are not yet live — keep them out of this graph.
+# NZ/JP have no native sold browser route; callers should treat home as
+# NO_NATIVE_SOLD_ROUTE and start from the first foreign market below.
 MARKET_FALLBACK_POLICY: dict[str, tuple[str, ...]] = {
-    "AU": ("US", "GB", "CA"),
-    "US": ("CA", "GB", "AU"),
-    "GB": ("US", "CA", "AU"),
-    "CA": ("US", "GB", "AU"),
+    "AU": ("US", "GB", "CA", "DE", "FR"),
+    "US": ("CA", "GB", "AU", "DE"),
+    "GB": ("US", "DE", "FR", "CA", "AU"),
+    "CA": ("US", "GB", "AU", "DE"),
+    "DE": ("FR", "IT", "ES", "GB", "US", "AU"),
+    "FR": ("DE", "IT", "ES", "GB", "US", "AU"),
+    "IT": ("DE", "FR", "ES", "GB", "US", "AU"),
+    "ES": ("DE", "FR", "IT", "GB", "US", "AU"),
+    # No native sold route — first entry is FOREIGN, never "local".
+    "NZ": ("AU", "US", "GB", "CA"),
+    "JP": ("US", "AU", "GB", "CA"),
 }
 
 # Language families that may borrow evidence from these source markets.
-# Japanese printings may be searched on EN-domain eBay sites for the *same*
+# Japanese printings may be searched on supported eBay sites for the *same*
 # Japanese identity — never as an English printing substitute.
-# JP eBay (ebay.co.jp) is not yet a browser-supported home/fallback route.
 LANGUAGE_COMPATIBLE_MARKETS: dict[str, frozenset[str]] = {
-    "en": frozenset({"AU", "US", "GB", "CA"}),
-    "ja": frozenset({"AU", "US", "GB", "CA"}),
-    "jp": frozenset({"AU", "US", "GB", "CA"}),
+    "en": frozenset({"AU", "US", "GB", "CA", "DE", "FR", "IT", "ES"}),
+    "ja": frozenset({"AU", "US", "GB", "CA", "DE", "FR", "IT", "ES"}),
+    "jp": frozenset({"AU", "US", "GB", "CA", "DE", "FR", "IT", "ES"}),
     "ko": frozenset(),
     "zh": frozenset(),
     "zh-hans": frozenset(),
@@ -44,6 +51,9 @@ MARKET_DISPLAY_NAMES: dict[str, str] = {
     "EU": "Europe",
 }
 
+# Markets with no proven CardScanR ebay_browser sold home route.
+NO_NATIVE_SOLD_ROUTE_MARKETS = frozenset({"NZ", "JP"})
+
 # Attempt classification for diagnostics (not shown raw to customers).
 NO_RESULTS = "NO_RESULTS"
 AMBIGUOUS_RESULTS = "AMBIGUOUS_RESULTS"
@@ -51,6 +61,7 @@ LOW_CONFIDENCE = "LOW_CONFIDENCE"
 SUFFICIENT_FOREIGN_COMPS = "SUFFICIENT_FOREIGN_COMPS"
 SUFFICIENT_LOCAL_COMPS = "SUFFICIENT_LOCAL_COMPS"
 NOT_REQUIRED = "NOT_REQUIRED"
+NO_NATIVE_SOLD_ROUTE = "NO_NATIVE_SOLD_ROUTE"
 ERROR = "ERROR"
 
 _BROWSER_MARKETS = frozenset(country for country, _currency in browser_supported_market_routes())
@@ -98,6 +109,11 @@ def market_fallback_policy() -> dict[str, tuple[str, ...]]:
     return dict(MARKET_FALLBACK_POLICY)
 
 
+def has_native_sold_route(market_country: object) -> bool:
+    home = normalize_market_country(market_country)
+    return home in _BROWSER_MARKETS and home not in NO_NATIVE_SOLD_ROUTE_MARKETS
+
+
 def is_browser_fallback_market(market_country: object) -> bool:
     return normalize_market_country(market_country) in _BROWSER_MARKETS
 
@@ -118,7 +134,7 @@ def fallback_markets_for_key(
     ordered: list[str] = []
     for market in candidates:
         normalized = normalize_market_country(market)
-        if normalized == home:
+        if normalized == home and has_native_sold_route(home):
             continue
         if normalized not in _BROWSER_MARKETS:
             continue

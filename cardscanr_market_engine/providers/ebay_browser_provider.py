@@ -49,7 +49,16 @@ NO_RESULTS_TEXT_MARKERS = ("0 results", "no exact matches found", "no results fo
 RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category")
 BLOCK_TEXT_MARKERS = CHALLENGE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
 DEFAULT_SOLD_DATE = datetime(1970, 1, 1, tzinfo=timezone.utc)
-SUPPORTED_MARKET_ROUTES = {("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")}
+SUPPORTED_MARKET_ROUTES = {
+    ("AU", "AUD"),
+    ("US", "USD"),
+    ("GB", "GBP"),
+    ("CA", "CAD"),
+    ("DE", "EUR"),
+    ("FR", "EUR"),
+    ("IT", "EUR"),
+    ("ES", "EUR"),
+}
 DEBUG_REPORTS_DIR = ROOT / "reports" / "ebay_browser_debug"
 RESULT_SELECTOR_COUNTS = (
     "li.s-item",
@@ -96,7 +105,16 @@ PICK_YOUR_CARD_PATTERNS = (
 LOT_BUNDLE_PATTERNS = (" lot ", " bundle ", " collection ", " bulk ", " card lot ", " holo lot ", " mixed lot ")
 GRADED_PATTERNS = (" psa ", " bgs ", " cgc ", " sgc ", " graded ", " slab ")
 SEALED_PATTERNS = (" booster ", " sealed ", " pack ", " etb ", " elite trainer box ")
-SUPPORTED_EBAY_DOMAINS = ("ebay.com.au", "ebay.com", "ebay.co.uk", "ebay.ca")
+SUPPORTED_EBAY_DOMAINS = (
+    "ebay.com.au",
+    "ebay.com",
+    "ebay.co.uk",
+    "ebay.ca",
+    "ebay.de",
+    "ebay.fr",
+    "ebay.it",
+    "ebay.es",
+)
 EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity/")
 DEFAULT_MAX_QUERY_ATTEMPTS = 5
 RESULT_CONTAINER_SELECTOR = 'li.s-item, .srp-results, a[href*="/itm/"]'
@@ -1665,7 +1683,8 @@ class EbayBrowserSoldCompsProvider:
         route = (request.market_country.upper(), request.currency.upper())
         if route not in SUPPORTED_MARKET_ROUTES:
             raise ProviderUnsupportedMarketError(
-                "eBay browser provider currently supports AU/AUD, US/USD, GB/GBP, and CA/CAD only",
+                "eBay browser provider currently supports "
+                "AU/AUD, US/USD, GB/GBP, CA/CAD, DE/EUR, FR/EUR, IT/EUR, ES/EUR only",
                 diagnostics={"marketCountry": request.market_country, "currency": request.currency},
             )
         identity_guard = evaluate_english_market_identity(request)

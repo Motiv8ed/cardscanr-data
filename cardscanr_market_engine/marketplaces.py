@@ -210,12 +210,21 @@ def ebay_host_matches_provider_domain(*, final_url_or_host: object, provider_dom
 
 
 def browser_supported_market_routes() -> tuple[tuple[str, str], ...]:
-    """Routes currently accepted by the live ebay_browser provider."""
+    """Routes currently accepted by the live ebay_browser provider.
+
+    DE/FR/IT/ES are included only because provider domains already exist in
+    `_EBAY_MARKETS` and must still pass live sold proof before claiming READY.
+    NZ/JP are intentionally absent until a native sold route is proven.
+    """
     return (
         ("AU", "AUD"),
         ("US", "USD"),
         ("GB", "GBP"),
         ("CA", "CAD"),
+        ("DE", "EUR"),
+        ("FR", "EUR"),
+        ("IT", "EUR"),
+        ("ES", "EUR"),
     )
 
 
