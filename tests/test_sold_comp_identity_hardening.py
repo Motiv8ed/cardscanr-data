@@ -109,7 +109,7 @@ class SetLanguageGradedLotTests(unittest.TestCase):
 
     def test_ambiguous_preowned_title_rejected(self) -> None:
         evaluated = filter_comps(_key(), [_comp("Pre-owned")])
-        self.assertIn(evaluated[0].rejection_reason, {"ambiguous_title", "wrong_collector_number"})
+        self.assertIn(evaluated[0].rejection_reason, {"ui_chrome_title", "ambiguous_title", "wrong_collector_number"})
         self.assertFalse(evaluated[0].included_in_estimate)
 
     def test_best_offer_chrome_title_rejected(self) -> None:
@@ -117,8 +117,13 @@ class SetLanguageGradedLotTests(unittest.TestCase):
         self.assertFalse(evaluated[0].included_in_estimate)
         self.assertIn(
             evaluated[0].rejection_reason,
-            {"sold_price_obscured", "ambiguous_title", "wrong_collector_number"},
+            {"sold_price_obscured", "ui_chrome_title", "ambiguous_title", "wrong_collector_number"},
         )
+
+    def test_buy_it_now_chrome_title_rejected(self) -> None:
+        evaluated = filter_comps(_key(), [_comp("Buy It Now")])
+        self.assertFalse(evaluated[0].included_in_estimate)
+        self.assertEqual(evaluated[0].rejection_reason, "ui_chrome_title")
 
     def test_sold_price_obscured_rejected(self) -> None:
         evaluated = filter_comps(
@@ -133,6 +138,18 @@ class SetLanguageGradedLotTests(unittest.TestCase):
             [_comp("Pokemon PIKACHU 58/102 - 30th Celebration - HOLO - MINT")],
         )
         self.assertEqual(evaluated[0].rejection_reason, "wrong_set")
+
+    def test_30th_anniversary_rejected_for_base_set(self) -> None:
+        evaluated = filter_comps(
+            _key(),
+            [_comp("2026 Pokemon 30th Anniversary Charizard 4/102 Gold Border Holo Classic")],
+        )
+        self.assertEqual(evaluated[0].rejection_reason, "wrong_set")
+        evaluated2 = filter_comps(
+            _key(),
+            [_comp("Pokemon TCG 30th Anniversary Charizard 4/102 Base Set")],
+        )
+        self.assertEqual(evaluated2[0].rejection_reason, "wrong_set")
 
     def test_ja_does_not_accept_english_title(self) -> None:
         key = _key(language="ja", card_name="ピカチュウ", normalized_card_name="pikachu", set_code="xy1", set_name="Collection X", collector_number="26")

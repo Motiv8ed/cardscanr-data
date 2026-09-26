@@ -109,6 +109,15 @@ CONDITION_ONLY_TITLES = frozenset(
         "3 bids",
         "best offer accepted",
         "best offer",
+        "add to cart",
+        "shop now",
+        "watch",
+        "watching",
+        "bids",
+        "sponsored",
+        "see all",
+        "more options",
+        "make offer",
     }
 )
 NON_ENGLISH_LANGUAGE_RE = re.compile(
@@ -125,7 +134,7 @@ NON_ENGLISH_LANGUAGE_RE = re.compile(
     flags=re.IGNORECASE,
 )
 BASE_SET_CONFLICT_RE = re.compile(
-    r"\b(?:25th\s+anniversary|30th\s+celebrations?|celebrations?|classic\s+collection|metal\s+gold\s+card)\b",
+    r"\b(?:25th\s+anniversary|30th\s+anniversary|30th\s+celebrations?|celebrations?|classic\s+collection|metal\s+gold\s+card|gold\s+border)\b",
     flags=re.IGNORECASE,
 )
 NON_CARD_PRODUCT_RE = re.compile(
@@ -772,6 +781,9 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "currency_mismatch"
     if _has_sold_price_obscured(comp):
         return "sold_price_obscured"
+    if _is_condition_only_title(comp.title) or _is_ui_chrome_title(comp.title):
+        # Defense in depth: pure UI/control chrome must never form a sold comp.
+        return "ui_chrome_title"
     language_rejection = _language_reject_reason(price_key, comp)
     if language_rejection:
         return language_rejection
@@ -819,10 +831,6 @@ def _reject_reason(price_key: MarketPriceKey, comp: SoldComp) -> str | None:
         return "wrong_set"
     if not _card_name_matches(price_key, normalized_identity):
         return "wrong_card_name"
-    if _is_condition_only_title(comp.title) or _is_ui_chrome_title(comp.title):
-        # Condition/UI-chrome scrape titles need full collector + set evidence in identity text.
-        if collector_info["quality"] != "full" or not set_info["matches"]:
-            return "ambiguous_title"
     if _has_many_card_numbers(price_key, normalized_identity):
         return "multiple_card_numbers"
     if score_comp(price_key, comp) < MIN_INCLUDED_SCORE:
