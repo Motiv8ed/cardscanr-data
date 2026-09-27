@@ -431,12 +431,42 @@ def build_sealed_pack(source_db: Path, work_dir: Path, output_dir: Path) -> Pack
     )
 
 
+def resolve_language_packs(
+    languages: Sequence[str] | None = None,
+) -> tuple[tuple[str, tuple[str, ...], str], ...]:
+    """Return LANGUAGE_PACKS filtered to an explicit production language set.
+
+    ``languages`` accepts pack ids (``en``, ``ja``) and also v1 ``jp`` which
+    maps to the ``ja`` pack. When omitted, all LANGUAGE_PACKS are built.
+    """
+    if languages is None:
+        return LANGUAGE_PACKS
+    wanted: set[str] = set()
+    for raw in languages:
+        token = raw.strip().lower()
+        if not token:
+            continue
+        if token in {"jp", "ja"}:
+            wanted.add("ja")
+        else:
+            wanted.add(token)
+    selected = tuple(entry for entry in LANGUAGE_PACKS if entry[0] in wanted)
+    missing = wanted - {entry[0] for entry in selected}
+    if missing:
+        raise ValueError(f"unknown pack languages: {sorted(missing)}")
+    if not selected:
+        raise ValueError("languages filter selected zero packs")
+    return selected
+
+
 def build_all_packs(
     *,
     source_db: Path,
     output_dir: Path,
     public_base_url: str | None = None,
     catalogue_release_id: str | None = None,
+    languages: Sequence[str] | None = None,
+    include_sealed: bool = True,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     work_dir = output_dir / "_work"
@@ -444,21 +474,24 @@ def build_all_packs(
         shutil.rmtree(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    language_packs = resolve_language_packs(languages)
+
     results: list[PackBuildResult] = [
         build_core_pack(source_db, work_dir, output_dir),
     ]
-    for pack_id, languages, description in LANGUAGE_PACKS:
+    for pack_id, pack_languages, description in language_packs:
         results.append(
             build_language_pack(
                 source_db,
                 work_dir,
                 output_dir,
                 pack_id=pack_id,
-                languages=languages,
+                languages=pack_languages,
                 description=description,
             )
         )
-    results.append(build_sealed_pack(source_db, work_dir, output_dir))
+    if include_sealed:
+        results.append(build_sealed_pack(source_db, work_dir, output_dir))
     shutil.rmtree(work_dir, ignore_errors=True)
 
     release_id = catalogue_release_id or utc_now().replace(":", "").replace("-", "")
