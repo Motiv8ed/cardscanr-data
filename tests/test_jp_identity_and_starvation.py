@@ -285,6 +285,22 @@ class FailureBackoffTests(unittest.TestCase):
         self.assertTrue(policy.retryable)
         self.assertEqual(policy.backoff, timedelta(minutes=30))
 
+    def test_ebay_sorry_transient_backoff_ladder(self) -> None:
+        from cardscanr_market_engine.failure_policy import FAILURE_CLASS_TRANSIENT_EBAY
+
+        exc = ProviderTemporaryError(
+            "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page during desktop navigation",
+            diagnostics={"reason": "ebay_sorry_error_page"},
+        )
+        self.assertEqual(classify_pricing_failure(exc), FAILURE_CLASS_TRANSIENT_EBAY)
+        first = build_failure_policy(exc, now=NOW, consecutive_same_failures=1)
+        second = build_failure_policy(exc, now=NOW, consecutive_same_failures=2)
+        third = build_failure_policy(exc, now=NOW, consecutive_same_failures=3)
+        self.assertTrue(first.retryable)
+        self.assertEqual(first.backoff, timedelta(minutes=15))
+        self.assertEqual(second.backoff, timedelta(minutes=60))
+        self.assertEqual(third.backoff, timedelta(hours=6))
+
 
 class SchedulerStarvationBackoffTests(unittest.TestCase):
     def setUp(self) -> None:

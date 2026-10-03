@@ -7,6 +7,11 @@ from typing import Any
 import requests
 
 from .models import MarketPriceKey, MarketPriceRefreshJob
+from .job_lease import (
+    DEFAULT_STALE_LOCK_MINUTES,
+    may_recover_running_lease,
+    recovery_action_for_running_job,
+)
 
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F-]{1,64}$")
 MAX_ERROR_BODY_CHARS = 4000
@@ -538,7 +543,8 @@ class SupabaseMarketEngineClient:
                     "price_key_id,current_market_price,recommended_price,next_refresh_due_at,"
                     "stale_after,latest_snapshot_id,confidence,sample_size,refresh_status,"
                     "display_price_source,provider,verification_required,reference_price,reference_provider,"
-                    "last_error_message,source_market_country,source_currency,source_price,fx_rate,fx_rate_timestamp"
+                    "last_updated_at,updated_at,last_error_message,source_market_country,source_currency,"
+                    "source_price,fx_rate,fx_rate_timestamp"
                 ),
                 "price_key_id": f"eq.{price_key_id}",
                 "limit": "1",
@@ -571,6 +577,20 @@ class SupabaseMarketEngineClient:
             if key_id and key_id not in active:
                 active[key_id] = row
         return active
+
+    def list_recent_user_demand_jobs(self, *, hours: int = 168) -> list[dict[str, Any]]:
+        """Rolling user-origin refresh requests (not owned_daily engine enqueues)."""
+        since = datetime.now(timezone.utc) - timedelta(hours=max(1, int(hours)))
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={
+                "select": "id,price_key_id,reason,requested_at,status,requested_by_user_id",
+                "requested_at": f"gte.{since.isoformat().replace('+00:00', 'Z')}",
+                "order": "requested_at.desc",
+                "limit": "5000",
+            },
+        )
+        return [row for row in rows if isinstance(row, dict)]
 
     def claim_specific_refresh_job(self, *, job_id: str, worker_id: str) -> MarketPriceRefreshJob | None:
         if UUID_PATTERN.fullmatch(str(job_id).strip()) is None:
@@ -702,6 +722,30 @@ class SupabaseMarketEngineClient:
                 raise LookupError(f"running refresh job not found for id {job_id}") from None
             return rows[0]
 
+    def mark_cache_local_runtime_failure(
+        self,
+        *,
+        price_key_id: str,
+        error_message: str,
+        market_country: str | None = None,
+        currency: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a local/X11 infrastructure failure without P2 card-band escalation.
+
+        Updates observability (last_error_message, updated_at) but does NOT set
+        refresh_status=failed. Verified freshness / selected price are untouched.
+        """
+        payload: dict[str, Any] = {
+            "price_key_id": price_key_id,
+            "last_error_message": (error_message or "")[:1000] or None,
+            "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+        }
+        if market_country:
+            payload["market_country"] = str(market_country).upper()
+        if currency:
+            payload["currency"] = str(currency).upper()
+        return self.upsert_cache(payload)
+
     def mark_cache_failure(
         self,
         *,
@@ -711,11 +755,40 @@ class SupabaseMarketEngineClient:
         market_country: str | None = None,
         currency: str | None = None,
     ) -> dict[str, Any]:
-        """Record a failed attempt and push next eligibility into the future."""
-        payload = {
+        """Record a failed attempt without clearing last-known-good price."""
+        # Merge-duplicates upsert: only patch failure fields. Never write $0 /
+        # null current_market_price here — that would erase provenance.
+        payload: dict[str, Any] = {
             "price_key_id": price_key_id,
             "refresh_status": "failed",
             "last_error_message": (error_message or "")[:1000] or None,
+            "next_refresh_due_at": _iso_or_none(next_refresh_due_at),
+            "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+        }
+        if market_country:
+            payload["market_country"] = str(market_country).upper()
+        if currency:
+            payload["currency"] = str(currency).upper()
+        return self.upsert_cache(payload)
+
+    def mark_cache_checked_no_new_evidence(
+        self,
+        *,
+        price_key_id: str,
+        next_refresh_due_at: datetime,
+        market_country: str | None = None,
+        currency: str | None = None,
+        outcome_message: str = "CHECKED_NO_NEW_EXACT_EVIDENCE",
+    ) -> dict[str, Any]:
+        """Record a successful sparse-market check without touching selected price provenance.
+
+        Updates attempt/check bookkeeping (updated_at, next_refresh_due_at, refresh_status)
+        but never rewrites current_market_price, last_updated_at, sample_size, or snapshot.
+        """
+        payload: dict[str, Any] = {
+            "price_key_id": price_key_id,
+            "refresh_status": "completed",
+            "last_error_message": (outcome_message or "CHECKED_NO_NEW_EXACT_EVIDENCE")[:1000],
             "next_refresh_due_at": _iso_or_none(next_refresh_due_at),
             "updated_at": _iso_or_none(datetime.now(timezone.utc)),
         }
@@ -785,10 +858,16 @@ class SupabaseMarketEngineClient:
     def recover_abandoned_refresh_jobs(
         self,
         *,
-        stale_after_minutes: int = 90,
+        stale_after_minutes: int = DEFAULT_STALE_LOCK_MINUTES,
         max_jobs: int = 25,
+        now: datetime | None = None,
     ) -> list[dict[str, Any]]:
-        """Fail running jobs whose lock is older than the stale threshold."""
+        """Fail running jobs whose lock is older than the stale threshold.
+
+        Live (non-stale) running leases are never stolen. Recovery marks the job
+        failed/retryable so the printing remains due — never completed/fresh.
+        """
+        current = now or datetime.now(timezone.utc)
         try:
             rows = self._rpc(
                 "recover_abandoned_market_price_refresh_jobs",
@@ -801,14 +880,11 @@ class SupabaseMarketEngineClient:
             # Fallback for environments that have not applied the recovery RPC yet.
             if exc.status_code != 404:
                 raise
-            cutoff = datetime.now(timezone.utc).timestamp() - (max(15, int(stale_after_minutes)) * 60)
-            cutoff_iso = datetime.fromtimestamp(cutoff, tz=timezone.utc).isoformat().replace("+00:00", "Z")
             stuck = self._table_get(
                 "market_price_refresh_jobs",
                 params={
                     "select": "id,price_key_id,status,locked_at,started_at,worker_id,reason",
                     "status": "eq.running",
-                    "or": f"(locked_at.lt.{cutoff_iso},and(locked_at.is.null,started_at.lt.{cutoff_iso}))",
                     "order": "locked_at.asc.nullsfirst",
                     "limit": max(1, min(int(max_jobs), 100)),
                 },
@@ -817,6 +893,23 @@ class SupabaseMarketEngineClient:
             for row in stuck:
                 job_id = str(row.get("id") or "").strip()
                 if not job_id:
+                    continue
+                action = recovery_action_for_running_job(
+                    status=str(row.get("status") or ""),
+                    locked_at=row.get("locked_at"),
+                    started_at=row.get("started_at"),
+                    now=current,
+                    stale_after_minutes=int(stale_after_minutes),
+                )
+                if action != "fail_stale_running":
+                    continue
+                if not may_recover_running_lease(
+                    status=str(row.get("status") or ""),
+                    locked_at=row.get("locked_at"),
+                    started_at=row.get("started_at"),
+                    now=current,
+                    stale_after_minutes=int(stale_after_minutes),
+                ):
                     continue
                 recovered.append(
                     self.fail_job(
@@ -832,6 +925,135 @@ class SupabaseMarketEngineClient:
         if isinstance(rows, dict):
             return [rows]
         return []
+
+    def list_owned_market_pricing_targets(
+        self,
+        *,
+        include_zero_owners: bool = False,
+    ) -> dict[str, Any]:
+        payload = self._rpc(
+            "list_owned_market_pricing_targets",
+            {"p_include_zero_owners": bool(include_zero_owners)},
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("list_owned_market_pricing_targets returned unexpected payload")
+        return payload
+
+    def sync_owned_market_price_keys(self) -> dict[str, Any]:
+        payload = self._rpc("sync_owned_market_price_keys", {})
+        if not isinstance(payload, dict):
+            raise ValueError("sync_owned_market_price_keys returned unexpected payload")
+        return payload
+
+    def owned_price_health_report(self) -> dict[str, Any]:
+        payload = self._rpc("owned_price_health_report", {})
+        if not isinstance(payload, dict):
+            raise ValueError("owned_price_health_report returned unexpected payload")
+        return payload
+
+    @staticmethod
+    def _fingerprint_lookup_candidates(fingerprint: str) -> list[str]:
+        """Return exact + collector-case variants for legacy fingerprint mismatches.
+
+        Owned SQL fingerprints upper-case collector numbers (GG30) while some
+        historical ``market_price_keys.fingerprint`` rows store lower-case (gg30).
+        Exact equality joins then miss the cache and falsely classify P0_NEVER_PRICED.
+        """
+        fp = str(fingerprint or "").strip()
+        if not fp:
+            return []
+        parts = fp.split("|")
+        out: list[str] = [fp]
+        if len(parts) >= 4:
+            collector = parts[3]
+            for alt in {collector.lower(), collector.upper()}:
+                if alt == collector:
+                    continue
+                cloned = list(parts)
+                cloned[3] = alt
+                out.append("|".join(cloned))
+        # Preserve order, unique
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for item in out:
+            if item not in seen:
+                seen.add(item)
+                ordered.append(item)
+        return ordered
+
+    def ensure_market_price_key_from_owned_target(self, target: dict[str, Any]) -> str:
+        fingerprint = str(target.get("fingerprint") or "").strip()
+        if not fingerprint:
+            raise ValueError("owned target missing fingerprint")
+        for candidate in self._fingerprint_lookup_candidates(fingerprint):
+            existing = self._table_get(
+                "market_price_keys",
+                params={"select": "id,fingerprint", "fingerprint": f"eq.{candidate}", "limit": "1"},
+            )
+            if existing:
+                return str(existing[0]["id"])
+        return self.get_or_create_price_key(
+            game="pokemon",
+            card_name=str(target.get("card_name") or ""),
+            normalized_card_name=str(target.get("card_name") or "").strip().lower().replace(" ", "_"),
+            set_name=str(target.get("set_name") or ""),
+            set_code=str(target.get("set_id") or ""),
+            collector_number=str(target.get("collector_number") or ""),
+            language=str(target.get("language") or "en"),
+            variant=str(target.get("variant") or "raw"),
+            condition=str(target.get("condition") or "raw"),
+            market_country=str(target.get("market_country") or "au"),
+            currency=str(target.get("currency") or "aud"),
+            fingerprint=fingerprint,
+        )
+
+    def enrich_owned_target_from_cache(self, target: dict[str, Any]) -> dict[str, Any]:
+        """Attach market_price_key_id + cache price fields for scheduler classification.
+
+        When the RPC left-join misses a legacy fingerprint case variant, the target
+        arrives as P0_NEVER_PRICED with null price even though a verified cache row
+        exists for the exact printing identity. Resolve the key and overlay cache.
+        """
+        enriched = dict(target)
+        key_id = str(enriched.get("market_price_key_id") or enriched.get("price_key_id") or "").strip()
+        if not key_id:
+            try:
+                key_id = str(self.ensure_market_price_key_from_owned_target(enriched) or "").strip()
+            except Exception:
+                key_id = ""
+        if not key_id:
+            return enriched
+        enriched["market_price_key_id"] = key_id
+        cache = self.get_cache_row(price_key_id=key_id) or {}
+        if not cache:
+            return enriched
+        # Never invent a price; only copy authoritative cache fields when present.
+        if cache.get("current_market_price") is not None:
+            enriched["current_market_price"] = cache.get("current_market_price")
+        if cache.get("last_updated_at") is not None:
+            enriched["last_updated_at"] = cache.get("last_updated_at")
+        if cache.get("refresh_status") is not None:
+            enriched["refresh_status"] = cache.get("refresh_status")
+        if cache.get("next_refresh_due_at") is not None:
+            enriched["next_refresh_due_at"] = cache.get("next_refresh_due_at")
+        if cache.get("stale_after") is not None:
+            enriched["stale_after"] = cache.get("stale_after")
+        if cache.get("display_price_source") is not None:
+            enriched["display_price_source"] = cache.get("display_price_source")
+        if cache.get("provider") is not None:
+            enriched["provider"] = cache.get("provider")
+        if cache.get("reference_price") is not None:
+            enriched["reference_price"] = cache.get("reference_price")
+        if cache.get("reference_provider") is not None:
+            enriched["reference_provider"] = cache.get("reference_provider")
+        enriched["cache_enrichment_applied"] = True
+        enriched["resolved_key_fingerprint"] = None
+        try:
+            key = self.get_price_key(price_key_id=key_id)
+            enriched["resolved_key_fingerprint"] = getattr(key, "fingerprint", None)
+        except Exception:
+            pass
+        return enriched
 
     def upsert_pipeline_heartbeat(
         self,

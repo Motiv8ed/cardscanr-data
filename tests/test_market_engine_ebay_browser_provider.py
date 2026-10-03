@@ -26,6 +26,7 @@ from cardscanr_market_engine.providers.ebay_browser_provider import (  # noqa: E
     EbayBrowserProviderConfig,
     EbayBrowserSoldCompsProvider,
     appears_to_be_personal_chrome_profile,
+    apply_sold_completed_filters_via_ui,
     assert_final_url_matches_requested_marketplace,
     build_quality_summary,
     build_result_container_timeout_diagnostics,
@@ -348,9 +349,24 @@ class ProviderFactoryTests(unittest.TestCase):
             self.assertTrue(profile_dir.exists())
 
     def test_ebay_browser_rejects_unsupported_market_before_network(self) -> None:
+        # DE/EUR is intentionally supported. Build a request whose country/currency
+        # pair is outside SUPPORTED_MARKET_ROUTES while keeping a valid AU market
+        # config object (resolve_marketplace_config rejects NZ before the provider).
         provider = EbayBrowserSoldCompsProvider()
+        base = sample_request(country="AU", currency="AUD")
+        unsupported = ProviderRequest(
+            price_key=base.price_key,
+            market_country="NZ",
+            currency="NZD",
+            marketplace=base.marketplace,
+            provider_marketplace_id=base.provider_marketplace_id,
+            provider_domain=base.provider_domain,
+            search_locale=base.search_locale,
+            display_name=base.display_name,
+            market_config=base.market_config,
+        )
         with self.assertRaises(ProviderUnsupportedMarketError):
-            provider.fetch_comps(sample_request(country="DE", currency="EUR"))
+            provider.fetch_comps(unsupported)
 
 
 class TimeoutAInstrumentationTests(unittest.TestCase):
@@ -665,10 +681,38 @@ class QueryBuilderTests(unittest.TestCase):
             language="en",
         )
         queries = build_provider_search_queries(request)
-        self.assertEqual(queries[0].query_text, "Roxie's Performance 081/086 Pokemon")
+        self.assertEqual(queries[0].query_text, "Roxie's Performance 081/086 chaos rising Pokemon")
+        self.assertEqual(queries[0].query_source, "name_number_set_unquoted")
         self.assertEqual(queries[-1].query_text, '"Roxie\'s Performance" "081/086" Pokemon')
         self.assertEqual(queries[0].diagnostics["queryStyle"], "unquoted_discovery")
         self.assertEqual(queries[-1].diagnostics["queryStyle"], "quoted_precision")
+        sources = [q.query_source for q in queries]
+        if "set_code_unquoted" in sources and "broad_number_unquoted" in sources:
+            self.assertLess(
+                sources.index("set_code_unquoted"),
+                sources.index("broad_number_unquoted"),
+            )
+
+    def test_en_ladder_prefers_set_code_before_broad_number(self) -> None:
+        request = sample_request(
+            card_name="Weedle",
+            normalized_card_name="weedle",
+            set_name="Chaos Rising",
+            set_code="me4",
+            collector_number="1",
+            language="en",
+            country="AU",
+            currency="AUD",
+        )
+        queries = build_provider_search_queries(request)
+        sources = [q.query_source for q in queries]
+        self.assertEqual(sources[0], "name_number_set_unquoted")
+        self.assertEqual(queries[0].query_text, "Weedle 1 chaos rising Pokemon")
+        self.assertIn("set_code_unquoted", sources)
+        self.assertIn("broad_number_unquoted", sources)
+        self.assertLess(sources.index("set_code_unquoted"), sources.index("broad_number_unquoted"))
+        self.assertNotIn("_trksid", queries[0].search_url)
+        self.assertTrue(queries[0].search_url.startswith("https://www.ebay.com.au/sch/i.html?"))
 
     def test_jp_local_name_is_not_used_for_english_market_queries(self) -> None:
         for country, currency in (("AU", "AUD"), ("US", "USD"), ("GB", "GBP"), ("CA", "CAD")):
@@ -708,16 +752,19 @@ class QueryBuilderTests(unittest.TestCase):
         self.assertEqual(query.provider_domain, "ebay.ca")
         self.assertIn("www.ebay.ca", query.search_url)
 
-    def test_query_builder_includes_sold_completed_params(self) -> None:
+    def test_query_builder_omits_sold_completed_deep_link_params(self) -> None:
         query = build_provider_search_query(sample_request())
-        self.assertIn("LH_Sold=1", query.search_url)
-        self.assertIn("LH_Complete=1", query.search_url)
+        self.assertNotIn("LH_Sold=1", query.search_url)
+        self.assertNotIn("LH_Complete=1", query.search_url)
+        self.assertIn("_nkw=", query.search_url)
+        self.assertEqual(query.diagnostics.get("soldFilterMode"), "ui_after_active_search")
 
     def test_english_query_has_no_negative_terms(self) -> None:
         query = build_provider_search_query(sample_request())
         for term in ("proxy", "custom", "digital", "code", "jumbo", "pack", "booster", "sealed", "psa", "cgc", "bgs", "graded", "lot", "bundle", "holo", "reverse"):
             self.assertNotIn(f"-{term}", query.query_text)
-        self.assertEqual(query.query_text, "Charizard ex 125/197 Pokemon")
+        self.assertEqual(query.query_text, "Charizard ex 125/197 obsidian flames Pokemon")
+        self.assertEqual(query.query_source, "name_number_set_unquoted")
         self.assertEqual(query.diagnostics["variantQueryMode"], "broad_variant_unknown_filter_later")
         self.assertEqual(query.diagnostics["queryPolicy"], "simple_discovery_filter_after")
         self.assertEqual(query.diagnostics["appliedNegativeTerms"], [])
@@ -841,12 +888,25 @@ class EvidenceStrategyTests(unittest.TestCase):
             collector_number="050/100",
             language="jp",
         )
-        exact = self._sold_comp("Pancham 050/100 Battle Partners Japanese Pokemon Card", item_id="222")
-        fallback = self._sold_comp("Pancham 050 SV9 Japanese Pokemon Card", item_id="223", query_source="set_code_fallback")
+        # Production scoring: set_code (+0.15) outranks set_name (+0.12). Exact identity
+        # must include the set code (or equivalent) to outrank a weaker number-only hit.
+        exact = self._sold_comp(
+            "Pancham 050/100 Battle Partners SV9 Japanese Pokemon Card",
+            item_id="222",
+        )
+        fallback = self._sold_comp(
+            "Pancham 050 Japanese Pokemon Card",
+            item_id="223",
+            query_source="broad_number_unquoted",
+        )
         evaluated = filter_comps(request.price_key, [exact, fallback])
         scores = {item.comp.source_listing_id: item.match_score for item in evaluated}
         self.assertGreater(scores["ebay-222"], scores["ebay-223"])
-        self.assertTrue(all(item.included_in_estimate for item in evaluated))
+        included = [item for item in evaluated if item.included_in_estimate]
+        self.assertEqual([item.comp.source_listing_id for item in included], ["ebay-222"])
+        rejected = [item for item in evaluated if not item.included_in_estimate]
+        self.assertTrue(rejected)
+        self.assertEqual(rejected[0].rejection_reason, "weak_set_identity")
 
     def test_selector_complete_your_set_listing_is_rejected(self) -> None:
         request = sample_request(country="AU", currency="AUD")
@@ -1556,7 +1616,8 @@ class EvidenceStrategyTests(unittest.TestCase):
         self.assertIn("aggregate", result.raw_metadata["stageTimings"])
         self.assertIn("evidence_filtering", result.raw_metadata["stageTimings"]["aggregate"]["stageDurationsMs"])
         self.assertIn("report_writing", result.raw_metadata["stageTimings"]["aggregate"]["stageDurationsMs"])
-        self.assertEqual(summary["query_attempts"][0]["query_source"], "broad_number_unquoted")
+        self.assertEqual(summary["query_attempts"][0]["query_source"], "name_number_set_unquoted")
+        self.assertEqual(queries[0].query_source, "name_number_set_unquoted")
         self.assertIn("early_stop_applied", summary)
         self.assertEqual(summary["failed_query_attempts"][0]["timed_out_stage"], "wait_for_result_container")
         self.assertIn("stage_timings", summary)
@@ -1967,6 +2028,96 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(
             classify_browser_page_state(title="Charizard listings", body_text="Sold items", selector_counts={".s-item": 2})["outcome"],
             "success",
+        )
+        self.assertEqual(
+            classify_browser_page_state(
+                title="Error Page | eBay",
+                body_text="SORRY Something went wrong on our end",
+            )["outcome"],
+            "provider_unavailable",
+        )
+
+    def test_apply_sold_completed_filters_via_ui_clicks_refine_links(self) -> None:
+        class _Loc:
+            def __init__(self, page: "_FakePage", selector: str) -> None:
+                self.page = page
+                self.selector = selector
+                self.first = self
+
+            def count(self) -> int:
+                if self.selector == "body":
+                    return 1
+                if "Sold items" in self.selector or (
+                    "LH_Sold=1" in self.selector and "Completed" not in self.selector
+                ):
+                    return 0 if "lh_sold=1" in self.page.url.lower() else 1
+                if "Completed items" in self.selector or "LH_Complete=1" in self.selector:
+                    return 0 if "lh_complete=1" in self.page.url.lower() else 1
+                return 0
+
+            def scroll_into_view_if_needed(self, timeout: int = 0) -> None:
+                return None
+
+            def hover(self, timeout: int = 0) -> None:
+                return None
+
+            def is_visible(self) -> bool:
+                return self.count() > 0
+
+            def click(self, timeout: int = 0, delay: int = 0) -> None:
+                if "Sold" in self.selector or ("LH_Sold" in self.selector and "Complete" not in self.selector):
+                    self.page.url = (
+                        "https://www.ebay.com.au/sch/i.html?_nkw=Pikachu&rt=nc&LH_Sold=1"
+                    )
+                    self.page.body = (
+                        "Sold items refine applied\nSold listings\nSold 27 Sep 2026\nA$1.50"
+                    )
+                elif "Completed" in self.selector or "LH_Complete" in self.selector:
+                    self.page.url = (
+                        "https://www.ebay.com.au/sch/i.html?_nkw=Pikachu&LH_Sold=1&rt=nc&LH_Complete=1"
+                    )
+                    self.page.body = "Sold listings\nSold 27 Sep 2026\nA$1.50"
+
+            def inner_text(self, timeout: int = 0) -> str:
+                return self.page.body
+
+        class _FakePage:
+            def __init__(self) -> None:
+                self.url = "https://www.ebay.com.au/sch/i.html?_nkw=Pikachu"
+                self.body = "Results for Pikachu Filter Active listings Sold items Completed items"
+                self.title_text = "Pikachu for sale | eBay"
+
+            def locator(self, selector: str) -> _Loc:
+                return _Loc(self, selector)
+
+            def wait_for_selector(self, selector: str, timeout: int = 0, state: str = "visible") -> None:
+                return None
+
+            def wait_for_load_state(self, state: str, timeout: int = 0) -> None:
+                return None
+
+            def wait_for_url(self, pattern, timeout: int = 0) -> None:
+                return None
+
+            def goto(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 0) -> None:
+                self.url = url
+
+            def title(self) -> str:
+                return self.title_text
+
+            def inner_text(self, sel: str) -> str:
+                return self.body
+
+        page = _FakePage()
+        diagnostics = apply_sold_completed_filters_via_ui(page, timeout_ms=5000)
+        # Completed is optional once Sold state independently verifies.
+        self.assertIn("LH_Sold=1", diagnostics["urlAfterFilters"])
+        self.assertIsNotNone(diagnostics["soldSelectorUsed"])
+        self.assertEqual(diagnostics["soldFilterMode"], "ui_after_active_search")
+        self.assertTrue(diagnostics["SOLD_STATE_VERIFIED"])
+        self.assertEqual(
+            diagnostics.get("completedFilterSkipped"),
+            "sold_state_verified_completed_optional",
         )
 
     def test_provider_diagnostics_redacts_secrets(self) -> None:

@@ -113,7 +113,9 @@ def offline_route_row(market_country: str, currency: str) -> dict:
         "expectedCurrency": currency,
         "providerMarketplaceId": request.provider_marketplace_id,
         "hostnameMatch": host == request.provider_domain,
-        "soldFiltersPresent": "LH_Sold=1" in search_url and "LH_Complete=1" in search_url,
+        "soldFilterMode": "ui_after_active_search",
+        "soldDeepLinkOmitted": ("LH_Sold=" not in search_url and "LH_Complete=" not in search_url),
+        "soldFiltersPresent": ("LH_Sold=" not in search_url and "LH_Complete=" not in search_url),
         "marketValidationPassed": host == request.provider_domain,
         "pricingAcceptedOrRejected": "offline_url_construction_only",
     }

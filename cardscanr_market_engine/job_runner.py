@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from dataclasses import replace
 import os
+import time
 from typing import Any
 
 from .cache_writer import build_cache_payload
@@ -30,11 +31,100 @@ from .providers.errors import (
     ProviderUnsupportedMarketError,
     sanitize_provider_diagnostics,
 )
+from .navigation_runtime_context import (
+    apply_context_to_environ,
+    load_navigation_runtime_context,
+)
 from .scheduler import parse_market_allowlist
 from .marketplace_ops_state import (
     get_active_cooldown,
     maybe_record_failure_cooldown,
 )
+from .atomic_json_state import AtomicStateError
+from .ebay_availability import (
+    EBAY_AVAILABILITY_COOLDOWN,
+    EBAY_CHALLENGE_REQUIRED as AVAIL_CHALLENGE,
+    begin_probe,
+    browser_work_allowed,
+    record_challenge,
+    record_healthy_browser_check,
+    record_sorry,
+    release_probe_local_failure,
+)
+from .ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+from .demand_aware_policy import DEFAULT_DEMAND_AWARE_POLICY
+from .demand_aware_scheduler import DemandIndex, evaluate_demand_aware_target, events_from_job_rows
+from .owned_verified_local_execution import (
+    PRICING_INTENT_OWNED_VERIFIED_LOCAL,
+    evaluate_owned_verified_local_execution,
+    job_requests_owned_verified_local,
+)
+from .owned_daily_outcomes import (
+    ALTERNATE_EBAY_SURFACE,
+    CHALLENGE_REQUIRED,
+    CHECKED_NO_NEW_EXACT_EVIDENCE,
+    EBAY_ACCESS_DENIED_403,
+    FINALIZE_TIMEOUT_SAFE,
+    NO_PRICE_EVER_FOUND,
+    TEMPORARY_BROWSER_FAILURE,
+    TEMPORARY_EBAY_SERVER_FAILURE,
+    classify_completed_ebay_write,
+    classify_exception_outcome,
+    is_sparse_no_new_evidence_reason,
+)
+from .pipeline_phase_diagnostics import (
+    build_provider_diagnostics_for_result,
+    extract_pipeline_phases,
+)
+from .x11_chrome_focus import is_local_runtime_failure_message
+
+
+def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str, Any]:
+    """Authoritative top-level phase fields for job results (fail-closed consumers)."""
+    meta = None
+    if provider_result is not None:
+        raw = getattr(provider_result, "raw_metadata", None)
+        if isinstance(raw, dict):
+            meta = raw
+    phases = extract_pipeline_phases(meta)
+    out: dict[str, Any] = {}
+    if phases.get("postSoldCapturePhase") is not None:
+        out["postSoldCapturePhase"] = phases.get("postSoldCapturePhase")
+    if phases.get("parsePhase") is not None:
+        out["parsePhase"] = phases.get("parsePhase")
+    if phases.get("x11SoldStateVerified"):
+        out["x11SoldStateVerified"] = True
+    capture_meta = phases.get("persistedCaptureArtifact")
+    if isinstance(capture_meta, dict):
+        out["currentJobCapture"] = capture_meta
+        out["persistedCaptureArtifact"] = capture_meta
+    if isinstance(meta, dict) and isinstance(meta.get("desktopNav"), dict):
+        out["desktopNav"] = meta.get("desktopNav")
+    if isinstance(meta, dict) and meta.get("navMode"):
+        out["navMode"] = meta.get("navMode")
+    return out
+
+
+def _phase_fields_from_diagnostics(provider_diagnostics: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(provider_diagnostics, dict):
+        return {}
+    nested = provider_diagnostics.get("diagnostics")
+    phase_src = nested if isinstance(nested, dict) else provider_diagnostics
+    phases = extract_pipeline_phases(phase_src if isinstance(phase_src, dict) else None)
+    out: dict[str, Any] = {}
+    if phases.get("postSoldCapturePhase") is not None:
+        out["postSoldCapturePhase"] = phases.get("postSoldCapturePhase")
+    if phases.get("parsePhase") is not None:
+        out["parsePhase"] = phases.get("parsePhase")
+    if phases.get("x11SoldStateVerified"):
+        out["x11SoldStateVerified"] = True
+    capture_meta = phases.get("persistedCaptureArtifact")
+    if isinstance(capture_meta, dict):
+        out["currentJobCapture"] = capture_meta
+        out["persistedCaptureArtifact"] = capture_meta
+    return out
+from .owned_daily_pacing import OwnedDailyPacingController
+from .gaming_resource_pause import GamingResourcePauseController
 
 
 def utc_now() -> datetime:
@@ -215,7 +305,18 @@ class MarketPriceJobRunner:
                     "allowedMarkets": allowed,
                 },
             )
-        cooldown = get_active_cooldown(market)
+        try:
+            cooldown = get_active_cooldown(market)
+        except AtomicStateError as exc:
+            raise ProviderBlockedError(
+                f"CHALLENGE_REQUIRED: marketplace ops state unreadable ({exc}); refusing browser work",
+                diagnostics={
+                    "providerOutcome": "marketplace_ops_state_unreadable",
+                    "operationalStatus": "CHALLENGE_REQUIRED",
+                    "marketCountry": market,
+                    "retryable": True,
+                },
+            ) from exc
         if cooldown is not None:
             status = cooldown.reason if cooldown.reason in {"AUTH_REQUIRED", "CHALLENGE_REQUIRED"} else "DEFERRED"
             raise ProviderBlockedError(
@@ -228,6 +329,54 @@ class MarketPriceJobRunner:
                     "cooldownUntil": utc_iso(cooldown.until),
                     "cooldownReason": cooldown.reason,
                     "retryable": True,
+                },
+            )
+        # Global eBay availability + incident ledger + cooldown (authoritative gate).
+        allow_probe = str(getattr(self, "_ebay_probe_mode", "") or "").lower() in {"1", "true", "yes"}
+        gate = evaluate_ebay_browser_work_gate(market=market or "AU", now=None, for_probe=allow_probe)
+        if not gate.allowed:
+            primary = gate.reason_codes[0] if gate.reason_codes else "EBAY_BROWSER_WORK_DENIED"
+            raise ProviderBlockedError(
+                f"{primary}: eBay browser work deferred ({','.join(gate.reason_codes)})",
+                diagnostics={
+                    "providerOutcome": (
+                        "marketplace_ops_cooldown"
+                        if any(c.startswith("MARKETPLACE_COOLDOWN:") for c in gate.reason_codes)
+                        else (
+                            "ebay_availability_cooldown"
+                            if EBAY_AVAILABILITY_COOLDOWN in gate.reason_codes
+                            else "ebay_availability_halt"
+                        )
+                    ),
+                    "operationalStatus": primary,
+                    "marketCountry": market,
+                    "ebayBrowserWorkGate": gate.to_dict(),
+                    "ebayAvailabilityState": gate.availability_state,
+                    "activeChallengeCount": gate.active_challenge_count,
+                    "retryable": AVAIL_CHALLENGE not in gate.reason_codes
+                    and not any(c.startswith("ACTIVE_CHALLENGE_INCIDENTS:") for c in gate.reason_codes),
+                },
+            )
+        # Preserve begin_probe behaviour when gate allows probe mode.
+        allowed_browser, avail_reason, avail_snap = browser_work_allowed(for_probe=allow_probe)
+        if allow_probe and avail_snap.state == "PROBE_REQUIRED" and allowed_browser:
+            begin_probe()
+        elif not allowed_browser:
+            # Defensive: gate should have caught this already.
+            until = utc_iso(avail_snap.next_probe_at) if avail_snap.next_probe_at else None
+            raise ProviderBlockedError(
+                f"{avail_reason}: eBay browser work deferred"
+                + (f" until {until}" if until else ""),
+                diagnostics={
+                    "providerOutcome": "ebay_availability_cooldown"
+                    if avail_reason == EBAY_AVAILABILITY_COOLDOWN
+                    else "ebay_availability_halt",
+                    "operationalStatus": avail_reason,
+                    "marketCountry": market,
+                    "ebayAvailabilityState": avail_snap.state,
+                    "nextProbeAt": until,
+                    "consecutiveSorryEvents": avail_snap.consecutive_sorry_events,
+                    "retryable": avail_reason != AVAIL_CHALLENGE,
                 },
             )
 
@@ -547,6 +696,8 @@ class MarketPriceJobRunner:
             raise ValueError(f"Market refresh job {job.id} is missing price_key_id")
         now = self.now_func()
         price_key: MarketPriceKey | None = None
+        prior_price: float | None = None
+        prior_cache: dict[str, Any] | None = None
         try:
             price_key = self.client.get_price_key(job.price_key_id)
             if not price_key.id:
@@ -555,13 +706,16 @@ class MarketPriceJobRunner:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
             # Prefer already-fresh no-op before marketplace allow/cooldown gates so
             # intentional skips never consume provider capacity or fail on ops cooldowns.
-            prior_cache = None
             if hasattr(self.client, "get_cache_row"):
                 try:
                     prior_cache = self.client.get_cache_row(price_key_id=price_key.id)
                 except Exception:
                     prior_cache = None
             force = "force" in str(job.reason or "").lower()
+            # Owned verified-local intent: reason contains owned_daily: (scheduler or
+            # reliability harness that embeds the scheduler reason).
+            is_owned_verified_local_intent = job_requests_owned_verified_local(reason=job.reason)
+            is_owned_daily = is_owned_verified_local_intent
             due_raw = (prior_cache or {}).get("next_refresh_due_at") or (prior_cache or {}).get("stale_after")
             due = None
             if due_raw:
@@ -569,10 +723,94 @@ class MarketPriceJobRunner:
                     due = datetime.fromisoformat(str(due_raw).replace("Z", "+00:00"))
                 except ValueError:
                     due = None
-            if not force and due is not None and due > now:
-                # Already-fresh is an intentional no-op, not a fleet failure.
-                # Cancel the job (do not fail_job / mark_cache_failure) so admin
-                # failure-rate alerts exclude these rows.
+            last_success_raw = (prior_cache or {}).get("last_updated_at")
+            prior_price_raw = (prior_cache or {}).get("current_market_price")
+            try:
+                prior_price = float(prior_price_raw) if prior_price_raw is not None else None
+            except (TypeError, ValueError):
+                prior_price = None
+
+            # Source-aware owned verified-local gate — MUST run before generic due skip.
+            # A recent REFERENCE-ONLY last_updated_at / next_refresh_due_at must not
+            # produce skipped_already_fresh for P0_NEEDS_VERIFIED_LOCAL work.
+            if not force and is_owned_verified_local_intent:
+                demand_hours = int(DEFAULT_DEMAND_AWARE_POLICY.normal_verified_ttl_hours)
+                demand_index = getattr(self, "_demand_index", None)
+                if demand_index is None:
+                    if hasattr(self.client, "list_recent_user_demand_jobs"):
+                        try:
+                            demand_index = DemandIndex(
+                                events_from_job_rows(
+                                    self.client.list_recent_user_demand_jobs(hours=168) or []
+                                )
+                            )
+                        except Exception:
+                            demand_index = DemandIndex([])
+                    else:
+                        demand_index = DemandIndex([])
+                    self._demand_index = demand_index
+                demand_row = evaluate_demand_aware_target(
+                    {
+                        **(prior_cache or {}),
+                        "market_price_key_id": price_key.id,
+                        "fingerprint": price_key.fingerprint,
+                        "market_country": getattr(price_key, "market_country", None)
+                        or (prior_cache or {}).get("market_country"),
+                        "current_market_price": prior_price,
+                        "display_price_source": (prior_cache or {}).get("display_price_source"),
+                        "provider": (prior_cache or {}).get("provider"),
+                        "last_updated_at": last_success_raw,
+                        "next_refresh_due_at": (prior_cache or {}).get("next_refresh_due_at"),
+                        "stale_after": (prior_cache or {}).get("stale_after"),
+                        "refresh_status": (prior_cache or {}).get("refresh_status"),
+                        "last_error_message": (prior_cache or {}).get("last_error_message"),
+                    },
+                    now=now,
+                    demand_index=demand_index,
+                )
+                demand_hours = int(demand_row.freshness_threshold_hours)
+                owned_exec = evaluate_owned_verified_local_execution(
+                    {
+                        **(prior_cache or {}),
+                        "current_market_price": prior_price,
+                        "display_price_source": (prior_cache or {}).get("display_price_source"),
+                        "provider": (prior_cache or {}).get("provider"),
+                        "last_updated_at": last_success_raw,
+                        "next_refresh_due_at": (prior_cache or {}).get("next_refresh_due_at"),
+                        "stale_after": (prior_cache or {}).get("stale_after"),
+                        "refresh_status": (prior_cache or {}).get("refresh_status"),
+                        "last_error_message": (prior_cache or {}).get("last_error_message"),
+                    },
+                    now=now,
+                    success_fresh_hours=demand_hours,
+                    pricing_intent=PRICING_INTENT_OWNED_VERIFIED_LOCAL,
+                )
+                if not owned_exec.should_execute:
+                    self.logger(
+                        f"[market-engine] skipped_already_fresh job={job.id} "
+                        f"reason={owned_exec.reason_code} band={owned_exec.scheduler_band} "
+                        f"sourceClass={owned_exec.source_class} "
+                        f"verifiedAt={owned_exec.successful_verified_at}"
+                    )
+                    if hasattr(self.client, "cancel_job"):
+                        self.client.cancel_job(job_id=job.id, reason="skipped_already_fresh")
+                    return {
+                        "jobId": job.id,
+                        "priceKeyId": price_key.id,
+                        "status": "skipped_already_fresh",
+                        "outcomeClass": "owned_daily_fresh_noop",
+                        "ownedDailyOutcome": "already_fresh_noop",
+                        "executionEligibility": owned_exec.to_dict(),
+                        "lastUpdatedAt": owned_exec.successful_verified_at,
+                        "nextRefreshDueAt": owned_exec.next_eligible_at,
+                    }
+                self.logger(
+                    f"[market-engine] owned_verified_local_execute job={job.id} "
+                    f"reason={owned_exec.reason_code} band={owned_exec.scheduler_band} "
+                    f"sourceClass={owned_exec.source_class} cacheDue={due_raw}"
+                )
+            elif not force and due is not None and due > now:
+                # Generic (non-owned) cache freshness — unchanged for manual/API/reference jobs.
                 self.logger(f"[market-engine] skipped_already_fresh job={job.id} due={due_raw}")
                 if hasattr(self.client, "cancel_job"):
                     self.client.cancel_job(
@@ -595,22 +833,39 @@ class MarketPriceJobRunner:
                     "outcomeClass": "already_fresh_noop",
                     "nextRefreshDueAt": due.isoformat().replace("+00:00", "Z"),
                 }
+
+            os.environ["CARDSCANR_JOB_ID"] = str(job.id)
+            os.environ["CARDSCANR_PRICE_KEY_ID"] = str(price_key.id)
+            os.environ.setdefault("CARDSCANR_CAPTURE_ORIGIN", "LIVE_BROWSER_CAPTURE")
+            if getattr(price_key, "fingerprint", None):
+                os.environ["CARDSCANR_FINGERPRINT"] = str(price_key.fingerprint)
+            nav_ctx = load_navigation_runtime_context()
+            nav_ctx.current_job_id = str(job.id)
+            nav_ctx.current_price_key_id = str(price_key.id)
+            if getattr(price_key, "fingerprint", None):
+                nav_ctx.current_fingerprint = str(price_key.fingerprint)
+            apply_context_to_environ(nav_ctx)
+
             self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
-            (
-                provider_request,
-                provider_result,
-                evaluated_comps,
-                source_pricing_stats,
-                pricing_stats,
-                currency_conversion,
-                fallback_attempts,
-            ) = self.fetch_fallback_result(
-                price_key=price_key,
-                provider_marketplace=provider_marketplace,
-                now=now,
-            )
+            try:
+                (
+                    provider_request,
+                    provider_result,
+                    evaluated_comps,
+                    source_pricing_stats,
+                    pricing_stats,
+                    currency_conversion,
+                    fallback_attempts,
+                ) = self.fetch_fallback_result(
+                    price_key=price_key,
+                    provider_marketplace=provider_marketplace,
+                    now=now,
+                )
+            finally:
+                for _env_key in ("CARDSCANR_JOB_ID", "CARDSCANR_FINGERPRINT"):
+                    os.environ.pop(_env_key, None)
             movement = evaluate_price_movement(
                 old_price=(prior_cache or {}).get("current_market_price"),
                 new_price=pricing_stats.recommended_price,
@@ -635,6 +890,69 @@ class MarketPriceJobRunner:
                     recommended_price=(prior_cache or {}).get("current_market_price"),
                 )
                 provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_reject_weak"
+
+            # Never write $0 / null as a successful refresh when a prior good price exists.
+            new_price = pricing_stats.recommended_price
+            try:
+                new_price_f = float(new_price) if new_price is not None else None
+            except (TypeError, ValueError):
+                new_price_f = None
+            prior_good = prior_price is not None and prior_price > 0
+            sparse_reason = str(getattr(pricing_stats, "no_reliable_price_reason", None) or "")
+            if (new_price_f is None or new_price_f <= 0) and prior_good:
+                # Sold search + identity filter ran; insufficient exact comps.
+                # This is a healthy CHECKED_NO_NEW_EXACT_EVIDENCE outcome, not a browser failure.
+                next_due = now + timedelta(hours=24 if is_owned_daily else max(1, int(self.config.no_comps_hours)))
+                if hasattr(self.client, "mark_cache_checked_no_new_evidence"):
+                    self.client.mark_cache_checked_no_new_evidence(
+                        price_key_id=price_key.id,
+                        next_refresh_due_at=next_due,
+                        market_country=price_key.market_country,
+                        currency=price_key.currency,
+                        outcome_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    )
+                if hasattr(self.client, "cancel_job"):
+                    self.client.cancel_job(
+                        job_id=job.id,
+                        reason=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    )
+                else:
+                    self.client.fail_job(
+                        job_id=job.id,
+                        error_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                        retryable=True,
+                        retry_delay_minutes=max(1, int((next_due - now).total_seconds() // 60)),
+                    )
+                self.logger(
+                    f"[market-engine] {CHECKED_NO_NEW_EXACT_EVIDENCE} job={job.id} "
+                    f"reason={sparse_reason or 'no_recommended_price'} retained={prior_price}"
+                )
+                try:
+                    record_healthy_browser_check(
+                        now=now,
+                        from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
+                    )
+                except Exception as avail_exc:
+                    self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
+                _diag = build_provider_diagnostics_for_result(provider_result)
+                return {
+                    "jobId": job.id,
+                    "priceKeyId": price_key.id,
+                    "status": "checked_no_new_exact_evidence",
+                    "ownedDailyOutcome": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    "outcomeClass": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    "noReliablePriceReason": sparse_reason or None,
+                    "includedCount": int(pricing_stats.included_count or 0),
+                    "rejectedCount": int(pricing_stats.rejected_count or 0),
+                    "retainedPrice": prior_price,
+                    "lastUpdatedAt": (prior_cache or {}).get("last_updated_at"),
+                    "nextRefreshDueAt": utc_iso(next_due),
+                    "lastGoodRetained": True,
+                    "providerDiagnostics": _diag,
+                    **_phase_fields_from_provider_result(provider_result),
+                }
+            if new_price_f is None or new_price_f <= 0:
+                raise ValueError("no_reliable_price:refusing_zero_or_null_cache_write")
             provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
             provider_result.raw_metadata["requestedMarketplace"] = f"EBAY_{price_key.market_country.upper()}"
             provider_result.raw_metadata["marketplaceActuallyUsed"] = provider_request.provider_marketplace_id
@@ -675,6 +993,19 @@ class MarketPriceJobRunner:
                 stale_after=pricing_stats.stale_after,
                 next_refresh_due_at=pricing_stats.stale_after,
             )
+            write_outcome = classify_completed_ebay_write(
+                prior_price=prior_price,
+                new_price=float(new_price_f),
+            )
+            try:
+                record_healthy_browser_check(
+                    now=now,
+                    from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
+                )
+            except Exception as avail_exc:
+                self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
+            _diag = build_provider_diagnostics_for_result(provider_result)
+            _phase = _phase_fields_from_provider_result(provider_result)
             return {
                 "jobId": job.id,
                 "priceKeyId": price_key.id,
@@ -684,6 +1015,13 @@ class MarketPriceJobRunner:
                 "rejectedCount": pricing_stats.rejected_count,
                 "confidence": pricing_stats.confidence,
                 "recommendedPrice": pricing_stats.recommended_price,
+                "sampleCount": pricing_stats.included_count,
+                "priorPrice": prior_price,
+                "resultingPrice": float(new_price_f) if new_price_f is not None else None,
+                "displayPriceSource": cache.get("display_price_source") if isinstance(cache, dict) else None,
+                "provider": (provider_result.provider_name if provider_result is not None else None),
+                "refreshStatus": "completed",
+                "verifiedSuccessFreshness": utc_iso(now),
                 "requestedMarketplace": f"EBAY_{price_key.market_country.upper()}",
                 "marketCountry": provider_request.market_country,
                 "sourceCurrency": provider_request.currency,
@@ -692,6 +1030,11 @@ class MarketPriceJobRunner:
                 "fallbackLevel": int(fallback_attempts[-1].get("fallbackLevel") or 0) if fallback_attempts else 0,
                 "evidenceType": "completed_sale",
                 "status": "completed",
+                "ownedDailyOutcome": write_outcome,
+                "outcomeClass": write_outcome,
+                # Authoritative pipeline phases for harness/reporting (fail-closed consumers).
+                "providerDiagnostics": _diag,
+                **_phase,
             }
         except Exception as exc:
             provider_diagnostics: dict[str, Any] | None = None
@@ -703,6 +1046,13 @@ class MarketPriceJobRunner:
                         "diagnostics": exc.diagnostics,
                     }
                 )
+            elif "provider_result" in locals() and provider_result is not None:
+                # Preserve capture/parse phase acknowledgement even when a later
+                # local write/finalize failure is not a ProviderError.
+                try:
+                    provider_diagnostics = build_provider_diagnostics_for_result(provider_result)
+                except Exception:
+                    provider_diagnostics = None
             if price_key is not None:
                 maybe_record_failure_cooldown(
                     market=str(price_key.market_country or ""),
@@ -712,6 +1062,114 @@ class MarketPriceJobRunner:
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
             error_message = str(exc)
+            owned_outcome = classify_exception_outcome(
+                exc if isinstance(exc, Exception) else error_message,
+                diagnostics=(exc.diagnostics if isinstance(exc, ProviderError) else None),
+            )
+            # Worker-wide eBay availability circuit (do not re-open on cooldown skip).
+            try:
+                diag = (exc.diagnostics if isinstance(exc, ProviderError) else None) or {}
+                operational = str(diag.get("operationalStatus") or "")
+                if operational in {EBAY_AVAILABILITY_COOLDOWN, AVAIL_CHALLENGE} or str(
+                    diag.get("providerOutcome") or ""
+                ) in {"ebay_availability_cooldown", "ebay_availability_halt", "marketplace_ops_cooldown"}:
+                    pass
+                elif owned_outcome == FINALIZE_TIMEOUT_SAFE or str(diag.get("terminal") or "") == FINALIZE_TIMEOUT_SAFE:
+                    # Local post-Sold CDP hang — do not treat as eBay SORRY or healthy.
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif owned_outcome == "POST_SOLD_CAPTURE_FAILURE" or str(diag.get("reason") or "") in {
+                    "post_sold_capture_failed",
+                    "cdp_post_sold_capture_failed",
+                }:
+                    # Local capture failure after X11 Sold verified — retain last-good; no SORRY breaker.
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif owned_outcome == ALTERNATE_EBAY_SURFACE or str(diag.get("reason") or "") in {
+                    "ebay_live_results",
+                    "alternate_ebay_surface",
+                    "sold_unavailable_on_alternate_surface",
+                }:
+                    # Alternate eBay surface — retain last-good; do not trip SORRY breaker.
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif owned_outcome in {
+                    "LOCAL_SEARCH_SURFACE_STATE_LEAK",
+                    "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED",
+                } or str(diag.get("reason") or "") in {
+                    "search_origin_ebay_live",
+                    "ebay_live_surface_at_submit_gate",
+                    "live_leak_after_type_unrecoverable",
+                    "ordinary_marketplace_surface_unrecoverable",
+                }:
+                    # Local Live-scope leak — retain last-good; do not trip SORRY breaker.
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif (
+                    bool(getattr(self, "_ebay_probe_mode", False))
+                    and owned_outcome not in {TEMPORARY_EBAY_SERVER_FAILURE, CHALLENGE_REQUIRED, EBAY_ACCESS_DENIED_403}
+                    and operational not in {EBAY_AVAILABILITY_COOLDOWN, AVAIL_CHALLENGE}
+                ):
+                    # Probe slot must not stay in_flight after local/browser failures.
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif owned_outcome == CHALLENGE_REQUIRED or operational == AVAIL_CHALLENGE:
+                    cooldown_row = None
+                    try:
+                        if price_key is not None:
+                            cooldown_row = get_active_cooldown(str(price_key.market_country or ""))
+                    except Exception:
+                        cooldown_row = None
+                    record_challenge(
+                        now=now,
+                        reference=error_message,
+                        market=(price_key.market_country if price_key is not None else None),
+                        incident_id=(cooldown_row.incident_id if cooldown_row is not None else None),
+                    )
+                elif owned_outcome == TEMPORARY_EBAY_SERVER_FAILURE or owned_outcome == EBAY_ACCESS_DENIED_403 or str(
+                    diag.get("reason") or ""
+                ) in {"ebay_sorry_error_page", "ebay_access_denied_403"}:
+                    record_sorry(
+                        now=now,
+                        reference=error_message,
+                        market=(price_key.market_country if price_key is not None else None),
+                        from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
+                    )
+            except Exception as avail_exc:
+                self.logger(f"[market-engine] ebay availability failure update failed: {avail_exc}")
+            # Legacy refuse-zero path: treat as sparse check when prior good exists.
+            if (
+                owned_outcome != CHECKED_NO_NEW_EXACT_EVIDENCE
+                and prior_price is not None
+                and prior_price > 0
+                and (
+                    "refusing_zero_price_overwrite" in error_message.lower()
+                    or is_sparse_no_new_evidence_reason(error_message)
+                )
+            ):
+                owned_outcome = CHECKED_NO_NEW_EXACT_EVIDENCE
+            if owned_outcome == CHECKED_NO_NEW_EXACT_EVIDENCE and prior_price is not None and prior_price > 0:
+                next_due = now + timedelta(hours=24)
+                try:
+                    if hasattr(self.client, "mark_cache_checked_no_new_evidence"):
+                        self.client.mark_cache_checked_no_new_evidence(
+                            price_key_id=job.price_key_id,
+                            next_refresh_due_at=next_due,
+                            market_country=(price_key.market_country if price_key is not None else None),
+                            currency=(price_key.currency if price_key is not None else None),
+                        )
+                    if hasattr(self.client, "cancel_job"):
+                        self.client.cancel_job(job_id=job.id, reason=CHECKED_NO_NEW_EXACT_EVIDENCE)
+                except Exception as checked_exc:
+                    self.logger(f"[market-engine] checked_no_new_evidence finalize failed job={job.id}: {checked_exc}")
+                return {
+                    "jobId": job.id,
+                    "priceKeyId": job.price_key_id,
+                    "status": "checked_no_new_exact_evidence",
+                    "ownedDailyOutcome": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    "outcomeClass": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    "error": error_message,
+                    "retainedPrice": prior_price,
+                    "lastGoodRetained": True,
+                    "nextRefreshDueAt": utc_iso(next_due),
+                    **({"providerDiagnostics": provider_diagnostics} if provider_diagnostics else {}),
+                    **_phase_fields_from_diagnostics(provider_diagnostics),
+                }
             consecutive = 1
             try:
                 consecutive = 1 + int(
@@ -739,32 +1197,143 @@ class MarketPriceJobRunner:
                 fail_job_error = str(fail_exc)
                 self.logger(f"[market-engine] fail_job rpc failed job={job.id}: {fail_job_error}")
             try:
-                self.client.mark_cache_failure(
-                    price_key_id=job.price_key_id,
-                    error_message=error_message,
-                    next_refresh_due_at=policy.next_refresh_due_at,
-                    market_country=(price_key.market_country if price_key is not None else None),
-                    currency=(price_key.currency if price_key is not None else None),
+                desktop_nav = {}
+                if isinstance(provider_diagnostics, dict):
+                    nested = provider_diagnostics.get("diagnostics") or provider_diagnostics
+                    if isinstance(nested, dict):
+                        desktop_nav = nested.get("desktopNav") or nested.get("linuxNav") or {}
+                search_submitted = bool(
+                    (desktop_nav or {}).get("searchSuccess")
+                    or (isinstance(provider_diagnostics, dict) and provider_diagnostics.get("searchSubmissionStarted"))
                 )
+                local_pre_submit = (
+                    owned_outcome == TEMPORARY_BROWSER_FAILURE
+                    and not search_submitted
+                    and is_local_runtime_failure_message(error_message)
+                )
+                if local_pre_submit and hasattr(self.client, "mark_cache_local_runtime_failure"):
+                    self.client.mark_cache_local_runtime_failure(
+                        price_key_id=job.price_key_id,
+                        error_message=error_message,
+                        market_country=(price_key.market_country if price_key is not None else None),
+                        currency=(price_key.currency if price_key is not None else None),
+                    )
+                else:
+                    self.client.mark_cache_failure(
+                        price_key_id=job.price_key_id,
+                        error_message=error_message,
+                        next_refresh_due_at=policy.next_refresh_due_at,
+                        market_country=(price_key.market_country if price_key is not None else None),
+                        currency=(price_key.currency if price_key is not None else None),
+                    )
             except Exception as cache_exc:
                 self.logger(f"[market-engine] mark_cache_failure failed job={job.id}: {cache_exc}")
+            if owned_outcome == NO_PRICE_EVER_FOUND or (
+                (prior_price is None or prior_price <= 0)
+                and "no_reliable_price" in error_message.lower()
+            ):
+                owned_outcome = NO_PRICE_EVER_FOUND
             result = {
                 "jobId": job.id,
                 "priceKeyId": job.price_key_id,
                 "status": "failed",
                 "error": error_message,
+                "ownedDailyOutcome": owned_outcome,
+                "outcomeClass": owned_outcome,
                 "failurePolicy": failure_policy_diagnostics(policy),
                 "consecutiveSameFailures": consecutive,
+                "lastGoodRetained": bool(prior_price is not None and prior_price > 0),
             }
             if provider_diagnostics:
                 result["providerDiagnostics"] = provider_diagnostics
+                result.update(_phase_fields_from_diagnostics(provider_diagnostics))
+                nested = provider_diagnostics.get("diagnostics")
+                if not isinstance(nested, dict):
+                    nested = provider_diagnostics if isinstance(provider_diagnostics, dict) else {}
+                for key in (
+                    "errorType",
+                    "errorMessage",
+                    "failureStage",
+                    "failureClass",
+                    "navigationFailureClass",
+                    "exceptionLocation",
+                    "runtimeMode",
+                    "tracebackTail",
+                    "childExitCode",
+                    "childStderrSummary",
+                    "expectedPriorTargetId",
+                    "searchSubmissionStarted",
+                ):
+                    if nested.get(key) is not None:
+                        result[key] = nested.get(key)
+                if not result.get("errorMessage"):
+                    result["errorMessage"] = error_message
+                if not result.get("errorType") and isinstance(exc, Exception):
+                    result["errorType"] = type(exc).__name__
             if fail_job_error:
                 result["failJobError"] = fail_job_error
             return result
 
     def run_once(self, *, max_jobs: int | None = None) -> list[dict[str, Any]]:
+        gaming = GamingResourcePauseController()
+        if gaming.should_block_new_jobs():
+            self.logger(
+                f"[market-engine] gaming pause active ({gaming.block_reason()}); "
+                "not claiming new pricing jobs (queue preserved)"
+            )
+            return []
         jobs = self.claim_jobs(max_jobs=max_jobs)
         if not jobs:
             self.logger("[market-engine] no queued jobs claimed")
             return []
-        return [self.run_job(job) for job in jobs]
+        # eBay browser: never burst multiple market checks without inter-job pacing.
+        # Prefer max_jobs=1 from the worker; if a batch is claimed, pace between jobs.
+        provider_name = str(getattr(self.provider, "provider_name", "") or "").strip().lower()
+        if provider_name != "ebay_browser" or len(jobs) <= 1:
+            results: list[dict[str, Any]] = []
+            for job in jobs:
+                # Already claimed before pause race — finish this card, then stop.
+                if results and gaming.should_block_new_jobs():
+                    self.logger("[market-engine] gaming pause after card boundary; stopping claim batch")
+                    break
+                gaming.mark_job_started(str(job.price_key_id))
+                try:
+                    results.append(self.run_job(job))
+                finally:
+                    gaming.mark_job_finished()
+            return results
+
+        pacing = OwnedDailyPacingController()
+        results = []
+        for index, job in enumerate(jobs):
+            if gaming.should_block_new_jobs():
+                self.logger(
+                    f"[market-engine] gaming pause; skipping remaining {len(jobs) - index} claimed jobs"
+                )
+                break
+            if pacing.state.browser_halted:
+                self.logger(
+                    f"[market-engine] browser halted ({pacing.state.halt_reason}); "
+                    f"skipping remaining {len(jobs) - index} claimed jobs this cycle"
+                )
+                break
+            t0 = time.monotonic()
+            gaming.mark_job_started(str(job.price_key_id))
+            try:
+                result = self.run_job(job)
+            finally:
+                gaming.mark_job_finished()
+            pacing.record_check_duration(time.monotonic() - t0)
+            outcome = str(result.get("ownedDailyOutcome") or result.get("outcomeClass") or "").strip()
+            pacing.observe_outcome(outcome, last_good_retained=bool(result.get("lastGoodRetained")))
+            results.append(result)
+            if outcome == CHALLENGE_REQUIRED:
+                break
+            if gaming.should_block_new_jobs():
+                self.logger("[market-engine] gaming pause after card; no further jobs this cycle")
+                break
+            if index + 1 < len(jobs):
+                delay = pacing.next_delay_seconds(more_jobs_pending=True)
+                self.logger(f"[market-engine] paced_cooldown={delay}s before next claimed job")
+                time.sleep(delay)
+        return results

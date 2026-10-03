@@ -63,10 +63,14 @@ def _collector_parts(value: object) -> tuple[str, str, bool]:
 
 
 def _build_search_url(*, request: ProviderRequest, query_text: str) -> str:
+    """Build an active (unsold) discovery URL.
+
+    Sold/Completed must be applied via the on-page filter UI after navigation.
+    Deep-linking with ``LH_Sold``/``LH_Complete`` is rejected by ebay.com.au
+    ("SORRY / Something went wrong") even when the same filters work from UI.
+    """
     params = {
         "_nkw": query_text,
-        "LH_Sold": "1",
-        "LH_Complete": "1",
     }
     return f"https://www.{request.provider_domain}/sch/i.html?{urlencode(params)}"
 
@@ -285,43 +289,19 @@ def build_provider_search_queries(
                     },
                 )
             )
-        attempts.append(
-            (
-                "broad_number_unquoted",
-                [base_name, full_number, pokemon] if full_number else [base_name, pokemon],
-                {
-                    "queryStyle": "unquoted_discovery",
-                    "usesSetName": False,
-                    "usesSetCode": False,
-                    "usesFullCollectorNumber": bool(collector_full),
-                    "primaryDiscoveryQuery": not uses_catalogue_collector,
-                },
-            )
-        )
-        if readable_set and (uses_catalogue_collector or not full_number):
+        # Prefer strongest exact identity first. Broad number-only searches are noisy and
+        # more heat-prone on ebay.com.au; keep them after set-qualified alternates.
+        if readable_set and full_number:
             attempts.append(
                 (
-                    "name_set_unquoted",
-                    [base_name, readable_set, pokemon_card],
+                    "name_number_set_unquoted",
+                    [base_name, full_number, readable_set, pokemon],
                     {
                         "queryStyle": "unquoted_discovery",
                         "usesSetName": True,
                         "usesSetCode": False,
-                        "usesFullCollectorNumber": False,
-                    },
-                )
-            )
-        if variant_terms:
-            attempts.append(
-                (
-                    "variant_unquoted",
-                    [base_name, full_number, *variant_terms, pokemon],
-                    {
-                        "queryStyle": "unquoted_discovery",
-                        "usesSetName": False,
-                        "usesSetCode": False,
-                        "usesFullCollectorNumber": bool(collector_full),
-                        "usesVariantTerm": True,
+                        "usesFullCollectorNumber": True,
+                        "primaryDiscoveryQuery": not uses_catalogue_collector,
                     },
                 )
             )
@@ -335,6 +315,48 @@ def build_provider_search_queries(
                         "usesSetName": False,
                         "usesSetCode": True,
                         "usesFullCollectorNumber": False,
+                        "alternateExactQuery": True,
+                    },
+                )
+            )
+        if readable_set and (uses_catalogue_collector or not full_number):
+            attempts.append(
+                (
+                    "name_set_unquoted",
+                    [base_name, readable_set, pokemon_card],
+                    {
+                        "queryStyle": "unquoted_discovery",
+                        "usesSetName": True,
+                        "usesSetCode": False,
+                        "usesFullCollectorNumber": False,
+                    },
+                )
+            )
+        attempts.append(
+            (
+                "broad_number_unquoted",
+                [base_name, full_number, pokemon] if full_number else [base_name, pokemon],
+                {
+                    "queryStyle": "unquoted_discovery",
+                    "usesSetName": False,
+                    "usesSetCode": False,
+                    "usesFullCollectorNumber": bool(collector_full),
+                    "primaryDiscoveryQuery": not uses_catalogue_collector and not (readable_set and full_number),
+                    "fallbackQuery": bool(readable_set and full_number),
+                },
+            )
+        )
+        if variant_terms:
+            attempts.append(
+                (
+                    "variant_unquoted",
+                    [base_name, full_number, *variant_terms, pokemon],
+                    {
+                        "queryStyle": "unquoted_discovery",
+                        "usesSetName": False,
+                        "usesSetCode": False,
+                        "usesFullCollectorNumber": bool(collector_full),
+                        "usesVariantTerm": True,
                     },
                 )
             )
@@ -366,6 +388,7 @@ def build_provider_search_queries(
             "queryIndex": len(queries),
             "querySource": source,
             "queryStyle": diagnostics.get("queryStyle") or "unquoted_discovery",
+            "soldFilterMode": "ui_after_active_search",
         }
         queries.append(
             ProviderSearchQuery(

@@ -179,7 +179,28 @@ class BulkReferenceRefreshRunner:
         display: DisplayPriceDecision,
         snapshot_id: str,
         now: datetime,
+        prior_cache: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        # When precedence preserves a higher-tier selected estimate (usually eBay),
+        # only update secondary reference fields. Never clobber selected market fields
+        # or point latest_snapshot_id at a reference observation.
+        if display.action in {"preserve_verified", "pending_verification", "reject_reference"}:
+            return {
+                "price_key_id": key.id,
+                "reference_price": display.reference_price,
+                "reference_provider": display.reference_provider,
+                "reference_updated_at": utc_iso(now),
+                "verification_required": display.verification_required,
+                "verification_reason": display.verification_reason,
+                # Keep customer-facing selected estimate / provenance intact.
+                "current_market_price": display.display_price,
+                "provider": display.provider,
+                "marketplace": display.marketplace,
+                "display_price_source": display.display_source,
+                "confidence": display.confidence,
+                "last_error_message": None,
+            }
+
         policy = calculate_refresh_policy(
             cache_row={
                 "current_market_price": display.display_price,
@@ -302,6 +323,7 @@ class BulkReferenceRefreshRunner:
             display=display,
             snapshot_id=snapshot_id,
             now=now,
+            prior_cache=prior_cache,
         )
         self.client.upsert_cache(cache_payload)
 

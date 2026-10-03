@@ -3,13 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from dataclasses import replace
 from pathlib import Path
+import os
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
+from cardscanr_market_engine.ebay_availability import EbayAvailabilitySnapshot, save_availability
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.models import (
     MarketPriceKey,
@@ -143,6 +146,45 @@ class FakeClient:
 
 
 class JobRunnerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # Isolate from production control-plane files (PROBE_REQUIRED / cooldowns).
+        self._tmpdir = tempfile.TemporaryDirectory()
+        root = Path(self._tmpdir.name)
+        avail = root / "ebay_availability_state.json"
+        ops = root / "marketplace_ops_state.json"
+        incidents = root / "control_plane_incidents.json"
+        save_availability(
+            EbayAvailabilitySnapshot(
+                state="HEALTHY",
+                market="AU",
+                confirmed_healthy=True,
+                updated_at=datetime(2026, 5, 25, tzinfo=timezone.utc),
+            ),
+            path=avail, force=True)
+        ops.write_text('{"version":1,"markets":{}}\n', encoding="utf-8")
+        incidents.write_text('{"version":1,"incidents":{}}\n', encoding="utf-8")
+        self._prev_env = {
+            "EBAY_AVAILABILITY_STATE_PATH": os.environ.get("EBAY_AVAILABILITY_STATE_PATH"),
+            "MARKET_OPS_STATE_PATH": os.environ.get("MARKET_OPS_STATE_PATH"),
+            "CONTROL_PLANE_INCIDENTS_PATH": os.environ.get("CONTROL_PLANE_INCIDENTS_PATH"),
+            "MARKET_WORKER_ALLOWED_MARKETS": os.environ.get("MARKET_WORKER_ALLOWED_MARKETS"),
+            "MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS": os.environ.get("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS"),
+        }
+        os.environ["EBAY_AVAILABILITY_STATE_PATH"] = str(avail)
+        os.environ["MARKET_OPS_STATE_PATH"] = str(ops)
+        os.environ["CONTROL_PLANE_INCIDENTS_PATH"] = str(incidents)
+        # Hermetic allowlist: do not inherit operator shell AU-only defaults.
+        os.environ["MARKET_WORKER_ALLOWED_MARKETS"] = "AU,US,GB,CA,NZ"
+        os.environ["MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS"] = "NONE"
+
+    def tearDown(self) -> None:
+        for key, value in self._prev_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self._tmpdir.cleanup()
+
     def test_job_runner_prepares_snapshot_cache_and_evidence_payloads(self) -> None:
         provider = FakeProvider()
         client = FakeClient()
@@ -231,7 +273,8 @@ class JobRunnerTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "failed")
-        self.assertEqual(client.failed, {"job_id": "job-2", "error_message": "boom"})
+        self.assertEqual(client.failed["job_id"], "job-2")
+        self.assertEqual(client.failed["error_message"], "boom")
 
     def test_job_runner_includes_fail_job_error_if_fail_rpc_fails(self) -> None:
         class BrokenProvider:
@@ -307,7 +350,8 @@ class JobRunnerTests(unittest.TestCase):
         self.assertEqual(result["providerDiagnostics"]["providerErrorCode"], "provider_identity_unavailable")
         diagnostics = result["providerDiagnostics"]["diagnostics"]
         self.assertEqual(diagnostics["blocked_reason"], "english_market_identity_unavailable")
-        self.assertEqual(client.failed, {"job_id": "job-identity-blocked", "error_message": result["error"]})
+        self.assertEqual(client.failed["job_id"], "job-identity-blocked")
+        self.assertEqual(client.failed["error_message"], result["error"])
 
     def test_job_runner_fails_cleanly_for_unsupported_market(self) -> None:
         class UnsupportedMarketProvider(FakeProvider):
@@ -345,7 +389,8 @@ class JobRunnerTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "failed")
         self.assertIn("Unsupported eBay market route", result["error"])
-        self.assertEqual(client.failed, {"job_id": "job-unsupported", "error_message": result["error"]})
+        self.assertEqual(client.failed["job_id"], "job-unsupported")
+        self.assertEqual(client.failed["error_message"], result["error"])
 
     def test_job_runner_does_not_accept_cross_marketplace_comps(self) -> None:
         class FallbackClient(FakeClient):
@@ -426,20 +471,12 @@ class JobRunnerTests(unittest.TestCase):
         )
 
         self.assertEqual(provider.attempts, ["EBAY_AU"])
-        self.assertEqual(result["status"], "completed")
-        self.assertEqual(result["requestedMarketplace"], "EBAY_AU")
-        self.assertEqual(result["marketplace"], "EBAY_AU")
-        self.assertEqual(result["fallbackLevel"], 0)
-        self.assertIsNone(result["recommendedPrice"])
-        self.assertEqual(result["currency"], "AUD")
-        self.assertEqual(result["sourceCurrency"], "AUD")
-        self.assertIsNone(client.cache_payload["current_market_price"])
-        self.assertEqual(client.cache_payload["currency"], "AUD")
-        diagnostics = client.snapshot_payload["diagnostics_json"]
-        self.assertEqual(diagnostics["requestedMarketplace"], "EBAY_AU")
-        self.assertEqual(diagnostics["marketplaceActuallyUsed"], "EBAY_AU")
-        self.assertEqual(diagnostics["pricingPolicy"], "ebay_home_marketplace_only")
-        self.assertEqual(diagnostics["fallbackLevel"], 0)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("refusing_zero_or_null_cache_write", str(result.get("error") or ""))
+        self.assertEqual(result.get("ownedDailyOutcome"), "NO_PRICE_EVER_FOUND")
+        self.assertIsNone(client.cache_payload)
+        # Home marketplace only — US comps must never be accepted as AU evidence.
+        self.assertEqual(provider.attempts.count("EBAY_US"), 0)
 
     def test_job_runner_persists_terminal_no_evidence_state(self) -> None:
         class AuClient(FakeClient):
@@ -500,13 +537,12 @@ class JobRunnerTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["status"], "failed")
         self.assertEqual(provider.attempts, ["EBAY_AU"])
-        self.assertIsNone(client.cache_payload["current_market_price"])
-        self.assertEqual(client.cache_payload["sample_size"], 0)
-        self.assertEqual(client.snapshot_payload["diagnostics_json"]["no_reliable_price_reason"], "no_comps_parsed")
-        self.assertEqual(client.snapshot_payload["diagnostics_json"]["fallbackLevel"], 0)
-        self.assertEqual(client.snapshot_payload["diagnostics_json"]["pricingPolicy"], "ebay_home_marketplace_only")
+        self.assertIn("refusing_zero_or_null_cache_write", str(result.get("error") or ""))
+        self.assertEqual(result.get("ownedDailyOutcome"), "NO_PRICE_EVER_FOUND")
+        self.assertIsNone(client.cache_payload)
+        self.assertIsNone(getattr(client, "snapshot_payload", None))
 
     def test_job_runner_errors_on_missing_job_price_key_id(self) -> None:
         runner = MarketPriceJobRunner(

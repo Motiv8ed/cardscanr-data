@@ -19,12 +19,24 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.international.fallback_runner import InternationalMarketPriceJobRunner
+from cardscanr_market_engine.owned_daily_outcomes import CHALLENGE_REQUIRED
+from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingController
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 MIN_TRANSIENT_BACKOFF_SECONDS = 10
 MAX_TRANSIENT_BACKOFF_SECONDS = 60
 MAX_REPORT_ERROR_CHARS = 1000
+
+
+def _ebay_pacing_enabled(config: MarketEngineConfig) -> bool:
+    return str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
+
+
+def _outcome_from_result(row: dict[str, Any]) -> str | None:
+    return (
+        str(row.get("ownedDailyOutcome") or row.get("outcomeClass") or "").strip() or None
+    )
 
 
 def utc_iso(value: datetime | None = None) -> str:
@@ -148,13 +160,31 @@ def run_worker_loop(
     max_jobs: int,
     sleep_func: Any = time.sleep,
     logger: Any = print,
+    pacing: OwnedDailyPacingController | None = None,
 ) -> int:
     cycle = 0
     transient_backoff_seconds = 0
+    pacing_controller = pacing
+    if pacing_controller is None and _ebay_pacing_enabled(config):
+        pacing_controller = OwnedDailyPacingController()
 
     while True:
         cycle += 1
         started_at = utc_iso()
+        cycle_t0 = time.monotonic()
+        if pacing_controller is not None and pacing_controller.state.browser_halted:
+            logger(
+                "[market-engine] "
+                f"cycle={cycle} status=browser_halted reason={pacing_controller.state.halt_reason} "
+                "awaiting human eBay session restoration"
+            )
+            if args.once:
+                return 0
+            if args.max_cycles > 0 and cycle >= args.max_cycles:
+                return 0
+            # Long idle; do not hammer after CHALLENGE_REQUIRED.
+            sleep_func(max(poll_seconds, pacing_controller.config.max_inter_job_delay_seconds))
+            continue
         try:
             results = runner.run_once(max_jobs=max_jobs)
         except Exception as exc:
@@ -187,12 +217,27 @@ def run_worker_loop(
             continue
 
         transient_backoff_seconds = 0
+        if pacing_controller is not None and results:
+            elapsed = time.monotonic() - cycle_t0
+            # Attribute cycle duration across jobs in this claim batch.
+            per_job = elapsed / max(1, len(results))
+            for row in results:
+                pacing_controller.record_check_duration(per_job)
+                outcome = _outcome_from_result(row)
+                pacing_controller.observe_outcome(
+                    outcome,
+                    last_good_retained=bool(row.get("lastGoodRetained")),
+                )
+                if outcome == CHALLENGE_REQUIRED:
+                    break
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,
             started_at=started_at,
             results=results,
         )
+        if pacing_controller is not None:
+            summary["ownedDailyPacing"] = pacing_controller.state.snapshot()
         write_json(config.latest_report_path, summary)
         append_jsonl(config.runs_report_path, summary)
         try:
@@ -226,7 +271,12 @@ def run_worker_loop(
             return 0
         if args.max_cycles > 0 and cycle >= args.max_cycles:
             return 0
-        sleep_func(poll_seconds)
+        if pacing_controller is not None and results:
+            delay = pacing_controller.next_delay_seconds(more_jobs_pending=True)
+            logger(f"[market-engine] paced_cooldown={delay}s outcome={pacing_controller.state.last_outcome}")
+            sleep_func(delay)
+        else:
+            sleep_func(poll_seconds)
 
 
 def parse_args() -> argparse.Namespace:

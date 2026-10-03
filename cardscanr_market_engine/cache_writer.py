@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .models import MarketPriceKey, PricingStats, ProviderResult
+from .price_source_precedence import display_source_for_tier, TIER_FRESH_EBAY
 
 
 def utc_iso(value: datetime | None = None) -> str:
@@ -28,6 +29,9 @@ def build_cache_payload(
     refreshed_at_iso = utc_iso(refreshed_at)
     raw_market_country = provider_result.raw_metadata.get("marketCountry")
     raw_currency = provider_result.raw_metadata.get("displayCurrency") or provider_result.raw_metadata.get("currency")
+    market_country = _normalized_market_field(raw_market_country, price_key.market_country)
+    # eBay sold writes are always a verified local/AU selected estimate.
+    display_source = display_source_for_tier(TIER_FRESH_EBAY, market_country=market_country)
     return {
         "price_key_id": price_key.id,
         "current_market_price": pricing_stats.recommended_price,
@@ -40,7 +44,7 @@ def build_cache_payload(
         "confidence": pricing_stats.confidence,
         "provider": provider_result.provider_name,
         "marketplace": provider_result.marketplace,
-        "market_country": _normalized_market_field(raw_market_country, price_key.market_country),
+        "market_country": market_country,
         "currency": _normalized_market_field(raw_currency, price_key.currency),
         "last_updated_at": refreshed_at_iso,
         "stale_after": stale_after_iso,
@@ -48,4 +52,5 @@ def build_cache_payload(
         "refresh_status": "completed",
         "latest_snapshot_id": snapshot_id,
         "last_error_message": None,
+        "display_price_source": display_source,
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import tempfile
@@ -19,6 +20,16 @@ from cardscanr_market_engine.marketplace_ops_state import (
 
 
 class MarketplaceOpsStateTests(unittest.TestCase):
+    def _isolate(self, tmp: str) -> Path:
+        root = Path(tmp)
+        ops = root / "ops.json"
+        incidents = root / "control_plane_incidents.json"
+        os.environ["CONTROL_PLANE_INCIDENTS_PATH"] = str(incidents)
+        os.environ["MARKET_OPS_STATE_PATH"] = str(ops)
+        self.addCleanup(lambda: os.environ.pop("CONTROL_PLANE_INCIDENTS_PATH", None))
+        self.addCleanup(lambda: os.environ.pop("MARKET_OPS_STATE_PATH", None))
+        return ops
+
     def test_auth_and_challenge_never_classified_as_no_comps(self) -> None:
         self.assertEqual(
             classify_provider_failure("eBay redirected the public sold-listing search to authentication"),
@@ -40,9 +51,28 @@ class MarketplaceOpsStateTests(unittest.TestCase):
             "NO_COMPS",
         )
 
+    def test_chrome_launch_failure_not_classified_as_challenge(self) -> None:
+        self.assertEqual(
+            classify_provider_failure(
+                "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
+                "Install Google Chrome, then verify Playwright support with: python -m playwright install chromium",
+                diagnostics={"browserConfig": {"challengeStop": True, "headless": False}},
+            ),
+            "ERROR",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            ops = self._isolate(tmp)
+            recorded = maybe_record_failure_cooldown(
+                market="AU",
+                message="Installed Google Chrome could not be launched through Playwright channel='chrome'",
+                diagnostics={"browserConfig": {"challengeStop": True}},
+                path=ops,
+            )
+            self.assertIsNone(recorded)
+
     def test_cooldown_recorded_and_active(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "ops.json"
+            path = self._isolate(tmp)
             now = datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc)
             state = record_marketplace_cooldown(
                 "GB",
@@ -61,7 +91,7 @@ class MarketplaceOpsStateTests(unittest.TestCase):
 
     def test_maybe_record_ignores_no_comps_and_existing_cooldown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "ops.json"
+            path = self._isolate(tmp)
             now = datetime(2026, 8, 16, 12, 0, tzinfo=timezone.utc)
             self.assertIsNone(
                 maybe_record_failure_cooldown(
@@ -87,6 +117,11 @@ class MarketplaceOpsStateTests(unittest.TestCase):
                 path=path,
             )
             self.assertEqual(first.until, second.until)
+            # Must not touch production ledger
+            prod = ROOT / "reports" / "runtime" / "control_plane_incidents.json"
+            if prod.exists():
+                blob = prod.read_text(encoding="utf-8")
+                self.assertNotIn(str(first.incident_id or ""), blob)
 
 
 if __name__ == "__main__":

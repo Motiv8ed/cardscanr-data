@@ -22,6 +22,7 @@ from ..job_runner import (
 from ..marketplaces import LocalMarketConfig, resolve_marketplace_config
 from ..models import EvaluatedComp, MarketPriceKey, MarketPriceRefreshJob, PricingStats, ProviderRequest, ProviderResult
 from ..price_movement_guard import evaluate_price_movement, movement_diagnostics
+from ..price_source_precedence import can_proposed_replace_selected
 from ..pricing_stats import calculate_pricing_stats
 from .evidence_gate import evaluate_international_evidence_gate_from_stats
 from .fallback_eligibility import evaluate_international_fallback_eligibility
@@ -436,6 +437,33 @@ class InternationalFallbackMixin:
                     currency=price_key.currency,
                 )
             return {"jobId": job.id, "priceKeyId": price_key.id, "status": "failed", "error": message}
+
+        may_replace, replace_reason = can_proposed_replace_selected(
+            current_provider=(prior_cache or {}).get("provider"),
+            current_price=(prior_cache or {}).get("current_market_price"),
+            current_display_source=(prior_cache or {}).get("display_price_source"),
+            current_observed_at=(prior_cache or {}).get("last_updated_at"),
+            proposed_provider=getattr(self.provider, "provider_name", None) or "ebay_browser",
+            proposed_price=pricing_stats.recommended_price,
+            proposed_display_source="international_estimate",
+            proposed_observed_at=now,
+            now=now,
+        )
+        if not may_replace:
+            message = f"international_fallback_blocked_by_source_precedence:{replace_reason}"
+            self.client.fail_job(
+                job_id=job.id,
+                error_message=message,
+                retryable=True,
+                retry_delay_minutes=24 * 60,
+            )
+            return {
+                "jobId": job.id,
+                "priceKeyId": price_key.id,
+                "status": "failed",
+                "error": message,
+                "sourcePrecedence": replace_reason,
+            }
 
         movement = evaluate_price_movement(
             old_price=(prior_cache or {}).get("current_market_price"),

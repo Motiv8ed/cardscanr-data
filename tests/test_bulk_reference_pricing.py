@@ -122,15 +122,18 @@ class DisplayPolicyTests(unittest.TestCase):
                 "provider": "ebay_browser",
                 "display_price_source": "verified_au",
                 "confidence": "medium",
+                "last_updated_at": "2026-08-26T12:00:00Z",
             },
             observation=obs,
             converted_price=5.84,
             target_currency="AUD",
             now=NOW,
         )
-        self.assertEqual(decision.action, "pending_verification")
+        # Source precedence keeps eBay primary; reference is stored secondarily.
+        self.assertEqual(decision.action, "preserve_verified")
         self.assertEqual(decision.display_price, 65.14)
-        self.assertTrue(decision.verification_required)
+        self.assertEqual(decision.provider, "ebay_browser")
+        self.assertEqual(decision.reference_price, 5.84)
 
     def test_pikachu_extreme_movement_guard(self) -> None:
         movement = evaluate_price_movement(old_price=65.14, new_price=5.84, included_count=13, confidence="medium")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import os
 from typing import Any
 
 from .providers.errors import (
@@ -19,8 +20,14 @@ from .providers.errors import (
 from .providers.identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE
 
 FAILURE_CLASS_TRANSIENT = "retryable_transient"
+FAILURE_CLASS_TRANSIENT_EBAY = "retryable_transient_ebay"
 FAILURE_CLASS_LATER = "retryable_later"
 FAILURE_CLASS_IDENTITY = "identity_unsupported"
+
+# Conservative defaults for classic eBay SORRY / Error Page (not challenge bypass).
+DEFAULT_EBAY_TRANSIENT_COOLDOWN_MINUTES = 15
+DEFAULT_EBAY_TRANSIENT_SECOND_COOLDOWN_MINUTES = 60
+DEFAULT_EBAY_TRANSIENT_DEFER_HOURS = 6
 
 IDENTITY_ERROR_MARKERS = frozenset(
     {
@@ -57,6 +64,65 @@ def _message_blob(exc: BaseException | str | None) -> str:
     return str(exc).lower()
 
 
+def _ebay_sorry_markers(exc: BaseException | str | None) -> bool:
+    text = _message_blob(exc)
+    diag = ""
+    if isinstance(exc, ProviderError) and isinstance(exc.diagnostics, dict):
+        diag = " ".join(
+            str(exc.diagnostics.get(k) or "")
+            for k in ("reason", "providerOutcome", "preSoldSorry", "error")
+        ).lower()
+    blob = f"{text} {diag}"
+    return any(
+        marker in blob
+        for marker in (
+            "ebay_sorry_error_page",
+            "temporary_ebay_server_failure",
+            "ebay sorry",
+            "pre_sold_sorry",
+            "error page | ebay",
+            "something went wrong on our end",
+        )
+    )
+
+
+def ebay_transient_backoff_minutes(*, consecutive_same_failures: int = 1) -> timedelta:
+    """Per printing×market track: 15m → longer → defer to later scheduler cycle."""
+    attempts = max(1, int(consecutive_same_failures))
+    first = max(
+        1,
+        int(
+            os.getenv(
+                "EBAY_TRANSIENT_FAILURE_COOLDOWN_MINUTES",
+                str(DEFAULT_EBAY_TRANSIENT_COOLDOWN_MINUTES),
+            )
+        ),
+    )
+    second = max(
+        first,
+        int(
+            os.getenv(
+                "EBAY_TRANSIENT_FAILURE_SECOND_COOLDOWN_MINUTES",
+                str(DEFAULT_EBAY_TRANSIENT_SECOND_COOLDOWN_MINUTES),
+            )
+        ),
+    )
+    defer_hours = max(
+        1,
+        int(
+            os.getenv(
+                "EBAY_TRANSIENT_FAILURE_DEFER_HOURS",
+                str(DEFAULT_EBAY_TRANSIENT_DEFER_HOURS),
+            )
+        ),
+    )
+    if attempts <= 1:
+        return timedelta(minutes=first)
+    if attempts == 2:
+        return timedelta(minutes=second)
+    return timedelta(hours=defer_hours)
+
+
 def classify_pricing_failure(exc: BaseException | str | None) -> str:
     text = _message_blob(exc)
     if isinstance(exc, ProviderIdentityUnavailableError):
@@ -67,6 +133,8 @@ def classify_pricing_failure(exc: BaseException | str | None) -> str:
         return FAILURE_CLASS_IDENTITY
     if any(marker in text for marker in UNSUPPORTED_ERROR_MARKERS):
         return FAILURE_CLASS_IDENTITY
+    if _ebay_sorry_markers(exc):
+        return FAILURE_CLASS_TRANSIENT_EBAY
     if isinstance(
         exc,
         (
@@ -108,7 +176,9 @@ def backoff_for_failure(
         if attempts == 2:
             return timedelta(hours=12)
         return timedelta(hours=24)
-    # transient
+    if classification == FAILURE_CLASS_TRANSIENT_EBAY:
+        return ebay_transient_backoff_minutes(consecutive_same_failures=attempts)
+    # generic transient
     if attempts <= 1:
         return timedelta(minutes=30)
     if attempts == 2:
@@ -130,6 +200,7 @@ def build_failure_policy(
         FAILURE_CLASS_IDENTITY: "identity_or_unsupported_backoff",
         FAILURE_CLASS_LATER: "retryable_later_backoff",
         FAILURE_CLASS_TRANSIENT: "retryable_transient_backoff",
+        FAILURE_CLASS_TRANSIENT_EBAY: "retryable_transient_ebay_backoff",
     }.get(classification, "failure_backoff")
     return FailurePolicy(
         classification=classification,

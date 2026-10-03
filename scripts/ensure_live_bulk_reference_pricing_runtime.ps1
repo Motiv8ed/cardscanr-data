@@ -64,7 +64,10 @@ switch ($Action) {
         $scriptPath = Join-Path $repoRoot "scripts\ensure_live_bulk_reference_pricing_runtime.ps1"
         $actionArg = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Action run-once"
         $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArg -WorkingDirectory $repoRoot
-        $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue)
+        # Finite repetition duration required by Task Scheduler (MaxValue XML is rejected).
+        $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) `
+            -RepetitionInterval (New-TimeSpan -Hours 1) `
+            -RepetitionDuration (New-TimeSpan -Days 365)
         $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
         if ($existing) {
             Set-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings | Out-Null
@@ -73,12 +76,15 @@ switch ($Action) {
             Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings -Description "CardScanR hourly bulk/reference pricing sync" | Out-Null
             Write-Host "[bulk-runtime] Registered scheduled task $taskName (hourly)"
         }
+        $created = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
         Write-StateFile -Payload @{
             component = "bulk_reference_sync"
             taskName = $taskName
             cadenceHours = 1
             registeredAtUtc = (Get-Date).ToUniversalTime().ToString("o")
             status = "scheduled"
+            taskState = [string]$created.State
         }
+        Write-Host "[bulk-runtime] task=$($created.TaskName) state=$($created.State)"
     }
 }

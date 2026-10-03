@@ -31,23 +31,72 @@ from .errors import (
 from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_english_market_identity
 from .query_builder import ProviderSearchQuery, build_provider_search_queries
 from ..marketplaces import ebay_host_matches_provider_domain, normalize_ebay_host
+from ..navigation_runtime_context import (
+    classify_pre_submit_runtime_error,
+    exception_diagnostics,
+    load_navigation_runtime_context,
+    pre_submit_only_requested,
+)
 
 
-CHALLENGE_TEXT_MARKERS = (
-    "captcha",
+# ACTIVE challenge: user-facing verification copy (never bare "captcha" alone).
+ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS = (
     "verify you are human",
     "verify yourself",
     "are you a robot",
     "security challenge",
     "robot check",
+    "confirm you are human",
+    "please verify yourself",
+    "to continue, please verify",
+    "press and hold",
+    "security measure",
 )
+# ACTIVE challenge: known eBay security/challenge navigation surfaces.
+ACTIVE_CHALLENGE_URL_MARKERS = (
+    "/splashui/",
+    "captcha.ebay.",
+    "/challenge?",
+    "/challenge/",
+    "signin.ebay.",
+)
+# Backward-compatible alias used by older tests/helpers (active visible text only).
+CHALLENGE_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS
 ACCESS_BLOCK_TEXT_MARKERS = ("access denied", "unusual traffic", "temporarily blocked", "blocked from using")
 AUTH_TEXT_MARKERS = ("sign in to continue", "please sign in", "session expired", "log in to continue")
 CONSENT_TEXT_MARKERS = ("accept all", "cookie consent", "privacy preferences")
 MAINTENANCE_TEXT_MARKERS = ("technical difficulties", "temporarily unavailable", "site maintenance")
+SORRY_ERROR_TEXT_MARKERS = ("something went wrong on our end", "sorry\nsomething went wrong")
 NO_RESULTS_TEXT_MARKERS = ("0 results", "no exact matches found", "no results for", "we looked everywhere")
-RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category")
-BLOCK_TEXT_MARKERS = CHALLENGE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
+RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category", "sold listings")
+BLOCK_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
+# Passiveive CAPTCHA/challenge capability in page source — diagnostic only.
+PASSIVE_CHALLENGE_RESOURCE_RES = (
+    re.compile(r"google\.com/recaptcha", re.I),
+    re.compile(r"gstatic\.com/recaptcha", re.I),
+    re.compile(r"recaptcha/api", re.I),
+    re.compile(r"\.ifh-captcha\b", re.I),
+    re.compile(r"\bifh-captcha\b", re.I),
+    re.compile(r"""['"][^'"]*captcha[^'"]*\.(?:js|css)""", re.I),
+)
+PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE = re.compile(
+    r"""<iframe[^>]+src=["'][^"']*recaptcha[^"']*["'][^>]*>""",
+    re.I,
+)
+
+# Sold/Completed are applied via on-page refine links after an active (unsold) search.
+# Deep-linking LH_Sold/LH_Complete on first navigation is rejected by ebay.com.au.
+SOLD_ITEMS_FILTER_SELECTORS = (
+    'a.su-selection-group__link:has-text("Sold items")',
+    'a.su-selection-group__link:has-text("Sold Items")',
+    'a[href*="LH_Sold=1"]',
+)
+COMPLETED_ITEMS_FILTER_SELECTORS = (
+    'a.su-selection-group__link:has-text("Completed items")',
+    'a.su-selection-group__link:has-text("Completed Items")',
+    'a[href*="LH_Complete=1"]:not([href*="LH_Sold=1"])',
+    'a[href*="LH_Complete=1"]',
+)
 DEFAULT_SOLD_DATE = datetime(1970, 1, 1, tzinfo=timezone.utc)
 SUPPORTED_MARKET_ROUTES = {
     ("AU", "AUD"),
@@ -398,9 +447,105 @@ def normalize_ebay_listing_url(href: str, *, provider_domain: str) -> dict[str, 
     return metadata
 
 
+def _looks_like_html_document(text: str) -> bool:
+    sample = str(text or "")[:4000].lower()
+    if not sample.strip():
+        return False
+    if "<html" in sample or sample.lstrip().startswith("<!doctype"):
+        return True
+    # Dense markup with scripts/styles is HTML source, not visible body text.
+    tag_hits = sample.count("<") + sample.count(">")
+    return tag_hits >= 40 and ("<script" in sample or "<style" in sample or "<iframe" in sample)
+
+
+def _strip_html_to_approx_visible_text(html: str) -> str:
+    """Best-effort visible text from HTML for classification (not a full browser render)."""
+    text = str(html or "")
+    text = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", text)
+    text = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", text)
+    text = re.sub(r"(?is)<noscript[^>]*>.*?</noscript>", " ", text)
+    text = re.sub(r"(?is)<!--.*?-->", " ", text)
+    text = re.sub(r"(?is)<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def _passive_challenge_resources(html_or_source: str) -> list[str]:
+    source = str(html_or_source or "")
+    if not source:
+        return []
+    found: list[str] = []
+    for pattern in PASSIVE_CHALLENGE_RESOURCE_RES:
+        if pattern.search(source):
+            found.append(pattern.pattern)
+    if PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE.search(source):
+        # Prefer classifying zero-size/hidden recaptcha iframes as passive.
+        for match in PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE.finditer(source):
+            tag = match.group(0).lower()
+            hidden = (
+                "display: none" in tag
+                or "display:none" in tag
+                or "visibility: hidden" in tag
+                or "visibility:hidden" in tag
+                or 'width="0"' in tag
+                or "width='0'" in tag
+                or 'height="0"' in tag
+                or "height='0'" in tag
+            )
+            found.append("hidden_recaptcha_iframe" if hidden else "recaptcha_iframe")
+            break
+    # Bare "captcha" in CSS class / framework markup is passive when not visible copy.
+    if re.search(r"\bcaptcha\b", source, flags=re.I) and "captcha_token_in_source" not in found:
+        found.append("captcha_token_in_source")
+    # Deduplicate while preserving order.
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in found:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _active_challenge_url(url: str) -> str | None:
+    blob = str(url or "").lower()
+    if not blob:
+        return None
+    for marker in ACTIVE_CHALLENGE_URL_MARKERS:
+        if marker in blob:
+            return marker
+    return None
+
+
+def _challenge_ui_active(challenge_ui: dict[str, Any] | None) -> tuple[bool, str | None]:
+    if not isinstance(challenge_ui, dict):
+        return False, None
+    if challenge_ui.get("visibleChallengeText") is True:
+        return True, "visible_challenge_text"
+    try:
+        if int(challenge_ui.get("visibleCaptchaFrameCount") or 0) > 0:
+            return True, "visible_captcha_iframe"
+    except (TypeError, ValueError):
+        pass
+    if challenge_ui.get("visibleChallengeWidget") is True:
+        return True, "visible_challenge_widget"
+    return False, None
+
+
 def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
-    haystack = f"{title}\n{body_text}".lower()
-    return any(marker in haystack for marker in BLOCK_TEXT_MARKERS)
+    """True only for active/user-facing block or challenge copy — not passive captcha resources."""
+    visible = body_text
+    html_source = ""
+    if _looks_like_html_document(body_text):
+        html_source = body_text
+        visible = _strip_html_to_approx_visible_text(body_text)
+    haystack = f"{title}\n{visible}".lower()
+    if any(marker in haystack for marker in BLOCK_TEXT_MARKERS):
+        return True
+    # Passiveive captcha resources in HTML must not count as a block by themselves.
+    _ = html_source
+    return False
 
 
 def is_ebay_authentication_url(url: str) -> bool:
@@ -419,27 +564,530 @@ def classify_browser_page_state(
     *,
     title: str = "",
     body_text: str = "",
+    html_document: str | None = None,
+    url: str = "",
     selector_counts: dict[str, int] | None = None,
+    challenge_ui: dict[str, Any] | None = None,
+    x11_sold_state_verified: bool | None = None,
 ) -> dict[str, Any]:
-    haystack = f"{title}\n{body_text}".lower()
+    """Classify page state with ACTIVE vs PASSIVE challenge awareness.
+
+    Representation-aware:
+    - visible body text / titles drive ACTIVE challenge detection
+    - raw HTML captcha/recaptcha resources are PASSIVE diagnostics unless a
+      visible challenge widget/text/URL proves an active challenge
+    - strong ordinary Sold/listing evidence + only passive resources => success
+    - genuinely conflicting active+ordinary evidence => ambiguous_security_state
+    """
     selectors = selector_counts or {}
     result_count = sum(int(value or 0) for value in selectors.values())
-    matched = lambda markers: next((marker for marker in markers if marker in haystack), None)
-    if marker := matched(CHALLENGE_TEXT_MARKERS):
-        return {"outcome": "challenge_detected", "reason": marker, "retryable": True}
-    if marker := matched(ACCESS_BLOCK_TEXT_MARKERS):
-        return {"outcome": "access_blocked", "reason": marker, "retryable": True}
-    if marker := matched(AUTH_TEXT_MARKERS):
-        return {"outcome": "authentication_required", "reason": marker, "retryable": True}
-    if marker := matched(MAINTENANCE_TEXT_MARKERS):
-        return {"outcome": "provider_unavailable", "reason": marker, "retryable": True}
-    if result_count <= 0 and (marker := matched(CONSENT_TEXT_MARKERS)):
-        return {"outcome": "provider_unavailable", "reason": f"interstitial:{marker}", "retryable": True}
-    if marker := matched(NO_RESULTS_TEXT_MARKERS):
-        return {"outcome": "no_results", "reason": marker, "retryable": False}
-    if result_count > 0 or matched(RESULT_TEXT_MARKERS):
-        return {"outcome": "success", "reason": "results_page", "retryable": False}
-    return {"outcome": "parsing_failure", "reason": "unknown_page_state", "retryable": True}
+    html_source = str(html_document or "")
+    visible_text = str(body_text or "")
+    if html_source and not _looks_like_html_document(visible_text):
+        # Explicit split: body_text is visible, html_document is source.
+        pass
+    elif _looks_like_html_document(visible_text):
+        html_source = html_source or visible_text
+        visible_text = _strip_html_to_approx_visible_text(visible_text)
+    elif not visible_text and html_source:
+        visible_text = _strip_html_to_approx_visible_text(html_source)
+
+    visible_haystack = f"{title}\n{visible_text}".lower()
+    matched_visible = lambda markers: next((marker for marker in markers if marker in visible_haystack), None)
+
+    passive_resources = _passive_challenge_resources(html_source or (body_text if _looks_like_html_document(body_text) else ""))
+    # Bare captcha token in visible text alone is not enough; require active phrases/URL/UI.
+    url_marker = _active_challenge_url(url)
+    ui_active, ui_reason = _challenge_ui_active(challenge_ui)
+    active_text_marker = matched_visible(ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS)
+
+    ordinary_markers = matched_visible(RESULT_TEXT_MARKERS)
+    url_l = str(url or "").lower()
+    ordinary_url = ("/sch/" in url_l or "/itm/" in url_l) and "ebay." in url_l
+    sold_url = "lh_sold=1" in url_l
+    strong_listing_evidence = (
+        result_count > 0
+        or bool(ordinary_markers)
+        or (sold_url and ordinary_url)
+        or bool(x11_sold_state_verified)
+        or int(selectors.get("canonical_itm_href_count") or 0) > 0
+    )
+
+    active_reasons: list[str] = []
+    if url_marker:
+        active_reasons.append(f"url:{url_marker}")
+    if active_text_marker:
+        active_reasons.append(f"visible_text:{active_text_marker}")
+    if ui_active and ui_reason:
+        active_reasons.append(f"challenge_ui:{ui_reason}")
+
+    base_diag = {
+        "classificationModel": "active_vs_passive_challenge_v1",
+        "passiveChallengeResources": passive_resources,
+        "activeChallengeEvidence": active_reasons,
+        "ordinaryResultsEvidence": {
+            "resultSelectorCount": result_count,
+            "resultTextMarker": ordinary_markers,
+            "soldUrl": sold_url,
+            "ordinaryEbayUrl": ordinary_url,
+            "x11SoldStateVerified": x11_sold_state_verified,
+            "canonicalItmHrefCount": int(selectors.get("canonical_itm_href_count") or 0),
+        },
+        "representation": {
+            "usedHtmlDocument": bool(html_source),
+            "visibleTextChars": len(visible_text),
+            "htmlChars": len(html_source),
+        },
+    }
+
+    # SORRY / maintenance / auth / access — evaluate on visible text (and title), not CSS.
+    if marker := matched_visible(ACCESS_BLOCK_TEXT_MARKERS):
+        return {"outcome": "access_blocked", "reason": marker, "retryable": True, **base_diag}
+    if marker := matched_visible(AUTH_TEXT_MARKERS):
+        return {"outcome": "authentication_required", "reason": marker, "retryable": True, **base_diag}
+    if marker := matched_visible(MAINTENANCE_TEXT_MARKERS):
+        return {"outcome": "provider_unavailable", "reason": marker, "retryable": True, **base_diag}
+    if marker := matched_visible(SORRY_ERROR_TEXT_MARKERS) or (
+        "error page" in visible_haystack and "something went wrong" in visible_haystack
+    ):
+        return {"outcome": "provider_unavailable", "reason": "ebay_sorry_error_page", "retryable": True, **base_diag}
+
+    # Active challenge vs ordinary results / ambiguity.
+    if active_reasons and strong_listing_evidence and not (url_marker or ui_active):
+        # Visible challenge phrases with simultaneous strong Sold/listing evidence —
+        # fail closed rather than silently price.
+        return {
+            "outcome": "ambiguous_security_state",
+            "reason": "active_text_with_ordinary_listing_evidence",
+            "retryable": True,
+            "securityClass": "AMBIGUOUS_SECURITY_STATE",
+            **base_diag,
+        }
+    if active_reasons:
+        return {
+            "outcome": "challenge_detected",
+            "reason": active_reasons[0],
+            "retryable": True,
+            "securityClass": "ACTIVE_CHALLENGE",
+            **base_diag,
+        }
+
+    if result_count <= 0 and (marker := matched_visible(CONSENT_TEXT_MARKERS)):
+        return {"outcome": "provider_unavailable", "reason": f"interstitial:{marker}", "retryable": True, **base_diag}
+    if marker := matched_visible(NO_RESULTS_TEXT_MARKERS):
+        return {"outcome": "no_results", "reason": marker, "retryable": False, **base_diag}
+    if strong_listing_evidence or ordinary_markers:
+        return {
+            "outcome": "success",
+            "reason": "results_page",
+            "retryable": False,
+            "securityClass": "ORDINARY_RESULTS",
+            "passiveChallengeResourcesOnly": bool(passive_resources),
+            **base_diag,
+        }
+    # Passiveive captcha resources alone on an otherwise unknown page are not an active challenge.
+    if passive_resources and not active_reasons:
+        return {
+            "outcome": "parsing_failure",
+            "reason": "unknown_page_state_with_passive_challenge_resources",
+            "retryable": True,
+            "securityClass": "PASSIVE_CHALLENGE_RESOURCE",
+            **base_diag,
+        }
+    return {"outcome": "parsing_failure", "reason": "unknown_page_state", "retryable": True, **base_diag}
+
+
+def _ebay_https_origin(url_or_host: str, *, fallback: str = "https://www.ebay.com.au") -> str:
+    """Build https origin without doubling www (hostname may already include www)."""
+    raw = str(url_or_host or "").strip()
+    if not raw:
+        return fallback
+    host = raw
+    if "://" in raw:
+        host = (urlparse(raw).hostname or "").lower()
+    else:
+        host = raw.lower().split("/")[0]
+    if not host:
+        return fallback
+    if host.startswith("www."):
+        return f"https://{host}"
+    return f"https://www.{host}"
+
+
+def _url_has_sold_completed_filters(url: str) -> bool:
+    lower = str(url or "").lower()
+    return "lh_sold=1" in lower and "lh_complete=1" in lower
+
+
+def _click_first_visible(page: Any, selectors: tuple[str, ...], *, timeout_ms: int = 4000) -> str | None:
+    """Click the first matching visible locator. Returns the selector used, or None."""
+    for selector in selectors:
+        locator = page.locator(selector)
+        try:
+            count = locator.count()
+        except Exception:
+            continue
+        if count <= 0:
+            continue
+        try:
+            target = locator.first
+            target.scroll_into_view_if_needed(timeout=min(2000, timeout_ms))
+            # Brief human-like settle reduces intermittent AU SORRY after Sold/Completed.
+            try:
+                target.hover(timeout=min(2000, timeout_ms))
+            except Exception:
+                pass
+            time.sleep(0.35)
+            target.click(timeout=timeout_ms, delay=80)
+            return selector
+        except Exception:
+            continue
+    return None
+
+
+def verify_sold_result_state(
+    *,
+    url: str,
+    title: str,
+    body_text: str,
+) -> dict[str, Any]:
+    """Independently verify the page is a sold-results state (not active listings).
+
+    Sold-only navigation is acceptable when URL/state and result-level sold evidence
+    agree. Active listings must never be accepted as sold comps.
+    """
+    url_l = str(url or "").lower()
+    title_l = str(title or "").lower()
+    body = str(body_text or "")
+    body_l = body.lower()
+    sold_url = "lh_sold=1" in url_l
+    complete_url = "lh_complete=1" in url_l
+    sold_date_lines = sum(
+        1
+        for line in body.splitlines()
+        if line.strip().lower().startswith("sold ")
+        and not line.strip().lower().startswith("sold items")
+        and not line.strip().lower().startswith("sold listings")
+    )
+    sold_listings_label = "sold listings" in body_l or "sold items" in body_l
+    # Result-level sold evidence: dated sold lines are the strongest page signal.
+    result_level_sold = sold_date_lines >= 1
+    verified = bool(sold_url and (result_level_sold or (sold_listings_label and complete_url)))
+    return {
+        "SOLD_STATE_VERIFIED": verified,
+        "soldUrlParam": sold_url,
+        "completedUrlParam": complete_url,
+        "soldDateLines": sold_date_lines,
+        "soldListingsLabel": sold_listings_label,
+        "resultLevelSoldEvidence": result_level_sold,
+        "titleHasSold": "sold" in title_l,
+        "activeListingContaminationPossible": bool(not verified and ("buy it now" in body_l or "add to cart" in body_l)),
+    }
+
+
+def apply_sold_completed_filters_via_ui(page: Any, *, timeout_ms: int = 45000) -> dict[str, Any]:
+    """Apply Sold items + Completed items via the refine UI (not a sold deep-link goto).
+
+    ebay.com.au rejects direct ``LH_Sold``/``LH_Complete`` deep links with a SORRY page,
+    while the same filters succeed when clicked from an active search results page.
+    """
+    started = page.url
+    diagnostics: dict[str, Any] = {
+        "soldFilterMode": "ui_after_active_search",
+        "urlBeforeFilters": started,
+        "soldSelectorUsed": None,
+        "completedSelectorUsed": None,
+        "SOLD_STATE_VERIFIED": False,
+    }
+    if _url_has_sold_completed_filters(started):
+        diagnostics["urlAfterFilters"] = started
+        diagnostics["alreadyApplied"] = True
+        sold_state = verify_sold_result_state(
+            url=started,
+            title=_safe_page_title(page),
+            body_text=_safe_body_text(page),
+        )
+        diagnostics.update(sold_state)
+        if not sold_state["SOLD_STATE_VERIFIED"]:
+            raise ProviderParseError(
+                "eBay sold URL present but sold-result state could not be verified",
+                diagnostics=diagnostics,
+            )
+        return diagnostics
+
+    # Sold items first (may navigate). Prefer in-page refine links over any deep-link goto.
+    # Longer settle after clicks: AU intermittently returns SORRY when the next check races
+    # mid-navigation (headed UI path is otherwise proven).
+    if "lh_sold=1" not in started.lower():
+        # Wait for active search readiness, then re-query Sold. Clicking Sold before the
+        # results/filter chrome finishes settling is a primary AU SORRY/chrome-error trigger.
+        ready_deadline = time.time() + min(20.0, max(6.0, timeout_ms / 1000.0))
+        diagnostics["searchReadySignals"] = []
+        while time.time() < ready_deadline:
+            body_probe = (_safe_body_text(page) or "").lower()
+            title_probe = (_safe_page_title(page) or "").lower()
+            state_probe = classify_browser_page_state(title=title_probe, body_text=body_probe)
+            if state_probe.get("reason") == "ebay_sorry_error_page" or str(page.url or "").lower().startswith(
+                "chrome-error:"
+            ):
+                raise ProviderTemporaryError(
+                    "eBay PRE_SOLD_SORRY: active search page unavailable before Sold items filter click",
+                    diagnostics={
+                        **diagnostics,
+                        "preSoldSorry": "PRE_SOLD_SORRY",
+                        "reason": "ebay_sorry_error_page",
+                        "browserPageState": state_probe,
+                        "urlBeforeFilters": page.url,
+                    },
+                )
+            sold_visible = False
+            try:
+                sold_loc = page.locator(
+                    'a.su-selection-group__link:has-text("Sold items"), a[href*="LH_Sold=1"]'
+                )
+                sold_visible = sold_loc.count() > 0 and sold_loc.first.is_visible()
+            except Exception:
+                sold_visible = False
+            results_signal = (
+                "results for" in body_probe
+                or "shop by category" in body_probe
+                or "filter" in body_probe
+            )
+            if sold_visible and results_signal:
+                diagnostics["searchReadySignals"] = ["sold_control_visible", "results_copy_present"]
+                break
+            time.sleep(0.4)
+        else:
+            diagnostics["searchReadySignals"] = ["timeout_waiting_for_active_search_ready"]
+        # Re-read URL after settle; do not click a locator captured before navigation finished.
+        started = page.url
+        diagnostics["urlBeforeFilters"] = started
+        time.sleep(0.8)
+        sold_sel = _click_first_visible(page, SOLD_ITEMS_FILTER_SELECTORS, timeout_ms=min(15000, timeout_ms))
+        diagnostics["soldSelectorUsed"] = sold_sel
+        if sold_sel is None:
+            raise ProviderTemporaryError(
+                "Could not find eBay Sold items filter control on active search results",
+                diagnostics=diagnostics,
+            )
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=min(20000, timeout_ms))
+        except Exception:
+            pass
+        time.sleep(4.0)
+        try:
+            page.wait_for_url(re.compile(r"(?i)lh_sold=1"), timeout=min(15000, timeout_ms))
+        except Exception:
+            pass
+
+    after_sold = page.url
+    diagnostics["urlAfterSold"] = after_sold
+    # AU sold DOM can paint LH_Sold=1 before dated sold lines appear; wait briefly.
+    settle_deadline = time.time() + min(12.0, max(4.0, timeout_ms / 1000.0))
+    body_after_sold = _safe_body_text(page)
+    title_after_sold = _safe_page_title(page)
+    while time.time() < settle_deadline:
+        if str(after_sold or "").lower().startswith("chrome-error:"):
+            break
+        probe = verify_sold_result_state(
+            url=after_sold,
+            title=title_after_sold,
+            body_text=body_after_sold,
+        )
+        if probe["SOLD_STATE_VERIFIED"]:
+            break
+        time.sleep(1.0)
+        after_sold = page.url
+        diagnostics["urlAfterSold"] = after_sold
+        body_after_sold = _safe_body_text(page)
+        title_after_sold = _safe_page_title(page)
+    state_after_sold = classify_browser_page_state(title=title_after_sold, body_text=body_after_sold)
+    chrome_error_after_sold = str(after_sold or "").lower().startswith("chrome-error:")
+    if chrome_error_after_sold or (
+        state_after_sold.get("outcome") == "provider_unavailable"
+        and state_after_sold.get("reason") == "ebay_sorry_error_page"
+    ):
+        # Recovery: homepage warm-up then re-open the active search, then re-click Sold.
+        # Re-goto of the same active URL alone is often still SORRY on AU.
+        # chrome-error:// also needs a full homepage restart, not a same-URL reload.
+        diagnostics["soldFilterSorryRetry"] = True
+        if chrome_error_after_sold:
+            diagnostics["soldFilterChromeErrorRetry"] = True
+        home_origin = _ebay_https_origin(started, fallback="https://www.ebay.com.au")
+        diagnostics["soldFilterRecoveryHome"] = home_origin
+        try:
+            page.goto(f"{home_origin}/", wait_until="domcontentloaded", timeout=min(20000, timeout_ms))
+            time.sleep(3.0)
+            page.goto(started, wait_until="domcontentloaded", timeout=min(20000, timeout_ms))
+            time.sleep(5.0)
+            try:
+                page.wait_for_selector(
+                    'a.su-selection-group__link:has-text("Sold items"), a[href*="LH_Sold=1"]',
+                    timeout=min(15000, timeout_ms),
+                    state="visible",
+                )
+            except Exception:
+                pass
+            sold_sel_retry = _click_first_visible(
+                page, SOLD_ITEMS_FILTER_SELECTORS, timeout_ms=min(15000, timeout_ms)
+            )
+            diagnostics["soldSelectorRetryUsed"] = sold_sel_retry
+            try:
+                page.wait_for_load_state("domcontentloaded", timeout=min(20000, timeout_ms))
+            except Exception:
+                pass
+            time.sleep(4.0)
+        except Exception:
+            pass
+        after_sold = page.url
+        diagnostics["urlAfterSold"] = after_sold
+        body_after_sold = _safe_body_text(page)
+        title_after_sold = _safe_page_title(page)
+        state_after_sold = classify_browser_page_state(title=title_after_sold, body_text=body_after_sold)
+        if str(after_sold or "").lower().startswith("chrome-error:") or (
+            state_after_sold.get("outcome") == "provider_unavailable"
+            and state_after_sold.get("reason") == "ebay_sorry_error_page"
+        ):
+            raise ProviderTemporaryError(
+                "eBay returned SORRY error page after Sold items filter click",
+                diagnostics={**diagnostics, "browserPageState": state_after_sold},
+            )
+        settle_deadline = time.time() + min(12.0, max(4.0, timeout_ms / 1000.0))
+        while time.time() < settle_deadline:
+            if str(after_sold or "").lower().startswith("chrome-error:"):
+                break
+            probe = verify_sold_result_state(
+                url=after_sold,
+                title=title_after_sold,
+                body_text=body_after_sold,
+            )
+            if probe["SOLD_STATE_VERIFIED"]:
+                break
+            time.sleep(1.0)
+            after_sold = page.url
+            diagnostics["urlAfterSold"] = after_sold
+            body_after_sold = _safe_body_text(page)
+            title_after_sold = _safe_page_title(page)
+        state_after_sold = classify_browser_page_state(title=title_after_sold, body_text=body_after_sold)
+        if str(after_sold or "").lower().startswith("chrome-error:"):
+            raise ProviderTemporaryError(
+                "eBay browser navigated to chrome-error after Sold items filter click",
+                diagnostics={**diagnostics, "browserPageState": state_after_sold},
+            )
+
+    if str(after_sold or "").lower().startswith("chrome-error:"):
+        raise ProviderTemporaryError(
+            "eBay browser navigated to chrome-error after Sold items filter click",
+            diagnostics={**diagnostics, "browserPageState": state_after_sold},
+        )
+
+    # Prefer Sold-only when already independently verified. Completed is optional and
+    # on AU can clear sold evidence or hit SORRY even after a good Sold page.
+    sold_state_pre_completed = verify_sold_result_state(
+        url=after_sold,
+        title=title_after_sold,
+        body_text=body_after_sold,
+    )
+    if sold_state_pre_completed["SOLD_STATE_VERIFIED"] and "lh_complete=1" not in after_sold.lower():
+        diagnostics.update(sold_state_pre_completed)
+        diagnostics["completedFilterSkipped"] = "sold_state_verified_completed_optional"
+        diagnostics["urlAfterFilters"] = after_sold
+        diagnostics["browserPageState"] = state_after_sold
+        diagnostics["soldEvidenceWithoutBothUrlParams"] = True
+        return diagnostics
+
+    if "lh_complete=1" not in after_sold.lower():
+        url_before_completed = after_sold
+        completed_sel = _click_first_visible(
+            page, COMPLETED_ITEMS_FILTER_SELECTORS, timeout_ms=min(12000, timeout_ms)
+        )
+        diagnostics["completedSelectorUsed"] = completed_sel
+        if completed_sel is None:
+            # Completed is optional only when Sold-only state independently verifies.
+            sold_state = verify_sold_result_state(
+                url=after_sold,
+                title=title_after_sold,
+                body_text=body_after_sold,
+            )
+            diagnostics.update(sold_state)
+            if sold_state["SOLD_STATE_VERIFIED"]:
+                diagnostics["completedFilterSkipped"] = "control_missing_sold_state_verified"
+                diagnostics["urlAfterFilters"] = after_sold
+                diagnostics["browserPageState"] = state_after_sold
+                diagnostics["soldEvidenceWithoutBothUrlParams"] = True
+                return diagnostics
+            raise ProviderTemporaryError(
+                "Could not find eBay Completed items filter control after Sold items",
+                diagnostics=diagnostics,
+            )
+        try:
+            page.wait_for_load_state("domcontentloaded", timeout=min(20000, timeout_ms))
+        except Exception:
+            pass
+        time.sleep(3.0)
+        try:
+            page.wait_for_url(re.compile(r"(?i)lh_complete=1"), timeout=min(15000, timeout_ms))
+        except Exception:
+            pass
+
+        # Completed click can intermittently land on SORRY even when Sold succeeded.
+        # Recover to the Sold URL and continue if sold evidence remains available.
+        body_after_completed = _safe_body_text(page)
+        title_after_completed = _safe_page_title(page)
+        state_after_completed = classify_browser_page_state(
+            title=title_after_completed, body_text=body_after_completed
+        )
+        if (
+            state_after_completed.get("outcome") == "provider_unavailable"
+            and state_after_completed.get("reason") == "ebay_sorry_error_page"
+        ):
+            diagnostics["completedFilterSorry"] = True
+            try:
+                page.goto(url_before_completed, wait_until="domcontentloaded", timeout=min(20000, timeout_ms))
+                time.sleep(2.0)
+            except Exception:
+                pass
+            body_recovered = _safe_body_text(page)
+            title_recovered = _safe_page_title(page)
+            state_recovered = classify_browser_page_state(title=title_recovered, body_text=body_recovered)
+            sold_state = verify_sold_result_state(
+                url=page.url,
+                title=title_recovered,
+                body_text=body_recovered,
+            )
+            diagnostics.update(sold_state)
+            if state_recovered.get("reason") != "ebay_sorry_error_page" and sold_state["SOLD_STATE_VERIFIED"]:
+                diagnostics["completedFilterSkipped"] = "sorry_after_completed_recovered_sold"
+                diagnostics["urlAfterFilters"] = page.url
+                diagnostics["browserPageState"] = state_recovered
+                diagnostics["soldEvidenceWithoutBothUrlParams"] = True
+                return diagnostics
+            raise ProviderTemporaryError(
+                "eBay returned SORRY error page after Sold/Completed filter UI flow",
+                diagnostics={**diagnostics, "browserPageState": state_after_completed},
+            )
+
+    final_url = page.url
+    diagnostics["urlAfterFilters"] = final_url
+    body_final = _safe_body_text(page)
+    title_final = _safe_page_title(page)
+    state_final = classify_browser_page_state(title=title_final, body_text=body_final)
+    diagnostics["browserPageState"] = state_final
+    if state_final.get("outcome") == "provider_unavailable" and state_final.get("reason") == "ebay_sorry_error_page":
+        raise ProviderTemporaryError(
+            "eBay returned SORRY error page after Sold/Completed filter UI flow",
+            diagnostics=diagnostics,
+        )
+    sold_state = verify_sold_result_state(url=final_url, title=title_final, body_text=body_final)
+    diagnostics.update(sold_state)
+    if not sold_state["SOLD_STATE_VERIFIED"]:
+        raise ProviderParseError(
+            "eBay Sold/Completed filters did not produce a verified sold-result state",
+            diagnostics=diagnostics,
+        )
+    if not _url_has_sold_completed_filters(final_url):
+        diagnostics["soldEvidenceWithoutBothUrlParams"] = True
+    return diagnostics
 
 
 def _looks_like_non_price_number(text: str, *, start: int, end: int) -> bool:
@@ -1052,7 +1700,12 @@ class _StageTimer:
 
     def __exit__(self, exc_type: Any, exc: Any, _tb: Any) -> bool:
         status = "timeout" if _looks_like_timeout(exc) else "failed" if exc is not None else "completed"
-        extra = {"errorType": type(exc).__name__} if exc is not None else None
+        extra = None
+        if exc is not None:
+            extra = {
+                "errorType": type(exc).__name__,
+                "errorMessage": str(exc)[:2000],
+            }
         self.timings.record(self.stage, self.started, status=status, extra=extra)
         return False
 
@@ -1757,6 +2410,8 @@ class EbayBrowserSoldCompsProvider:
         self._page: Any | None = None
         self._session_navs = 0
         self._session_locale: str | None = None
+        self._desktop_cdp_browser: Any | None = None
+        self._desktop_nav_ready: bool = False
 
     def _wait_for_request_slot(self) -> None:
         min_wait = max(self.config.cooldown_seconds, self.config.min_seconds_between_requests)
@@ -1771,19 +2426,39 @@ class EbayBrowserSoldCompsProvider:
         page = self._page
         context = self._context
         pw = self._pw
+        cdp_browser = self._desktop_cdp_browser
         self._page = None
         self._context = None
         self._pw = None
+        self._desktop_cdp_browser = None
+        self._desktop_nav_ready = False
         self._session_navs = 0
         self._session_locale = None
-        for closer in (page, context):
-            if closer is None:
-                continue
+        # For CDP-attached Chrome: disconnect only. Never close contexts/pages that
+        # belong to the externally owned desktop browser.
+        if cdp_browser is not None:
             try:
-                closer.close()
+                cdp_browser.close()  # disconnect from CDP; does not exit Chrome
             except Exception:
                 pass
-        if pw is not None:
+        elif context is not None:
+            try:
+                context.close()
+            except Exception:
+                pass
+        elif page is not None:
+            try:
+                page.close()
+            except Exception:
+                pass
+        if pw is not None and cdp_browser is None:
+            try:
+                pw.stop()
+            except Exception:
+                pass
+        elif pw is not None and cdp_browser is not None:
+            # Keep sync_playwright alive across desktop jobs when possible; only stop
+            # if we are fully tearing down (caller cleared browser already).
             try:
                 pw.stop()
             except Exception:
@@ -1841,7 +2516,17 @@ class EbayBrowserSoldCompsProvider:
             except Exception:
                 # Poisoned/challenge sessions must not leak into later jobs.
                 if self.config.reuse_context:
-                    self._close_browser_session()
+                    if self._desktop_nav_mode_enabled():
+                        # Keep Chrome alive; only drop stale CDP handles.
+                        self._page = None
+                        self._context = None
+                        try:
+                            if self._desktop_cdp_browser is not None:
+                                list(self._desktop_cdp_browser.contexts)
+                        except Exception:
+                            self._desktop_cdp_browser = None
+                    else:
+                        self._close_browser_session()
                 raise
 
     def _fetch_comps_serial(self, request: ProviderRequest) -> ProviderResult:
@@ -1889,11 +2574,32 @@ class EbayBrowserSoldCompsProvider:
                             "stage_timings": diagnostics.get("stageTimings") or diagnostics.get("stage_timings"),
                             "selector_counts": diagnostics.get("candidateSelectorCounts"),
                             "debug_artifacts": diagnostics.get("debugArtifacts"),
+                            "sold_filter_mode": diagnostics.get("soldFilterMode"),
                         }
                     )
+                    if diagnostics.get("preSoldSorry") == "PRE_SOLD_SORRY":
+                        attempt_failure["preSoldSorry"] = "PRE_SOLD_SORRY"
                     failed_attempts.append(attempt_failure)
+                    sold_filter_miss = "sold items filter control" in str(exc).lower()
+                    page_state = diagnostics.get("browserPageState") or {}
+                    pre_sold_sorry = (
+                        diagnostics.get("preSoldSorry") == "PRE_SOLD_SORRY"
+                        or "pre_sold_sorry" in str(exc).lower()
+                    )
+                    sorry_or_entry_block = (
+                        pre_sold_sorry
+                        or diagnostics.get("reason") == "ebay_sorry_error_page"
+                        or page_state.get("reason") == "ebay_sorry_error_page"
+                        or "sorry error page" in str(exc).lower()
+                        or "active search page unavailable" in str(exc).lower()
+                        or "chrome-error" in str(exc).lower()
+                    )
                     if (
-                        diagnostics.get("timedOutStage")
+                        (
+                            diagnostics.get("timedOutStage")
+                            or sold_filter_miss
+                            or sorry_or_entry_block
+                        )
                         and _safe_to_try_next_query(search_query)
                         and search_query.query_index + 1 < len(search_queries)
                     ):
@@ -1947,10 +2653,27 @@ class EbayBrowserSoldCompsProvider:
                 )
             raise
         except Exception as exc:
+            ctx = load_navigation_runtime_context()
+            loc = exception_diagnostics(exc)
+            failure_class = classify_pre_submit_runtime_error(exc, runtime_mode=ctx.runtime_mode)
+            stage = str(lookup_timings.fields.get("currentStage") or "run_query_attempt")
             raise ProviderTemporaryError(
-                "eBay browser lookup failed temporarily",
+                str(exc) or "eBay browser lookup failed temporarily",
                 diagnostics={
-                    "errorType": type(exc).__name__,
+                    **loc,
+                    "failureStage": stage,
+                    "failureClass": failure_class,
+                    "navigationFailureClass": failure_class,
+                    "runtimeMode": ctx.runtime_mode,
+                    "attemptId": ctx.current_attempt_id or os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                    "jobId": ctx.current_job_id or os.environ.get("CARDSCANR_JOB_ID"),
+                    "priceKeyId": ctx.current_price_key_id or os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+                    "expectedPriorTargetId": (
+                        ctx.expected_prior.target_id if ctx.expected_prior is not None else None
+                    ),
+                    "queryPrepared": True,
+                    "searchSubmissionStarted": False,
+                    "childProcessStarted": False,
                     "providerDomain": request.provider_domain,
                     "stageTimings": lookup_timings.snapshot(),
                 },
@@ -2003,6 +2726,79 @@ class EbayBrowserSoldCompsProvider:
                     )
         first_query = attempts[0][0]
         query_used = " || ".join(search_query.query_text for search_query, _result in attempts)
+        # Preserve compact operational phase metadata from the latest successful attempt.
+        # Aggregate used to drop x11SoldStateVerified / postSoldCapturePhase / capture
+        # artifact fields — that broke reliability harness truth.
+        last_attempt_meta = attempts[-1][1].raw_metadata if isinstance(attempts[-1][1].raw_metadata, dict) else {}
+        op_keys = (
+            "navMode",
+            "desktopNav",
+            "soldState",
+            "x11SoldStateVerified",
+            "postSoldCapturePhase",
+            "parsePhase",
+            "postSoldCapture",
+            "finalizeTerminal",
+            "directSearchURL",
+            "playwrightNavigation",
+            "cdpUsedFor",
+            "browserPageState",
+            "searchUrl",
+        )
+        operational: dict[str, Any] = {k: last_attempt_meta[k] for k in op_keys if k in last_attempt_meta}
+        # Compact current-job capture metadata (no HTML body).
+        persisted = None
+        stage_from_attempt = last_attempt_meta.get("stageTimings")
+        if isinstance(stage_from_attempt, dict):
+            persisted = stage_from_attempt.get("persistedCaptureArtifact")
+            if "postSoldCapturePhase" not in operational and stage_from_attempt.get("postSoldCapturePhase"):
+                operational["postSoldCapturePhase"] = stage_from_attempt.get("postSoldCapturePhase")
+            if "parsePhase" not in operational and stage_from_attempt.get("parsePhase"):
+                operational["parsePhase"] = stage_from_attempt.get("parsePhase")
+            if "x11SoldStateVerified" not in operational and stage_from_attempt.get("x11SoldStateVerified"):
+                operational["x11SoldStateVerified"] = stage_from_attempt.get("x11SoldStateVerified")
+            if "desktopNav" not in operational and isinstance(stage_from_attempt.get("desktopNav"), dict):
+                operational["desktopNav"] = stage_from_attempt.get("desktopNav")
+        if isinstance(persisted, dict):
+            operational["persistedCaptureArtifact"] = {
+                k: persisted.get(k)
+                for k in (
+                    "htmlPath",
+                    "sha256",
+                    "bodyPath",
+                    "bodySha256",
+                    "targetId",
+                    "jobId",
+                    "attemptId",
+                    "priceKeyId",
+                    "fingerprint",
+                    "captureOrigin",
+                    "captureMethod",
+                    "htmlByteSize",
+                    "bodyLength",
+                )
+                if persisted.get(k) is not None
+            }
+            operational["currentJobCapture"] = dict(operational["persistedCaptureArtifact"])
+        # Prefer attempt stageTimings nested under aggregate for forensic recovery.
+        merged_stage = {
+            **(stage_timings or {}),
+            "aggregate": aggregate_timings.snapshot(),
+        }
+        if isinstance(stage_from_attempt, dict):
+            merged_stage["lastAttempt"] = {
+                k: stage_from_attempt.get(k)
+                for k in (
+                    "postSoldCapturePhase",
+                    "parsePhase",
+                    "x11SoldStateVerified",
+                    "finalizeTerminal",
+                    "persistedCaptureArtifact",
+                    "desktopNav",
+                    "postSoldCapture",
+                )
+                if stage_from_attempt.get(k) is not None
+            }
         metadata = sanitize_provider_diagnostics(
             {
                 "providerDomain": first_query.provider_domain,
@@ -2053,14 +2849,12 @@ class EbayBrowserSoldCompsProvider:
                 "wrongLanguageRejectedCount": latest_progress.get("wrongLanguageRejectedCount", 0),
                 "noisyResultRatio": latest_progress.get("noisyResultRatio", 0.0),
                 "lowConfidenceSparseMarketReason": low_confidence_sparse_market_reason,
-                "stageTimings": {
-                    **(stage_timings or {}),
-                    "aggregate": aggregate_timings.snapshot(),
-                },
+                "stageTimings": merged_stage,
                 "marketScope": self.config.market_scope,
                 "qualitySummary": quality_summary,
                 "attemptedQualitySummaryBeforeDedupe": attempted_quality_summary,
                 "parserErrors": all_parser_errors[:50],
+                **operational,
             }
         )
         provider_result = ProviderResult(
@@ -2080,7 +2874,701 @@ class EbayBrowserSoldCompsProvider:
         provider_result.raw_metadata["stageTimings"]["aggregate"] = aggregate_timings.snapshot()
         return provider_result
 
+    def _desktop_nav_mode_enabled(self) -> bool:
+        return os.getenv("EBAY_BROWSER_NAV_MODE", "").strip().lower() in {
+            "desktop_win32",
+            "desktop",
+            "real_desktop",
+            "linux_x11",
+            "linux_gui",
+        }
+
+    def _linux_x11_nav_mode_enabled(self) -> bool:
+        return os.getenv("EBAY_BROWSER_NAV_MODE", "").strip().lower() in {
+            "linux_x11",
+            "linux_gui",
+        }
+
+    def _ensure_linux_chrome_cdp_ready(self) -> int:
+        """Ensure Linux :99 Chrome is up with CDP; do not attach Playwright yet."""
+        from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+        from .linux_x11_ebay_nav import ensure_chrome_with_cdp
+
+        port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or _DEFAULT_CDP_PORT
+        ctx = load_navigation_runtime_context()
+        ensure_chrome_with_cdp(
+            cdp_port=port,
+            runtime_mode=ctx.runtime_mode,
+            allow_existing_ebay_targets=ctx.is_inter_card(),
+        )
+        return int(port)
+
+    def _connect_desktop_cdp_browser(self) -> Any:
+        """Connect Playwright over CDP; do not select a page target yet."""
+        from playwright.sync_api import sync_playwright
+
+        if self._linux_x11_nav_mode_enabled():
+            from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+        else:
+            from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+
+        port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT)
+        connect_timeout_ms = max(5_000, int(self.config.launch_timeout_seconds * 1000))
+
+        def _connect() -> Any:
+            if self._linux_x11_nav_mode_enabled():
+                from .linux_x11_ebay_nav import ensure_chrome_with_cdp
+
+                ctx = load_navigation_runtime_context()
+                ensure_chrome_with_cdp(
+                    cdp_port=port or _DEFAULT_CDP_PORT,
+                    runtime_mode=ctx.runtime_mode,
+                    allow_existing_ebay_targets=ctx.is_inter_card(),
+                )
+            else:
+                from .desktop_win32_ebay_nav import ensure_chrome_with_cdp
+
+                ensure_chrome_with_cdp(
+                    profile_dir=self.config.ensure_profile_dir(),
+                    cdp_port=port or _DEFAULT_CDP_PORT,
+                )
+            if self._pw is None:
+                self._pw = sync_playwright().start()
+            self._desktop_cdp_browser = self._pw.chromium.connect_over_cdp(
+                f"http://127.0.0.1:{port or _DEFAULT_CDP_PORT}",
+                timeout=connect_timeout_ms,
+            )
+            self._desktop_nav_ready = True
+            return self._desktop_cdp_browser
+
+        browser = self._desktop_cdp_browser
+        if browser is None:
+            browser = _connect()
+        try:
+            _ = list(browser.contexts)
+        except Exception:
+            self._desktop_cdp_browser = None
+            self._page = None
+            self._context = None
+            browser = _connect()
+        return browser
+
+    def _ensure_desktop_cdp_page(self) -> Any:
+        """Attach read-only Playwright and return a page (legacy callers / Win32).
+
+        Linux post-Sold capture must use capture_verified_sold_page binding instead of
+        arbitrarily selecting ebay_pages[-1].
+        """
+        browser = self._connect_desktop_cdp_browser()
+        contexts = list(browser.contexts)
+        if not contexts:
+            raise ProviderTemporaryError(
+                "Desktop Chrome CDP attached but no browser contexts available",
+                diagnostics={},
+            )
+        pages = list(contexts[0].pages)
+        if not pages:
+            raise ProviderTemporaryError(
+                "Desktop Chrome CDP attached but no page targets available",
+                diagnostics={},
+            )
+        # Prefer an LH_Sold page when present; otherwise last eBay page (legacy).
+        sold_pages = [p for p in pages if "lh_sold=1" in (p.url or "").lower()]
+        ebay_pages = [p for p in pages if "ebay." in (p.url or "").lower()]
+        page = sold_pages[-1] if sold_pages else (ebay_pages[-1] if ebay_pages else pages[-1])
+        try:
+            page.set_default_timeout(min(self.config.timeout_seconds * 1000, 45_000))
+        except Exception:
+            pass
+        self._page = page
+        self._context = contexts[0]
+        return page
+
+    def _list_cdp_page_targets(self) -> list[dict[str, Any]]:
+        browser = self._connect_desktop_cdp_browser()
+        contexts = list(browser.contexts)
+        if not contexts:
+            return []
+        pages = list(contexts[0].pages)
+        self._context = contexts[0]
+        out: list[dict[str, Any]] = []
+        for idx, page in enumerate(pages):
+            try:
+                url = str(page.url or "")
+            except Exception:
+                url = ""
+            try:
+                title = str(page.title() or "")
+            except Exception:
+                title = ""
+            out.append(
+                {
+                    "id": f"pw-{idx}",
+                    "type": "page",
+                    "url": url,
+                    "title": title,
+                    "_page": page,
+                }
+            )
+        return out
+
+    def _disconnect_desktop_cdp_client(self) -> None:
+        try:
+            browser = self._desktop_cdp_browser
+            if browser is not None:
+                browser.close()
+        except Exception:
+            pass
+        self._desktop_cdp_browser = None
+        self._page = None
+        self._context = None
+
+    def _fetch_with_desktop_win32(
+        self,
+        *,
+        request: ProviderRequest,
+        search_query: ProviderSearchQuery,
+    ) -> ProviderResult:
+        """Navigate with real Win32/Linux X11 mouse/keyboard; parse only via CDP attach."""
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+        from ..finalize_deadline import FINALIZE_SUCCESS, finalize_timeout_seconds, run_with_finalize_deadline
+
+        if self._linux_x11_nav_mode_enabled():
+            from .linux_x11_ebay_nav import navigate_query_to_sold
+
+            nav_mode_label = "linux_x11"
+            nav_stage = "linux_x11_search_and_sold"
+        else:
+            from .desktop_win32_ebay_nav import navigate_query_to_sold
+
+            nav_mode_label = "desktop_win32"
+            nav_stage = "desktop_win32_search_and_sold"
+
+        timeout_ms = self.config.timeout_seconds * 1000
+        stage_timings = StageTimings()
+        with _StageTimer(stage_timings, "desktop_ensure_chrome_cdp"):
+            if self._linux_x11_nav_mode_enabled():
+                # Do not hold a Playwright CDP session across long X11 GUI nav —
+                # that raced the Ceruledge post-Sold hang (CDP attach before parse).
+                port = self._ensure_linux_chrome_cdp_ready()
+                stage_timings.fields["cdpPortReady"] = port
+                stage_timings.fields["playwrightAttachedBeforeNav"] = False
+            else:
+                self._ensure_desktop_cdp_page()
+                stage_timings.fields["playwrightAttachedBeforeNav"] = True
+
+        with _StageTimer(stage_timings, nav_stage):
+            ctx = load_navigation_runtime_context()
+            pre_submit = pre_submit_only_requested(flag=False)
+            nav = navigate_query_to_sold(
+                search_query.query_text,
+                reset_homepage=not ctx.is_inter_card(),
+                attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                price_key_id=str(getattr(request.price_key, "id", None) or "") or None,
+                pre_submit_only=pre_submit,
+            )
+            nav_diag = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
+            search_diag = nav_diag.get("search") if isinstance(nav_diag.get("search"), dict) else {}
+            gui_timings = search_diag.get("guiAttemptTimings") or (nav_diag.get("guiAttemptTimings"))
+            stage_timings.fields["desktopNav"] = {
+                "ok": nav.ok,
+                "searchSuccess": nav.search_success,
+                "soldClickSuccess": nav.sold_click_success,
+                "SOLD_STATE_VERIFIED": nav.sold_state_verified,
+                "url": nav.url,
+                "sorry": nav.sorry,
+                "challenge": nav.challenge,
+                "soldDateLines": nav.sold_date_lines,
+                "error": nav.error,
+                "navMode": nav_mode_label,
+                "guiAttemptTimings": gui_timings,
+                "preSubmit": (search_diag.get("diagnostics") or {}).get("preSubmit")
+                if isinstance(search_diag.get("diagnostics"), dict)
+                else search_diag.get("preSubmit"),
+                "postNavigation": (search_diag.get("diagnostics") or {}).get("postNavigation")
+                if isinstance(search_diag.get("diagnostics"), dict)
+                else search_diag.get("postNavigation"),
+            }
+            if isinstance(gui_timings, dict):
+                stage_timings.fields["guiAttemptTimings"] = gui_timings
+        search_result_code = str(
+            search_diag.get("resultCode") or nav_diag.get("resultCode") or nav.error or ""
+        )
+        if search_result_code == "PRE_SUBMIT_QUERY_READY" or nav_diag.get("preSubmitQueryReady"):
+            return ProviderResult(
+                provider_name=self.provider_name,
+                marketplace=request.provider_marketplace_id,
+                provider_fingerprint="pre_submit_only",
+                query_used=search_query.query_text,
+                comps=[],
+                raw_metadata=sanitize_provider_diagnostics(
+                    {
+                        "resultCode": "PRE_SUBMIT_QUERY_READY",
+                        "searchSubmissionStarted": False,
+                        "runtimeMode": ctx.runtime_mode,
+                        "navMode": nav_mode_label,
+                        "desktopNav": stage_timings.fields.get("desktopNav"),
+                        "stageTimings": stage_timings.snapshot(),
+                    }
+                ),
+            )
+        if nav.challenge:
+            raise ProviderBlockedError(
+                "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
+                diagnostics={
+                    "providerOutcome": "challenge_detected",
+                    "navMode": nav_mode_label,
+                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "stageTimings": stage_timings.snapshot(),
+                },
+            )
+        if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE":
+            raise ProviderTemporaryError(
+                "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page during desktop navigation",
+                diagnostics={
+                    "reason": "ebay_sorry_error_page",
+                    "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                    "preSoldSorry": "PRE_SOLD_SORRY" if not nav.sold_click_success else None,
+                    "navMode": nav_mode_label,
+                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "stageTimings": stage_timings.snapshot(),
+                },
+            )
+        if str(nav.error or "") in {
+            "ALTERNATE_EBAY_SURFACE",
+            "EBAY_LIVE_RESULTS",
+            "SOLD_UNAVAILABLE_ON_ALTERNATE_SURFACE",
+            "LOCAL_SEARCH_SURFACE_STATE_LEAK",
+            "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED",
+        } or "ebaylive/search" in str(nav.url or "").lower():
+            owned = (
+                "LOCAL_SEARCH_SURFACE_STATE_LEAK"
+                if "LOCAL_SEARCH_SURFACE_STATE_LEAK" in str(nav.error or "")
+                else (
+                    "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED"
+                    if "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED" in str(nav.error or "")
+                    else "ALTERNATE_EBAY_SURFACE"
+                )
+            )
+            reason = (
+                "search_origin_ebay_live"
+                if owned.startswith("LOCAL_SEARCH_SURFACE")
+                else "ebay_live_results"
+            )
+            raise ProviderTemporaryError(
+                f"{owned}: eBay Live/alternate search surface cannot provide Sold comps"
+                if owned == "ALTERNATE_EBAY_SURFACE"
+                else f"{owned}: search submitted or attempted from invalid eBay surface",
+                diagnostics={
+                    "reason": reason,
+                    "ownedDailyOutcome": owned,
+                    "routeClass": owned,
+                    "url": nav.url,
+                    "tripsSorryBreaker": False,
+                    "markFresh": False,
+                    "lastGoodRetained": True,
+                    "navMode": nav_mode_label,
+                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "stageTimings": stage_timings.snapshot(),
+                },
+            )
+        if not nav.search_success or not nav.sold_click_success or not nav.sold_state_verified:
+            raise ProviderTemporaryError(
+                f"Desktop sold navigation failed: {nav.error or 'unknown'}",
+                diagnostics={
+                    "navMode": nav_mode_label,
+                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "stageTimings": stage_timings.snapshot(),
+                },
+            )
+
+        from .post_sold_capture import resolve_authoritative_capture_html_path
+        from .post_sold_capture_process import (
+            capture_deadline_seconds,
+            capture_process_result_to_sold_page,
+            post_sold_finalize_deadline_seconds,
+            run_capture_worker_process,
+        )
+
+        # Capture is OS-killable (≤15s). Whole post-Sold finalize wraps parse/price.
+        capture_budget = capture_deadline_seconds()
+        finalize_budget = post_sold_finalize_deadline_seconds(
+            default=max(30, int(capture_budget) + 15)
+        )
+        stage_timings.fields["captureProcessTimeoutSeconds"] = capture_budget
+        stage_timings.fields["finalizeTimeoutSeconds"] = finalize_budget
+        authoritative_html_path = resolve_authoritative_capture_html_path(
+            job_id=os.environ.get("CARDSCANR_JOB_ID"),
+            attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+            price_key_id=(
+                os.environ.get("CARDSCANR_PRICE_KEY_ID")
+                or str(getattr(request.price_key, "id", "") or "")
+                or None
+            ),
+        )
+        stage_timings.fields["authoritativeCaptureArtifactPath"] = str(authoritative_html_path)
+
+        def _disconnect_cdp_for_deadline() -> None:
+            # Legacy Playwright disconnect — process-boundary capture does not use it,
+            # but keep for any residual in-process CDP handles.
+            try:
+                browser = self._desktop_cdp_browser
+                if browser is not None:
+                    browser.close()
+            except Exception:
+                pass
+            self._desktop_cdp_browser = None
+            self._page = None
+            self._context = None
+
+        def _post_sold_parse() -> ProviderResult:
+            from .post_sold_capture import (
+                PARSE_COMPLETE,
+                PARSE_FAILED,
+                PARSE_PENDING,
+                POST_SOLD_CAPTURE_FAILED,
+                POST_SOLD_CAPTURE_PENDING,
+                POST_SOLD_CAPTURE_READY,
+            )
+
+            # X11 already established Sold; local CDP capture is a separate phase.
+            stage_timings.fields["x11SoldStateVerified"] = True
+            stage_timings.fields["postSoldCapturePhase"] = POST_SOLD_CAPTURE_PENDING
+            stage_timings.fields["parsePhase"] = PARSE_PENDING
+
+            # Prefer existing X11 Sold clipboard body for diagnostics only (not production provenance).
+            x11_body = ""
+            x11_body_source = None
+            sold_diag = nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else {}
+            search_diag_nav = nav_diag.get("search") if isinstance(nav_diag.get("search"), dict) else {}
+            tag = str((search_diag_nav.get("diagnostics") or {}).get("tag") or search_diag_nav.get("tag") or "")
+            if not tag and isinstance(sold_diag.get("diagnostics"), dict):
+                tag = str(sold_diag.get("diagnostics", {}).get("tag") or "")
+            if not tag:
+                tag = str(search_diag_nav.get("tag") or "")
+            body_path = ROOT / "reports" / "artifacts" / f"linux_sold_{tag}_body.txt" if tag else None
+            if body_path is not None and body_path.is_file():
+                try:
+                    x11_body = body_path.read_text(encoding="utf-8", errors="replace")
+                    x11_body_source = f"x11_clipboard_file:{body_path.name}"
+                except Exception:
+                    x11_body = ""
+            stage_timings.fields["x11SoldBodyChars"] = len(x11_body)
+            stage_timings.fields["x11SoldBodySource"] = x11_body_source
+
+            if self._linux_x11_nav_mode_enabled():
+                from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+            else:
+                from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+
+            cdp_port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or _DEFAULT_CDP_PORT
+            cdp_endpoint = f"http://127.0.0.1:{int(cdp_port)}"
+
+            # HARD PROCESS BOUNDARY — parent never calls connect_over_cdp here.
+            # Authoritative unique HTML path is chosen by the parent (not last_capture).
+            proc_result = run_capture_worker_process(
+                cdp_endpoint=cdp_endpoint,
+                expected_url=nav.url,
+                expected_query=search_query.query_text,
+                expected_origin=str(search_query.provider_domain or "ebay.com.au"),
+                deadline_seconds=capture_budget,
+                max_results=self.config.max_results * 3,
+                socket_timeout=min(4.0, max(2.0, capture_budget / 3.0)),
+                artifact_path=str(authoritative_html_path),
+            )
+            capture = capture_process_result_to_sold_page(
+                proc_result,
+                x11_sold_state_verified=True,
+            )
+            # Keep X11 body length visible even when CDP process fails.
+            if x11_body and not capture.diagnostics.get("x11SoldBodyChars"):
+                capture.diagnostics["x11SoldBodyChars"] = len(x11_body)
+                capture.diagnostics["x11SoldBodySource"] = x11_body_source
+
+            probe_capture = capture.to_probe_dict()
+            stage_timings.fields["postSoldCapture"] = probe_capture
+            stage_timings.fields["postSoldCapturePhase"] = capture.capture_phase
+            stage_timings.fields["postSoldCdpAttached"] = bool(capture.target_id)
+            stage_timings.fields["soldStateAfterParseAttach"] = capture.sold_state
+            stage_timings.fields["x11SoldStateVerified"] = True
+            stage_timings.fields["captureProcess"] = (probe_capture.get("diagnostics") or {}).get("captureProcess")
+
+            if not capture.success:
+                stage_timings.fields["parsePhase"] = PARSE_FAILED
+                raise ProviderTemporaryError(
+                    f"POST_SOLD_CAPTURE_FAILURE: local CDP capture failed after X11 SOLD_STATE_VERIFIED "
+                    f"({capture.failure_class or 'unknown'})",
+                    diagnostics={
+                        "navMode": nav_mode_label,
+                        "reason": "post_sold_capture_failed",
+                        "ownedDailyOutcome": "POST_SOLD_CAPTURE_FAILURE",
+                        "terminal": "POST_SOLD_CAPTURE_FAILURE",
+                        "x11SoldStateVerified": True,
+                        "SOLD_STATE_VERIFIED": True,
+                        "postSoldCapturePhase": POST_SOLD_CAPTURE_FAILED,
+                        "failureClass": capture.failure_class,
+                        "failureDetail": capture.failure_detail,
+                        "capture": probe_capture,
+                        "postSoldCapture": probe_capture,
+                        "url": capture.target_url or nav.url,
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                        "tripsSorryBreaker": False,
+                        "stageTimings": stage_timings.snapshot(),
+                    },
+                )
+
+            stage_timings.fields["postSoldCapturePhase"] = POST_SOLD_CAPTURE_READY
+            title = str(capture.target_title or "")
+            # Keep visible body text separate from raw HTML for classification.
+            # ONLY use HTML/body from the CURRENT successful capture payload.
+            # Never fall back to global post_sold_capture_last/last_capture.html —
+            # that file may belong to a prior job and must not be parsed as current evidence.
+            visible_body = str((proc_result.payload or {}).get("body_text") or "")
+            html_doc = str((proc_result.payload or {}).get("html") or "")
+            if not visible_body:
+                # Current-capture body only (from this process result), never disk last_capture.
+                fallback = str(capture.html_or_text or "")
+                visible_body = (
+                    ""
+                    if _looks_like_html_document(fallback)
+                    else fallback
+                )
+            body_text = visible_body
+            if html_doc and "/itm/" in html_doc:
+                capture.html_or_text = html_doc
+            sold_state = capture.sold_state or verify_sold_result_state(
+                url=capture.target_url or nav.url,
+                title=title,
+                body_text=body_text or html_doc,
+            )
+            page_url = capture.target_url or nav.url
+
+            # Persist real capture BEFORE parser execution (diagnostic evidence only).
+            from .post_sold_capture import persist_sold_capture_artifact
+
+            persist_info = persist_sold_capture_artifact(
+                html=html_doc or body_text,
+                body_text=str((proc_result.payload or {}).get("body_text") or body_text or ""),
+                canonical_itm_href_count=int(
+                    (capture.diagnostics or {}).get("canonicalItmHrefCount")
+                    or (proc_result.payload or {}).get("canonical_itm_href_count")
+                    or 0
+                ),
+                card_identity={
+                    "priceKeyId": getattr(request.price_key, "id", None),
+                    "cardName": getattr(request.price_key, "card_name", None),
+                    "setName": getattr(request.price_key, "set_name", None),
+                    "setCode": getattr(request.price_key, "set_code", None),
+                    "collectorNumber": getattr(request.price_key, "collector_number", None),
+                    "language": getattr(request.price_key, "language", None),
+                },
+                query=search_query.query_text,
+                target_url=page_url,
+                target_title=title,
+                capture_method=capture.capture_method,
+                market=search_query.market_country,
+                extra_meta={
+                    "targetId": capture.target_id,
+                    "captureElapsedMs": capture.capture_elapsed_ms,
+                    "orphanCountAfter": getattr(proc_result, "orphan_count_after", None),
+                    "workerExitCode": getattr(proc_result, "exit_code", None),
+                    "jobId": os.environ.get("CARDSCANR_JOB_ID"),
+                    "attemptId": os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                    "priceKeyId": os.environ.get("CARDSCANR_PRICE_KEY_ID")
+                    or getattr(request.price_key, "id", None),
+                    "fingerprint": os.environ.get("CARDSCANR_FINGERPRINT")
+                    or getattr(request.price_key, "fingerprint", None),
+                    "captureOrigin": os.environ.get("CARDSCANR_CAPTURE_ORIGIN") or "LIVE_BROWSER_CAPTURE",
+                },
+            )
+            # Compact current-job capture contract for harness (correlation fields included).
+            if isinstance(persist_info, dict):
+                persist_info = {
+                    **persist_info,
+                    "targetId": capture.target_id,
+                    "jobId": os.environ.get("CARDSCANR_JOB_ID"),
+                    "attemptId": os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                    "priceKeyId": os.environ.get("CARDSCANR_PRICE_KEY_ID")
+                    or getattr(request.price_key, "id", None),
+                    "fingerprint": os.environ.get("CARDSCANR_FINGERPRINT")
+                    or getattr(request.price_key, "fingerprint", None),
+                    "captureOrigin": os.environ.get("CARDSCANR_CAPTURE_ORIGIN") or "LIVE_BROWSER_CAPTURE",
+                    "captureMethod": capture.capture_method,
+                    "bodyLength": len(str((proc_result.payload or {}).get("body_text") or body_text or "")),
+                }
+            stage_timings.fields["persistedCaptureArtifact"] = persist_info
+            stage_timings.fields["currentJobCapture"] = persist_info
+            gui_marks_persist = stage_timings.fields.get("guiAttemptTimings")
+            if not isinstance(gui_marks_persist, dict):
+                gui_marks_persist = {"marks": {}}
+                stage_timings.fields["guiAttemptTimings"] = gui_marks_persist
+            gui_marks_persist.setdefault("marks", {})["T11_artifact_persisted"] = time.time()
+
+            if is_ebay_authentication_url(page_url):
+                raise ProviderAuthenticationRequiredError(
+                    "eBay redirected the public sold-listing search to authentication; sign-in is not attempted",
+                    diagnostics={"providerOutcome": "authentication_redirect", "navMode": nav_mode_label},
+                )
+            assert_final_url_matches_requested_marketplace(
+                final_url=page_url,
+                expected_provider_domain=search_query.provider_domain,
+                requested_market_country=search_query.market_country,
+                requested_currency=search_query.currency,
+            )
+
+            # No Playwright page handle — classify with representation-aware challenge model.
+            selector_counts = {
+                "process_capture": 1,
+                "canonical_itm_href_count": int(
+                    (capture.diagnostics or {}).get("canonicalItmHrefCount") or 0
+                ),
+            }
+            challenge_ui = None
+            worker_diag = (capture.diagnostics or {}).get("workerDiagnostics")
+            if isinstance(worker_diag, dict) and isinstance(worker_diag.get("challengeUi"), dict):
+                challenge_ui = worker_diag.get("challengeUi")
+            elif isinstance((capture.diagnostics or {}).get("challengeUi"), dict):
+                challenge_ui = (capture.diagnostics or {}).get("challengeUi")
+            page_state = classify_browser_page_state(
+                title=title,
+                body_text=body_text,
+                html_document=html_doc or None,
+                url=page_url,
+                selector_counts=selector_counts,
+                challenge_ui=challenge_ui if isinstance(challenge_ui, dict) else None,
+                x11_sold_state_verified=True,
+            )
+            stage_timings.fields["browserPageState"] = page_state
+            if page_state["outcome"] in {
+                "challenge_detected",
+                "access_blocked",
+                "authentication_required",
+                "ambiguous_security_state",
+            }:
+                if page_state["outcome"] == "authentication_required":
+                    raise ProviderAuthenticationRequiredError(
+                        "eBay browser session requires sign-in before pricing can continue",
+                        diagnostics={"providerOutcome": "authentication_required", "navMode": nav_mode_label},
+                    )
+                raise ProviderBlockedError(
+                    "eBay returned a block or verification page; captcha bypass is not attempted"
+                    if page_state["outcome"] != "ambiguous_security_state"
+                    else "eBay page security state is ambiguous; failing closed without captcha bypass",
+                    diagnostics={
+                        "providerOutcome": page_state["outcome"],
+                        "browserPageState": page_state,
+                        "navMode": nav_mode_label,
+                        "SOLD_STATE_VERIFIED": True,
+                        "x11SoldStateVerified": True,
+                    },
+                )
+
+            gui_marks = stage_timings.fields.get("guiAttemptTimings")
+            if not isinstance(gui_marks, dict):
+                gui_marks = {"marks": {}}
+                stage_timings.fields["guiAttemptTimings"] = gui_marks
+            marks = gui_marks.setdefault("marks", {})
+            marks.setdefault("T10_html_data_captured", time.time())
+
+            with _StageTimer(stage_timings, "parse_result_rows"):
+                comps, parser_errors, visible_sample = self._parse_capture_candidates(
+                    candidates=(capture.diagnostics or {}).get("candidates") or [],
+                    request=request,
+                    search_query=search_query,
+                )
+            stage_timings.fields["parsePhase"] = PARSE_COMPLETE
+            marks["T11_exact_comp_parse_complete"] = time.time()
+            quality_summary = build_quality_summary(comps, request=request)
+            for error in parser_errors:
+                url_quality = error.get("url_quality")
+                if url_quality == "generic_non_item":
+                    quality_summary["generic_url_count"] += 1
+                elif url_quality in {"missing", "malformed_or_non_ebay"}:
+                    quality_summary["missing_url_count"] += 1
+            self._session_navs += 1
+            self._write_debug_artifacts(
+                page=None,
+                request=request,
+                search_query=search_query,
+                title=title,
+                body_text=body_text,
+                detected_block=False,
+                selector_counts=selector_counts,
+                comps=comps,
+                parser_errors=parser_errors,
+                visible_result_text_sample=visible_sample,
+                quality_summary=quality_summary,
+                stage_timings=stage_timings.snapshot(),
+            )
+            marks["T12_pricing_calculation_complete"] = time.time()
+            marks["T13_db_cache_snapshot_write_complete"] = time.time()
+            marks["T14_job_finalized"] = time.time()
+            stage_timings.fields["finalizeTerminal"] = FINALIZE_SUCCESS
+            return ProviderResult(
+                provider_name=self.provider_name,
+                marketplace=search_query.provider_marketplace_id,
+                provider_fingerprint=self._provider_fingerprint(search_query),
+                query_used=search_query.query_text,
+                comps=comps,
+                raw_metadata=sanitize_provider_diagnostics(
+                    {
+                        "providerDomain": search_query.provider_domain,
+                        "providerMarketplaceId": search_query.provider_marketplace_id,
+                        "marketCountry": search_query.market_country,
+                        "currency": search_query.currency,
+                        "searchUrl": page_url,
+                        "queryIndex": search_query.query_index,
+                        "querySource": search_query.query_source,
+                        "resultCount": len(comps),
+                        "providerOutcome": "success" if comps else "no_results",
+                        "browserPageState": page_state,
+                        "navMode": nav_mode_label,
+                        "desktopNav": stage_timings.fields.get("desktopNav"),
+                        "soldState": sold_state,
+                        "x11SoldStateVerified": True,
+                        "postSoldCapturePhase": POST_SOLD_CAPTURE_READY,
+                        "parsePhase": PARSE_COMPLETE,
+                        "postSoldCapture": {
+                            "targetId": capture.target_id,
+                            "targetUrl": capture.target_url,
+                            "captureElapsedMs": capture.capture_elapsed_ms,
+                            "retryUsed": capture.retry_used,
+                            "captureMethod": capture.capture_method,
+                            "canonicalItmHrefCount": (capture.diagnostics or {}).get("canonicalItmHrefCount"),
+                            "process": (capture.diagnostics or {}).get("captureProcess"),
+                        },
+                        "diagnosticStages": DIAGNOSTIC_STAGES,
+                        "maxResults": self.config.max_results,
+                        "browserConfig": self.config.safe_diagnostics(),
+                        "queryDiagnostics": search_query.diagnostics,
+                        "marketScope": self.config.market_scope,
+                        "qualitySummary": quality_summary,
+                        "candidateSelectorCounts": selector_counts,
+                        "parserErrors": parser_errors[:20],
+                        "visibleResultTextSample": visible_sample,
+                        "stageTimings": stage_timings.snapshot(),
+                        "browserSessionNavs": self._session_navs,
+                        "directSearchURL": False,
+                        "playwrightNavigation": False,
+                        "cdpUsedFor": "read_only_process_capture",
+                        "finalizeTerminal": FINALIZE_SUCCESS,
+                    }
+                ),
+            )
+
+        return run_with_finalize_deadline(
+            _post_sold_parse,
+            timeout_seconds=finalize_budget,
+            on_timeout=_disconnect_cdp_for_deadline,
+            stage="post_sold_cdp_attach_and_parse",
+        )
+
     def _fetch_with_playwright(self, *, request: ProviderRequest, search_query: ProviderSearchQuery) -> ProviderResult:
+        if self._desktop_nav_mode_enabled():
+            return self._fetch_with_desktop_win32(request=request, search_query=search_query)
+
         try:
             from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
             from playwright.sync_api import sync_playwright
@@ -2156,7 +3644,39 @@ class EbayBrowserSoldCompsProvider:
                     owned_pw = None
                     raise
             with _StageTimer(stage_timings, "open_ebay_page"):
-                page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                # AU: warm authenticated session on homepage, then clean active-search URL
+                # (same path as the isolated Sold proof). Do NOT submit via homepage search
+                # box — that injects _trksid/_from and is more likely to hit SORRY.
+                domain = str(search_query.provider_domain or "").strip().lower()
+                is_au = domain.endswith("ebay.com.au") or str(search_query.market_country or "").upper() == "AU"
+                if is_au:
+                    home = _ebay_https_origin(domain or "ebay.com.au") + "/"
+                    page.goto(home, wait_until="domcontentloaded", timeout=timeout_ms)
+                    time.sleep(2.0)
+                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                    time.sleep(3.0)
+                    stage_timings.fields["auSearchEntry"] = "homepage_then_clean_search_url"
+                    entry_body = _safe_body_text(page)
+                    entry_title = _safe_page_title(page)
+                    entry_state = classify_browser_page_state(title=entry_title, body_text=entry_body)
+                    if entry_state.get("reason") == "ebay_sorry_error_page" or str(page.url or "").lower().startswith(
+                        "chrome-error:"
+                    ):
+                        stage_timings.fields["preSoldSorry"] = "PRE_SOLD_SORRY"
+                        raise ProviderTemporaryError(
+                            "eBay PRE_SOLD_SORRY on clean active search before Sold items filter click",
+                            diagnostics={
+                                "preSoldSorry": "PRE_SOLD_SORRY",
+                                "reason": "ebay_sorry_error_page",
+                                "browserPageState": entry_state,
+                                "urlBeforeFilters": page.url,
+                                "auSearchEntry": "homepage_then_clean_search_url",
+                                "stageTimings": stage_timings.snapshot(),
+                            },
+                        )
+                else:
+                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                    time.sleep(2.0)
             if reuse:
                 self._session_navs += 1
             if is_ebay_authentication_url(page.url):
@@ -2178,11 +3698,9 @@ class EbayBrowserSoldCompsProvider:
                     requested_currency=search_query.currency,
                 )
             with _StageTimer(stage_timings, "apply_sold_completed_filters"):
-                    if "LH_Sold=1" not in search_query.search_url or "LH_Complete=1" not in search_query.search_url:
-                        raise ProviderParseError(
-                            "eBay search URL is missing sold/completed filters",
-                            diagnostics={"searchUrl": search_query.search_url},
-                        )
+                    # Never deep-link sold URLs on first navigation — apply via refine UI.
+                    filter_diagnostics = apply_sold_completed_filters_via_ui(page, timeout_ms=timeout_ms)
+                    stage_timings.fields.setdefault("soldFilterUi", filter_diagnostics)
             try:
                     with _StageTimer(stage_timings, "wait_for_network_idle"):
                         page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 15000))
@@ -2526,6 +4044,53 @@ class EbayBrowserSoldCompsProvider:
                 )
         return comps, parse_errors, visible_sample
 
+    def _parse_capture_candidates(
+        self,
+        *,
+        candidates: list[Any],
+        request: ProviderRequest,
+        search_query: ProviderSearchQuery,
+    ) -> tuple[list[SoldComp], list[dict[str, Any]], str]:
+        """Parse listing candidates already extracted by the capture subprocess."""
+        comps: list[SoldComp] = []
+        parse_errors: list[dict[str, Any]] = []
+        visible_sample = ""
+        rows = [c for c in (candidates or []) if isinstance(c, dict)]
+        for index, candidate in enumerate(rows):
+            if not visible_sample and candidate.get("text"):
+                visible_sample = _normalise_text(candidate.get("text"))[:1000]
+            try:
+                comp = parse_candidate_dict(
+                    candidate,
+                    index=index,
+                    request=request,
+                    search_query=search_query,
+                )
+            except Exception:
+                parse_errors.append(
+                    {"index": index, "errorType": "candidate_exception", "source": candidate.get("source")}
+                )
+                continue
+            if comp is not None:
+                comps.append(comp)
+                if len(comps) >= self.config.max_results:
+                    break
+            else:
+                url_metadata = normalize_ebay_listing_url(
+                    str(candidate.get("href") or ""),
+                    provider_domain=search_query.provider_domain,
+                )
+                parse_errors.append(
+                    {
+                        "index": index,
+                        "errorType": "candidate_not_parseable",
+                        "source": candidate.get("source"),
+                        "url_quality": url_metadata["url_quality"],
+                        "original_href": url_metadata["original_href"],
+                    }
+                )
+        return comps, parse_errors, visible_sample
+
     def _parse_card(
         self,
         *,
@@ -2792,11 +4357,27 @@ class EbayBrowserSoldCompsProvider:
         latest_dir = self.config.debug_artifact_dir
         latest_dir.mkdir(parents=True, exist_ok=True)
         try:
-            (latest_dir / "page.html").write_text(page.content(), encoding="utf-8")
+            if page is None:
+                (latest_dir / "page.html").write_text(
+                    body_text if body_text.strip().startswith("<") else f"<!-- text capture -->\n{body_text}",
+                    encoding="utf-8",
+                )
+            else:
+                # Avoid unbounded page.content(); rely on page default timeout from CDP attach.
+                html = page.evaluate("() => document.documentElement.outerHTML")
+                if html:
+                    (latest_dir / "page.html").write_text(str(html), encoding="utf-8")
         except Exception:
-            pass
+            try:
+                (latest_dir / "page.html").write_text(
+                    f"<!-- page.html skipped: content capture failed; title={title!s} -->\n",
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
         try:
-            page.screenshot(path=str(latest_dir / "screenshot.png"), full_page=True)
+            if page is not None:
+                page.screenshot(path=str(latest_dir / "screenshot.png"), full_page=False, timeout=8_000)
         except Exception:
             pass
         from ..filters import filter_comps
@@ -2821,7 +4402,7 @@ class EbayBrowserSoldCompsProvider:
                         "result_count": len(comps),
                     }
                 ],
-                "page_url_after_load": getattr(page, "url", ""),
+                "page_url_after_load": (getattr(page, "url", "") if page is not None else ""),
                 "page_title": title,
                 "detected_block_or_captcha": detected_block,
                 "visible_result_text_sample": visible_result_text_sample,

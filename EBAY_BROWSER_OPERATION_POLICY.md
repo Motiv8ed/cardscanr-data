@@ -102,3 +102,47 @@ Set `EBAY_BROWSER_KILL_SWITCH=true` to disable the provider immediately. The fac
 ## Live Validation Limit
 
 For production validation, run exactly one card refresh, claim at most one worker job, use one browser context at a time, and stop on challenge or verification without retry loops.
+
+## Current operational constraint (2026-09-27)
+
+This is **current eBay/browser behaviour**, not a permanent architectural requirement.
+
+### AU sold evidence
+
+- AU sold comps currently require **headed Chrome** using the authenticated CardScanR profile:
+  - `EBAY_BROWSER_MODE=headed`
+  - `EBAY_BROWSER_HEADLESS=false`
+  - `EBAY_BROWSER_USER_DATA_DIR=<repo>/.browser_profiles/cardscanr`
+- Headless AU sold navigation currently fails with eBay’s generic **SORRY / Something went wrong** page even when the same UI filter clicks succeed headed.
+- Prefer normal navigation:
+  1. Homepage warm-up → active search URL (no `LH_Sold` / `LH_Complete` deep-link), or homepage → typed search
+  2. Click **Sold items**
+  3. Click **Completed items** when available
+- Direct sold deep-links (`LH_Sold=1&LH_Complete=1` on first navigation) may return SORRY on ebay.com.au and are **not** the preferred AU path.
+- Current flakiness (2026-09-27): after a burst of AU sold navigations, Sold/Completed clicks may intermittently return SORRY or omit the Sold control. This is treated as temporary navigation failure with last-good retention — not CAPTCHA bypass territory.
+- If **Sold** succeeds but **Completed** lands on SORRY, the provider recovers to the Sold results URL and continues when sold evidence is visible (Completed is preferred, not mandatory when Sold evidence already exists).
+- Production ensure script starts a **single** worker with concurrency 1 and max-jobs 1 so Chrome instances do not fight the profile lock.
+- Do **not** create a second competing Chrome profile.
+- Do **not** bypass CAPTCHA / human checks. If eBay requests verification, stop and restore the session manually in the CardScanR profile, then restart the runtime.
+- Human re-verification may occasionally be required; treat that as recoverable ops, not a code defect.
+
+### Owned-daily enablement
+
+- Persistent flag: `reports/runtime/owned_daily_full_enable.flag`
+- Runtime snapshot: `reports/runtime/live_ebay_runtime_config.json`
+- Startup path: `scripts/ensure_live_ebay_pricing_runtime.ps1` (reads the persistent flag; does **not** force full enable)
+- Owned pass runs **once per UTC day** inside `market_price_scheduler` when `OWNED_DAILY_FULL_ENABLE=true`, using the 24h last-successful-refresh due rule (not calendar-midnight churn).
+- After the 2026-09-27 price-precedence incident, keep full enable **false** until the capped pilot is explicitly re-authorized.
+
+### Customer-facing source precedence (2026-09-27)
+
+Verified eBay sold estimates are the primary customer-facing market estimate.
+
+1. Fresh verified eBay sold estimate  
+2. Stale-but-valid previous eBay sold estimate (within 7 days)  
+3. Supported structured market fallback (international estimate)  
+4. Reference/static provider (tcgdex / static_reference / etc.)  
+5. Unavailable  
+
+Lower tiers may store secondary observations (`reference_price` / snapshots) but must not silently overwrite a valid higher-tier selected `current_market_price`. Shared policy: `cardscanr_market_engine/price_source_precedence.py`.
+

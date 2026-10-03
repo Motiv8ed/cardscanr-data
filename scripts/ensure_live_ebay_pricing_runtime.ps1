@@ -103,22 +103,37 @@ function Ensure-Worker {
         return
     }
 
-    Set-LiveEbayWorkerEnvironment -ProfilePath $profilePath -Headless $true
+    # ebay.com.au rejects sold deep-links and also rejects the same Sold/Completed
+    # UI filter navigation under headless Chrome (SORRY error page). Headed works.
+    # Production mode is intentionally headed (EBAY_BROWSER_MODE=headed).
+    Set-LiveEbayWorkerEnvironment -ProfilePath $profilePath -Headless $false
+    $env:EBAY_BROWSER_HEADLESS = "false"
+    $env:EBAY_BROWSER_MODE = "headed"
     $env:MARKET_WORKER_ALLOWED_MARKETS = "AU,US,GB,CA"
     $env:MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS = "NONE"
     $env:MARKET_WORKER_CONCURRENCY = "1"
-    $env:MARKET_WORKER_MAX_JOBS_PER_RUN = "4"
+    $env:MARKET_WORKER_MAX_JOBS_PER_RUN = "1"
     $env:MARKET_WORKER_POLL_SECONDS = "5"
     # Keep single-browser safety; throughput gains come from fuller queue + less idle poll.
     $env:EBAY_BROWSER_MAX_CONCURRENCY = "1"
-    $env:EBAY_BROWSER_REUSE_CONTEXT = "true"
+    # Prefer non-reuse launches; persistent reuse has TargetClosedError flakes on this host.
+    $env:EBAY_BROWSER_REUSE_CONTEXT = "false"
     $env:EBAY_BROWSER_RECYCLE_AFTER_NAVIGATIONS = "20"
+    # Owned-daily enable is controlled solely by owned_daily_full_enable.flag.
+    # Ensure must never invent or persist true.
+    $fullEnable = Read-OwnedDailyFullEnableFlag -StateDir $stateDir
+    $env:OWNED_DAILY_FULL_ENABLE = if ($fullEnable) { "true" } else { "false" }
+    if (-not $env:OWNED_DAILY_MAX_ENQUEUE) { $env:OWNED_DAILY_MAX_ENQUEUE = "25" }
+    Write-LiveEbayRuntimeConfig -StateDir $stateDir -ProfilePath $profilePath -Headless $false -OwnedDailyFullEnable $fullEnable -OwnedDailyMaxEnqueue ([int]$env:OWNED_DAILY_MAX_ENQUEUE) | Out-Null
+    Write-LiveEbayWorkerConfigSummary -ProfilePath $profilePath -Headless $false -PollSeconds 5 -MaxJobs 1
 
     $stdout = Join-Path $stateDir "live_ebay_worker.out.log"
     $stderr = Join-Path $stateDir "live_ebay_worker.err.log"
+    $env:PYTHONUNBUFFERED = "1"
     $argList = @(
+        "-u",
         "workers/market_price_worker.py",
-        "--max-jobs", "4",
+        "--max-jobs", "1",
         "--poll-seconds", "5"
     )
     $proc = Start-Process -FilePath $pythonPath -ArgumentList $argList `
@@ -159,10 +174,21 @@ function Ensure-Scheduler {
     $env:MARKET_SCHEDULER_DRY_RUN = "false"
     $env:MARKET_SCHEDULER_INCLUDE_MISSING_CACHE = "true"
     $env:MARKET_SCHEDULER_INCLUDE_STALE_CACHE = "true"
+    # Once-daily owned pass runs inside this scheduler process only when flag is true.
+    $fullEnable = Read-OwnedDailyFullEnableFlag -StateDir $stateDir
+    $env:OWNED_DAILY_FULL_ENABLE = if ($fullEnable) { "true" } else { "false" }
+    if (-not $env:OWNED_DAILY_MAX_ENQUEUE) { $env:OWNED_DAILY_MAX_ENQUEUE = "25" }
+    $env:OWNED_DAILY_SYNC_KEYS = "true"
+    # Scheduler shares the same persistent runtime config (headed; enable from flag).
+    if (-not $env:EBAY_BROWSER_MODE) { $env:EBAY_BROWSER_MODE = "headed" }
+    if (-not $env:EBAY_BROWSER_HEADLESS) { $env:EBAY_BROWSER_HEADLESS = "false" }
+    Write-LiveEbayRuntimeConfig -StateDir $stateDir -ProfilePath $profilePath -Headless $false -OwnedDailyFullEnable $fullEnable -OwnedDailyMaxEnqueue ([int]$env:OWNED_DAILY_MAX_ENQUEUE) | Out-Null
 
     $stdout = Join-Path $stateDir "live_ebay_scheduler.out.log"
     $stderr = Join-Path $stateDir "live_ebay_scheduler.err.log"
+    $env:PYTHONUNBUFFERED = "1"
     $argList = @(
+        "-u",
         "workers/market_price_scheduler.py",
         "--poll-seconds", "60"
     )

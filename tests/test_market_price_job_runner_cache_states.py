@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
+import os
+import tempfile
 import unittest
 
 from cardscanr_market_engine.config import MarketEngineConfig
+from cardscanr_market_engine.ebay_availability import EbayAvailabilitySnapshot, save_availability
 from cardscanr_market_engine.filters import filter_comps
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob, ProviderRequest, ProviderResult, SoldComp
@@ -102,6 +106,17 @@ class _FakeClient:
         self.cancelled_jobs.append(dict(kwargs))
         return {"status": "cancelled", **kwargs}
 
+    def mark_cache_failure(self, **kwargs: object) -> dict:
+        self.cache_payloads.append({"refresh_status": "failed", **kwargs})
+        return dict(kwargs)
+
+    def mark_cache_checked_no_new_evidence(self, **kwargs: object) -> dict:
+        self.cache_payloads.append({"refresh_status": "completed", **kwargs})
+        return dict(kwargs)
+
+    def count_recent_same_failures(self, *, price_key_id: str, error_message: str) -> int:
+        return 0
+
     def get_cache_row(self, *, price_key_id: str):
         return getattr(self, "_cache_row", None)
 
@@ -153,6 +168,42 @@ class _CountingFailingProvider(_FailingProvider):
 
 
 class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        root = Path(self._tmpdir.name)
+        avail = root / "ebay_availability_state.json"
+        ops = root / "marketplace_ops_state.json"
+        incidents = root / "control_plane_incidents.json"
+        save_availability(
+            EbayAvailabilitySnapshot(
+                state="HEALTHY",
+                market="AU",
+                confirmed_healthy=True,
+                updated_at=datetime(2026, 5, 20, tzinfo=timezone.utc),
+            ),
+            path=avail, force=True)
+        ops.write_text('{"version":1,"markets":{}}\n', encoding="utf-8")
+        incidents.write_text('{"version":1,"incidents":{}}\n', encoding="utf-8")
+        self._prev_env = {
+            "EBAY_AVAILABILITY_STATE_PATH": os.environ.get("EBAY_AVAILABILITY_STATE_PATH"),
+            "MARKET_OPS_STATE_PATH": os.environ.get("MARKET_OPS_STATE_PATH"),
+            "CONTROL_PLANE_INCIDENTS_PATH": os.environ.get("CONTROL_PLANE_INCIDENTS_PATH"),
+            "MARKET_WORKER_ALLOWED_MARKETS": os.environ.get("MARKET_WORKER_ALLOWED_MARKETS"),
+            "MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS": os.environ.get("MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS"),
+        }
+        os.environ["EBAY_AVAILABILITY_STATE_PATH"] = str(avail)
+        os.environ["MARKET_OPS_STATE_PATH"] = str(ops)
+        os.environ["CONTROL_PLANE_INCIDENTS_PATH"] = str(incidents)
+        os.environ["MARKET_WORKER_ALLOWED_MARKETS"] = "AU,US,GB,CA,NZ"
+        os.environ["MARKET_WORKER_DEFERRED_CHALLENGE_MARKETS"] = "NONE"
+
+    def tearDown(self) -> None:
+        for key, value in self._prev_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self._tmpdir.cleanup()
     def test_supported_au_aud_job_creates_cache_snapshot_and_evidence(self) -> None:
         client = _FakeClient(_riolu_key())
         runner = MarketPriceJobRunner(
@@ -179,7 +230,7 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
         self.assertEqual(cache["sample_size"], 1)
         self.assertEqual(cache["current_market_price"], 4.25)
 
-    def test_no_evidence_found_writes_null_price_cache(self) -> None:
+    def test_no_evidence_never_priced_is_no_price_ever_found(self) -> None:
         client = _FakeClient(_riolu_key())
         runner = MarketPriceJobRunner(
             client=client,
@@ -191,16 +242,54 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
 
         result = runner.run_job(_job())
 
-        self.assertEqual(result["status"], "completed")
-        self.assertIsNone(result["recommendedPrice"])
-        self.assertEqual(result["includedCount"], 0)
-        self.assertEqual(len(client.cache_payloads), 1)
-        cache = client.cache_payloads[0]
-        self.assertIsNone(cache["current_market_price"])
-        self.assertIsNone(cache["recommended_price"])
-        self.assertEqual(cache["sample_size"], 0)
-        self.assertEqual(cache["refresh_status"], "completed")
-        self.assertEqual(client.snapshots[0]["diagnostics_json"]["no_reliable_price_reason"], "no_comps_parsed")
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["ownedDailyOutcome"], "NO_PRICE_EVER_FOUND")
+        self.assertIn("no_reliable_price", result["error"])
+        self.assertEqual(len(client.failed_jobs), 1)
+
+    def test_sparse_market_with_prior_good_is_checked_no_new_exact_evidence(self) -> None:
+        client = _FakeClient(_riolu_key())
+        client._cache_row = {
+            "current_market_price": 4.25,
+            "provider": "ebay_browser",
+            "last_updated_at": "2026-05-20T00:00:00+00:00",
+            "latest_snapshot_id": "snap-prior",
+            "sample_size": 3,
+            "refresh_status": "completed",
+            "next_refresh_due_at": "2026-05-21T00:00:00+00:00",
+        }
+        job = _job()
+        job = MarketPriceRefreshJob(
+            id=job.id,
+            price_key_id=job.price_key_id,
+            reason="owned_daily:force_sparse_proof",
+            priority=job.priority,
+            status=job.status,
+            attempt_count=job.attempt_count,
+        )
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=_StaticProvider([]),
+            config=_config(),
+            now_func=lambda: datetime(2026, 6, 1, tzinfo=timezone.utc),
+            logger=lambda _message: None,
+        )
+
+        result = runner.run_job(job)
+
+        self.assertEqual(result["status"], "checked_no_new_exact_evidence")
+        self.assertEqual(result["ownedDailyOutcome"], "CHECKED_NO_NEW_EXACT_EVIDENCE")
+        self.assertEqual(result["retainedPrice"], 4.25)
+        self.assertTrue(result["lastGoodRetained"])
+        self.assertEqual(result["lastUpdatedAt"], "2026-05-20T00:00:00+00:00")
+        self.assertEqual(len(client.cancelled_jobs), 1)
+        self.assertEqual(client.cancelled_jobs[0]["reason"], "CHECKED_NO_NEW_EXACT_EVIDENCE")
+        self.assertEqual(len(client.failed_jobs), 0)
+        self.assertEqual(len(client.snapshots), 0)
+        checked = client.cache_payloads[-1]
+        self.assertEqual(checked["refresh_status"], "completed")
+        self.assertNotIn("current_market_price", checked)
+        self.assertNotIn("last_updated_at", checked)
 
     def test_provider_failure_marks_job_failed_clearly(self) -> None:
         client = _FakeClient(_riolu_key())
@@ -217,9 +306,11 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertIn("provider timeout", result["error"])
         self.assertEqual(result["providerDiagnostics"]["providerErrorCode"], "provider_temporary")
+        self.assertEqual(result["ownedDailyOutcome"], "TEMPORARY_BROWSER_FAILURE")
         self.assertEqual(len(client.failed_jobs), 1)
         self.assertIn("provider timeout", client.failed_jobs[0]["error_message"])
-        self.assertEqual(client.cache_payloads, [])
+        self.assertEqual(len(client.cache_payloads), 1)
+        self.assertEqual(client.cache_payloads[0]["refresh_status"], "failed")
 
     def test_provider_block_stops_marketplace_fallback(self) -> None:
         client = _FakeClient(_riolu_key())
