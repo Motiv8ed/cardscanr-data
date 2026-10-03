@@ -1,0 +1,80 @@
+{
+  "historicalVerdictUnchanged": "FAIL_NAVIGATION / SOLD_NAVIGATION_TIMEOUT / consumed=true",
+  "futurePhaseTerminal": "SOLD_UNEXPECTED_FILTER_TRANSITION",
+  "futureFailureStage": "SOLD_STATE_TRANSITION",
+  "rootCauseClass": "ROOT_CAUSE_REPRODUCED",
+  "fixtureResult": {
+    "ok": false,
+    "terminal": "SOLD_UNEXPECTED_FILTER_TRANSITION",
+    "error": "SOLD_UNEXPECTED_FILTER_TRANSITION",
+    "SOLD_STATE_VERIFIED": false,
+    "soldClickSuccess": true,
+    "diagnostics": {
+      "runtimeMode": "FIXTURE",
+      "searchSubmitted": true,
+      "ordinaryResultsConfirmed": true,
+      "urlBefore": "https://www.ebay.com.au/sch/i.html?_nkw=Meowth+56+jungle+Pokemon&_sacat=0&_from=R40&_trksid=m570.l1313",
+      "soldControlDiscovered": true,
+      "soldClickAttempted": true,
+      "soldClickResult": "OK",
+      "lhSoldBefore": false,
+      "lhSoldAfter": false,
+      "x11SoldStateVerified": false,
+      "passiveRecaptchaIframe": false,
+      "failureStage": "SOLD_STATE_TRANSITION",
+      "failureClass": "SOLD_UNEXPECTED_FILTER_TRANSITION",
+      "phases": [
+        {
+          "name": "SOLD_CONTROL_DISCOVERY",
+          "startedAt": 0.0,
+          "elapsedMs": 499,
+          "timeoutMs": 12000,
+          "status": "PASS",
+          "reasonCode": "SOLD_CONTROL_AVAILABLE"
+        },
+        {
+          "name": "SOLD_CONTROL_CLICK",
+          "startedAt": 0.49999999999999994,
+          "elapsedMs": 200,
+          "timeoutMs": 5000,
+          "status": "PASS",
+          "reasonCode": "SOLD_CLICKED"
+        },
+        {
+          "name": "SOLD_STATE_TRANSITION",
+          "startedAt": 0.7,
+          "elapsedMs": 2049,
+          "timeoutMs": 8000,
+          "status": "FAIL",
+          "reasonCode": "SOLD_UNEXPECTED_FILTER_TRANSITION"
+        },
+        {
+          "name": "SOLD_STATE_VERIFICATION",
+          "startedAt": 0.7,
+          "elapsedMs": 2049,
+          "timeoutMs": 10000,
+          "status": "FAIL",
+          "reasonCode": "SOLD_UNEXPECTED_FILTER_TRANSITION"
+        }
+      ],
+      "retries": 0,
+      "urlAfter": "https://www.ebay.com.au/sch/i.html?_nkw=Meowth+56+jungle+Pokemon&_sacat=0&_from=R40&rt=nc&LH_PrefLoc=2",
+      "pageTitle": "Meowth 56 Jungle Pokemon for sale | eBay - Google Chrome"
+    },
+    "policy": {
+      "controlDiscoverySeconds": 12.0,
+      "controlClickSeconds": 5.0,
+      "stateTransitionSeconds": 8.0,
+      "stateVerificationSeconds": 10.0,
+      "legacyOpaquePendingSeconds": 35.0,
+      "evidenceBasis": {
+        "clickToVerifiedMedianMs": 3346,
+        "clickToVerifiedP90Ms": 3358,
+        "clickToVerifiedMaxMs": 5371,
+        "ordinaryToControlP90Ms": 4988,
+        "headroomPolicy": "finite_stage_budgets_above_p90"
+      }
+    }
+  },
+  "note": "Historical opaque SOLD_NAVIGATION_TIMEOUT preserved. Corrected diagnostics identify unexpected LH_PrefLoc without LH_Sold."
+}

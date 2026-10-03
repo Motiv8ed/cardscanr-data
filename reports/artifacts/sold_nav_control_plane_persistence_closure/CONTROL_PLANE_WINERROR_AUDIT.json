@@ -1,0 +1,7 @@
+{
+  "file": "reports/runtime/ebay_availability_state.json",
+  "writerOnGateEval": "get_availability via locked_json_state always wrote on exit (even HEALTHY unchanged)",
+  "exactFailure": "atomic_json_state.atomic_write_json -> os.replace PermissionError WinError 5",
+  "rootCause": "gate evaluation / stop accounting triggered unnecessary availability rewrite under FileLock; Windows sharing denial on replace",
+  "fix": "peek_availability + browser_work_allowed(persist_transitions=False); get_availability writes only on meaningful transition; bounded Windows replace retry; fail closed CONTROL_PLANE_PERSISTENCE_FAILURE"
+}

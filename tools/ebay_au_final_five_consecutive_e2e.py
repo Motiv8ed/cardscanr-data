@@ -944,7 +944,10 @@ def main() -> int:
             stop_run = True
             stop_reason = f"{verdict}_card_{position}"
 
-        _, g_after = _gate_ok()
+        try:
+            _, g_after = _gate_ok()
+        except Exception as gate_exc:  # noqa: BLE001 — never lose stop accounting
+            g_after = {"gateReadError": f"{type(gate_exc).__name__}:{gate_exc}"[:400], "allowed": False}
         report["controlPlaneAfter"] = g_after
         card_reports.append(report)
         (CARDS_DIR / f"card_{position}.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -952,6 +955,43 @@ def main() -> int:
 
         if search_started:
             executed_live += 1
+
+        checkpoint_at = int(os.getenv("CARDSCANR_MID_RUN_CHECKPOINT_AT") or "0")
+        if (
+            checkpoint_at > 0
+            and accounting["completedHealthyPathCount"] == checkpoint_at
+            and not stop_run
+        ):
+            g_ok_cp, g_payload_cp = _gate_ok()
+            fresh_to_provider = 0
+            for c in card_reports:
+                elig = c.get("sourceAwareEligibility") or {}
+                if elig.get("wouldSkipFresh") and (c.get("job") or {}).get("searchSubmitted"):
+                    fresh_to_provider += 1
+            cp = {
+                "jobs": accounting["completedHealthyPathCount"],
+                "liveSubmissions": accounting["liveNavigationStartedCount"],
+                "controlPlaneOk": g_ok_cp,
+                "challenges": accounting["challengeStopCount"],
+                "freshToProvider": fresh_to_provider,
+                "ownershipMutations": 0,
+                "retries": accounting["retryCount"],
+                "orphans": 0,
+                "marketplace": g_payload_cp,
+                "ok": bool(
+                    g_ok_cp
+                    and accounting["challengeStopCount"] == 0
+                    and accounting["retryCount"] == 0
+                    and accounting["failedAttemptCount"] == 0
+                    and fresh_to_provider == 0
+                ),
+            }
+            run["midRunCheckpoint"] = cp
+            (BOOT / "mid_run_checkpoint.json").write_text(json.dumps(cp, indent=2) + "\n", encoding="utf-8")
+            print(json.dumps({"MID_RUN_CHECKPOINT": cp}, indent=2), flush=True)
+            if not cp["ok"]:
+                stop_run = True
+                stop_reason = f"mid_run_checkpoint_failed_at_{checkpoint_at}"
 
         if stop_run:
             break

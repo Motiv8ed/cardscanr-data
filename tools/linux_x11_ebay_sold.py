@@ -45,6 +45,18 @@ from cardscanr_market_engine.providers.linux_x11_gui_fsm import (  # noqa: E402
     page_is_about_blank,
     sold_click_coords_valid,
 )
+from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: E402
+    DEFAULT_SOLD_TIMEOUT_POLICY,
+    PHASE_SOLD_CONTROL_DISCOVERY,
+    PHASE_SOLD_STATE_TRANSITION,
+    PHASE_SOLD_STATE_VERIFICATION,
+    TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+    TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT,
+    TERMINAL_SOLD_UNEXPECTED_FILTER,
+    build_sold_failure_evidence,
+    classify_sold_observation,
+    url_has_lh_sold,
+)
 
 
 def find_orange_highlight_left_rail(im: Image.Image, g: dict) -> tuple[int, int, int] | None:
@@ -84,11 +96,29 @@ def close_about_blank_tab() -> None:
         clear_modifiers()
 
 
-def wait_sold_pending(gate: SoldGateState, *, tag: str, timeout: int = 35) -> dict:
-    """SOLD_NAVIGATION_PENDING: no omnibox/Ctrl+L until page looks settled."""
+def wait_sold_pending(
+    gate: SoldGateState,
+    *,
+    tag: str,
+    timeout: float | None = None,
+    url_before: str | None = None,
+) -> dict:
+    """SOLD_NAVIGATION_PENDING with phase-specific verification budget.
+
+    Evidence-based default: SOLD_STATE_VERIFICATION_TIMEOUT_S (10s), not opaque 35s.
+    Emits phase-specific terminals (not generic SOLD_NAVIGATION_TIMEOUT when known).
+    """
+    verify_budget = float(
+        timeout if timeout is not None else DEFAULT_SOLD_TIMEOUT_POLICY.state_verification_s
+    )
     t0 = time.time()
+    phase_started = t0
     last_title = ""
-    while time.time() - t0 < timeout:
+    url = url_before or ""
+    title_now = ""
+    failure_stage = PHASE_SOLD_STATE_VERIFICATION
+    terminal_override: str | None = None
+    while time.time() - t0 < verify_budget:
         if not may_perform_browser_action(gate, "ctrl_l"):
             pass  # enforced by not calling omnibox here
         time.sleep(0.45)
@@ -106,72 +136,98 @@ def wait_sold_pending(gate: SoldGateState, *, tag: str, timeout: int = 35) -> di
                 "verified": False,
                 "aboutBlank": True,
                 "terminal": SoldPhase.ABOUT_BLANK_ABORT.value,
+                "failureStage": PHASE_SOLD_STATE_TRANSITION,
+                "phaseElapsedMs": int((time.time() - phase_started) * 1000),
+                "phaseTimeoutMs": int(verify_budget * 1000),
             }
         if ("sorry" in tl and "ebay" in tl) or "error page" in tl:
-            # Title-level SORRY / Error Page — settle then classify (not a focus failure)
             break
         if "captcha" in tl or "security measure" in tl or "verify yourself" in tl:
             break
-        # Settled non-blank title: allow ONE omnibox read
+        # Settled non-blank title: allow URL read (progress-aware, not fixed 2s+12s)
         if "untitled" not in tl and "loading" not in tl and len(tl) > 5:
-            # Prefer title signals that filter applied (result count change) — then read URL once
-            if time.time() - t0 >= 2.0:
-                break
+            if time.time() - t0 >= 1.5:
+                url = omnibox_url()
+                title_now = title()
+                obs = classify_sold_observation(url=url, title=title_now, url_before=url_before)
+                if obs.get("verified"):
+                    gate = on_sold_terminal(gate, verified=True)
+                    return {
+                        "gate": gate,
+                        "url": url,
+                        "title": title_now,
+                        "verified": True,
+                        "aboutBlank": False,
+                        "terminal": SoldPhase.SOLD_STATE_VERIFIED.value,
+                        "failureStage": None,
+                        "phaseElapsedMs": int((time.time() - phase_started) * 1000),
+                        "phaseTimeoutMs": int(verify_budget * 1000),
+                        "x11SoldStateVerified": True,
+                        "lhSoldAfter": True,
+                    }
+                if obs.get("terminal") == "ABOUT_BLANK_ABORT":
+                    gate = on_sold_terminal(gate, about_blank=True)
+                    terminal_override = SoldPhase.ABOUT_BLANK_ABORT.value
+                    break
+                if obs.get("terminal") == "EBAY_CHALLENGE":
+                    gate = on_sold_terminal(gate, challenge=True)
+                    terminal_override = SoldPhase.EBAY_CHALLENGE.value
+                    break
+                if obs.get("terminal") == "EBAY_SORRY":
+                    gate = on_sold_terminal(gate, sorry=True)
+                    terminal_override = SoldPhase.EBAY_SORRY.value
+                    break
+                if obs.get("terminal") == TERMINAL_SOLD_UNEXPECTED_FILTER and (time.time() - t0) >= 2.0:
+                    # Meowth-class: URL mutated (e.g. LH_PrefLoc) without LH_Sold.
+                    failure_stage = PHASE_SOLD_STATE_TRANSITION
+                    terminal_override = TERMINAL_SOLD_UNEXPECTED_FILTER
+                    gate = on_sold_terminal(gate, timeout=True)
+                    break
+                # Keep polling within verification budget (no extra opaque 12s extension).
 
-    # Terminal URL read — only after pending wait (not during early race)
-    if not may_perform_browser_action(gate, "begin_next_card"):
-        pass
-    # Ending pending for URL classification read is intentional after settle
-    url = omnibox_url()
-    title_now = title()
-    classified = classify_post_sold_url(url, title_now)
-    if classified["terminal"] == "ABOUT_BLANK_ABORT":
-        gate = on_sold_terminal(gate, about_blank=True)
-    elif classified["terminal"] == "EBAY_CHALLENGE":
-        gate = on_sold_terminal(gate, challenge=True)
-    elif classified["terminal"] == "EBAY_SORRY":
-        gate = on_sold_terminal(gate, sorry=True)
-    elif classified["verified"]:
-        gate = on_sold_terminal(gate, verified=True)
-    else:
-        # Keep waiting a bit more with additional URL peeks
-        for _ in range(12):
-            time.sleep(1.0)
-            if "untitled" in title().lower() or "loading" in title().lower():
-                close_about_blank_tab()
-                gate = on_sold_terminal(gate, about_blank=True)
-                return {
-                    "gate": gate,
-                    "url": "about:blank",
-                    "title": title(),
-                    "verified": False,
-                    "aboutBlank": True,
-                    "terminal": SoldPhase.ABOUT_BLANK_ABORT.value,
-                }
-            url = omnibox_url()
-            title_now = title()
-            classified = classify_post_sold_url(url, title_now)
-            if classified["verified"]:
-                gate = on_sold_terminal(gate, verified=True)
-                break
-            if classified["terminal"] in {"EBAY_CHALLENGE", "EBAY_SORRY", "ABOUT_BLANK_ABORT"}:
-                gate = on_sold_terminal(
-                    gate,
-                    challenge=classified["terminal"] == "EBAY_CHALLENGE",
-                    sorry=classified["terminal"] == "EBAY_SORRY",
-                    about_blank=classified["terminal"] == "ABOUT_BLANK_ABORT",
-                )
-                break
+    if terminal_override is None:
+        if not may_perform_browser_action(gate, "begin_next_card"):
+            pass
+        url = omnibox_url()
+        title_now = title()
+        obs = classify_sold_observation(url=url, title=title_now, url_before=url_before)
+        if obs.get("verified"):
+            gate = on_sold_terminal(gate, verified=True)
+        elif obs.get("terminal") == "ABOUT_BLANK_ABORT":
+            gate = on_sold_terminal(gate, about_blank=True)
+            terminal_override = SoldPhase.ABOUT_BLANK_ABORT.value
+        elif obs.get("terminal") == "EBAY_CHALLENGE":
+            gate = on_sold_terminal(gate, challenge=True)
+            terminal_override = SoldPhase.EBAY_CHALLENGE.value
+        elif obs.get("terminal") == "EBAY_SORRY":
+            gate = on_sold_terminal(gate, sorry=True)
+            terminal_override = SoldPhase.EBAY_SORRY.value
+        elif obs.get("terminal") == TERMINAL_SOLD_UNEXPECTED_FILTER:
+            failure_stage = PHASE_SOLD_STATE_TRANSITION
+            terminal_override = TERMINAL_SOLD_UNEXPECTED_FILTER
+            gate = on_sold_terminal(gate, timeout=True)
         else:
+            failure_stage = PHASE_SOLD_STATE_VERIFICATION
+            terminal_override = TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT
             gate = on_sold_terminal(gate, timeout=True)
 
+    verified = gate.phase == SoldPhase.SOLD_STATE_VERIFIED
+    terminal = terminal_override or gate.phase.value
+    if not verified and terminal == SoldPhase.SOLD_NAVIGATION_TIMEOUT.value:
+        terminal = TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT
     return {
         "gate": gate,
         "url": url,
-        "title": title_now,
-        "verified": gate.phase == SoldPhase.SOLD_STATE_VERIFIED,
+        "title": title_now or last_title,
+        "verified": verified,
         "aboutBlank": gate.phase == SoldPhase.ABOUT_BLANK_ABORT,
-        "terminal": gate.phase.value,
+        "terminal": terminal,
+        "failureStage": None if verified else failure_stage,
+        "phaseElapsedMs": int((time.time() - phase_started) * 1000),
+        "phaseTimeoutMs": int(verify_budget * 1000),
+        "x11SoldStateVerified": verified,
+        "lhSoldAfter": url_has_lh_sold(url),
+        "lhSoldBefore": url_has_lh_sold(url_before),
     }
 
 
@@ -269,13 +325,40 @@ def gui_sold(*, tag: str) -> dict:
     if not hl:
         out = {
             "ok": False,
-            "error": "sold_items_highlight_not_in_left_rail",
+            "error": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+            "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
+            "failureClass": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
             "soldClickSuccess": False,
+            "soldControlDiscovered": False,
             "SOLD_STATE_VERIFIED": False,
             "url": omnibox_url(),
             "title": title(),
             "timeline": timeline,
+            "soldTimeoutPolicy": DEFAULT_SOLD_TIMEOUT_POLICY.to_dict(),
         }
+        out["failureEvidence"] = build_sold_failure_evidence(
+            runtime_mode=os.environ.get("CARDSCANR_RUNTIME_MODE"),
+            attempt_id=os.environ.get("CARDSCANR_ATTEMPT_ID"),
+            job_id=os.environ.get("CARDSCANR_JOB_ID"),
+            price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+            query=os.environ.get("CARDSCANR_QUERY"),
+            search_submitted=True,
+            ordinary_results_confirmed=True,
+            url=out.get("url"),
+            title=out.get("title"),
+            ready_state=None,
+            sold_diagnostics={
+                "soldControlDiscovered": False,
+                "soldClickAttempted": False,
+                "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
+                "failureClass": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+                "lhSoldBefore": url_has_lh_sold(url0),
+                "lhSoldAfter": False,
+                "x11SoldStateVerified": False,
+                "phases": [],
+            },
+            error_message=TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+        )
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
 
@@ -286,6 +369,7 @@ def gui_sold(*, tag: str) -> dict:
         out = {
             "ok": False,
             "error": "sold_click_outside_left_rail",
+            "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
             "click": [cx, cy],
             "SOLD_STATE_VERIFIED": False,
             "timeline": timeline,
@@ -311,7 +395,12 @@ def gui_sold(*, tag: str) -> dict:
     stage_marks["T8_sold_activated"] = time.time()
     gate = on_sold_clicked(gate)
 
-    pending = wait_sold_pending(gate, tag=tag, timeout=35)
+    pending = wait_sold_pending(
+        gate,
+        tag=tag,
+        timeout=DEFAULT_SOLD_TIMEOUT_POLICY.state_verification_s,
+        url_before=url0,
+    )
     gate = pending["gate"]
     mark("pending_done", terminal=pending["terminal"], url=pending.get("url"), title=pending.get("title"))
     if pending.get("verified"):
@@ -323,10 +412,16 @@ def gui_sold(*, tag: str) -> dict:
         (ART / f"linux_sold_{tag}_body.txt").write_text(body, encoding="utf-8", errors="replace")
         stage_marks["T10_html_data_captured"] = time.time()
 
-    shot(ART / f"linux_sold_{tag}_after.png")
+    # Diagnostic-only screenshot; must not replace original Sold failure.
+    diagnostic_shot = None
+    try:
+        diagnostic_shot = str(shot(ART / f"linux_sold_{tag}_after.png"))
+    except Exception as shot_exc:
+        diagnostic_shot = f"DIAGNOSTIC_SHOT_FAILED:{type(shot_exc).__name__}"
     out = {
         "ok": bool(pending["verified"]),
         "soldClickSuccess": True,
+        "soldControlDiscovered": True,
         "SOLD_STATE_VERIFIED": bool(pending["verified"]),
         "click": [cx, cy],
         "url": pending.get("url"),
@@ -338,18 +433,61 @@ def gui_sold(*, tag: str) -> dict:
         "aboutBlank": bool(pending.get("aboutBlank")),
         "bodyChars": len(body),
         "lhSoldInjected": False,
+        "lhSoldBefore": pending.get("lhSoldBefore"),
+        "lhSoldAfter": pending.get("lhSoldAfter"),
+        "x11SoldStateVerified": bool(pending.get("x11SoldStateVerified")),
         "activation": "x11_mouse_click_on_visible_sold_items",
         "locateAid": "ctrl+f_sold_items_left_rail_only",
         "phase": gate.phase.value,
+        "failureStage": pending.get("failureStage"),
+        "failureClass": None if pending.get("verified") else pending.get("terminal"),
         "events": gate.events,
         "timeline": timeline,
         "guiAttemptTimings": {"marks": stage_marks},
+        "soldTimeoutPolicy": DEFAULT_SOLD_TIMEOUT_POLICY.to_dict(),
+        "phaseElapsedMs": pending.get("phaseElapsedMs"),
+        "phaseTimeoutMs": pending.get("phaseTimeoutMs"),
+        "diagnosticScreenshot": "DIAGNOSTIC_ONLY" if diagnostic_shot else None,
     }
     if out["sorry"]:
         out["error"] = TEMPORARY_EBAY_SERVER_FAILURE
         out["classification"] = TEMPORARY_EBAY_SERVER_FAILURE
     elif not out["ok"]:
-        out["error"] = pending["terminal"]
+        # Prefer phase-specific terminal over opaque SOLD_NAVIGATION_TIMEOUT.
+        out["error"] = str(pending.get("terminal") or TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT)
+    if not out["ok"]:
+        out["failureEvidence"] = build_sold_failure_evidence(
+            runtime_mode=os.environ.get("CARDSCANR_RUNTIME_MODE"),
+            attempt_id=os.environ.get("CARDSCANR_ATTEMPT_ID"),
+            job_id=os.environ.get("CARDSCANR_JOB_ID"),
+            price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+            query=os.environ.get("CARDSCANR_QUERY"),
+            search_submitted=True,
+            ordinary_results_confirmed=True,
+            url=out.get("url"),
+            title=out.get("title"),
+            ready_state=None,
+            sold_diagnostics={
+                "soldControlDiscovered": True,
+                "soldClickAttempted": True,
+                "soldClickResult": "OK",
+                "failureStage": out.get("failureStage"),
+                "failureClass": out.get("failureClass") or out.get("error"),
+                "lhSoldBefore": out.get("lhSoldBefore"),
+                "lhSoldAfter": out.get("lhSoldAfter"),
+                "x11SoldStateVerified": out.get("x11SoldStateVerified"),
+                "diagnosticScreenshot": out.get("diagnosticScreenshot"),
+                "phases": [
+                    {
+                        "name": PHASE_SOLD_STATE_VERIFICATION,
+                        "elapsedMs": out.get("phaseElapsedMs"),
+                        "timeoutMs": out.get("phaseTimeoutMs"),
+                        "status": "FAIL",
+                    }
+                ],
+            },
+            error_message=str(out.get("error")),
+        )
     (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     return out
 

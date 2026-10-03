@@ -14,8 +14,10 @@ active tempfile).
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -23,6 +25,12 @@ from typing import Any, Callable, Iterator
 from filelock import FileLock, Timeout
 
 DEFAULT_LOCK_TIMEOUT_SECONDS = 10.0
+# Control-plane local I/O only — NOT an eBay / browser retry.
+WINDOWS_REPLACE_MAX_ATTEMPTS = 6
+WINDOWS_REPLACE_BACKOFF_MS = (15, 30, 60, 100, 150, 200)
+CONTROL_PLANE_PERSISTENCE_FAILURE = "CONTROL_PLANE_PERSISTENCE_FAILURE"
+
+_LOG = logging.getLogger(__name__)
 
 
 class AtomicStateError(RuntimeError):
@@ -50,11 +58,65 @@ def _unlink_owned_temp(tmp_path: Path) -> None:
         pass
 
 
+def _is_windows_replace_denied(exc: BaseException) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError):
+        # WinError 5 Access denied / 32 sharing violation
+        winerr = getattr(exc, "winerror", None)
+        if winerr in {5, 32}:
+            return True
+        if getattr(exc, "errno", None) in {13, 11, 16}:
+            return True
+    return False
+
+
+def atomic_replace_with_retry(tmp_path: Path, path: Path) -> None:
+    """Bounded deterministic retry for Windows sharing/permission denials on replace.
+
+    Retries only local control-plane file replace. Never duplicates marketplace actions.
+    Fail closed with AtomicStateError(CONTROL_PLANE_PERSISTENCE_FAILURE) after bound.
+    """
+    last: BaseException | None = None
+    attempts = max(1, int(WINDOWS_REPLACE_MAX_ATTEMPTS))
+    for i in range(attempts):
+        try:
+            os.replace(str(tmp_path), str(path))
+            if i > 0:
+                _LOG.warning(
+                    "atomic_replace_retry_succeeded path=%s attempt=%s/%s",
+                    path,
+                    i + 1,
+                    attempts,
+                )
+            return
+        except Exception as exc:
+            last = exc
+            if not _is_windows_replace_denied(exc) or i + 1 >= attempts:
+                break
+            delay_ms = WINDOWS_REPLACE_BACKOFF_MS[min(i, len(WINDOWS_REPLACE_BACKOFF_MS) - 1)]
+            _LOG.warning(
+                "atomic_replace_retry path=%s attempt=%s/%s delay_ms=%s err=%s",
+                path,
+                i + 1,
+                attempts,
+                delay_ms,
+                f"{type(exc).__name__}:{exc}",
+            )
+            time.sleep(delay_ms / 1000.0)
+    assert last is not None
+    if _is_windows_replace_denied(last):
+        raise AtomicStateError(
+            f"{CONTROL_PLANE_PERSISTENCE_FAILURE}:replace_denied:{path.name}:{type(last).__name__}:{last}"
+        ) from last
+    raise last
+
+
 def atomic_write_json(path: Path, payload: dict[str, Any], *, indent: int = 2) -> Path:
     """Atomically replace JSON at path (owned tempfile in same directory + os.replace).
 
     On failure, removes only the tempfile created by this call — never glob-cleans
-    peer writers' temps.
+    peer writers' temps. Windows sharing denials get bounded local retry then fail closed.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +131,7 @@ def atomic_write_json(path: Path, payload: dict[str, Any], *, indent: int = 2) -
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(text)
             _fsync_file(fh)
-        os.replace(tmp_path, path)
+        atomic_replace_with_retry(tmp_path, path)
         return path
     except Exception:
         _unlink_owned_temp(tmp_path)
@@ -95,11 +157,14 @@ def locked_json_state(
     *,
     timeout_seconds: float | None = None,
     default: dict[str, Any] | None = None,
+    write: bool = True,
 ) -> Iterator[dict[str, Any]]:
     """Hold an interprocess lock, yield mutable payload, atomically write on success.
 
     On exception inside the block, the prior canonical file is left unchanged.
     Lock timeout raises AtomicStateError (fail closed).
+
+    write=False: read/evaluate under lock without persisting (gate inspection).
 
     Does not glob-clean temporary files after lock release — only atomic_write_json
     may remove the exact tempfile it created.
@@ -119,7 +184,8 @@ def locked_json_state(
     try:
         payload = read_json_object(target, default=default)
         yield payload
-        atomic_write_json(target, payload)
+        if write:
+            atomic_write_json(target, payload)
     finally:
         try:
             lock.release()
@@ -159,7 +225,10 @@ def replace_json_state(
 
 __all__ = [
     "AtomicStateError",
+    "CONTROL_PLANE_PERSISTENCE_FAILURE",
     "DEFAULT_LOCK_TIMEOUT_SECONDS",
+    "WINDOWS_REPLACE_MAX_ATTEMPTS",
+    "atomic_replace_with_retry",
     "atomic_write_json",
     "lock_path_for",
     "locked_json_state",

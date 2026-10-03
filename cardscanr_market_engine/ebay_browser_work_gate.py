@@ -24,7 +24,6 @@ from .ebay_availability import (
     EBAY_CHALLENGE_REQUIRED,
     EbayAvailabilitySnapshot,
     browser_work_allowed,
-    get_availability,
 )
 from .marketplace_ops_state import MarketplaceCooldownState, get_active_cooldown
 
@@ -79,10 +78,13 @@ def evaluate_ebay_browser_work_gate(
     reasons: list[str] = []
     result = EbayBrowserWorkGateResult(allowed=False, market=market_n, for_probe=for_probe)
 
-    # 1) Availability + probe semantics
+    # 1) Availability + probe semantics (read/evaluate; do not mutate merely to answer).
     try:
         allowed_avail, avail_reason, snap = browser_work_allowed(
-            now=now, path=availability_path, for_probe=for_probe
+            now=now,
+            path=availability_path,
+            for_probe=for_probe,
+            persist_transitions=False,
         )
         result.availability_state = snap.state
         result.probe_in_flight = bool(snap.probe_in_flight)

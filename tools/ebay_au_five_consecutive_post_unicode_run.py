@@ -191,26 +191,39 @@ def capture_readiness_from_closure() -> dict[str, Any]:
 
 
 def _gate_ok() -> tuple[bool, dict[str, Any]]:
-    gate = evaluate_ebay_browser_work_gate(market="AU", for_probe=False)
-    cd = get_active_cooldown("AU")
-    flag = (ROOT / "reports" / "runtime" / "owned_daily_full_enable.flag").read_text(encoding="utf-8").strip()
-    payload = {
-        "gate": gate.to_dict(),
-        "activeAuChallenges": gate.active_challenge_count,
-        "cooldown": None if cd is None else cd.to_dict(),
-        "ownedDaily": flag,
-        "probeInFlight": gate.to_dict().get("probeInFlight"),
-        "stateIntegrityOk": gate.to_dict().get("stateIntegrityOk"),
-    }
-    ok = (
-        bool(gate.allowed)
-        and gate.active_challenge_count == 0
-        and flag == "false"
-        and payload["probeInFlight"] in (False, None)
-        and payload["stateIntegrityOk"] in (True, None)
-        and cd is None
-    )
-    return ok, payload
+    try:
+        gate = evaluate_ebay_browser_work_gate(market="AU", for_probe=False)
+        cd = get_active_cooldown("AU")
+        flag_path = ROOT / "reports" / "runtime" / "owned_daily_full_enable.flag"
+        flag = flag_path.read_text(encoding="utf-8").strip() if flag_path.is_file() else "false"
+        payload = {
+            "gate": gate.to_dict(),
+            "activeAuChallenges": gate.active_challenge_count,
+            "cooldown": None if cd is None else cd.to_dict(),
+            "ownedDaily": flag,
+            "probeInFlight": gate.to_dict().get("probeInFlight"),
+            "stateIntegrityOk": gate.to_dict().get("stateIntegrityOk"),
+        }
+        ok = (
+            bool(gate.allowed)
+            and gate.active_challenge_count == 0
+            and flag == "false"
+            and payload["probeInFlight"] in (False, None)
+            and payload["stateIntegrityOk"] in (True, None)
+            and cd is None
+        )
+        return ok, payload
+    except (OSError, PermissionError, TimeoutError, Exception) as exc:
+        # Fail closed: gate unreadable must not crash stop accounting.
+        return False, {
+            "gate": {"allowed": False, "error": f"{type(exc).__name__}:{exc}"[:400]},
+            "activeAuChallenges": None,
+            "cooldown": None,
+            "ownedDaily": "unknown",
+            "probeInFlight": None,
+            "stateIntegrityOk": False,
+            "gateReadError": f"{type(exc).__name__}:{exc}"[:400],
+        }
 
 
 def _pre_live_ok(

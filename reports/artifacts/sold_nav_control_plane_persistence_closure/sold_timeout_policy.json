@@ -1,0 +1,14 @@
+{
+  "controlDiscoverySeconds": 12.0,
+  "controlClickSeconds": 5.0,
+  "stateTransitionSeconds": 8.0,
+  "stateVerificationSeconds": 10.0,
+  "legacyOpaquePendingSeconds": 35.0,
+  "evidenceBasis": {
+    "clickToVerifiedMedianMs": 3346,
+    "clickToVerifiedP90Ms": 3358,
+    "clickToVerifiedMaxMs": 5371,
+    "ordinaryToControlP90Ms": 4988,
+    "headroomPolicy": "finite_stage_budgets_above_p90"
+  }
+}

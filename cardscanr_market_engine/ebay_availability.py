@@ -14,9 +14,18 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
+from filelock import FileLock, Timeout
+
 from .config import REPORTS_DIR
 from .marketplace_ops_state import parse_utc, utc_iso, utc_now
-from .atomic_json_state import AtomicStateError, atomic_write_json, locked_json_state, read_json_object
+from .atomic_json_state import (
+    DEFAULT_LOCK_TIMEOUT_SECONDS,
+    AtomicStateError,
+    atomic_write_json,
+    lock_path_for,
+    locked_json_state,
+    read_json_object,
+)
 from .control_plane_state_ownership import assert_canonical_state_writer_domain_allowed
 
 AvailabilityState = Literal[
@@ -272,19 +281,69 @@ def refresh_transitions(
     return snapshot
 
 
-def get_availability(
+def peek_availability(
     *,
     now: datetime | None = None,
     path: Path | None = None,
 ) -> EbayAvailabilitySnapshot:
+    """Read availability under lock without persisting.
+
+    For gate evaluation / stop accounting: must not create avoidable write races.
+    Applies COOLDOWN→PROBE_REQUIRED in-memory only (does not mutate durable state).
+    """
     current = now or utc_now()
     target = path or state_path()
-    # Locked so COOLDOWN→PROBE_REQUIRED transitions cannot race writers.
-    with locked_json_state(target, default=_default_snapshot().to_dict()) as payload:
+    with locked_json_state(target, default=_default_snapshot().to_dict(), write=False) as payload:
+        return refresh_transitions(_from_dict(payload), now=current)
+
+
+def get_availability(
+    *,
+    now: datetime | None = None,
+    path: Path | None = None,
+    persist_transitions: bool = True,
+) -> EbayAvailabilitySnapshot:
+    """Locked availability read with optional transition persistence.
+
+    When ``persist_transitions`` is False (gate inspection), behaves like
+    ``peek_availability`` — no durable write.
+
+    When True, persists only if ``refresh_transitions`` changes durable state
+    (avoids needless HEALTHY rewrite races during stop accounting).
+    """
+    current = now or utc_now()
+    target = path or state_path()
+    if not persist_transitions:
+        return peek_availability(now=current, path=target)
+    # Locked read; write only when a transition must be durably recorded.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(lock_path_for(target)), timeout=DEFAULT_LOCK_TIMEOUT_SECONDS)
+    try:
+        lock.acquire()
+    except Timeout as exc:
+        raise AtomicStateError(f"state_lock_timeout:{target.name}") from exc
+    try:
+        payload = read_json_object(target, default=_default_snapshot().to_dict())
         snap = refresh_transitions(_from_dict(payload), now=current)
-        payload.clear()
-        payload.update(snap.to_dict())
+        new_payload = snap.to_dict()
+        if "revision" in payload:
+            new_payload["revision"] = payload.get("revision")
+        meaningful = (
+            new_payload.get("state") != payload.get("state")
+            or new_payload.get("probeInFlight") != payload.get("probeInFlight")
+            or new_payload.get("nextProbeAt") != payload.get("nextProbeAt")
+        )
+        if meaningful:
+            assert_canonical_state_writer_domain_allowed()
+            rev = int(payload.get("revision") or 0) + 1
+            new_payload["revision"] = rev
+            atomic_write_json(target, new_payload)
         return snap
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
 
 
 def browser_work_allowed(
@@ -292,13 +351,18 @@ def browser_work_allowed(
     now: datetime | None = None,
     path: Path | None = None,
     for_probe: bool = False,
+    persist_transitions: bool = False,
 ) -> tuple[bool, str, EbayAvailabilitySnapshot]:
     """Whether an eBay browser pricing attempt may start.
 
     Fail closed: corrupt/unreadable state or lock timeout never authorises work.
+
+    Default ``persist_transitions=False`` so gate evaluation / stop accounting does
+    not mutate availability merely to answer allowed/denied. Callers that own
+    transition persistence (schedulers advancing COOLDOWN) may pass True.
     """
     try:
-        snap = get_availability(now=now, path=path)
+        snap = get_availability(now=now, path=path, persist_transitions=persist_transitions)
     except AtomicStateError:
         # Unreadable / lock failure — do not treat as HEALTHY.
         blocked = _default_snapshot()

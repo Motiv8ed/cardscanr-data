@@ -1,0 +1,13 @@
+{
+  "callChain": [
+    "job_runner -> ebay_browser_provider -> linux_x11_ebay_nav -> WSL linux_x11_ebay_sold.gui_sold -> wait_sold_pending"
+  ],
+  "timeoutFile": "tools/linux_x11_ebay_sold.py",
+  "timeoutFunction": "wait_sold_pending",
+  "legacyTimeoutSeconds": 35,
+  "legacyExtensionPolls": "12 x 1.0s",
+  "newVerificationBudgetSeconds": 10,
+  "successPredicate": "lh_sold=1 in omnibox URL -> x11SoldStateVerified / SOLD_STATE_VERIFIED",
+  "meowthStage": "SOLD_NAVIGATION_PENDING after click; URL became LH_PrefLoc=2 without LH_Sold",
+  "wslSubprocessTimeoutSeconds": 120
+}
