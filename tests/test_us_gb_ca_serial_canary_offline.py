@@ -1,8 +1,10 @@
 """Offline guards for US/GB/CA serialized canaries and blocked JP/EU."""
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from cardscanr_market_engine.browser_lifecycle_policy import (
     RUNTIME_COLD_START,
@@ -20,6 +22,7 @@ from cardscanr_market_engine.navigation_runtime_context import (
 from cardscanr_market_engine.region_pricing_registry import is_region_dispatchable, region_definition
 from cardscanr_market_engine.region_pricing_status import region_status_row
 from cardscanr_market_engine.region_pricing_registry import CARDSCANR_REGIONS
+from cardscanr_market_engine import region_pricing_registry as region_registry
 
 
 def _healthy_prior(market: str, host: str) -> PriorCardContext:
@@ -113,6 +116,55 @@ class BlockedRegionAndMarketSwitchTests(unittest.TestCase):
 
     def test_cardscanr_regions_include_blocked(self) -> None:
         self.assertEqual(CARDSCANR_REGIONS, ("AU", "US", "GB", "CA", "JP", "EU"))
+
+    def test_continuous_override_cannot_enable_jp_or_eu(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "continuous_enabled_markets.json"
+            with patch.object(region_registry, "CONTINUOUS_MARKETS_FLAG", path):
+                region_registry.write_continuous_market_overrides(["US", "JP", "EU", "GB"])
+                self.assertEqual(
+                    region_registry.load_continuous_market_overrides(),
+                    frozenset({"US", "GB"}),
+                )
+                self.assertEqual(region_registry.region_definition("US").status, "CONTINUOUS")
+                self.assertTrue(region_registry.region_definition("US").worker_enable_default)
+                self.assertEqual(region_registry.region_definition("JP").provider, "NONE")
+                self.assertFalse(region_registry.region_definition("JP").worker_enable_default)
+                self.assertEqual(region_registry.region_definition("CA").status, "READY_FOR_BROWSER_CANARY")
+                us_row = region_status_row("US")
+                self.assertEqual(us_row["status"], "CONTINUOUS")
+                self.assertTrue(us_row["enabled"])
+                jp_row = region_status_row("JP")
+                self.assertEqual(jp_row["workerState"], "BLOCKED")
+                self.assertFalse(jp_row["enabled"])
+
+    def test_claim_sql_filters_by_market_not_global_fifo(self) -> None:
+        sql = (
+            Path(__file__).resolve().parents[1]
+            / "supabase"
+            / "migrations"
+            / "20261005081000_claim_jobs_for_market.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("claim_market_price_refresh_jobs_for_market", sql)
+        self.assertIn("lower(k.market_country) = lower(trim(p_market_country))", sql)
+        self.assertNotIn("ebay.eu", sql)
+
+    def test_claim_jobs_routes_market_filter(self) -> None:
+        from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
+
+        client = SupabaseMarketEngineClient.__new__(SupabaseMarketEngineClient)
+        calls: list[tuple[str, dict]] = []
+
+        def _rpc(name: str, params: dict) -> list:
+            calls.append((name, params))
+            return []
+
+        client._rpc = _rpc  # type: ignore[method-assign]
+        client.claim_jobs(worker_id="w", max_jobs=1, market_country="US")
+        self.assertEqual(calls[0][0], "claim_market_price_refresh_jobs_for_market")
+        self.assertEqual(calls[0][1]["p_market_country"], "US")
+        client.claim_jobs(worker_id="w", max_jobs=1)
+        self.assertEqual(calls[1][0], "claim_market_price_refresh_jobs")
 
     def test_owned_daily_sql_fans_out_browser_markets_not_jp_eu(self) -> None:
         sql = (

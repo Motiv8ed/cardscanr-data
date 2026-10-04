@@ -118,7 +118,13 @@ class FakeClient:
         self.completed: dict | None = None
         self.failed: dict | None = None
 
-    def claim_jobs(self, *, worker_id: str, max_jobs: int) -> list[MarketPriceRefreshJob]:
+    def claim_jobs(
+        self,
+        *,
+        worker_id: str,
+        max_jobs: int,
+        market_country: str | None = None,
+    ) -> list[MarketPriceRefreshJob]:
         return []
 
     def get_price_key(self, price_key_id: str) -> MarketPriceKey:
@@ -388,7 +394,8 @@ class JobRunnerTests(unittest.TestCase):
             )
         )
         self.assertEqual(result["status"], "failed")
-        self.assertIn("Unsupported eBay market route", result["error"])
+        self.assertIn("BLOCKED_NEEDS_PROVIDER", result["error"])
+        self.assertNotIn("SELECTING", result["error"])
         self.assertEqual(client.failed["job_id"], "job-unsupported")
         self.assertEqual(client.failed["error_message"], result["error"])
 

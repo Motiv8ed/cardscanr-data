@@ -121,11 +121,28 @@ class SupabaseMarketEngineClient:
             return data
         return [data]
 
-    def claim_jobs(self, *, worker_id: str, max_jobs: int) -> list[MarketPriceRefreshJob]:
-        rows = self._rpc(
-            "claim_market_price_refresh_jobs",
-            {"p_worker_id": worker_id, "p_max_jobs": max_jobs},
-        )
+    def claim_jobs(
+        self,
+        *,
+        worker_id: str,
+        max_jobs: int,
+        market_country: str | None = None,
+    ) -> list[MarketPriceRefreshJob]:
+        market = str(market_country or "").strip().upper()
+        if market:
+            rows = self._rpc(
+                "claim_market_price_refresh_jobs_for_market",
+                {
+                    "p_worker_id": worker_id,
+                    "p_max_jobs": max_jobs,
+                    "p_market_country": market,
+                },
+            )
+        else:
+            rows = self._rpc(
+                "claim_market_price_refresh_jobs",
+                {"p_worker_id": worker_id, "p_max_jobs": max_jobs},
+            )
         if not isinstance(rows, list):
             raise ValueError("claim_market_price_refresh_jobs returned unexpected payload shape")
         for index, row in enumerate(rows):

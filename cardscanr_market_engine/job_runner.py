@@ -558,7 +558,13 @@ class MarketPriceJobRunner:
 
     def claim_jobs(self, *, max_jobs: int | None = None) -> list[MarketPriceRefreshJob]:
         limit = max_jobs or self.config.max_jobs_per_run
-        return self.client.claim_jobs(worker_id=self.config.worker_id, max_jobs=limit)
+        allowed = parse_market_allowlist(os.getenv("MARKET_WORKER_ALLOWED_MARKETS", ""))
+        market = allowed[0] if len(allowed) == 1 else None
+        return self.client.claim_jobs(
+            worker_id=self.config.worker_id,
+            max_jobs=limit,
+            market_country=market,
+        )
 
     def build_snapshot_payload(
         self,

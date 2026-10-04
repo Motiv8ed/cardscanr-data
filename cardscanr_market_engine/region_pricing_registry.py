@@ -5,9 +5,12 @@ invent browser endpoints for JP or a fictional ebay.eu host.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from pathlib import Path
+from typing import Any, Literal, Sequence
 
+from .config import REPORTS_DIR
 from .international.market_fallback_policy import NO_NATIVE_SOLD_ROUTE_MARKETS
 from .marketplaces import LocalMarketConfig, resolve_marketplace_config
 
@@ -27,6 +30,7 @@ BROWSER_READY_REGIONS = ("AU", "US", "GB", "CA")
 GLOBAL_BROWSER_PRICING_CONCURRENCY = 1
 SEARCH_MODE = "RENDERED_UI_X11"
 PROVIDER_EBAY_BROWSER = "ebay_browser"
+CONTINUOUS_MARKETS_FLAG = REPORTS_DIR / "runtime" / "continuous_enabled_markets.json"
 
 
 @dataclass(frozen=True)
@@ -104,6 +108,40 @@ def _from_ebay_config(
         provider_marketplace_id=config.provider_marketplace_id,
         notes=("English Sold-items control identity; X11 activation only.",),
     )
+
+
+def load_continuous_market_overrides() -> frozenset[str]:
+    """Runtime enablement after a market canary passes. JP/EU cannot be enabled here."""
+    if not CONTINUOUS_MARKETS_FLAG.is_file():
+        return frozenset()
+    try:
+        payload = json.loads(CONTINUOUS_MARKETS_FLAG.read_text(encoding="utf-8"))
+    except Exception:
+        return frozenset()
+    raw = payload.get("markets") if isinstance(payload, dict) else payload
+    if not isinstance(raw, (list, tuple)):
+        return frozenset()
+    enabled = {str(item).strip().upper() for item in raw if str(item).strip()}
+    enabled.discard("JP")
+    enabled.discard("EU")
+    return frozenset(code for code in enabled if code in BROWSER_READY_REGIONS)
+
+
+def write_continuous_market_overrides(markets: Sequence[str]) -> Path:
+    CONTINUOUS_MARKETS_FLAG.parent.mkdir(parents=True, exist_ok=True)
+    codes: list[str] = []
+    seen: set[str] = set()
+    for item in markets:
+        code = str(item).strip().upper()
+        if code in {"JP", "EU"} or code not in BROWSER_READY_REGIONS or code in seen:
+            continue
+        seen.add(code)
+        codes.append(code)
+    CONTINUOUS_MARKETS_FLAG.write_text(
+        json.dumps({"markets": codes}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return CONTINUOUS_MARKETS_FLAG
 
 
 def region_definition(region: str) -> RegionPricingDefinition:
@@ -211,10 +249,11 @@ def region_definition(region: str) -> RegionPricingDefinition:
         currency=currency,
         marketplace="ebay",
     )
-    status: RegionStatus = "CONTINUOUS" if code == "AU" else "READY_FOR_BROWSER_CANARY"
+    continuous = code == "AU" or code in load_continuous_market_overrides()
+    status: RegionStatus = "CONTINUOUS" if continuous else "READY_FOR_BROWSER_CANARY"
     return _from_ebay_config(
         config,
-        worker_enable_default=code == "AU",
+        worker_enable_default=continuous,
         status=status,
     )
 
