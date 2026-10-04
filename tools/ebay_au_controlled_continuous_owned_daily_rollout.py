@@ -678,6 +678,20 @@ def main() -> int:
         return _extend_deploy(orig_verify())
 
     harness.verify_deployed_code = _verify  # type: ignore[assignment]
+
+    # Xvfb must be up before cold-start Chrome restart (DISPLAY :99).
+    from cardscanr_market_engine.local_browser_runtime import ensure_xvfb
+
+    xv = ensure_xvfb()
+    (harness.BOOT / "ensure_xvfb_pre_bootstrap.json").write_text(
+        json.dumps(xv, indent=2) + "\n", encoding="utf-8"
+    )
+    print(json.dumps({"ENSURE_XVFB_PRE_BOOTSTRAP": xv}, indent=2), flush=True)
+    if not xv.get("ok"):
+        owned = owned_daily_shutdown("xvfb_not_ready")
+        print("STOP: Xvfb not ready before cold-start normalisation", flush=True)
+        return 2
+
     rc_boot = seq._bootstrap_guards()
     if rc_boot != 0:
         owned = owned_daily_shutdown("bootstrap_failed")
