@@ -9,6 +9,8 @@ from enum import Enum
 from typing import Any
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
+from .sold_page_health import is_ebay_error_page
+
 # Operational outcomes
 TEMPORARY_EBAY_SERVER_FAILURE = "TEMPORARY_EBAY_SERVER_FAILURE"
 EBAY_CHALLENGE_REQUIRED = "EBAY_CHALLENGE_REQUIRED"
@@ -133,6 +135,10 @@ def page_is_about_blank(url: str | None, title: str | None = None) -> bool:
 def search_page_ready(*, url: str, title: str, search_button_found: bool) -> tuple[bool, str]:
     if page_is_about_blank(url, title):
         return False, "about_blank"
+    if is_ebay_error_page(title=title, url=url):
+        return False, "ebay_error_page"
+    if is_ebay_sorry_page(title=title, url=url):
+        return False, "ebay_sorry_error_page"
     if "ebay." not in (url or "").lower() and "ebay" not in (title or "").lower():
         if not search_button_found:
             return False, "not_ebay_no_search_button"
@@ -455,7 +461,7 @@ def classify_search_surface(
             "terminal": "EBAY_CHALLENGE",
             "challenge": True,
         }
-    from .sold_page_health import EBAY_ERROR_PAGE, is_ebay_error_page
+    from .sold_page_health import EBAY_ERROR_PAGE
 
     sorry = is_ebay_sorry_page(title=title, url=url, body=body)
     error_page = is_ebay_error_page(title=title, url=url, body=body)

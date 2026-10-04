@@ -66,6 +66,7 @@ from cardscanr_market_engine.providers.linux_x11_gui_fsm import (  # noqa: E402
     page_is_about_blank,
     search_page_ready,
 )
+from cardscanr_market_engine.providers.sold_page_health import is_ebay_error_page  # noqa: E402
 
 DISPLAY_NAME = os.environ.get("DISPLAY", ":99")
 PREFIX = Path(os.path.expanduser("~/.local/cardscanr-gui"))
@@ -998,6 +999,30 @@ def gui_search(
     btn = find_search_button(im, g)
     ready, reason = search_page_ready(url=url0, title=t0, search_button_found=bool(btn))
     if not ready:
+        # Pre-submit marketplace Error/Sorry pages must not look like a missing
+        # local search input — they open market-scoped cooldown, unconsumed.
+        error_page = is_ebay_error_page(title=t0, url=url0) or reason == "ebay_error_page"
+        sorry_page = is_ebay_sorry_page(title=t0, url=url0) or reason == "ebay_sorry_error_page"
+        if error_page or sorry_page:
+            gate.phase = SearchPhase.TEMPORARY_EBAY_SERVER_FAILURE
+            out = {
+                "ok": False,
+                "error": TEMPORARY_EBAY_SERVER_FAILURE,
+                "classification": TEMPORARY_EBAY_SERVER_FAILURE,
+                "reason": "ebay_error_page" if error_page else "ebay_sorry_error_page",
+                "sorry": True,
+                "errorPage": bool(error_page),
+                "diagnostics": diag,
+                "manufacturedUrl": False,
+                "submitted": False,
+                "searchSubmissionStarted": False,
+                "searchMethod": "visible_ebay_search_input_x11",
+                "phase": gate.phase.value,
+                "url": url0,
+                "title": t0,
+            }
+            (ART / f"linux_search_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+            return out
         gate.phase = SearchPhase.SEARCH_INPUT_NOT_CONFIRMED
         out = {
             "ok": False,

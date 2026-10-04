@@ -17,6 +17,7 @@ import urllib3
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from cardscanr_market_engine.canary_control_plane import parse_operation_mode
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.continuous_au_status import append_daily_metrics, write_continuous_status
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
@@ -38,6 +39,7 @@ from cardscanr_market_engine.owned_daily_outcomes import (
 )
 from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingController
 from cardscanr_market_engine.providers import create_market_comps_provider
+from cardscanr_market_engine.scheduler import parse_market_allowlist
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 MIN_TRANSIENT_BACKOFF_SECONDS = 10
@@ -193,50 +195,61 @@ def run_worker_loop(
         started_at = utc_iso()
         cycle_t0 = time.monotonic()
         continuous = owned_daily_full_enable()
+        operation_mode = parse_operation_mode()
+        allowed_markets = parse_market_allowlist(os.getenv("MARKET_WORKER_ALLOWED_MARKETS", ""))
+        gate_market = allowed_markets[0] if len(allowed_markets) == 1 else "AU"
         gate_info: dict[str, Any] = {}
         worker_state = "SELECTING"
         hard = None
         budget_reason = None
-        if continuous:
-            gate_info = classify_continuous_gate(market="AU")
-            if pacing_controller is not None:
+        # Probe / canary modes must classify the target market even when the
+        # continuous flag is false so PROBE_REQUIRED can begin_probe.
+        if continuous or operation_mode in {"PROBE", "CANARY"}:
+            gate_info = classify_continuous_gate(market=gate_market)
+            if continuous and pacing_controller is not None:
                 maybe_resume_transient_halt(pacing_controller, gate_info)
-            budget_reason = budget.budget_exhausted()
-            transient_stop = budget.transient_hard_stop()
-            hard = gate_info.get("hardStop") or transient_stop
-            if pacing_controller is not None and pacing_controller.state.halt_reason in HARD_STOP_OUTCOMES:
-                hard = pacing_controller.state.halt_reason
+            if continuous:
+                budget_reason = budget.budget_exhausted()
+                transient_stop = budget.transient_hard_stop()
+                hard = gate_info.get("hardStop") or transient_stop
+                if pacing_controller is not None and pacing_controller.state.halt_reason in HARD_STOP_OUTCOMES:
+                    hard = pacing_controller.state.halt_reason
+            else:
+                hard = gate_info.get("hardStop")
             worker_state = str(gate_info.get("workerState") or "SELECTING")
             if budget_reason:
                 worker_state = "BUDGET_WAIT"
             if hard:
                 worker_state = "HARD_STOP"
-                write_owned_daily_flag(False)
-                budget.last_hard_stop = str(hard)
-                budget.persist()
-            write_continuous_status(
-                {
-                    "enabled": continuous and not hard,
-                    "market": "AU",
-                    "workerState": worker_state,
-                    "submissions1h": budget.submissions_1h(),
-                    "submissions24h": budget.submissions_24h(),
-                    "healthy1h": len(healthy_times),
-                    "healthy24h": len(healthy_times),
-                    "transientFailures1h": budget.transients_1h(),
-                    "consecutiveTransientFailures": budget.consecutive_transient,
-                    "lastSuccessfulJobAt": last_success,
-                    "lastTransientFailureAt": last_transient,
-                    "cooldownUntil": gate_info.get("cooldownUntil"),
-                    "nextProbeAt": gate_info.get("nextProbeAt"),
-                    "lastHardStopReason": hard or budget.last_hard_stop,
-                    "activeChallenges": gate_info.get("activeChallenges") or 0,
-                }
-            )
+                if continuous:
+                    write_owned_daily_flag(False)
+                    budget.last_hard_stop = str(hard)
+                    budget.persist()
+            if continuous:
+                write_continuous_status(
+                    {
+                        "enabled": continuous and not hard,
+                        "market": gate_market,
+                        "workerState": worker_state,
+                        "submissions1h": budget.submissions_1h(),
+                        "submissions24h": budget.submissions_24h(),
+                        "healthy1h": len(healthy_times),
+                        "healthy24h": len(healthy_times),
+                        "transientFailures1h": budget.transients_1h(),
+                        "consecutiveTransientFailures": budget.consecutive_transient,
+                        "lastSuccessfulJobAt": last_success,
+                        "lastTransientFailureAt": last_transient,
+                        "cooldownUntil": gate_info.get("cooldownUntil"),
+                        "nextProbeAt": gate_info.get("nextProbeAt"),
+                        "lastHardStopReason": hard or budget.last_hard_stop,
+                        "activeChallenges": gate_info.get("activeChallenges") or 0,
+                    }
+                )
             if hard:
                 logger(
                     "[market-engine] "
-                    f"cycle={cycle} status=HARD_STOP reason={hard} awaiting owner review"
+                    f"cycle={cycle} status=HARD_STOP reason={hard} market={gate_market} "
+                    f"mode={operation_mode} awaiting owner review"
                 )
                 if args.once:
                     return 2
@@ -254,7 +267,8 @@ def run_worker_loop(
             if worker_state == "COOLDOWN":
                 logger(
                     "[market-engine] "
-                    f"cycle={cycle} status=COOLDOWN until={gate_info.get('cooldownUntil')} "
+                    f"cycle={cycle} status=COOLDOWN market={gate_market} "
+                    f"until={gate_info.get('cooldownUntil')} "
                     f"nextProbeAt={gate_info.get('nextProbeAt')} no provider"
                 )
                 if args.once:
@@ -285,7 +299,11 @@ def run_worker_loop(
             sleep_func(max(poll_seconds, 30))
             continue
 
-        runner._ebay_probe_mode = worker_state == "PROBE_REQUIRED"  # noqa: SLF001
+        runner._ebay_probe_mode = (  # noqa: SLF001
+            worker_state == "PROBE_REQUIRED"
+            or operation_mode == "PROBE"
+            or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
+        )
         try:
             results = runner.run_once(max_jobs=max_jobs)
         except Exception as exc:
