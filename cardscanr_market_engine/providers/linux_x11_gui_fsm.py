@@ -327,17 +327,22 @@ def is_ebay_challenge_page(
     url: str | None = None,
     body: str | None = None,
 ) -> bool:
-    blob = f"{title or ''}\n{url or ''}\n{body or ''}".lower()
-    return any(
-        marker in blob
-        for marker in (
-            "captcha",
-            "security measure",
-            "verify yourself",
-            "splashui/challenge",
-            "verification challenge",
-        )
-    )
+    """Active marketplace challenge — passive recaptcha iframe alone is non-blocking."""
+    t = (title or "").lower()
+    u = (url or "").lower()
+    b = (body or "").lower()
+    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+        return True
+    if "verification challenge" in f"{t}\n{b}":
+        return True
+    if "captcha" in t or "captcha" in u:
+        return True
+    if "captcha" in b:
+        # Passive google recaptcha iframe on an otherwise normal page is not an active challenge.
+        if "recaptcha" in b and "iframe" in b and "verify yourself" not in b and "security measure" not in b:
+            return False
+        return True
+    return False
 
 
 def is_ebay_sorry_page(
@@ -345,16 +350,21 @@ def is_ebay_sorry_page(
     url: str | None = None,
     body: str | None = None,
 ) -> bool:
+    """Classic eBay SORRY interstitial — not marketplace Error Page | eBay.
+
+    Error Page title/URL is classified separately (sold_page_health.is_ebay_error_page)
+    so capture/Sold health can report MARKETPLACE_ERROR_PAGE instead of collapsing into
+    CDP_TARGET_NOT_FOUND or treating every error page as CAPTCHA.
+    """
     t = (title or "").strip().lower()
     u = (url or "").strip().lower()
     b = (body or "").strip().lower()
     blob = f"{t}\n{b}"
     if is_ebay_challenge_page(title=title, url=url, body=body):
         return False
-    if "error page" in t and "ebay" in t:
-        return True
-    if "/error" in u:
-        return True
+    # Distinct class: Error Page | eBay (and /error) — not classic SORRY.
+    if ("error page" in t and "ebay" in t) or "/error" in u:
+        return False
     if "sorry" in blob and (
         "something went wrong" in blob
         or "looks like" in blob
@@ -362,6 +372,9 @@ def is_ebay_sorry_page(
     ):
         return True
     if "something went wrong on our end" in blob:
+        return True
+    # Legacy: title-only sorry markers without Error Page wording.
+    if t.startswith("sorry") and "ebay" in t:
         return True
     return False
 
@@ -442,16 +455,33 @@ def classify_search_surface(
             "terminal": "EBAY_CHALLENGE",
             "challenge": True,
         }
+    from .sold_page_health import EBAY_ERROR_PAGE, is_ebay_error_page
+
     sorry = is_ebay_sorry_page(title=title, url=url, body=body)
-    if sorry and http_status == 403:
+    error_page = is_ebay_error_page(title=title, url=url, body=body)
+    # HTTP 403 takes precedence over Error Page title (access-denied contract).
+    if http_status == 403 and (sorry or error_page):
         return {
             **base,
             "routeClass": "EBAY_ACCESS_DENIED_403",
             "phase": SearchPhase.EBAY_ACCESS_DENIED_403.value,
             "outcome": EBAY_ACCESS_DENIED_403,
             "terminal": EBAY_ACCESS_DENIED_403,
-            "sorry": True,
+            "sorry": bool(sorry),
+            "errorPage": bool(error_page),
             "accessDenied403": True,
+            "tripsSorryBreaker": True,
+            "localGuiThroughSubmit": bool(query_visible_confirmed and submitted),
+        }
+    if error_page:
+        return {
+            **base,
+            "routeClass": "TEMPORARY_EBAY_SERVER_FAILURE",
+            "phase": SearchPhase.TEMPORARY_EBAY_SERVER_FAILURE.value,
+            "outcome": TEMPORARY_EBAY_SERVER_FAILURE,
+            "terminal": EBAY_ERROR_PAGE,
+            "sorry": False,
+            "errorPage": True,
             "tripsSorryBreaker": True,
             "localGuiThroughSubmit": bool(query_visible_confirmed and submitted),
         }
@@ -544,6 +574,7 @@ def classify_post_navigation_page(
         "terminal": surface.get("terminal"),
         "outcome": surface.get("outcome"),
         "sorry": bool(surface.get("sorry")),
+        "errorPage": bool(surface.get("errorPage")),
         "challenge": bool(surface.get("challenge")),
         "accessDenied403": bool(surface.get("accessDenied403")),
         "verified": surface.get("routeClass") == ORDINARY_RESULTS_CONFIRMED,
@@ -577,8 +608,13 @@ def classify_post_sold_url(
             "verified": False,
             "outcome": classified.get("outcome"),
             "sorry": classified.get("sorry"),
+            "errorPage": classified.get("errorPage"),
             "challenge": classified.get("challenge"),
             "accessDenied403": classified.get("accessDenied403"),
+            "soldFilterStateVerified": "lh_sold=1" in str(url or "").lower(),
+            "soldPageHealthVerified": False,
+            "x11SoldStateVerified": False,
+            "marketplacePageClass": classified.get("terminal"),
         }
     if is_ebay_live_search_url(url):
         return {
@@ -589,10 +625,42 @@ def classify_post_sold_url(
             "challenge": False,
             "ebayLive": True,
         }
-    u = (url or "").lower()
-    if "lh_sold=1" in u:
-        return {"terminal": "SOLD_STATE_VERIFIED", "verified": True, "outcome": None}
-    return {"terminal": None, "verified": False, "outcome": None}
+    # Filter + page health (Error Page with LH_Sold must not verify).
+    from .sold_page_health import evaluate_sold_verification
+
+    ev = evaluate_sold_verification(url=url, title=title, body=body, http_status=http_status)
+    if ev.get("verified"):
+        return {
+            "terminal": "SOLD_STATE_VERIFIED",
+            "verified": True,
+            "outcome": None,
+            "soldFilterStateVerified": True,
+            "soldPageHealthVerified": True,
+            "x11SoldStateVerified": True,
+            "marketplacePageClass": ev.get("marketplacePageClass"),
+        }
+    if ev.get("terminal"):
+        return {
+            "terminal": ev["terminal"],
+            "verified": False,
+            "outcome": TEMPORARY_EBAY_SERVER_FAILURE
+            if ev.get("terminal") in {"EBAY_ERROR_PAGE", "EBAY_SORRY"}
+            else classified.get("outcome"),
+            "sorry": ev.get("terminal") == "EBAY_SORRY",
+            "errorPage": ev.get("terminal") == "EBAY_ERROR_PAGE",
+            "soldFilterStateVerified": ev.get("soldFilterStateVerified"),
+            "soldPageHealthVerified": ev.get("soldPageHealthVerified"),
+            "x11SoldStateVerified": False,
+            "marketplacePageClass": ev.get("marketplacePageClass"),
+        }
+    return {
+        "terminal": None,
+        "verified": False,
+        "outcome": None,
+        "soldFilterStateVerified": ev.get("soldFilterStateVerified"),
+        "soldPageHealthVerified": ev.get("soldPageHealthVerified"),
+        "x11SoldStateVerified": False,
+    }
 
 
 def on_search_post_submit_page(
@@ -626,7 +694,7 @@ def on_search_post_submit_page(
         state.phase = SearchPhase.EBAY_ACCESS_DENIED_403
         state.note(EBAY_ACCESS_DENIED_403)
         return state
-    if classified.get("sorry"):
+    if classified.get("sorry") or classified.get("errorPage"):
         state.phase = SearchPhase.TEMPORARY_EBAY_SERVER_FAILURE
         state.note(TEMPORARY_EBAY_SERVER_FAILURE)
         return state

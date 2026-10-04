@@ -15,6 +15,7 @@ from cardscanr_market_engine.providers.post_sold_capture import (
     CDP_SOLD_READBACK_LOGIC_FAILURE,
     CDP_TARGET_AMBIGUOUS,
     CDP_TARGET_NOT_FOUND,
+    CDP_TARGET_URL_MISMATCH,
     CDP_TIMEOUT,
     POST_SOLD_CAPTURE_FAILED,
     POST_SOLD_CAPTURE_READY,
@@ -224,8 +225,8 @@ class TestCaptureVerifiedSoldPage(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertTrue(result.x11_sold_state_verified)
         self.assertEqual(result.capture_phase, POST_SOLD_CAPTURE_FAILED)
-        # Binding should refuse ordinary tab without LH_Sold.
-        self.assertEqual(result.failure_class, CDP_TARGET_NOT_FOUND)
+        # Binding should refuse ordinary tab without LH_Sold (page present → URL mismatch, not absent).
+        self.assertEqual(result.failure_class, CDP_TARGET_URL_MISMATCH)
 
     def test_12_capture_failure_does_not_advance_freshness_diag(self) -> None:
         # Outcome classification must map to POST_SOLD_CAPTURE_FAILURE (no fresh).

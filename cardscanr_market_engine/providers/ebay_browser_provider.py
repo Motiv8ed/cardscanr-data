@@ -3296,6 +3296,46 @@ class EbayBrowserSoldCompsProvider:
 
             if not capture.success:
                 stage_timings.fields["parsePhase"] = PARSE_FAILED
+                fail_cls = str(capture.failure_class or "")
+                # Marketplace Error/SORRY page present — not CDP_TARGET_NOT_FOUND / local capture bug.
+                if fail_cls in {"MARKETPLACE_ERROR_PAGE", "TARGET_REJECTED_UNHEALTHY_PAGE", "EBAY_ERROR_PAGE"}:
+                    health_cls = str(
+                        (probe_capture.get("diagnostics") or {}).get("healthClassification")
+                        or (probe_capture.get("diagnostics") or {}).get("marketplacePageClass")
+                        or "EBAY_ERROR_PAGE"
+                    )
+                    raise ProviderTemporaryError(
+                        f"TEMPORARY_EBAY_SERVER_FAILURE: marketplace {health_cls} after Sold filter "
+                        f"(capture NOT_RUN; not CDP_TARGET_NOT_FOUND)",
+                        diagnostics={
+                            "navMode": nav_mode_label,
+                            "reason": "ebay_error_page"
+                            if "ERROR" in health_cls.upper()
+                            else "ebay_sorry_error_page",
+                            "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                            "terminal": health_cls,
+                            "failureClass": fail_cls,
+                            "failureDetail": capture.failure_detail,
+                            "soldFilterStateVerified": True,
+                            "soldPageHealthVerified": False,
+                            "x11SoldStateVerified": False,
+                            "SOLD_STATE_VERIFIED": False,
+                            "marketplacePageClass": health_cls,
+                            "expectedTargetFound": (probe_capture.get("diagnostics") or {}).get(
+                                "expectedTargetFound"
+                            ),
+                            "capture": "NOT_RUN",
+                            "parse": "NOT_RUN",
+                            "write": "NOT_RUN",
+                            "postSoldCapturePhase": POST_SOLD_CAPTURE_FAILED,
+                            "postSoldCapture": probe_capture,
+                            "url": capture.target_url or nav.url,
+                            "markFresh": False,
+                            "lastGoodRetained": True,
+                            "tripsSorryBreaker": True,
+                            "stageTimings": stage_timings.snapshot(),
+                        },
+                    )
                 raise ProviderTemporaryError(
                     f"POST_SOLD_CAPTURE_FAILURE: local CDP capture failed after X11 SOLD_STATE_VERIFIED "
                     f"({capture.failure_class or 'unknown'})",

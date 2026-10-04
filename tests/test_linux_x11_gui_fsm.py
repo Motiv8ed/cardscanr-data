@@ -417,7 +417,13 @@ def test_gui_attempt_timings_elapsed():
 
 
 def test_iron_bundle_error_page_is_temporary_ebay_server_failure():
-    """Regression: Iron Bundle sv6/62 — Error Page | eBay after confirmed GUI submit."""
+    """Regression: Iron Bundle sv6/62 — Error Page | eBay after confirmed GUI submit.
+
+    Error Page is distinct from classic SORRY but still TEMPORARY_EBAY_SERVER_FAILURE
+    (not CAPTCHA, not CDP_TARGET_NOT_FOUND).
+    """
+    from cardscanr_market_engine.providers.sold_page_health import is_ebay_error_page
+
     title = "Error Page | eBay"
     url = (
         "https://www.ebay.com.au/sch/i.html?"
@@ -425,8 +431,9 @@ def test_iron_bundle_error_page_is_temporary_ebay_server_failure():
         "&_sacat=0&_from=R40&_trksid=m570.l1313"
     )
     body = "SORRY\nSomething went wrong on our end\n0.27672817.1790657862.5d4d0662"
-    assert is_ebay_sorry_page(title=title, url=url, body=body)
-    assert is_ebay_sorry_page(title=title, url=url)  # title alone is enough
+    assert is_ebay_error_page(title=title, url=url, body=body)
+    assert is_ebay_error_page(title=title, url=url)
+    assert not is_ebay_sorry_page(title=title, url=url)
 
     state = SearchGateState()
     ok, state, _ = on_search_surface_validated(state, url="https://www.ebay.com.au/")
@@ -446,13 +453,16 @@ def test_iron_bundle_error_page_is_temporary_ebay_server_failure():
         query_visible_confirmed=True,
         submitted=True,
     )
-    assert classified["sorry"] is True
+    assert classified.get("errorPage") is True
+    assert classified["sorry"] is False
     assert classified["outcome"] == TEMPORARY_EBAY_SERVER_FAILURE
     assert classified["localGuiThroughSubmit"] is True
 
     sold = classify_post_sold_url(url, title, body)
-    assert sold["terminal"] == "EBAY_SORRY"
+    assert sold["terminal"] == "EBAY_ERROR_PAGE"
     assert sold["outcome"] == TEMPORARY_EBAY_SERVER_FAILURE
+    assert sold.get("soldPageHealthVerified") is False
+    assert sold.get("x11SoldStateVerified") is False
 
 
 def test_iron_bundle_outcome_retains_last_good_no_freshness_success():

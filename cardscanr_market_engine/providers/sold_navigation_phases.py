@@ -20,6 +20,11 @@ from .linux_x11_gui_fsm import (
     is_ebay_sorry_page,
     page_is_about_blank,
 )
+from .sold_page_health import (
+    EBAY_ERROR_PAGE,
+    PHASE_PAGE_HEALTH_VERIFICATION,
+    evaluate_sold_verification,
+)
 
 # Evidence-based finite budgets (seconds). Not unlimited.
 SOLD_CONTROL_DISCOVERY_TIMEOUT_S = 12.0
@@ -42,6 +47,7 @@ TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT = "SOLD_STATE_VERIFICATION_TIMEOUT"
 TERMINAL_SOLD_UNEXPECTED_FILTER = "SOLD_UNEXPECTED_FILTER_TRANSITION"
 TERMINAL_SOLD_CHALLENGE = "EBAY_CHALLENGE"
 TERMINAL_SOLD_SORRY = "EBAY_SORRY"
+TERMINAL_SOLD_ERROR_PAGE = EBAY_ERROR_PAGE
 TERMINAL_ABOUT_BLANK = "ABOUT_BLANK_ABORT"
 
 CONTROL_PLANE_PERSISTENCE_FAILURE = "CONTROL_PLANE_PERSISTENCE_FAILURE"
@@ -125,19 +131,85 @@ def classify_sold_observation(
     url_before: str | None = None,
     body: str | None = None,
 ) -> dict[str, Any]:
-    if page_is_about_blank(url, title):
-        return {"terminal": TERMINAL_ABOUT_BLANK, "verified": False, "phase": SoldPhase.ABOUT_BLANK_ABORT.value}
-    if is_ebay_challenge_page(title=title, url=url, body=body):
-        return {"terminal": TERMINAL_SOLD_CHALLENGE, "verified": False, "phase": SoldPhase.EBAY_CHALLENGE.value}
-    if is_ebay_sorry_page(title=title, url=url, body=body):
-        return {"terminal": TERMINAL_SOLD_SORRY, "verified": False, "phase": SoldPhase.EBAY_SORRY.value}
+    """Classify post-Sold observation.
+
+    FILTER_STATE_CHECKS: LH_Sold=1 / unexpected filter transition.
+    PAGE_HEALTH_CHECKS: title/host/error/sorry/challenge (via evaluate_sold_verification).
+    x11SoldStateVerified requires soldFilterStateVerified AND soldPageHealthVerified.
+    """
+    ev = evaluate_sold_verification(url=url, title=title, body=body, url_before=url_before)
+    base = {
+        "soldFilterStateVerified": bool(ev.get("soldFilterStateVerified")),
+        "soldPageHealthVerified": bool(ev.get("soldPageHealthVerified")),
+        "x11SoldStateVerified": bool(ev.get("x11SoldStateVerified")),
+        "marketplacePageClass": ev.get("marketplacePageClass"),
+        "captureReady": bool(ev.get("captureReady")),
+        "lhSold": bool(ev.get("soldFilterStateVerified")),
+    }
+    if ev.get("verified"):
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_STATE_VERIFIED,
+            "verified": True,
+            "phase": SoldPhase.SOLD_STATE_VERIFIED.value,
+        }
+    term = ev.get("terminal")
+    if term == TERMINAL_ABOUT_BLANK or page_is_about_blank(url, title):
+        return {
+            **base,
+            "terminal": TERMINAL_ABOUT_BLANK,
+            "verified": False,
+            "phase": SoldPhase.ABOUT_BLANK_ABORT.value,
+        }
+    if term == TERMINAL_SOLD_CHALLENGE or is_ebay_challenge_page(title=title, url=url, body=body):
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_CHALLENGE,
+            "verified": False,
+            "phase": SoldPhase.EBAY_CHALLENGE.value,
+        }
+    if term == TERMINAL_SOLD_ERROR_PAGE:
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_ERROR_PAGE,
+            "verified": False,
+            "phase": PHASE_PAGE_HEALTH_VERIFICATION,
+            # Keep polling within verification budget (transient → healthy possible).
+            "stableUnhealthyPending": True,
+        }
+    if term == TERMINAL_SOLD_SORRY or is_ebay_sorry_page(title=title, url=url, body=body):
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_SORRY,
+            "verified": False,
+            "phase": PHASE_PAGE_HEALTH_VERIFICATION,
+            "stableUnhealthyPending": True,
+        }
+    if term == TERMINAL_SOLD_UNEXPECTED_FILTER or url_has_unexpected_filter(url, url_before=url_before):
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_UNEXPECTED_FILTER,
+            "verified": False,
+            "phase": PHASE_SOLD_STATE_TRANSITION,
+            "reason": "url_mutated_without_lh_sold",
+        }
+    if term in {
+        "SOLD_UNAVAILABLE_ON_ALTERNATE_SURFACE",
+        "EBAY_ACCESS_DENIED_403",
+    }:
+        return {**base, "terminal": str(term), "verified": False, "phase": str(term)}
+    # Fallback through legacy classify for alternate surfaces.
     classified = classify_post_sold_url(str(url or ""), str(title or ""), body)
     if classified.get("verified"):
         return {
+            **base,
             "terminal": TERMINAL_SOLD_STATE_VERIFIED,
             "verified": True,
             "phase": SoldPhase.SOLD_STATE_VERIFIED.value,
             "x11SoldStateVerified": True,
+            "soldFilterStateVerified": True,
+            "soldPageHealthVerified": True,
+            "captureReady": True,
             "lhSold": True,
         }
     if classified.get("terminal") in {
@@ -145,21 +217,20 @@ def classify_sold_observation(
         "ABOUT_BLANK_ABORT",
         "EBAY_CHALLENGE",
         "EBAY_SORRY",
+        "EBAY_ERROR_PAGE",
         "EBAY_ACCESS_DENIED_403",
     }:
         return {
+            **base,
             "terminal": str(classified["terminal"]),
             "verified": False,
             "phase": str(classified["terminal"]),
+            "soldFilterStateVerified": bool(classified.get("soldFilterStateVerified", base["soldFilterStateVerified"])),
+            "soldPageHealthVerified": bool(classified.get("soldPageHealthVerified", False)),
+            "x11SoldStateVerified": False,
         }
-    if url_has_unexpected_filter(url, url_before=url_before):
-        return {
-            "terminal": TERMINAL_SOLD_UNEXPECTED_FILTER,
-            "verified": False,
-            "phase": PHASE_SOLD_STATE_TRANSITION,
-            "reason": "url_mutated_without_lh_sold",
-        }
-    return {"terminal": None, "verified": False, "phase": PHASE_SOLD_STATE_VERIFICATION}
+    phase = PHASE_PAGE_HEALTH_VERIFICATION if base["soldFilterStateVerified"] else PHASE_SOLD_STATE_VERIFICATION
+    return {**base, "terminal": None, "verified": False, "phase": phase}
 
 
 @dataclass
@@ -207,7 +278,10 @@ def run_sold_fixture(
         "soldClickResult": None,
         "lhSoldBefore": url_has_lh_sold(url_before),
         "lhSoldAfter": False,
+        "soldFilterStateVerified": False,
+        "soldPageHealthVerified": False,
         "x11SoldStateVerified": False,
+        "marketplacePageClass": None,
         "passiveRecaptchaIframe": clock.passive_recaptcha,
         "failureStage": None,
         "failureClass": None,
@@ -216,30 +290,55 @@ def run_sold_fixture(
     }
 
     if already_sold or url_has_lh_sold(url_before):
+        obs0 = clock.at(0.0)
+        early = classify_sold_observation(url=obs0["url"], title=obs0["title"])
         phase = PhaseRecord(
             PHASE_SOLD_STATE_VERIFICATION,
             started_at=t0,
             timeout_ms=int(pol.state_verification_s * 1000),
         )
-        phase.finish(status="PASS", reason_code=TERMINAL_SOLD_STATE_VERIFIED, now=t0)
+        if early.get("verified"):
+            phase.finish(status="PASS", reason_code=TERMINAL_SOLD_STATE_VERIFIED, now=t0)
+            phases.append(phase)
+            diagnostics.update(
+                {
+                    "alreadySold": True,
+                    "soldFilterStateVerified": True,
+                    "soldPageHealthVerified": True,
+                    "x11SoldStateVerified": True,
+                    "lhSoldAfter": True,
+                    "marketplacePageClass": early.get("marketplacePageClass"),
+                    "pageTitle": obs0["title"],
+                    "phases": [p.to_dict() for p in phases],
+                }
+            )
+            return {
+                "ok": True,
+                "terminal": TERMINAL_SOLD_STATE_VERIFIED,
+                "SOLD_STATE_VERIFIED": True,
+                "soldClickSuccess": False,
+                "alreadySold": True,
+                "diagnostics": diagnostics,
+                "policy": pol.to_dict(),
+            }
+        # Filter may be true but page unhealthy (Rowlet-class Error Page).
+        phase.finish(status="FAIL", reason_code=str(early.get("terminal") or TERMINAL_SOLD_ERROR_PAGE), now=t0)
         phases.append(phase)
         diagnostics.update(
             {
                 "alreadySold": True,
-                "x11SoldStateVerified": True,
-                "lhSoldAfter": True,
+                "soldFilterStateVerified": bool(early.get("soldFilterStateVerified")),
+                "soldPageHealthVerified": False,
+                "x11SoldStateVerified": False,
+                "lhSoldAfter": url_has_lh_sold(obs0["url"]),
+                "marketplacePageClass": early.get("marketplacePageClass"),
+                "pageTitle": obs0["title"],
+                "failureStage": PHASE_PAGE_HEALTH_VERIFICATION,
+                "failureClass": str(early.get("terminal") or TERMINAL_SOLD_ERROR_PAGE),
                 "phases": [p.to_dict() for p in phases],
             }
         )
-        return {
-            "ok": True,
-            "terminal": TERMINAL_SOLD_STATE_VERIFIED,
-            "SOLD_STATE_VERIFIED": True,
-            "soldClickSuccess": False,
-            "alreadySold": True,
-            "diagnostics": diagnostics,
-            "policy": pol.to_dict(),
-        }
+        return _fail(str(early.get("terminal") or TERMINAL_SOLD_ERROR_PAGE), diagnostics, pol)
 
     # Discovery
     disc = PhaseRecord(
@@ -360,7 +459,10 @@ def run_sold_fixture(
                     "urlAfter": obs["url"],
                     "pageTitle": obs["title"],
                     "lhSoldAfter": True,
+                    "soldFilterStateVerified": True,
+                    "soldPageHealthVerified": True,
                     "x11SoldStateVerified": True,
+                    "marketplacePageClass": classified.get("marketplacePageClass"),
                     "phases": [p.to_dict() for p in phases],
                     "documentReadyState": obs.get("readyState"),
                 }
@@ -376,19 +478,38 @@ def run_sold_fixture(
                 "policy": pol.to_dict(),
             }
         term = classified.get("terminal")
-        if term in {TERMINAL_SOLD_CHALLENGE, TERMINAL_SOLD_SORRY, TERMINAL_ABOUT_BLANK}:
+        # Challenge / about:blank are immediate. Error/SORRY keep polling until budget
+        # (PAGE_HEALTH_VERIFICATION) so a transient interstitial can settle healthy.
+        if term in {TERMINAL_SOLD_CHALLENGE, TERMINAL_ABOUT_BLANK}:
             trans.finish(status="FAIL", reason_code=str(term), now=elapsed)
             ver.finish(status="FAIL", reason_code=str(term), now=elapsed)
             diagnostics.update(
                 {
                     "urlAfter": obs["url"],
                     "pageTitle": obs["title"],
+                    "soldFilterStateVerified": bool(classified.get("soldFilterStateVerified")),
+                    "soldPageHealthVerified": False,
+                    "x11SoldStateVerified": False,
+                    "marketplacePageClass": classified.get("marketplacePageClass"),
                     "failureStage": PHASE_SOLD_STATE_VERIFICATION,
                     "failureClass": str(term),
                     "phases": [p.to_dict() for p in phases],
                 }
             )
             return _fail(str(term), diagnostics, pol)
+        if term in {TERMINAL_SOLD_ERROR_PAGE, TERMINAL_SOLD_SORRY}:
+            diagnostics.update(
+                {
+                    "urlAfter": obs["url"],
+                    "pageTitle": obs["title"],
+                    "soldFilterStateVerified": bool(classified.get("soldFilterStateVerified")),
+                    "soldPageHealthVerified": False,
+                    "x11SoldStateVerified": False,
+                    "marketplacePageClass": classified.get("marketplacePageClass"),
+                    "lastUnhealthyTerminal": str(term),
+                }
+            )
+            # Continue polling within verify_deadline.
         if term == TERMINAL_SOLD_UNEXPECTED_FILTER and (elapsed - click_at) >= unexpected_settle_s:
             trans.finish(status="FAIL", reason_code=TERMINAL_SOLD_UNEXPECTED_FILTER, now=elapsed)
             ver.finish(status="FAIL", reason_code=TERMINAL_SOLD_UNEXPECTED_FILTER, now=elapsed)
@@ -417,20 +538,36 @@ def run_sold_fixture(
             return _fail("PAGE_CHANGED_UNEXPECTEDLY", diagnostics, pol)
         elapsed += poll_s
 
-    trans.finish(status="FAIL", reason_code=TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT, now=elapsed)
-    ver.finish(status="FAIL", reason_code=TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT, now=elapsed)
     obs = clock.at(elapsed)
+    final_obs = classify_sold_observation(url=obs["url"], title=obs["title"], url_before=url_before)
+    # Stable Error/SORRY through the health window → specific marketplace failure (not timeout).
+    stable_term = diagnostics.get("lastUnhealthyTerminal") or final_obs.get("terminal")
+    if stable_term in {TERMINAL_SOLD_ERROR_PAGE, TERMINAL_SOLD_SORRY}:
+        terminal = str(stable_term)
+        stage = PHASE_PAGE_HEALTH_VERIFICATION
+    else:
+        terminal = TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT
+        stage = PHASE_SOLD_STATE_VERIFICATION
+    trans.finish(status="FAIL", reason_code=terminal, now=elapsed)
+    ver.finish(status="FAIL", reason_code=terminal, now=elapsed)
     diagnostics.update(
         {
             "urlAfter": obs["url"],
             "pageTitle": obs["title"],
             "lhSoldAfter": url_has_lh_sold(obs["url"]),
-            "failureStage": PHASE_SOLD_STATE_VERIFICATION,
-            "failureClass": TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT,
+            "soldFilterStateVerified": bool(final_obs.get("soldFilterStateVerified")),
+            "soldPageHealthVerified": False,
+            "x11SoldStateVerified": False,
+            "marketplacePageClass": final_obs.get("marketplacePageClass") or diagnostics.get("marketplacePageClass"),
+            "failureStage": stage,
+            "failureClass": terminal,
+            "capture": "NOT_RUN",
+            "parse": "NOT_RUN",
+            "write": "NOT_RUN",
             "phases": [p.to_dict() for p in phases],
         }
     )
-    return _fail(TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT, diagnostics, pol)
+    return _fail(terminal, diagnostics, pol)
 
 
 def _fail(terminal: str, diagnostics: dict[str, Any], pol: SoldTimeoutPolicy) -> dict[str, Any]:
@@ -482,7 +619,13 @@ def build_sold_failure_evidence(
         "soldClickResult": d.get("soldClickResult"),
         "lhSoldBefore": d.get("lhSoldBefore"),
         "lhSoldAfter": d.get("lhSoldAfter"),
+        "soldFilterStateVerified": d.get("soldFilterStateVerified"),
+        "soldPageHealthVerified": d.get("soldPageHealthVerified"),
         "x11SoldStateVerified": d.get("x11SoldStateVerified"),
+        "marketplacePageClass": d.get("marketplacePageClass"),
+        "capture": d.get("capture"),
+        "parse": d.get("parse"),
+        "write": d.get("write"),
         "failureStage": d.get("failureStage"),
         "failureClass": d.get("failureClass") or d.get("terminal") or error_message,
         "errorMessage": error_message or d.get("failureClass"),

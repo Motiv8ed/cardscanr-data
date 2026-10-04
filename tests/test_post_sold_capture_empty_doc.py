@@ -251,7 +251,8 @@ class TestCaptureReadinessAndFallback(unittest.TestCase):
             expected_query=QUERY,
         )
         self.assertIsNone(chosen)
-        self.assertEqual(fail, CDP_TARGET_NOT_FOUND)
+        # Plausible page present but missing LH_Sold — not "target absent".
+        self.assertEqual(fail, CDP_TARGET_URL_MISMATCH)
 
     def test_ambiguous_rejected(self) -> None:
         a = SOLD_URL + "&_pgn=1"
@@ -269,6 +270,17 @@ class TestCaptureReadinessAndFallback(unittest.TestCase):
             url=SOLD_URL,
             title="Error Page | eBay",
             body_text=SOLD_BODY,
+            expected_url=SOLD_URL,
+            expected_query=QUERY,
+        )
+        self.assertFalse(integ["ok"])
+        self.assertIn("error_page", integ["reasons"])
+
+    def test_classic_sorry_title_rejected(self) -> None:
+        integ = capture_integrity_ok(
+            url=SOLD_URL,
+            title="Sorry! Something went wrong | eBay",
+            body_text="SORRY\nSomething went wrong on our end\n",
             expected_url=SOLD_URL,
             expected_query=QUERY,
         )

@@ -128,6 +128,10 @@ CDP_TARGET_AMBIGUOUS = "CDP_TARGET_AMBIGUOUS"
 CDP_TARGET_STALE = "CDP_TARGET_STALE"
 CDP_TARGET_CHANGED = "CDP_TARGET_CHANGED"
 CDP_TARGET_FAILURE = "CDP_TARGET_FAILURE"
+CDP_TARGET_ATTACH_FAILURE = "CDP_TARGET_ATTACH_FAILURE"
+# Target present but rejected for marketplace page health (not "target absent").
+MARKETPLACE_ERROR_PAGE = "MARKETPLACE_ERROR_PAGE"
+TARGET_REJECTED_UNHEALTHY_PAGE = "TARGET_REJECTED_UNHEALTHY_PAGE"
 CDP_DOCUMENT_NOT_READY = "CDP_DOCUMENT_NOT_READY"
 CDP_MAIN_FRAME_NOT_READY = "CDP_MAIN_FRAME_NOT_READY"
 CDP_EXECUTION_CONTEXT_NOT_READY = "CDP_EXECUTION_CONTEXT_NOT_READY"
@@ -324,7 +328,11 @@ def score_sold_page_target(
         cand.score = -500
         cand.reasons.append("ebay_live")
         return cand
-    if "error page" in t or "/error" in u:
+    if "error page" in t or ("/error" in u and "splashui/challenge" not in u):
+        cand.score = -500
+        cand.reasons.append("error_page")
+        return cand
+    if "sorry" in t[:80] and "ebay" in t:
         cand.score = -500
         cand.reasons.append("sorry_error")
         return cand
@@ -407,6 +415,28 @@ def select_sold_page_target(
     if not viable:
         viable = [c for c in scored if c.score >= 80]
     if not viable:
+        # Taxonomy: absent vs present-but-unhealthy (Rowlet-class).
+        page_like = [
+            c
+            for c in scored
+            if c.target_type in {"page", "Page", ""}
+            and not any(r in c.reasons for r in ("non_page_type", "rejected_non_content"))
+        ]
+        if not page_like and not scored:
+            return None, CDP_TARGET_NOT_FOUND, scored
+        unhealthy = [
+            c
+            for c in scored
+            if any(r in c.reasons for r in ("error_page", "sorry_error", "challenge"))
+        ]
+        if unhealthy:
+            # Prefer marketplace error class when Error Page / SORRY present.
+            if any("error_page" in c.reasons or "sorry_error" in c.reasons for c in unhealthy):
+                return None, MARKETPLACE_ERROR_PAGE, scored
+            return None, TARGET_REJECTED_UNHEALTHY_PAGE, scored
+        if page_like:
+            # Plausible pages exist but none viable (e.g. missing LH_Sold).
+            return None, CDP_TARGET_URL_MISMATCH if require_lh_sold else CDP_TARGET_NOT_FOUND, scored
         return None, CDP_TARGET_NOT_FOUND, scored
 
     viable.sort(key=lambda c: c.score, reverse=True)
@@ -534,7 +564,10 @@ def capture_integrity_ok(
     if "ebaylive" in u:
         ok = False
         reasons.append("ebay_live")
-    if "error page" in t or "sorry" in t[:80] or "/error" in u:
+    if "error page" in t or ("/error" in u and "splashui/challenge" not in u):
+        ok = False
+        reasons.append("error_page")
+    elif "sorry" in t[:80]:
         ok = False
         reasons.append("sorry_error")
     if "splashui/challenge" in u or "captcha" in t:
@@ -675,10 +708,22 @@ def capture_verified_sold_page(
             result.diagnostics["methods"] = read.get("methods")
             result.diagnostics["attachReadMs"] = read.get("elapsed_ms")
         if not integrity.get("ok"):
-            result.failure_class = CDP_INTEGRITY_FAILURE
-            result.failure_detail = ",".join(integrity.get("reasons") or []) or "integrity_failed"
+            reasons = list(integrity.get("reasons") or [])
+            if "error_page" in reasons or "sorry_error" in reasons:
+                result.failure_class = MARKETPLACE_ERROR_PAGE
+                result.diagnostics["marketplacePageClass"] = (
+                    "EBAY_ERROR_PAGE" if "error_page" in reasons else "EBAY_SORRY"
+                )
+                result.diagnostics["capture"] = "NOT_RUN"
+                result.diagnostics["parse"] = "NOT_RUN"
+                result.diagnostics["write"] = "NOT_RUN"
+                # Do not retain error-page HTML as pricing capture evidence.
+                result.html_or_text = None
+            else:
+                result.failure_class = CDP_INTEGRITY_FAILURE
+                result.html_or_text = body
+            result.failure_detail = ",".join(reasons) or "integrity_failed"
             result.capture_phase = POST_SOLD_CAPTURE_FAILED
-            result.html_or_text = body
             result.capture_elapsed_ms = int((time.monotonic() - started) * 1000)
             return result
         result.success = True
@@ -730,12 +775,33 @@ def capture_verified_sold_page(
         )
         result.candidates = [c.to_dict() for c in scored]
         if fail_cls or chosen is None:
-            result.failure_class = fail_cls or CDP_TARGET_NOT_FOUND
-            result.failure_detail = fail_cls or "no_viable_sold_target"
+            from .sold_page_health import rejection_evidence_from_scored
+
+            rej = rejection_evidence_from_scored(
+                scored,
+                expected_url=expected_url,
+                expected_query=expected_query,
+                fail_cls=fail_cls or CDP_TARGET_NOT_FOUND,
+            )
+            result.failure_class = str(rej.get("failureClass") or fail_cls or CDP_TARGET_NOT_FOUND)
+            result.failure_detail = ",".join(rej.get("rejectionReasons") or []) or (
+                fail_cls or "no_viable_sold_target"
+            )
             result.capture_phase = POST_SOLD_CAPTURE_FAILED
             result.capture_elapsed_ms = int((time.monotonic() - started) * 1000)
-            # Do not accept X11 body alone without a bound CDP page — parser needs DOM/hrefs.
-            result.diagnostics["preVerifiedSkippedReason"] = "no_bound_cdp_page_for_parser"
+            result.target_id = rej.get("expectedTargetId")
+            result.target_url = rej.get("expectedTargetUrl")
+            result.target_title = rej.get("expectedTargetTitle")
+            result.diagnostics["rejectionEvidence"] = rej
+            result.diagnostics["expectedTargetFound"] = rej.get("expectedTargetFound")
+            result.diagnostics["healthClassification"] = rej.get("healthClassification")
+            result.diagnostics["preVerifiedSkippedReason"] = "target_rejected_or_absent"
+            # Do not capture/parse marketplace error pages as pricing evidence.
+            if result.failure_class in {MARKETPLACE_ERROR_PAGE, TARGET_REJECTED_UNHEALTHY_PAGE}:
+                result.diagnostics["capture"] = "NOT_RUN"
+                result.diagnostics["parse"] = "NOT_RUN"
+                result.diagnostics["write"] = "NOT_RUN"
+                result.diagnostics["marketplacePageClass"] = rej.get("healthClassification")
             return result
 
         result.target_id = chosen.target_id
@@ -749,7 +815,7 @@ def capture_verified_sold_page(
         try:
             read = attach_and_read(chosen)
         except Exception as exc:
-            result.failure_class = CDP_CAPTURE_FAILURE
+            result.failure_class = CDP_TARGET_ATTACH_FAILURE
             result.failure_detail = f"{type(exc).__name__}:{exc}"
             result.capture_phase = POST_SOLD_CAPTURE_FAILED
             result.capture_elapsed_ms = int((time.monotonic() - started) * 1000)

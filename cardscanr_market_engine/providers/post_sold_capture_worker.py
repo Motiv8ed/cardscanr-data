@@ -29,15 +29,21 @@ from cardscanr_market_engine.providers.post_sold_capture import (  # noqa: E402
     CDP_EVALUATION_FAILURE,
     CDP_INTEGRITY_FAILURE,
     CDP_TARGET_AMBIGUOUS,
+    CDP_TARGET_ATTACH_FAILURE,
     CDP_TARGET_FAILURE,
     CDP_TARGET_MISMATCH,
     CDP_TARGET_NOT_FOUND,
     CDP_TIMEOUT,
+    MARKETPLACE_ERROR_PAGE,
+    TARGET_REJECTED_UNHEALTHY_PAGE,
     assess_document_readiness,
     capture_integrity_ok,
     resolve_authoritative_capture_html_path,
     select_sold_page_target,
     write_utf8_bytes_atomic,
+)
+from cardscanr_market_engine.providers.sold_page_health import (  # noqa: E402
+    rejection_evidence_from_scored,
 )
 from cardscanr_market_engine.providers.post_sold_capture_cdp import (  # noqa: E402
     CHALLENGE_UI_JS,
@@ -407,10 +413,29 @@ def run_capture(args: argparse.Namespace) -> int:
             diagnostics=diagnostics,
         )
     if fail_cls or chosen is None:
-        status = fail_cls or CDP_TARGET_NOT_FOUND
-        if status in {CDP_TARGET_NOT_FOUND}:
-            status = CDP_TARGET_NOT_FOUND
-        return _fail(status, elapsed_ms=(time.monotonic() - started) * 1000, diagnostics=diagnostics)
+        rej = rejection_evidence_from_scored(
+            scored,
+            expected_url=expected_url or None,
+            expected_query=expected_query or None,
+            fail_cls=fail_cls or CDP_TARGET_NOT_FOUND,
+        )
+        status = str(rej.get("failureClass") or fail_cls or CDP_TARGET_NOT_FOUND)
+        diagnostics["rejectionEvidence"] = rej
+        diagnostics["expectedTargetFound"] = rej.get("expectedTargetFound")
+        diagnostics["healthClassification"] = rej.get("healthClassification")
+        diagnostics["marketplacePageClass"] = rej.get("healthClassification")
+        if status in {MARKETPLACE_ERROR_PAGE, TARGET_REJECTED_UNHEALTHY_PAGE}:
+            diagnostics["capture"] = "NOT_RUN"
+            diagnostics["parse"] = "NOT_RUN"
+            diagnostics["write"] = "NOT_RUN"
+        return _fail(
+            status,
+            elapsed_ms=(time.monotonic() - started) * 1000,
+            diagnostics=diagnostics,
+            target_id=rej.get("expectedTargetId"),
+            target_url=rej.get("expectedTargetUrl"),
+            error=",".join(rej.get("rejectionReasons") or []) or status,
+        )
 
     # Locate websocket URL for chosen target
     ws_url = ""

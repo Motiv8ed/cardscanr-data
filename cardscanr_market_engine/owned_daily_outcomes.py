@@ -126,6 +126,17 @@ def classify_exception_outcome(
         return CHALLENGE_REQUIRED
     if category == "DEFERRED":
         return PRE_FLIGHT_CONTROL_PLANE_BLOCKED
+    # Marketplace Error Page after Sold filter — not a local CDP target-absent bug.
+    fail_cls = str(diag.get("failureClass") or "").upper()
+    page_cls = str(diag.get("marketplacePageClass") or diag.get("terminal") or "").upper()
+    if (
+        reason in {"ebay_error_page", "ebay_sorry_error_page"}
+        or fail_cls in {"MARKETPLACE_ERROR_PAGE", "TARGET_REJECTED_UNHEALTHY_PAGE", "EBAY_ERROR_PAGE"}
+        or page_cls in {"EBAY_ERROR_PAGE", "MARKETPLACE_ERROR_PAGE"}
+        or "marketplace ebay_error_page" in text
+        or ("marketplace" in text and "error_page" in text and "cdp_target_not_found" not in text)
+    ):
+        return TEMPORARY_EBAY_SERVER_FAILURE
     # Post-Sold local CDP capture failure — X11 Sold may still be verified.
     if (
         str(diag.get("ownedDailyOutcome") or "") == POST_SOLD_CAPTURE_FAILURE

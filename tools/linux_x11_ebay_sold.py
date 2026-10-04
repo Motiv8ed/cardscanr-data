@@ -191,11 +191,11 @@ def wait_sold_pending(
                 "phaseElapsedMs": int((time.time() - phase_started) * 1000),
                 "phaseTimeoutMs": int(verify_budget * 1000),
             }
-        if ("sorry" in tl and "ebay" in tl) or "error page" in tl:
-            break
         if "captcha" in tl or "security measure" in tl or "verify yourself" in tl:
             break
-        # Settled non-blank title: allow URL read (progress-aware, not fixed 2s+12s)
+        # Settled non-blank title: allow URL read (progress-aware, not fixed 2s+12s).
+        # Error/SORRY titles do NOT early-break — PAGE_HEALTH_VERIFICATION polls until
+        # healthy settle or verification budget (stable Error Page → EBAY_ERROR_PAGE).
         if "untitled" not in tl and "loading" not in tl and len(tl) > 5:
             if time.time() - t0 >= 1.5:
                 url = omnibox_url()
@@ -213,7 +213,10 @@ def wait_sold_pending(
                         "failureStage": None,
                         "phaseElapsedMs": int((time.time() - phase_started) * 1000),
                         "phaseTimeoutMs": int(verify_budget * 1000),
+                        "soldFilterStateVerified": True,
+                        "soldPageHealthVerified": True,
                         "x11SoldStateVerified": True,
+                        "marketplacePageClass": obs.get("marketplacePageClass"),
                         "lhSoldAfter": True,
                     }
                 if obs.get("terminal") == "ABOUT_BLANK_ABORT":
@@ -224,10 +227,13 @@ def wait_sold_pending(
                     gate = on_sold_terminal(gate, challenge=True)
                     terminal_override = SoldPhase.EBAY_CHALLENGE.value
                     break
-                if obs.get("terminal") == "EBAY_SORRY":
-                    gate = on_sold_terminal(gate, sorry=True)
-                    terminal_override = SoldPhase.EBAY_SORRY.value
-                    break
+                if obs.get("terminal") in {"EBAY_ERROR_PAGE", "EBAY_SORRY"}:
+                    # Keep polling within budget; remember last unhealthy for terminal.
+                    terminal_override = None
+                    failure_stage = "PAGE_HEALTH_VERIFICATION"
+                    # Stash for post-loop classification via last obs.
+                    last_unhealthy = obs.get("terminal")
+                    _ = last_unhealthy
                 if obs.get("terminal") == TERMINAL_SOLD_UNEXPECTED_FILTER and (time.time() - t0) >= 2.0:
                     # Meowth-class: URL mutated (e.g. LH_PrefLoc) without LH_Sold.
                     failure_stage = PHASE_SOLD_STATE_TRANSITION
@@ -250,9 +256,14 @@ def wait_sold_pending(
         elif obs.get("terminal") == "EBAY_CHALLENGE":
             gate = on_sold_terminal(gate, challenge=True)
             terminal_override = SoldPhase.EBAY_CHALLENGE.value
+        elif obs.get("terminal") == "EBAY_ERROR_PAGE":
+            gate = on_sold_terminal(gate, sorry=True)
+            terminal_override = "EBAY_ERROR_PAGE"
+            failure_stage = "PAGE_HEALTH_VERIFICATION"
         elif obs.get("terminal") == "EBAY_SORRY":
             gate = on_sold_terminal(gate, sorry=True)
             terminal_override = SoldPhase.EBAY_SORRY.value
+            failure_stage = "PAGE_HEALTH_VERIFICATION"
         elif obs.get("terminal") == TERMINAL_SOLD_UNEXPECTED_FILTER:
             failure_stage = PHASE_SOLD_STATE_TRANSITION
             terminal_override = TERMINAL_SOLD_UNEXPECTED_FILTER
@@ -266,6 +277,7 @@ def wait_sold_pending(
     terminal = terminal_override or gate.phase.value
     if not verified and terminal == SoldPhase.SOLD_NAVIGATION_TIMEOUT.value:
         terminal = TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT
+    filter_ok = url_has_lh_sold(url)
     return {
         "gate": gate,
         "url": url,
@@ -276,9 +288,17 @@ def wait_sold_pending(
         "failureStage": None if verified else failure_stage,
         "phaseElapsedMs": int((time.time() - phase_started) * 1000),
         "phaseTimeoutMs": int(verify_budget * 1000),
+        "soldFilterStateVerified": bool(filter_ok) if verified or terminal in {"EBAY_ERROR_PAGE", "EBAY_SORRY"} else filter_ok,
+        "soldPageHealthVerified": bool(verified),
         "x11SoldStateVerified": verified,
+        "marketplacePageClass": (
+            "HEALTHY_SOLD_RESULTS"
+            if verified
+            else (terminal if terminal in {"EBAY_ERROR_PAGE", "EBAY_SORRY", "EBAY_CHALLENGE"} else None)
+        ),
         "lhSoldAfter": url_has_lh_sold(url),
         "lhSoldBefore": url_has_lh_sold(url_before),
+        "capture": "NOT_RUN" if not verified else None,
     }
 
 

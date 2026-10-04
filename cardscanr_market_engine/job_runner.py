@@ -1123,7 +1123,16 @@ class MarketPriceJobRunner:
                     )
                 elif owned_outcome == TEMPORARY_EBAY_SERVER_FAILURE or owned_outcome == EBAY_ACCESS_DENIED_403 or str(
                     diag.get("reason") or ""
-                ) in {"ebay_sorry_error_page", "ebay_access_denied_403"}:
+                ) in {
+                    "ebay_sorry_error_page",
+                    "ebay_error_page",
+                    "ebay_access_denied_403",
+                    "marketplace_error_page",
+                } or str(diag.get("failureClass") or "").upper() in {
+                    "MARKETPLACE_ERROR_PAGE",
+                    "EBAY_ERROR_PAGE",
+                    "TARGET_REJECTED_UNHEALTHY_PAGE",
+                }:
                     record_sorry(
                         now=now,
                         reference=error_message,

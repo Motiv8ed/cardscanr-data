@@ -122,14 +122,20 @@ def classify_provider_failure(message: str | None, *, diagnostics: dict[str, Any
         marker in blob
         for marker in (
             "ebay_sorry_error_page",
+            "ebay_error_page",
+            "marketplace_error_page",
             "temporary_ebay_server_failure",
             "ebay sorry",
             "pre_sold_sorry",
             "something went wrong on our end",
             "error page | ebay",
+            "ebay_error_page",
         )
     ):
         return "TRANSIENT_EBAY"
+    if fail_cls := str(diag.get("failureClass") or "").upper():
+        if fail_cls in {"MARKETPLACE_ERROR_PAGE", "EBAY_ERROR_PAGE", "TARGET_REJECTED_UNHEALTHY_PAGE"}:
+            return "TRANSIENT_EBAY"
     if not text:
         return "ERROR"
     return "ERROR"
