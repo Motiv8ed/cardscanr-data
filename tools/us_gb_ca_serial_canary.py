@@ -108,7 +108,7 @@ def run_cycle(market: str, *, dry_run: bool) -> dict:
         env=env,
         capture_output=True,
         text=True,
-        timeout=180,
+        timeout=600,
     )
     worker = None
     if not dry_run:
