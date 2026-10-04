@@ -26,6 +26,7 @@ from cardscanr_market_engine.canary_control_plane import (
     record_canary_episode,
     set_operation_mode,
 )
+from cardscanr_market_engine.gaming_resource_pause import GamingResourcePauseController
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.ebay_availability import get_availability, peek_availability
 from cardscanr_market_engine.ebay_browser_work_gate import evaluate_ebay_browser_work_gate
@@ -208,6 +209,30 @@ def run_scheduler_worker(market: str, *, mode: str) -> dict[str, Any]:
     }
 
 
+def wait_for_gaming_clear(*, max_wait_seconds: int = 900) -> dict[str, Any]:
+    """Block canary/probe work while Fortnite gaming pause is active. Never bypass."""
+    controller = GamingResourcePauseController()
+    started = time.time()
+    while controller.should_block_new_jobs():
+        status = controller.status()
+        payload = {
+            "blocked": True,
+            "reason": controller.block_reason(),
+            "status": status,
+            "elapsedSec": int(time.time() - started),
+        }
+        if time.time() - started >= max_wait_seconds:
+            payload["timeout"] = True
+            return payload
+        time.sleep(20)
+    return {
+        "blocked": False,
+        "reason": None,
+        "status": controller.status(),
+        "elapsedSec": int(time.time() - started),
+    }
+
+
 def wait_for_probe_window(market: str, *, max_wait_seconds: int = 3700) -> dict[str, Any]:
     started = time.time()
     while True:
@@ -238,6 +263,11 @@ def wait_for_probe_window(market: str, *, max_wait_seconds: int = 3700) -> dict[
 
 def recover_au() -> dict[str, Any]:
     ART.mkdir(parents=True, exist_ok=True)
+    gaming = wait_for_gaming_clear(max_wait_seconds=900)
+    _write(ART / "AU_gaming_wait.json", gaming)
+    if gaming.get("blocked"):
+        return {"ok": False, "reason": "GAMING_RESOURCE_PAUSE", "gaming": gaming}
+
     ready = local_ready(market="AU", cold=True)
     _write(ART / "AU_local_ready.json", ready)
     if not ready["ok"]:
@@ -269,10 +299,24 @@ def recover_au() -> dict[str, Any]:
         if wait.get("stop") or not wait.get("ready"):
             return {"ok": False, "reason": "AU_COOLDOWN_WAIT_FAILED", "wait": wait}
 
+    gaming2 = wait_for_gaming_clear(max_wait_seconds=120)
+    if gaming2.get("blocked"):
+        return {"ok": False, "reason": "GAMING_RESOURCE_PAUSE", "gaming": gaming2}
+
     probe = run_scheduler_worker("AU", mode="PROBE")
     _write(ART / "AU_probe_cycle.json", {k: v for k, v in probe.items() if "Stdout" not in k and "Stderr" not in k})
     after = get_availability(market="AU", persist_transitions=False)
     _write(ART / "AU_availability_after.json", after.to_dict())
+
+    # Empty worker cycle while gaming pause active is not a marketplace failure.
+    gaming_after = GamingResourcePauseController()
+    if not probe.get("result") and gaming_after.should_block_new_jobs():
+        return {
+            "ok": False,
+            "reason": "GAMING_RESOURCE_PAUSE",
+            "gaming": gaming_after.status(),
+            "probe": {k: probe.get(k) for k in ("outcome", "error", "status", "healthy", "searchSubmissionStarted")},
+        }
 
     classification = classify_canary_failure(
         outcome=probe.get("outcome"),
@@ -367,6 +411,13 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
                     continue
                 # Probe success does not count toward 5/5.
                 continue
+
+        gaming = wait_for_gaming_clear(max_wait_seconds=900)
+        if gaming.get("blocked"):
+            stop_reason = "GAMING_RESOURCE_PAUSE"
+            result = "STOPPED_SAFE"
+            cards.append({"kind": "GAMING_PAUSE", "gaming": gaming, "at": utc_now()})
+            break
 
         ready = local_ready(market=market, cold=(healthy == 0))
         if not ready["ok"]:
