@@ -123,7 +123,7 @@ def run_cycle(market: str, *, dry_run: bool) -> dict:
             env=env,
             capture_output=True,
             text=True,
-            timeout=900,
+            timeout=1500,
         )
     return {
         "market": market,
