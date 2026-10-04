@@ -72,6 +72,25 @@ PREFIX = Path(os.path.expanduser("~/.local/cardscanr-gui"))
 ART = Path("/mnt/d/cardscanr-data/reports/artifacts")
 
 
+def marketplace_homepage() -> str:
+    raw = (os.environ.get("CARDSCANR_MARKETPLACE_HOME") or "").strip()
+    if raw:
+        return raw if raw.endswith("/") else raw + "/"
+    market = (os.environ.get("CARDSCANR_MARKET") or "AU").strip().upper() or "AU"
+    homes = {
+        "AU": "https://www.ebay.com.au/",
+        "US": "https://www.ebay.com/",
+        "GB": "https://www.ebay.co.uk/",
+        "CA": "https://www.ebay.ca/",
+    }
+    return homes.get(market, "https://www.ebay.com.au/")
+
+
+def marketplace_host() -> str:
+    home = marketplace_homepage().rstrip("/").lower()
+    return home.replace("https://", "").replace("http://", "").replace("www.", "")
+
+
 def run_self_check(*, runtime_mode: str | None = None) -> dict:
     """Local-only readiness check. Never opens eBay or submits keys to a page."""
     _env()
@@ -491,7 +510,7 @@ def ensure_all_categories(layout: dict, tag: str, *, force: bool = False) -> str
         if ("_sacat=0" in u) or (
             "/sch/" not in u
             and "lh_sold" not in u
-            and u.rstrip("/").endswith("ebay.com.au")
+            and u.rstrip("/").endswith(marketplace_host())
         ):
             return "skipped_all_categories_already_verified"
     cx, cy = layout["category_click"]
@@ -522,7 +541,7 @@ def navigate_omnibox_home() -> None:
     clear_modifiers()
     sh("xdotool key --clearmodifiers ctrl+l")
     time.sleep(0.25)
-    Path("/tmp/ebay_home.txt").write_text("https://www.ebay.com.au/", encoding="utf-8")
+    Path("/tmp/ebay_home.txt").write_text(marketplace_homepage(), encoding="utf-8")
     subprocess.check_call(["bash", "-lc", "xclip -selection clipboard < /tmp/ebay_home.txt"])
     sh("xdotool key --clearmodifiers ctrl+a")
     time.sleep(0.05)

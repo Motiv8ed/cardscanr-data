@@ -46,6 +46,8 @@ class PriorCardContext:
     x11_sold_state_verified: bool = False
     capture_correlated: bool = False
     card_verdict: str | None = None
+    market: str | None = None
+    currency: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -59,6 +61,8 @@ class PriorCardContext:
             "x11SoldStateVerified": self.x11_sold_state_verified,
             "captureCorrelated": self.capture_correlated,
             "cardVerdict": self.card_verdict,
+            "market": self.market,
+            "currency": self.currency,
         }
 
     @classmethod
@@ -76,6 +80,8 @@ class PriorCardContext:
             x11_sold_state_verified=bool(data.get("x11SoldStateVerified") or data.get("x11_sold_state_verified")),
             capture_correlated=bool(data.get("captureCorrelated") or data.get("capture_correlated")),
             card_verdict=_s(data.get("cardVerdict") or data.get("card_verdict")),
+            market=_s(data.get("market")),
+            currency=_s(data.get("currency")),
         )
 
 
@@ -142,7 +148,19 @@ def hostname_of(url: str) -> str:
 
 def is_ebay_marketplace_host(host: str) -> bool:
     h = (host or "").lower()
-    return h == "ebay.com" or h.endswith(".ebay.com") or h.endswith(".ebay.com.au") or h == "ebay.com.au"
+    if h.startswith("www."):
+        h = h[4:]
+    roots = (
+        "ebay.com",
+        "ebay.com.au",
+        "ebay.co.uk",
+        "ebay.ca",
+        "ebay.de",
+        "ebay.fr",
+        "ebay.it",
+        "ebay.es",
+    )
+    return any(h == root or h.endswith("." + root) for root in roots)
 
 
 def is_challenge_url(url: str, title: str = "") -> bool:
@@ -361,7 +379,46 @@ def prior_from_card_report(report: dict[str, Any] | None) -> PriorCardContext | 
         ),
         capture_correlated=bool(capture.get("correlated")),
         card_verdict=_s(report.get("cardVerdict")),
+        market=_s(identity.get("market") or job.get("market") or job.get("marketCountry")),
+        currency=_s(identity.get("currency") or job.get("currency")),
     )
+
+
+def prior_market_of(prior: PriorCardContext | None) -> str | None:
+    if prior is None:
+        return None
+    market = _s(prior.market)
+    if market:
+        return market.upper()
+    host = hostname_of(prior.final_url or "")
+    if host.startswith("www."):
+        host = host[4:]
+    host_to_market = {
+        "ebay.com.au": "AU",
+        "ebay.com": "US",
+        "ebay.co.uk": "GB",
+        "ebay.ca": "CA",
+    }
+    return host_to_market.get(host)
+
+
+def required_runtime_mode(
+    *,
+    next_market: str,
+    prior: PriorCardContext | None,
+) -> str:
+    """INTER_CARD only when the prior healthy terminal card is the same market."""
+    nxt = str(next_market or "").strip().upper()
+    prev = prior_market_of(prior)
+    if not nxt:
+        return RUNTIME_COLD_START
+    if prev is None:
+        return RUNTIME_COLD_START
+    if prev != nxt:
+        return RUNTIME_COLD_START
+    if not prior_context_is_healthy_terminal(prior):
+        return RUNTIME_COLD_START
+    return RUNTIME_INTER_CARD
 
 
 __all__ = [
@@ -375,7 +432,8 @@ __all__ = [
     "correlates_to_prior",
     "evaluate_runtime_targets",
     "hostname_of",
-    "is_ebay_marketplace_host",
+    "required_runtime_mode",
+    "prior_market_of",
     "origin_class_for",
     "prior_context_is_healthy_terminal",
     "prior_from_card_report",

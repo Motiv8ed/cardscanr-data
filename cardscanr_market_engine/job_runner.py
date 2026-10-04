@@ -34,6 +34,7 @@ from .providers.errors import (
 from .navigation_runtime_context import (
     apply_context_to_environ,
     load_navigation_runtime_context,
+    prepare_context_for_market,
 )
 from .scheduler import parse_market_allowlist
 from .marketplace_ops_state import (
@@ -76,7 +77,7 @@ from .pipeline_phase_diagnostics import (
     build_provider_diagnostics_for_result,
     extract_pipeline_phases,
 )
-from .x11_chrome_focus import is_local_runtime_failure_message
+from .region_pricing_registry import is_region_dispatchable
 
 
 def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str, Any]:
@@ -272,6 +273,15 @@ class MarketPriceJobRunner:
 
     def _assert_market_allowed_for_worker(self, price_key: MarketPriceKey) -> None:
         market = str(price_key.market_country or "").strip().upper()
+        if market and not is_region_dispatchable(market):
+            raise ProviderUnsupportedMarketError(
+                f"BLOCKED_NEEDS_PROVIDER: {market} has no verified-local browser provider",
+                diagnostics={
+                    "marketCountry": market,
+                    "provider": "NONE",
+                    "workerState": "BLOCKED",
+                },
+            )
         allowed_raw = os.getenv("MARKET_WORKER_ALLOWED_MARKETS")
         if allowed_raw is None:
             allowed_raw = "AU,US,GB,CA"
@@ -846,6 +856,11 @@ class MarketPriceJobRunner:
             nav_ctx.current_price_key_id = str(price_key.id)
             if getattr(price_key, "fingerprint", None):
                 nav_ctx.current_fingerprint = str(price_key.fingerprint)
+            prepare_context_for_market(
+                nav_ctx,
+                market=str(getattr(price_key, "market_country", "") or "AU"),
+                currency=str(getattr(price_key, "currency", "") or ""),
+            )
             apply_context_to_environ(nav_ctx)
 
             self._assert_market_allowed_for_worker(price_key)

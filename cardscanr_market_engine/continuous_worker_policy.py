@@ -13,6 +13,7 @@ from .owned_daily_outcomes import (
     UNACCOUNTED_SEARCH_URL_NAVIGATION,
 )
 from .owned_daily_pacing import OwnedDailyPacingController
+from .region_pricing_registry import is_region_dispatchable, region_definition
 
 
 HARD_STOP_OUTCOMES = frozenset(
@@ -26,6 +27,22 @@ HARD_STOP_OUTCOMES = frozenset(
 
 
 def classify_continuous_gate(*, market: str = "AU") -> dict[str, Any]:
+    definition = region_definition(market)
+    if not is_region_dispatchable(definition.region):
+        return {
+            "gate": {"allowed": False, "market": definition.region, "reasonCodes": ["BLOCKED_NEEDS_PROVIDER"]},
+            "probeAllowed": False,
+            "workerState": "BLOCKED",
+            "hardStop": None,
+            "availabilityState": None,
+            "activeChallenges": 0,
+            "stateIntegrityOk": True,
+            "cooldownUntil": None,
+            "nextProbeAt": None,
+            "provider": definition.provider or "NONE",
+            "blocked": True,
+            "reason": definition.reason,
+        }
     gate = evaluate_ebay_browser_work_gate(market=market, for_probe=False)
     probe = evaluate_ebay_browser_work_gate(market=market, for_probe=True)
     payload = gate.to_dict() if hasattr(gate, "to_dict") else {}

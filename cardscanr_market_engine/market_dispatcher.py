@@ -16,6 +16,7 @@ from .config import REPORTS_DIR
 from .region_pricing_registry import (
     GLOBAL_BROWSER_PRICING_CONCURRENCY,
     browser_ready_region_codes,
+    is_region_dispatchable,
 )
 from .scheduler import utc_iso, utc_now
 
@@ -173,6 +174,8 @@ def pick_fair_market(
     for market, count in due_by_market.items():
         code = str(market or "").upper()
         if code not in enabled:
+            continue
+        if not is_region_dispatchable(code):
             continue
         if int(count or 0) <= 0:
             continue

@@ -14,36 +14,51 @@ from .region_pricing_registry import CARDSCANR_REGIONS, region_definition
 def region_status_row(region: str) -> dict[str, Any]:
     definition = region_definition(region)
     gate = classify_continuous_gate(market=definition.region)
-    snap = peek_availability(market=definition.region)
+    blocked = bool(gate.get("blocked") or not definition.browser_capable)
+    snap = None if blocked else peek_availability(market=definition.region)
     budget = ContinuousSafetyBudget.from_env()
+    worker_state = str(gate.get("workerState") or "WAITING")
     status = definition.status
-    if not definition.browser_capable:
+    if blocked:
         status = "BLOCKED_NEEDS_PROVIDER"
+        worker_state = "BLOCKED"
     elif gate.get("hardStop"):
         status = "HARD_STOP"
-    elif gate.get("workerState") == "COOLDOWN":
+    elif worker_state == "COOLDOWN":
         status = "COOLDOWN"
+    elif worker_state == "PROBE_REQUIRED":
+        status = "PROBE_REQUIRED"
     elif definition.region == "AU" and owned_daily_full_enable():
         status = "CONTINUOUS"
     return {
         "region": definition.region,
-        "enabled": bool(definition.worker_enable_default and status == "CONTINUOUS"),
-        "provider": definition.provider,
+        "enabled": False if blocked else bool(definition.worker_enable_default and status == "CONTINUOUS"),
+        "provider": "NONE" if blocked else definition.provider,
         "currency": definition.currency,
-        "workerState": gate.get("workerState"),
-        "availability": snap.state,
-        "cooldownUntil": gate.get("cooldownUntil"),
-        "nextProbeAt": gate.get("nextProbeAt") or (snap.next_probe_at.isoformat() if snap.next_probe_at else None),
-        "submissions1h": budget.submissions_1h_for_market(definition.region),
-        "submissions24h": budget.submissions_24h_for_market(definition.region),
-        "transientFailures1h": budget.transients_1h(),
-        "lastSuccessAt": snap.last_healthy_at.isoformat() if snap.last_healthy_at else None,
-        "lastFailureAt": snap.last_sorry_at.isoformat() if snap.last_sorry_at else None,
-        "hardStopReason": gate.get("hardStop"),
+        "workerState": worker_state,
+        "availability": None if blocked else (snap.state if snap else None),
+        "cooldownUntil": None if blocked else gate.get("cooldownUntil"),
+        "nextProbeAt": None
+        if blocked
+        else (
+            gate.get("nextProbeAt")
+            or (snap.next_probe_at.isoformat() if snap and snap.next_probe_at else None)
+        ),
+        "submissions1h": 0 if blocked else budget.submissions_1h_for_market(definition.region),
+        "submissions24h": 0 if blocked else budget.submissions_24h_for_market(definition.region),
+        "transientFailures1h": 0 if blocked else budget.transients_1h(),
+        "lastSuccessAt": None
+        if blocked
+        else (snap.last_healthy_at.isoformat() if snap and snap.last_healthy_at else None),
+        "lastFailureAt": None
+        if blocked
+        else (snap.last_sorry_at.isoformat() if snap and snap.last_sorry_at else None),
+        "hardStopReason": None if blocked else gate.get("hardStop"),
         "status": status,
-        "browserCapable": definition.browser_capable,
+        "browserCapable": False if blocked else definition.browser_capable,
         "marketplaceHost": definition.marketplace_host,
         "reason": definition.reason,
+        "activeChallenges": 0 if blocked else gate.get("activeChallenges") or 0,
     }
 
 

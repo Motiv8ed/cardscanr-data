@@ -16,7 +16,9 @@ from .browser_lifecycle_policy import (
     RUNTIME_COLD_START,
     RUNTIME_INTER_CARD,
     PriorCardContext,
+    required_runtime_mode,
 )
+from .region_pricing_registry import region_definition
 
 NAV_CONTEXT_ENV = "CARDSCANR_NAV_CONTEXT_JSON"
 NAV_CONTEXT_PATH_ENV = "CARDSCANR_NAV_CONTEXT_JSON_PATH"
@@ -58,6 +60,9 @@ class NavigationRuntimeContext:
     current_query: str | None = None
     expected_prior: PriorCardContext | None = None
     pre_submit_only: bool = False
+    current_market: str | None = None
+    current_currency: str | None = None
+    marketplace_home: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         prior = self.expected_prior.to_dict() if self.expected_prior is not None else None
@@ -71,6 +76,9 @@ class NavigationRuntimeContext:
             "expectedPrior": prior,
             "expectedPriorTargetId": (prior or {}).get("targetId") if prior else None,
             "preSubmitOnly": self.pre_submit_only,
+            "currentMarket": self.current_market,
+            "currentCurrency": self.current_currency,
+            "marketplaceHome": self.marketplace_home,
         }
 
     def prior(self) -> PriorCardContext | None:
@@ -106,6 +114,12 @@ class NavigationRuntimeContext:
             exports["CARDSCANR_FINGERPRINT"] = str(self.current_fingerprint)
         if self.current_job_id:
             exports["CARDSCANR_JOB_ID"] = str(self.current_job_id)
+        if self.current_market:
+            exports["CARDSCANR_MARKET"] = str(self.current_market)
+        if self.current_currency:
+            exports["CARDSCANR_CURRENCY"] = str(self.current_currency)
+        if self.marketplace_home:
+            exports["CARDSCANR_MARKETPLACE_HOME"] = str(self.marketplace_home)
         if self.pre_submit_only:
             exports[PRE_SUBMIT_ONLY_ENV] = "1"
         return exports
@@ -126,6 +140,12 @@ def apply_context_to_environ(ctx: NavigationRuntimeContext) -> None:
         os.environ["CARDSCANR_FINGERPRINT"] = str(ctx.current_fingerprint)
     if ctx.current_job_id:
         os.environ["CARDSCANR_JOB_ID"] = str(ctx.current_job_id)
+    if ctx.current_market:
+        os.environ["CARDSCANR_MARKET"] = str(ctx.current_market)
+    if ctx.current_currency:
+        os.environ["CARDSCANR_CURRENCY"] = str(ctx.current_currency)
+    if ctx.marketplace_home:
+        os.environ["CARDSCANR_MARKETPLACE_HOME"] = str(ctx.marketplace_home)
     if ctx.pre_submit_only:
         os.environ[PRE_SUBMIT_ONLY_ENV] = "1"
     else:
@@ -210,7 +230,35 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
         current_query=str(data.get("currentQuery") or "").strip() or None,
         expected_prior=PriorCardContext.from_dict(prior_dict if isinstance(prior_dict, dict) else None),
         pre_submit_only=pre_submit,
+        current_market=str(data.get("currentMarket") or os.environ.get("CARDSCANR_MARKET") or "").strip()
+        or None,
+        current_currency=str(data.get("currentCurrency") or os.environ.get("CARDSCANR_CURRENCY") or "").strip()
+        or None,
+        marketplace_home=str(
+            data.get("marketplaceHome") or os.environ.get("CARDSCANR_MARKETPLACE_HOME") or ""
+        ).strip()
+        or None,
     )
+
+
+def prepare_context_for_market(
+    ctx: NavigationRuntimeContext,
+    *,
+    market: str,
+    currency: str | None = None,
+    homepage: str | None = None,
+) -> NavigationRuntimeContext:
+    """Force COLD_START when the prior card belongs to a different marketplace."""
+    code = str(market or "").strip().upper()
+    definition = region_definition(code)
+    ctx.current_market = code or None
+    ctx.current_currency = str(currency or definition.currency or "").upper() or None
+    ctx.marketplace_home = homepage or definition.homepage or None
+    mode = required_runtime_mode(next_market=code, prior=ctx.expected_prior)
+    ctx.runtime_mode = mode
+    if mode == RUNTIME_COLD_START:
+        ctx.expected_prior = None
+    return ctx
 
 
 def pre_submit_only_requested(*, flag: bool = False) -> bool:

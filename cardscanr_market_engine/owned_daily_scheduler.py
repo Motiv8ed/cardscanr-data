@@ -21,6 +21,7 @@ from .ebay_availability import (
 )
 from .market_dispatcher import load_dispatcher_state, pick_fair_market, save_dispatcher_state
 from .owned_daily_pacing import OwnedDailyPacingConfig
+from .region_pricing_registry import is_region_dispatchable
 from .queue_capacity import QueueWatermarks, enqueue_budget
 from .scheduler import (
     SchedulerDecision,
@@ -176,6 +177,15 @@ class OwnedPrintingRefreshScheduler:
                 should_enqueue=False,
                 priority=None,
                 reason="market_not_allowed",
+                score=0,
+                details=details,
+            )
+
+        if market and not is_region_dispatchable(market):
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason="BLOCKED_NEEDS_PROVIDER",
                 score=0,
                 details=details,
             )

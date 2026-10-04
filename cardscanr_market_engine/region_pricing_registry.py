@@ -129,9 +129,9 @@ def region_definition(region: str) -> RegionPricingDefinition:
             browser_capable=False,
             status="BLOCKED_NEEDS_PROVIDER",
             reason=(
-                "NO_NATIVE_SOLD_ROUTE: CardScanR does not have a legitimate JP eBay "
-                "sold browser path. JP fallback policy uses foreign estimates, not "
-                "verified-local JP evidence."
+                "BLOCKED_NEEDS_PROVIDER: a verified-local JP provider has not been "
+                "selected. CardScanR has no native JP sold browser route; foreign "
+                "eBay estimates are not JP verified-local."
             ),
             notes=(
                 "Do not invent ebay.co.jp sold support.",
@@ -157,8 +157,8 @@ def region_definition(region: str) -> RegionPricingDefinition:
             browser_capable=False,
             status="BLOCKED_NEEDS_PROVIDER",
             reason=(
-                "EU is a display-only CardScanR region. No ebay.eu host exists. "
-                "Canonical EUR eBay sites are country markets DE/FR/IT/ES, not EU."
+                "BLOCKED_NEEDS_PROVIDER: EU is display-only. No ebay.eu host exists "
+                "and DE/FR/IT/ES are not silently treated as canonical EU."
             ),
             notes=(
                 "Do not treat DE/FR/IT/ES as EU verified-local without an owner "
@@ -229,6 +229,14 @@ def browser_ready_region_codes() -> tuple[str, ...]:
         for code in CARDSCANR_REGIONS
         if region_definition(code).browser_capable and region_definition(code).sold_capability
     )
+
+
+def is_region_dispatchable(region: str) -> bool:
+    """True only for browser-capable sold markets with a real provider."""
+    definition = region_definition(region)
+    if definition.provider in {"", "NONE"}:
+        return False
+    return bool(definition.browser_capable and definition.sold_capability and definition.production_ready)
 
 
 def approved_sold_labels_for_market(market: str) -> frozenset[str]:
