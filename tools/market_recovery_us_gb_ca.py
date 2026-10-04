@@ -98,13 +98,20 @@ def bind_env(market: str, *, mode: str) -> dict[str, str]:
     return values
 
 
+def cold_start_browser() -> dict[str, Any]:
+    """Restart Chrome to about:blank when leftover eBay tabs would break COLD_START."""
+    from tools.ebay_au_final_five_sequential_production_proof import cold_start_normalise
+
+    return cold_start_normalise()
+
+
 def local_ready(*, market: str, cold: bool = True) -> dict[str, Any]:
     xvfb = ensure_xvfb()
+    cold_norm = cold_start_browser() if cold else {"ok": True, "resetMethod": "skipped_inter_card"}
     runtime = probe_pre_live_runtime(runtime_mode="COLD_START" if cold else "INTER_CARD")
-    # COLD_START may reject leftover ebay targets — that is ok to clear later via
-    # ensure_chrome; here we require Xvfb + CDP + keyboard readiness.
     ready = bool(
         xvfb.get("ok")
+        and cold_norm.get("ok")
         and runtime.get("xvfbReady")
         and runtime.get("cdpReady")
         and runtime.get("keyboardInjectionReady") is not False
@@ -113,6 +120,11 @@ def local_ready(*, market: str, cold: bool = True) -> dict[str, Any]:
         "ok": ready,
         "market": market,
         "xvfb": xvfb,
+        "coldStart": {
+            "ok": cold_norm.get("ok"),
+            "resetMethod": cold_norm.get("resetMethod"),
+            "ebayTargetsAfter": cold_norm.get("ebayTargetsAfter"),
+        },
         "runtime": {
             k: runtime.get(k)
             for k in (
