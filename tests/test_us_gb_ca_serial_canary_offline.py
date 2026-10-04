@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from cardscanr_market_engine.browser_lifecycle_policy import (
     RUNTIME_COLD_START,
@@ -112,6 +113,21 @@ class BlockedRegionAndMarketSwitchTests(unittest.TestCase):
 
     def test_cardscanr_regions_include_blocked(self) -> None:
         self.assertEqual(CARDSCANR_REGIONS, ("AU", "US", "GB", "CA", "JP", "EU"))
+
+    def test_owned_daily_sql_fans_out_browser_markets_not_jp_eu(self) -> None:
+        sql = (
+            Path(__file__).resolve().parents[1]
+            / "supabase"
+            / "migrations"
+            / "20261005080000_owned_daily_browser_market_fanout.sql"
+        ).read_text(encoding="utf-8")
+        self.assertIn("('us', 'usd')", sql)
+        self.assertIn("('gb', 'gbp')", sql)
+        self.assertIn("('ca', 'cad')", sql)
+        self.assertIn("('au', 'aud')", sql)
+        self.assertNotIn("('jp'", sql.lower())
+        self.assertNotIn("('eu'", sql.lower())
+        self.assertIn("browser_ready_market_fanout", sql)
 
 
 if __name__ == "__main__":
