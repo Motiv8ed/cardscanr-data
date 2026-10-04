@@ -421,20 +421,39 @@ def stop_verdict(v: str) -> bool:
 
 
 def wait_for_marketplace_healthy(*, deadline: float, poll_seconds: int = 30) -> dict[str, Any]:
-    """Idle/read-only until control plane is naturally HEALTHY (no manual cooldown clear)."""
+    """Idle/read-only until control plane is naturally HEALTHY (no manual cooldown clear).
+
+    When nextProbeAt elapses, persist COOLDOWN→PROBE_REQUIRED (natural transition) and
+    return needsProbe=true so the caller may run the single authorized recovery probe.
+    """
+    from cardscanr_market_engine.ebay_availability import get_availability
+
     started = _utc()
     while time.time() < deadline:
+        # Persist natural COOLDOWN→PROBE_REQUIRED when nextProbeAt elapses.
+        snap = get_availability(persist_transitions=True)
         gate = gate_dict(evaluate_ebay_browser_work_gate(market="AU", for_probe=False))
-        if gate.get("allowed") and str(gate.get("availabilityState") or "").upper() == "HEALTHY":
-            return {"ok": True, "startedAtUtc": started, "readyAtUtc": _utc(), "gate": gate}
+        state = str(gate.get("availabilityState") or snap.state or "").upper()
+        if gate.get("allowed") and state == "HEALTHY":
+            return {"ok": True, "startedAtUtc": started, "readyAtUtc": _utc(), "gate": gate, "needsProbe": False}
         if int(gate.get("activeChallengeCount") or 0) > 0 or not gate.get("stateIntegrityOk", True):
             return {"ok": False, "hardStop": True, "startedAtUtc": started, "gate": gate}
+        if state == "PROBE_REQUIRED":
+            return {
+                "ok": True,
+                "needsProbe": True,
+                "startedAtUtc": started,
+                "readyAtUtc": _utc(),
+                "gate": gate,
+                "availability": snap.to_dict(),
+            }
         print(
             json.dumps(
                 {
                     "COOLDOWN_WAIT": {
-                        "availabilityState": gate.get("availabilityState"),
+                        "availabilityState": state,
                         "reasonCodes": gate.get("reasonCodes"),
+                        "nextProbeAt": (snap.to_dict() or {}).get("nextProbeAt"),
                         "at": _utc(),
                     }
                 },
@@ -443,7 +462,12 @@ def wait_for_marketplace_healthy(*, deadline: float, poll_seconds: int = 30) -> 
             flush=True,
         )
         time.sleep(max(5, int(poll_seconds)))
-    return {"ok": False, "timeout": True, "startedAtUtc": started, "gate": gate_dict(evaluate_ebay_browser_work_gate(market="AU", for_probe=False))}
+    return {
+        "ok": False,
+        "timeout": True,
+        "startedAtUtc": started,
+        "gate": gate_dict(evaluate_ebay_browser_work_gate(market="AU", for_probe=False)),
+    }
 
 
 def write_report(run: dict[str, Any]) -> Path:
@@ -693,6 +717,9 @@ def main() -> int:
             return 1
         gate0 = wait0.get("gate") or gate_dict(evaluate_ebay_browser_work_gate(market="AU", for_probe=False))
         _write(OUT / "bootstrap" / "marketplace_gate.json", gate0)
+        needs_recovery_probe = bool(wait0.get("needsProbe"))
+    else:
+        needs_recovery_probe = False
 
     baseline = capture_attempt_event_baseline()
     _write(OUT / "bootstrap" / "attempt_baseline.json", baseline)
@@ -714,6 +741,7 @@ def main() -> int:
             "OWNED_DAILY_FULL_ENABLE": False,
             "OWNED_DAILY_MAX_ENQUEUE": 1,
             "OWNED_DAILY_ALLOWED_MARKETS": "AU",
+            "EBAY_BROWSER_NAV_MODE": "linux_x11",
             "REAL_OWNED_DAILY_LOOP_USED": True,
             "FORCED_JOB_HARNESS_USED_AS_EXECUTION_LOOP": False,
         },
@@ -728,6 +756,73 @@ def main() -> int:
     )
     runner._ebay_probe_mode = False  # noqa: SLF001
     pacing = OwnedDailyPacingController(OwnedDailyPacingConfig.from_env())
+
+    # Natural recovery: one authorized probe when PROBE_REQUIRED after cooldown expiry.
+    if needs_recovery_probe:
+        print(json.dumps({"RECOVERY_PROBE": "begin_authorized_probe_slot"}, indent=2), flush=True)
+        runner._ebay_probe_mode = True  # noqa: SLF001
+        os.environ["OWNED_DAILY_MAX_ENQUEUE"] = "1"
+        probe_report = run_owned_daily_scheduler_cycle(scheduler)
+        _write(OUT / "bootstrap" / "recovery_probe_scheduler.json", {
+            "summary": probe_report.get("summary"),
+            "enqueuedJobs": [
+                {"job_id": ej.get("job_id"), "fingerprint": ej.get("fingerprint"), "reason": ej.get("reason")}
+                for ej in (probe_report.get("enqueuedJobs") or [])
+            ],
+        })
+        enq = list(probe_report.get("enqueuedJobs") or [])
+        probe_job = None
+        for ej in enq:
+            jid = str(ej.get("job_id") or "").strip()
+            if jid and hasattr(client, "claim_specific_refresh_job"):
+                probe_job = client.claim_specific_refresh_job(job_id=jid, worker_id=WORKER_ID + "-probe")
+                if probe_job is not None:
+                    break
+        if probe_job is None:
+            claimed = client.claim_jobs(worker_id=WORKER_ID + "-probe", max_jobs=1)
+            probe_job = claimed[0] if claimed else None
+        if probe_job is None:
+            owned_daily_shutdown("recovery_probe_no_job")
+            print("STOP: recovery probe could not claim job", flush=True)
+            return 2
+        attempt_id = new_attempt_id()
+        apply_context_to_environ(
+            NavigationRuntimeContext(
+                runtime_mode=RUNTIME_COLD_START,
+                current_job_id=str(probe_job.id),
+                current_attempt_id=attempt_id,
+                current_price_key_id=str(probe_job.price_key_id),
+                pre_submit_only=False,
+            )
+        )
+        os.environ["CARDSCANR_LIVE_ATTEMPT_ID"] = attempt_id
+        try:
+            probe_result = runner.run_job(probe_job)
+        except Exception as exc:  # noqa: BLE001
+            probe_result = {"status": "failed", "error": str(exc)[:400]}
+        runner._ebay_probe_mode = False  # noqa: SLF001
+        _write(OUT / "bootstrap" / "recovery_probe_result.json", {
+            "jobId": probe_job.id,
+            "attemptId": attempt_id,
+            "status": probe_result.get("status"),
+            "ownedDailyOutcome": probe_result.get("ownedDailyOutcome"),
+            "error": probe_result.get("error"),
+            "searchSubmissionStarted": has_search_submission_started(attempt_id),
+        })
+        gate_after = gate_dict(evaluate_ebay_browser_work_gate(market="AU", for_probe=False))
+        _write(OUT / "bootstrap" / "marketplace_gate_after_probe.json", gate_after)
+        if not (gate_after.get("allowed") and str(gate_after.get("availabilityState") or "").upper() == "HEALTHY"):
+            # Probe may itself hit pre-submit SORRY → another cooldown episode.
+            if int(gate_after.get("activeChallengeCount") or 0) > 0:
+                owned_daily_shutdown("recovery_probe_hard_challenge")
+                return 2
+            wait1 = wait_for_marketplace_healthy(deadline=deadline, poll_seconds=60)
+            _write(OUT / "bootstrap" / "marketplace_gate_wait_after_probe.json", wait1)
+            if not wait1.get("ok") or wait1.get("needsProbe"):
+                owned_daily_shutdown("recovery_probe_did_not_restore_healthy")
+                print("STOP: recovery probe did not restore HEALTHY", flush=True)
+                return 1
+        print(json.dumps({"RECOVERY_PROBE": "complete", "gate": gate_after}, indent=2), flush=True)
 
     cards: list[dict[str, Any]] = []
     cycle_logs: list[dict[str, Any]] = []
