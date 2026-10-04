@@ -330,7 +330,10 @@ def run_worker_loop(
                 )
                 if outcome in HARD_STOP_OUTCOMES:
                     break
-                if outcome == TEMPORARY_EBAY_SERVER_FAILURE or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES:
+                if continuous and (
+                    outcome == TEMPORARY_EBAY_SERVER_FAILURE
+                    or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES
+                ):
                     last_transient = utc_iso()
                     stop_reason = budget.record_transient()
                     budget.persist()
@@ -352,7 +355,8 @@ def run_worker_loop(
                             return 2
                         break
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
-                    budget.record_healthy()
+                    if continuous:
+                        budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
                     consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"

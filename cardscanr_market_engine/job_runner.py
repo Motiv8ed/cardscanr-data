@@ -37,6 +37,7 @@ from .navigation_runtime_context import (
     prepare_context_for_market,
 )
 from .scheduler import parse_market_allowlist
+from .x11_chrome_focus import is_local_runtime_failure_message
 from .marketplace_ops_state import (
     get_active_cooldown,
     maybe_record_failure_cooldown,

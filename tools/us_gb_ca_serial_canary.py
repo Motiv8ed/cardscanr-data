@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.continuous_worker_policy import classify_continuous_gate
 from cardscanr_market_engine.ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+from cardscanr_market_engine.local_browser_runtime import ensure_xvfb
 from cardscanr_market_engine.owned_daily_enablement import owned_daily_full_enable
 from cardscanr_market_engine.region_pricing_registry import region_definition
 from cardscanr_market_engine.region_pricing_status import multi_region_status
@@ -65,6 +66,7 @@ def bind_browser_env(market: str) -> dict[str, str]:
 def precheck(market: str) -> dict:
     definition = region_definition(market)
     gate = evaluate_ebay_browser_work_gate(market=market, for_probe=False)
+    xvfb = ensure_xvfb()
     return {
         "market": market,
         "currency": definition.currency,
@@ -83,12 +85,15 @@ def precheck(market: str) -> dict:
         "activeChallenges": gate.active_challenge_count,
         "jpBlocked": classify_continuous_gate(market="JP")["workerState"] == "BLOCKED",
         "euBlocked": classify_continuous_gate(market="EU")["workerState"] == "BLOCKED",
+        "xvfbReady": bool(xvfb.get("ok")),
+        "xvfbReason": xvfb.get("reason"),
         "status": multi_region_status(),
         "ok": bool(
             definition.browser_capable
             and definition.currency == CURRENCY[market]
             and gate.active_challenge_count == 0
             and gate.state_integrity_ok
+            and bool(xvfb.get("ok"))
             and os.getenv("PRE_SUBMIT_ONLY") not in {"1", "true"}
         ),
     }

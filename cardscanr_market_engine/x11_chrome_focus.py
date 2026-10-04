@@ -417,7 +417,11 @@ def is_local_runtime_failure_message(message: str | None) -> bool:
         "desktop sold navigation failed: command 'xdotool",
         "pre_submit_gui",
         "keyboard_injection",
-        "keyboardinjection",
+        "linux_chrome_cdp_failed",
+        "display :99 not ready",
+        "cdp_fail",
+        "xvfb",
+        "x11_nav_python_missing",
     )
     return any(m in text for m in markers)
 

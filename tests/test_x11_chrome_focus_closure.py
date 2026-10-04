@@ -36,7 +36,12 @@ class LocalRuntimeFailureMessageTests(unittest.TestCase):
         )
         self.assertTrue(is_local_runtime_failure_message(msg))
 
-    def test_marketplace_error_not_local(self) -> None:
+    def test_chrome_cdp_display_failure_is_local(self) -> None:
+        self.assertTrue(
+            is_local_runtime_failure_message(
+                "linux_chrome_cdp_failed: mode=COLD_START stdout='CDP_FAIL' stderr='ERROR: DISPLAY :99 not ready'"
+            )
+        )
         self.assertFalse(is_local_runtime_failure_message("no_reliable_price: sparse comps"))
 
 
