@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Local eBay-like filter rail fixture</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #chrome-toolbar { height: 80px; background: #f1f1f1; border-bottom: 1px solid #ccc; padding: 8px; }
+    #rail { position: absolute; left: 0; top: 80px; width: 280px; padding: 12px; }
+    .filter { display: block; margin: 8px 0; padding: 6px 8px; border: 1px solid #ddd; cursor: pointer; }
+    #findbar { display: none; position: absolute; right: 20px; top: 90px; background: #fff8c6; border: 1px solid #ccc; padding: 6px; }
+    #status { margin-left: 300px; margin-top: 100px; }
+  </style>
+</head>
+<body>
+  <div id="chrome-toolbar">Local fixture — no network</div>
+  <div id="findbar">Find: Sold items</div>
+  <aside id="rail">
+    <div class="filter" data-param="" id="loc_header">Item location</div>
+    <a class="filter" id="australia_only" href="?LH_PrefLoc=2" data-param="LH_PrefLoc=2">Australia Only</a>
+    <a class="filter" id="worldwide" href="?LH_PrefLoc=1" data-param="LH_PrefLoc=1">Worldwide</a>
+    <label class="filter" id="completed_items" data-param="LH_Complete=1"><input type="checkbox" /> Completed items</label>
+    <label class="filter" id="sold_items" data-param="LH_Sold=1"><input type="checkbox" /> Sold items</label>
+    <label class="filter" id="free_postage" data-param="LH_FS=1"><input type="checkbox" /> Free postage</label>
+    <span id="hidden_sold_dup" style="display:none" aria-hidden="true">Sold items</span>
+  </aside>
+  <div id="status">Ready</div>
+  <script>
+    // Local-only URL mutation for fixture clicks (no network).
+    document.querySelectorAll('[data-param]').forEach((el) => {
+      el.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const p = el.getAttribute('data-param') || '';
+        const u = new URL(location.href);
+        if (p) {
+          const [k, v] = p.split('=');
+          u.searchParams.set(k, v || '1');
+        }
+        history.replaceState({}, '', u.toString());
+        document.getElementById('status').textContent = 'URL=' + u.toString();
+      });
+    });
+  </script>
+</body>
+</html>

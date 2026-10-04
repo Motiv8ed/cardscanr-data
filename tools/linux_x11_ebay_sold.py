@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""X11 Sold activation: Ctrl+F locate → clear modifiers → left-rail click → pending wait."""
+"""X11 Sold activation: exact DOM/accessibility identity → single X11 click → verify.
+
+Ctrl+F / orange-pixel highlights are diagnostic-only and never authoritative for click targeting.
+"""
 from __future__ import annotations
 
 import argparse
@@ -10,6 +13,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
@@ -45,6 +49,18 @@ from cardscanr_market_engine.providers.linux_x11_gui_fsm import (  # noqa: E402
     page_is_about_blank,
     sold_click_coords_valid,
 )
+from cardscanr_market_engine.providers.sold_control_cdp_locate import (  # noqa: E402
+    fetch_sold_control_candidates_via_cdp,
+)
+from cardscanr_market_engine.providers.sold_control_identity import (  # noqa: E402
+    PIXEL_HIGHLIGHT_AUTHORITATIVE,
+    SOLD_CONTROL_AMBIGUOUS,
+    SOLD_CONTROL_IDENTITY_NOT_PROVEN,
+    SoldControlIdentity,
+    build_click_target_diagnostics,
+    content_origin_from_viewport_metrics,
+    prove_sold_control_identity,
+)
 from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: E402
     DEFAULT_SOLD_TIMEOUT_POLICY,
     PHASE_SOLD_CONTROL_DISCOVERY,
@@ -60,7 +76,12 @@ from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: 
 
 
 def find_orange_highlight_left_rail(im: Image.Image, g: dict) -> tuple[int, int, int] | None:
-    """Only accept Ctrl+F orange highlights inside the left filter rail."""
+    """LEGACY diagnostic helper only — NOT authoritative for production clicks.
+
+    Evidence before click from this path is only: orange Ctrl+F highlight inside left rail.
+    That does NOT uniquely identify the Sold-items control (Meowth → LH_PrefLoc=2).
+    """
+    assert PIXEL_HIGHLIGHT_AUTHORITATIVE is False
     hits = []
     x_min = max(LEFT_RAIL_X_MIN, g["x"] + 5)
     x_max = min(LEFT_RAIL_X_MAX, g["x"] + 300)
@@ -85,6 +106,36 @@ def find_orange_highlight_left_rail(im: Image.Image, g: dict) -> tuple[int, int,
     if not sold_click_coords_valid(cx, cy, win_y=g["y"]):
         return None
     return cx, cy, len(best)
+
+
+def locate_sold_control_identity(
+    *,
+    chrome_window: dict[str, Any],
+    url_before: str | None,
+    candidate_provider: Any | None = None,
+) -> SoldControlIdentity:
+    """Current-page positive identity. Rediscovered every call (no stale coords)."""
+    if candidate_provider is not None:
+        blob = candidate_provider()
+    else:
+        blob = fetch_sold_control_candidates_via_cdp()
+    viewport = dict(blob.get("viewport") or {})
+    ox, oy, dpr = content_origin_from_viewport_metrics(viewport)
+    return prove_sold_control_identity(
+        list(blob.get("candidates") or []),
+        viewport=viewport,
+        window_x=int(chrome_window.get("x") or 0),
+        window_y=int(chrome_window.get("y") or 0),
+        content_origin_x=ox,
+        content_origin_y=oy,
+        device_scale_factor=dpr,
+        page_url=str(blob.get("url") or url_before or ""),
+        runtime_mode=os.environ.get("CARDSCANR_RUNTIME_MODE"),
+        attempt_id=os.environ.get("CARDSCANR_ATTEMPT_ID"),
+        job_id=os.environ.get("CARDSCANR_JOB_ID"),
+        price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+        target_id=str(blob.get("targetId") or "") or None,
+    )
 
 
 def close_about_blank_tab() -> None:
@@ -299,42 +350,82 @@ def gui_sold(*, tag: str) -> dict:
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
 
+    # Ensure find bar closed so it cannot intercept clicks / obscure labels.
     clear_modifiers()
     sh("xdotool key --clearmodifiers Escape")
-    time.sleep(0.1)
-    mark("ctrl_f")
-    sh("xdotool key --clearmodifiers ctrl+f")
-    time.sleep(0.25)
-    Path("/tmp/find_sold.txt").write_text("Sold items", encoding="utf-8")
-    subprocess.check_call(["bash", "-lc", "xclip -selection clipboard < /tmp/find_sold.txt"])
-    sh("xdotool key --clearmodifiers ctrl+v")
-    time.sleep(0.35)
+    time.sleep(0.12)
     clear_modifiers()
-    im = shot(ART / f"linux_sold_{tag}_find.png")
-    g = chrome_geom()
-    hl = find_orange_highlight_left_rail(im, g)
-    if not hl or hl[2] < 4:
-        for n in range(4):
-            sh("xdotool key --clearmodifiers Return")
-            time.sleep(0.28)
-            clear_modifiers()
-            im = shot(ART / f"linux_sold_{tag}_find{n}.png")
-            hl = find_orange_highlight_left_rail(im, g)
-            if hl and hl[2] >= 4:
-                break
-    if not hl:
+
+    # Active challenge title check before locate/click.
+    t_now = title().lower()
+    if "captcha" in t_now or "security measure" in t_now or "verify yourself" in t_now:
+        gate = on_sold_terminal(gate, challenge=True)
         out = {
             "ok": False,
-            "error": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+            "error": "EBAY_CHALLENGE",
             "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
-            "failureClass": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+            "failureClass": "EBAY_CHALLENGE",
+            "soldClickSuccess": False,
+            "soldControlIdentityProven": False,
+            "SOLD_STATE_VERIFIED": False,
+            "url": omnibox_url(),
+            "title": title(),
+            "timeline": timeline,
+            "physicalClickCount": 0,
+        }
+        (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+        return out
+
+    g = chrome_geom()
+    # Optional Ctrl+F diagnostic screenshot only — NEVER used for click coordinates.
+    try:
+        sh("xdotool key --clearmodifiers ctrl+f")
+        time.sleep(0.15)
+        Path("/tmp/find_sold.txt").write_text("Sold items", encoding="utf-8")
+        subprocess.check_call(["bash", "-lc", "xclip -selection clipboard < /tmp/find_sold.txt"])
+        sh("xdotool key --clearmodifiers ctrl+v")
+        time.sleep(0.2)
+        shot(ART / f"linux_sold_{tag}_find_diagnostic.png")
+        mark("ctrl_f_diagnostic_only", authoritative=False)
+    except Exception as diag_exc:
+        mark("ctrl_f_diagnostic_failed", error=str(diag_exc)[:200])
+    finally:
+        try:
+            sh("xdotool key --clearmodifiers Escape")
+            time.sleep(0.12)
+            clear_modifiers()
+        except Exception:
+            pass
+
+    # Authoritative identity: read-only CDP/DOM exact label + bounding box (current page).
+    identity = locate_sold_control_identity(chrome_window=g, url_before=url0)
+    mark(
+        "sold_identity",
+        proven=identity.proven,
+        reason=identity.reason_code,
+        click=identity.click_point_x11,
+        label=(identity.candidate.label if identity.candidate else None),
+    )
+    stage_marks = {"T7_sold_control_located": time.time()}
+    if not identity.proven or not identity.click_point_x11:
+        reason = identity.reason_code or SOLD_CONTROL_IDENTITY_NOT_PROVEN
+        out = {
+            "ok": False,
+            "error": reason,
+            "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
+            "failureClass": reason,
             "soldClickSuccess": False,
             "soldControlDiscovered": False,
+            "soldControlIdentityProven": False,
             "SOLD_STATE_VERIFIED": False,
             "url": omnibox_url(),
             "title": title(),
             "timeline": timeline,
             "soldTimeoutPolicy": DEFAULT_SOLD_TIMEOUT_POLICY.to_dict(),
+            "identity": identity.to_dict(),
+            "pixelHighlightAuthoritative": False,
+            "physicalClickCount": 0,
+            "locateAid": "cdp_exact_sold_items_label",
         }
         out["failureEvidence"] = build_sold_failure_evidence(
             runtime_mode=os.environ.get("CARDSCANR_RUNTIME_MODE"),
@@ -351,47 +442,55 @@ def gui_sold(*, tag: str) -> dict:
                 "soldControlDiscovered": False,
                 "soldClickAttempted": False,
                 "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
-                "failureClass": TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+                "failureClass": reason,
                 "lhSoldBefore": url_has_lh_sold(url0),
                 "lhSoldAfter": False,
                 "x11SoldStateVerified": False,
                 "phases": [],
             },
-            error_message=TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
+            error_message=reason,
         )
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
 
-    cx, cy, n = hl
-    mark("sold_located", xy=[cx, cy], hits=n)
-    stage_marks = {"T7_sold_control_located": time.time()}
+    cx, cy = identity.click_point_x11
     if not sold_click_coords_valid(cx, cy, win_y=g["y"]):
         out = {
             "ok": False,
-            "error": "sold_click_outside_left_rail",
+            "error": SOLD_CONTROL_IDENTITY_NOT_PROVEN,
             "failureStage": PHASE_SOLD_CONTROL_DISCOVERY,
+            "failureClass": "sold_click_outside_left_rail_after_identity",
             "click": [cx, cy],
+            "soldControlIdentityProven": False,
             "SOLD_STATE_VERIFIED": False,
             "timeline": timeline,
+            "identity": identity.to_dict(),
             "guiAttemptTimings": {"marks": stage_marks},
+            "physicalClickCount": 0,
         }
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
 
-    # Close find bar, CLEAR MODIFIERS (prevents Ctrl+Click → new about:blank tab)
-    sh("xdotool key --clearmodifiers Escape")
-    time.sleep(0.18)
     clear_modifiers()
-    time.sleep(0.08)
-    mark("modifiers_cleared_pre_click")
+    time.sleep(0.05)
+    mark(
+        "pre_click_identity",
+        soldControlIdentityProven=True,
+        label=identity.candidate.label if identity.candidate else None,
+        role=identity.candidate.role if identity.candidate else None,
+        boundingRect=identity.candidate.bounding_rect if identity.candidate else None,
+        chosenClickPoint=[cx, cy],
+        pageUrl=url0,
+        targetId=(identity.diagnostics or {}).get("targetId"),
+    )
     gate.phase = SoldPhase.SOLD_LOCATED
     gate.phase = SoldPhase.SOLD_CONTROL_AVAILABLE
 
-    # Physical click on visible Sold items — never Ctrl+Click
+    # ONE physical X11 click only — never CDP/JS activate, never retry nearby coords.
     clear_modifiers()
     sh(f"xdotool mousemove {cx} {cy}")
     sh("xdotool click --clearmodifiers 1")
-    mark("sold_clicked", xy=[cx, cy])
+    mark("sold_clicked", xy=[cx, cy], physicalClickCount=1)
     stage_marks["T8_sold_activated"] = time.time()
     gate = on_sold_clicked(gate)
 
@@ -418,10 +517,14 @@ def gui_sold(*, tag: str) -> dict:
         diagnostic_shot = str(shot(ART / f"linux_sold_{tag}_after.png"))
     except Exception as shot_exc:
         diagnostic_shot = f"DIAGNOSTIC_SHOT_FAILED:{type(shot_exc).__name__}"
+    click_diag = build_click_target_diagnostics(
+        identity, pre_click_url=url0, post_click_url=str(pending.get("url") or "")
+    )
     out = {
         "ok": bool(pending["verified"]),
         "soldClickSuccess": True,
         "soldControlDiscovered": True,
+        "soldControlIdentityProven": True,
         "SOLD_STATE_VERIFIED": bool(pending["verified"]),
         "click": [cx, cy],
         "url": pending.get("url"),
@@ -436,8 +539,12 @@ def gui_sold(*, tag: str) -> dict:
         "lhSoldBefore": pending.get("lhSoldBefore"),
         "lhSoldAfter": pending.get("lhSoldAfter"),
         "x11SoldStateVerified": bool(pending.get("x11SoldStateVerified")),
-        "activation": "x11_mouse_click_on_visible_sold_items",
-        "locateAid": "ctrl+f_sold_items_left_rail_only",
+        "activation": "x11_mouse_click_on_identity_proven_sold_items",
+        "locateAid": "cdp_exact_sold_items_label",
+        "pixelHighlightAuthoritative": False,
+        "physicalClickCount": 1,
+        "identity": identity.to_dict(),
+        "clickTargetDiagnostics": click_diag,
         "phase": gate.phase.value,
         "failureStage": pending.get("failureStage"),
         "failureClass": None if pending.get("verified") else pending.get("terminal"),

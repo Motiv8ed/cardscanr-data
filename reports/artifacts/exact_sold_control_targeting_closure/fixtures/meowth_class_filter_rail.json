@@ -1,0 +1,116 @@
+{
+  "name": "meowth_class_location_above_sold",
+  "baseUrl": "http://127.0.0.1/local/sch?_nkw=Meowth+56+jungle+Pokemon",
+  "viewport": {
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "outerWidth": 1280,
+    "outerHeight": 880,
+    "contentOriginX": 0,
+    "contentOriginY": 80,
+    "devicePixelRatio": 1,
+    "scrollX": 0,
+    "scrollY": 0
+  },
+  "window": { "x": 0, "y": 0, "w": 1280, "h": 880 },
+  "oldPixelHighlights": [
+    [110, 300],
+    [112, 302],
+    [114, 304],
+    [114, 307],
+    [116, 308]
+  ],
+  "note": "X11 orange-cluster y≈307 with contentOriginY=80 → viewport y≈227 on Australia Only. Sold items lower (y≈360). Matches Meowth historical click [114,307] → LH_PrefLoc=2 class.",
+  "elements": [
+    {
+      "id": "loc_header",
+      "tag": "div",
+      "role": "",
+      "label": "Item location",
+      "localParam": "",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 40, "y": 190, "width": 200, "height": 20, "top": 190, "left": 40, "right": 240, "bottom": 210 }
+    },
+    {
+      "id": "australia_only",
+      "tag": "a",
+      "role": "link",
+      "label": "Australia Only",
+      "localParam": "LH_PrefLoc=2",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 214, "width": 180, "height": 28, "top": 214, "left": 48, "right": 228, "bottom": 242 }
+    },
+    {
+      "id": "worldwide",
+      "tag": "a",
+      "role": "link",
+      "label": "Worldwide",
+      "localParam": "LH_PrefLoc=1",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 250, "width": 180, "height": 28, "top": 250, "left": 48, "right": 228, "bottom": 278 }
+    },
+    {
+      "id": "completed_items",
+      "tag": "label",
+      "role": "checkbox",
+      "label": "Completed items",
+      "localParam": "LH_Complete=1",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 320, "width": 180, "height": 28, "top": 320, "left": 48, "right": 228, "bottom": 348 }
+    },
+    {
+      "id": "sold_items",
+      "tag": "label",
+      "role": "checkbox",
+      "label": "Sold items",
+      "localParam": "LH_Sold=1",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 360, "width": 180, "height": 28, "top": 360, "left": 48, "right": 228, "bottom": 388 },
+      "viewportIntersection": { "intersects": true, "area": 5040 }
+    },
+    {
+      "id": "free_postage",
+      "tag": "label",
+      "role": "checkbox",
+      "label": "Free postage",
+      "localParam": "LH_FS=1",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 400, "width": 180, "height": 28, "top": 400, "left": 48, "right": 228, "bottom": 428 }
+    },
+    {
+      "id": "hidden_sold_dup",
+      "tag": "span",
+      "role": "",
+      "label": "Sold items",
+      "localParam": "",
+      "visible": false,
+      "hidden": true,
+      "enabled": true,
+      "inFilterRegion": true,
+      "boundingRect": { "x": 48, "y": 900, "width": 180, "height": 28, "top": 900, "left": 48, "right": 228, "bottom": 928 }
+    },
+    {
+      "id": "sponsored_items_sold_text",
+      "tag": "span",
+      "role": "",
+      "label": "104K items sold",
+      "localParam": "",
+      "visible": true,
+      "enabled": true,
+      "inFilterRegion": false,
+      "boundingRect": { "x": 400, "y": 200, "width": 120, "height": 20, "top": 200, "left": 400, "right": 520, "bottom": 220 }
+    }
+  ]
+}
