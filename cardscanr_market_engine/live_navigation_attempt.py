@@ -71,6 +71,9 @@ class SearchSubmissionEvent:
     pid: int
     price_key_id: str | None
     path: str
+    market: str | None = None
+    currency: str | None = None
+    fingerprint: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,6 +85,9 @@ class SearchSubmissionEvent:
             "pid": self.pid,
             "priceKeyId": self.price_key_id,
             "path": self.path,
+            "market": self.market,
+            "currency": self.currency,
+            "fingerprint": self.fingerprint,
         }
 
 
@@ -161,6 +167,9 @@ def emit_search_submission_started(
     query: str,
     price_key_id: str | None = None,
     include_query_text: bool = True,
+    market: str | None = None,
+    currency: str | None = None,
+    fingerprint: str | None = None,
 ) -> SearchSubmissionEvent:
     """Atomically record SEARCH_SUBMISSION_STARTED for attempt_id (once).
 
@@ -181,6 +190,9 @@ def emit_search_submission_started(
             pid=int(existing.get("pid") or os.getpid()),
             price_key_id=existing.get("priceKeyId"),
             path=str(path),
+            market=existing.get("market"),
+            currency=existing.get("currency"),
+            fingerprint=existing.get("fingerprint"),
         )
 
     payload = {
@@ -191,6 +203,9 @@ def emit_search_submission_started(
         "query": (query if include_query_text else None),
         "pid": os.getpid(),
         "priceKeyId": price_key_id,
+        "market": market,
+        "currency": currency,
+        "fingerprint": fingerprint,
         "monotonic": time.monotonic(),
     }
     tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
@@ -205,6 +220,9 @@ def emit_search_submission_started(
         pid=int(payload["pid"]),
         price_key_id=price_key_id,
         path=str(path),
+        market=market,
+        currency=currency,
+        fingerprint=fingerprint,
     )
 
 

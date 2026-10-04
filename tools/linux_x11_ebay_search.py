@@ -1385,6 +1385,9 @@ def gui_search(
                 attempt_id=attempt_id,
                 query=query,
                 price_key_id=price_key_id,
+                market=str(diag.get("market") or os.environ.get("CARDSCANR_MARKET") or "").strip() or None,
+                currency=str(diag.get("currency") or os.environ.get("CARDSCANR_CURRENCY") or "").strip() or None,
+                fingerprint=str(diag.get("fingerprint") or os.environ.get("CARDSCANR_FINGERPRINT") or "").strip() or None,
             )
             diag["searchSubmissionStarted"] = submission_event.to_dict()
             timings.mark("T5_search_submission_started_event")

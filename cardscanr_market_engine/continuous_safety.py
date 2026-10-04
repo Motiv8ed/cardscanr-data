@@ -33,6 +33,7 @@ class ContinuousSafetyBudget:
     transients: list[datetime] = field(default_factory=list)
     consecutive_transient: int = 0
     last_hard_stop: str | None = None
+    market_submissions: list[tuple[datetime, str]] = field(default_factory=list)
 
     @classmethod
     def from_env(cls, *, path: Path | None = None) -> "ContinuousSafetyBudget":
@@ -60,6 +61,14 @@ class ContinuousSafetyBudget:
         self.transients = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d]
         self.consecutive_transient = int(data.get("consecutiveTransient") or 0)
         self.last_hard_stop = str(data.get("lastHardStop") or "") or None
+        tagged: list[tuple[datetime, str]] = []
+        for row in data.get("marketSubmissions") or []:
+            if isinstance(row, dict):
+                parsed = _parse_dt(row.get("at"))
+                market = str(row.get("market") or "").upper()
+                if parsed is not None:
+                    tagged.append((parsed, market))
+        self.market_submissions = tagged
 
     def persist(self, path: Path | None = None) -> None:
         target = path or BUDGET_LEDGER_PATH
@@ -69,6 +78,9 @@ class ContinuousSafetyBudget:
             "transients": [utc_iso(x) for x in self.transients[-200:]],
             "consecutiveTransient": self.consecutive_transient,
             "lastHardStop": self.last_hard_stop,
+            "marketSubmissions": [
+                {"at": utc_iso(at), "market": market} for at, market in self.market_submissions[-400:]
+            ],
             "updatedAtUtc": utc_iso(),
         }
         target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -78,6 +90,7 @@ class ContinuousSafetyBudget:
         day = now - timedelta(hours=24)
         self.submissions = [t for t in self.submissions if t >= day]
         self.transients = [t for t in self.transients if t >= hour]
+        self.market_submissions = [(t, m) for t, m in self.market_submissions if t >= day]
 
     def submissions_1h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
@@ -88,6 +101,18 @@ class ContinuousSafetyBudget:
         current = now or utc_now()
         day = current - timedelta(hours=24)
         return sum(1 for t in self.submissions if t >= day)
+
+    def submissions_1h_for_market(self, market: str, now: datetime | None = None) -> int:
+        current = now or utc_now()
+        hour = current - timedelta(hours=1)
+        code = str(market or "").upper()
+        return sum(1 for t, m in self.market_submissions if t >= hour and m == code)
+
+    def submissions_24h_for_market(self, market: str, now: datetime | None = None) -> int:
+        current = now or utc_now()
+        day = current - timedelta(hours=24)
+        code = str(market or "").upper()
+        return sum(1 for t, m in self.market_submissions if t >= day and m == code)
 
     def transients_1h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
@@ -112,9 +137,11 @@ class ContinuousSafetyBudget:
             return "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR"
         return None
 
-    def record_submission(self, now: datetime | None = None) -> None:
+    def record_submission(self, now: datetime | None = None, *, market: str | None = None) -> None:
         current = now or utc_now()
         self.submissions.append(current)
+        if market:
+            self.market_submissions.append((current, str(market).upper()))
         self._prune(current)
 
     def record_healthy(self) -> None:

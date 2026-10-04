@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Global eBay browser availability circuit breaker.
+"""Per-market eBay browser availability circuit breaker.
 
-Worker-wide reaction to classic eBay SORRY / TEMPORARY_EBAY_SERVER_FAILURE.
-Does not change pricing math, browser identity, or attempt to bypass eBay.
-State persists across worker/scheduler/Chrome/host restarts.
+Marketplace-specific SORRY / TEMPORARY_EBAY_SERVER_FAILURE must not halt other
+markets. A v1 single-snapshot file remains AU until a non-AU market is written.
+True application integrity failures remain a separate global hard-stop path.
 """
 from __future__ import annotations
 
@@ -179,19 +179,44 @@ def _from_dict(payload: dict[str, Any]) -> EbayAvailabilitySnapshot:
     )
 
 
-def load_availability(*, path: Path | None = None) -> EbayAvailabilitySnapshot:
-    """Load availability snapshot.
+def _normalize_market(market: str | None) -> str:
+    return str(market or "AU").strip().upper() or "AU"
 
-    Missing file → default HEALTHY bootstrap snapshot.
+
+def _slot_from_payload(payload: dict[str, Any], market: str) -> dict[str, Any] | None:
+    code = _normalize_market(market)
+    markets = payload.get("markets")
+    if isinstance(markets, dict):
+        slot = markets.get(code) or markets.get(code.lower())
+        return slot if isinstance(slot, dict) else None
+    if payload.get("state"):
+        doc_market = str(payload.get("market") or "AU").upper()
+        if code == doc_market:
+            return payload
+        if code == "AU" and doc_market in {"", "AU"}:
+            return payload
+    return None
+
+
+def load_availability(*, path: Path | None = None, market: str | None = None) -> EbayAvailabilitySnapshot:
+    """Load availability snapshot for one market.
+
+    Missing file / missing market slot → default HEALTHY bootstrap snapshot.
     Corrupt/unreadable JSON → AtomicStateError (fail closed; never treat as HEALTHY).
     """
     target = path or state_path()
+    code = _normalize_market(market)
     if not target.exists():
-        return _default_snapshot()
+        return _default_snapshot(market=code)
     payload = read_json_object(target)
     if not payload:
-        return _default_snapshot()
-    return _from_dict(payload)
+        return _default_snapshot(market=code)
+    slot = _slot_from_payload(payload, code)
+    if not slot:
+        return _default_snapshot(market=code)
+    snap = _from_dict(slot)
+    snap.market = code
+    return snap
 
 
 def save_availability_unlocked(
@@ -242,26 +267,50 @@ def save_availability(
     return target
 
 
+def _write_market_slot(payload: dict[str, Any], market: str, snap_dict: dict[str, Any], revision: int) -> None:
+    code = _normalize_market(market)
+    snap_dict = dict(snap_dict)
+    snap_dict["market"] = code
+    markets = payload.get("markets")
+    has_multi = isinstance(markets, dict)
+    if not has_multi and code == "AU":
+        payload.clear()
+        payload.update(snap_dict)
+        payload["revision"] = revision
+        return
+    preserved: dict[str, Any] = {}
+    if has_multi:
+        preserved = {str(k).upper(): dict(v) for k, v in markets.items() if isinstance(v, dict)}
+    elif payload.get("state"):
+        existing_market = str(payload.get("market") or "AU").upper()
+        preserved[existing_market] = {k: v for k, v in payload.items() if k not in {"markets", "revision"}}
+    preserved[code] = snap_dict
+    payload.clear()
+    payload.update({"version": 2, "revision": revision, "markets": preserved})
+
+
 def _mutate_availability(
     mutator,
     *,
     path: Path | None = None,
     now: datetime | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
-    """Locked read→mutate→atomic write for availability state."""
+    """Locked read→mutate→atomic write for one market's availability slot."""
     assert_canonical_state_writer_domain_allowed()
     target = path or state_path()
     current = now or utc_now()
-    with locked_json_state(target, default=_default_snapshot().to_dict()) as payload:
-        snap = _from_dict(payload)
+    code = _normalize_market(market)
+    with locked_json_state(target, default=_default_snapshot(market=code).to_dict()) as payload:
+        slot = _slot_from_payload(payload, code)
+        snap = _from_dict(slot) if slot else _default_snapshot(market=code)
+        snap.market = code
         snap = refresh_transitions(snap, now=current)
         snap = mutator(snap) or snap
+        snap.market = code
         snap.updated_at = utc_now()
         rev = int(payload.get("revision") or 0) + 1
-        new_payload = snap.to_dict()
-        new_payload["revision"] = rev
-        payload.clear()
-        payload.update(new_payload)
+        _write_market_slot(payload, code, snap.to_dict(), rev)
         return snap
 
 
@@ -285,6 +334,7 @@ def peek_availability(
     *,
     now: datetime | None = None,
     path: Path | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Read availability under lock without persisting.
 
@@ -293,8 +343,12 @@ def peek_availability(
     """
     current = now or utc_now()
     target = path or state_path()
-    with locked_json_state(target, default=_default_snapshot().to_dict(), write=False) as payload:
-        return refresh_transitions(_from_dict(payload), now=current)
+    code = _normalize_market(market)
+    with locked_json_state(target, default=_default_snapshot(market=code).to_dict(), write=False) as payload:
+        slot = _slot_from_payload(payload, code)
+        snap = _from_dict(slot) if slot else _default_snapshot(market=code)
+        snap.market = code
+        return refresh_transitions(snap, now=current)
 
 
 def get_availability(
@@ -302,6 +356,7 @@ def get_availability(
     now: datetime | None = None,
     path: Path | None = None,
     persist_transitions: bool = True,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Locked availability read with optional transition persistence.
 
@@ -313,8 +368,9 @@ def get_availability(
     """
     current = now or utc_now()
     target = path or state_path()
+    code = _normalize_market(market)
     if not persist_transitions:
-        return peek_availability(now=current, path=target)
+        return peek_availability(now=current, path=target, market=code)
     # Locked read; write only when a transition must be durably recorded.
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = FileLock(str(lock_path_for(target)), timeout=DEFAULT_LOCK_TIMEOUT_SECONDS)
@@ -323,21 +379,24 @@ def get_availability(
     except Timeout as exc:
         raise AtomicStateError(f"state_lock_timeout:{target.name}") from exc
     try:
-        payload = read_json_object(target, default=_default_snapshot().to_dict())
-        snap = refresh_transitions(_from_dict(payload), now=current)
+        payload = read_json_object(target, default=_default_snapshot(market=code).to_dict())
+        slot = _slot_from_payload(payload, code)
+        snap = _from_dict(slot) if slot else _default_snapshot(market=code)
+        snap.market = code
+        snap = refresh_transitions(snap, now=current)
         new_payload = snap.to_dict()
-        if "revision" in payload:
-            new_payload["revision"] = payload.get("revision")
+        if slot is None:
+            return snap
         meaningful = (
-            new_payload.get("state") != payload.get("state")
-            or new_payload.get("probeInFlight") != payload.get("probeInFlight")
-            or new_payload.get("nextProbeAt") != payload.get("nextProbeAt")
+            new_payload.get("state") != slot.get("state")
+            or new_payload.get("probeInFlight") != slot.get("probeInFlight")
+            or new_payload.get("nextProbeAt") != slot.get("nextProbeAt")
         )
         if meaningful:
             assert_canonical_state_writer_domain_allowed()
             rev = int(payload.get("revision") or 0) + 1
-            new_payload["revision"] = rev
-            atomic_write_json(target, new_payload)
+            _write_market_slot(payload, code, new_payload, rev)
+            atomic_write_json(target, payload)
         return snap
     finally:
         try:
@@ -352,6 +411,7 @@ def browser_work_allowed(
     path: Path | None = None,
     for_probe: bool = False,
     persist_transitions: bool = False,
+    market: str | None = None,
 ) -> tuple[bool, str, EbayAvailabilitySnapshot]:
     """Whether an eBay browser pricing attempt may start.
 
@@ -362,7 +422,12 @@ def browser_work_allowed(
     transition persistence (schedulers advancing COOLDOWN) may pass True.
     """
     try:
-        snap = get_availability(now=now, path=path, persist_transitions=persist_transitions)
+        snap = get_availability(
+            now=now,
+            path=path,
+            persist_transitions=persist_transitions,
+            market=market,
+        )
     except AtomicStateError:
         # Unreadable / lock failure — do not treat as HEALTHY.
         blocked = _default_snapshot()
@@ -388,6 +453,7 @@ def begin_probe(
     *,
     now: datetime | None = None,
     path: Path | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Mark the single allowed recovery probe as in-flight."""
     current = now or utc_now()
@@ -401,7 +467,7 @@ def begin_probe(
         snap.last_outcome = "probe_started"
         return snap
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def release_probe_local_failure(
@@ -409,6 +475,7 @@ def release_probe_local_failure(
     now: datetime | None = None,
     path: Path | None = None,
     reference: str | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Clear probe_in_flight after a local finalize failure (not SORRY, not healthy).
 
@@ -427,7 +494,7 @@ def release_probe_local_failure(
             snap.last_failure_reference = reference[:300]
         return snap
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def _open_cooldown(
@@ -483,7 +550,7 @@ def record_sorry(
             cooldown = repeated_defer_cooldown()
         return _open_cooldown(snap, cooldown=cooldown, now=current, reference=reference, market=market)
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def record_challenge(
@@ -513,7 +580,7 @@ def record_challenge(
             snap.last_challenge_incident_id = str(incident_id)
         return snap
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def record_healthy_browser_check(
@@ -521,6 +588,7 @@ def record_healthy_browser_check(
     now: datetime | None = None,
     path: Path | None = None,
     from_probe: bool | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Record a successful SOLD/pricing browser check (not a synthetic ping)."""
     current = now or utc_now()
@@ -553,13 +621,14 @@ def record_healthy_browser_check(
             snap.recovery_health_count = max(1, int(snap.recovery_health_count))
         return snap
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def clear_challenge_for_manual_restore(
     *,
     path: Path | None = None,
     now: datetime | None = None,
+    market: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Andrew-only restore after challenge resolution (not automatic)."""
     current = now or utc_now()
@@ -574,7 +643,7 @@ def clear_challenge_for_manual_restore(
         snap.last_challenge_incident_id = None
         return snap
 
-    return _mutate_availability(_apply, path=path, now=current)
+    return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
 def seed_from_observed_sorrys(
@@ -642,4 +711,4 @@ def seed_from_observed_sorrys(
         # If natural time already passed, transition to PROBE_REQUIRED without probing.
         return refresh_transitions(snap, now=current)
 
-    return _mutate_availability(_apply, path=target, now=current)
+    return _mutate_availability(_apply, path=target, now=current, market=market)

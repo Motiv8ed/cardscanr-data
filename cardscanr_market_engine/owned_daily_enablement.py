@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import REPORTS_DIR
+from .region_pricing_registry import browser_ready_region_codes
 
 FLAG_PATH = REPORTS_DIR / "runtime" / "owned_daily_full_enable.flag"
 STATUS_PATH = REPORTS_DIR / "runtime" / "continuous_au_worker_status.json"
@@ -74,11 +75,27 @@ def apply_continuous_au_env() -> dict[str, str]:
         "EBAY_TRANSIENT_FAILURE_SECOND_COOLDOWN_MINUTES": os.getenv(
             "EBAY_TRANSIENT_FAILURE_SECOND_COOLDOWN_MINUTES", "180"
         ),
+        "GLOBAL_BROWSER_PRICING_CONCURRENCY": "1",
     }
     for key, value in values.items():
         os.environ[key] = value
     os.environ.pop("PRE_SUBMIT_ONLY", None)
     os.environ.pop("CARDSCANR_PRE_SUBMIT_ONLY", None)
+    return values
+
+
+def apply_continuous_multi_region_env(*, markets: str | None = None) -> dict[str, str]:
+    """Enable browser-ready markets under the same global concurrency=1 contract.
+
+    JP/EU remain excluded unless an explicit allowlist includes them (they are
+    not browser-ready). Does not start extra workers.
+    """
+    values = apply_continuous_au_env()
+    allow = (markets or ",".join(browser_ready_region_codes())).strip()
+    os.environ["OWNED_DAILY_ALLOWED_MARKETS"] = allow
+    values["OWNED_DAILY_ALLOWED_MARKETS"] = allow
+    os.environ["GLOBAL_BROWSER_PRICING_CONCURRENCY"] = "1"
+    values["GLOBAL_BROWSER_PRICING_CONCURRENCY"] = "1"
     return values
 
 

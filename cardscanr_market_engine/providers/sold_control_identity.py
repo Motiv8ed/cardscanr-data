@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..region_pricing_registry import approved_sold_labels_for_market
+
 APPROVED_SOLD_LABELS = frozenset({"sold items"})
 APPROVED_SOLD_ROLES = frozenset({"checkbox", "button", "link", "menuitemcheckbox", ""})
 
@@ -142,8 +144,9 @@ def normalize_label(text: str | None) -> str:
     return re.sub(r"\s+", " ", str(text or "")).strip().lower()
 
 
-def is_exact_sold_label(text: str | None) -> bool:
-    return normalize_label(text) in APPROVED_SOLD_LABELS
+def is_exact_sold_label(text: str | None, *, market: str | None = None) -> bool:
+    labels = approved_sold_labels_for_market(market) if market else APPROVED_SOLD_LABELS
+    return normalize_label(text) in labels
 
 
 @dataclass

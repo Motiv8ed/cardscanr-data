@@ -358,9 +358,11 @@ class MarketPriceJobRunner:
                 },
             )
         # Preserve begin_probe behaviour when gate allows probe mode.
-        allowed_browser, avail_reason, avail_snap = browser_work_allowed(for_probe=allow_probe)
+        allowed_browser, avail_reason, avail_snap = browser_work_allowed(
+            for_probe=allow_probe, market=market or "AU"
+        )
         if allow_probe and avail_snap.state == "PROBE_REQUIRED" and allowed_browser:
-            begin_probe()
+            begin_probe(market=market or "AU")
         elif not allowed_browser:
             # Defensive: gate should have caught this already.
             until = utc_iso(avail_snap.next_probe_at) if avail_snap.next_probe_at else None

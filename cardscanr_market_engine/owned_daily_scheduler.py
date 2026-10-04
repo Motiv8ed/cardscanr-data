@@ -19,7 +19,7 @@ from .ebay_availability import (
     EBAY_AVAILABILITY_COOLDOWN,
     browser_work_allowed,
 )
-from .owned_daily_enablement import owned_daily_full_enable
+from .market_dispatcher import load_dispatcher_state, pick_fair_market, save_dispatcher_state
 from .owned_daily_pacing import OwnedDailyPacingConfig
 from .queue_capacity import QueueWatermarks, enqueue_budget
 from .scheduler import (
@@ -197,8 +197,10 @@ class OwnedPrintingRefreshScheduler:
         # Worker-wide eBay availability circuit: do not consume due cards during COOLDOWN.
         # PROBE_REQUIRED: allow a single recovery-slot evaluation (worker/job_runner
         # uses for_probe); do not HOLD the entire queue permanently.
-        allowed_browser, avail_reason, avail_snap = browser_work_allowed(now=now, for_probe=False)
-        probe_ok, _, _ = browser_work_allowed(now=now, for_probe=True)
+        allowed_browser, avail_reason, avail_snap = browser_work_allowed(
+            now=now, for_probe=False, market=market or "AU"
+        )
+        probe_ok, _, _ = browser_work_allowed(now=now, for_probe=True, market=market or "AU")
         probe_slot = (not allowed_browser) and probe_ok and str(avail_snap.state or "") == "PROBE_REQUIRED"
         if not allowed_browser and not probe_slot:
             return SchedulerDecision(
@@ -440,6 +442,30 @@ class OwnedPrintingRefreshScheduler:
                     target, now=now, demand_index=self._demand_index
                 )
             work_items.append({**item, "price_key_id": price_key_id, "demand_row": demand_row})
+
+        due_by_market: dict[str, int] = {}
+        for w in work_items:
+            row = w["demand_row"]
+            if not row.due or not row.would_hit_ebay:
+                continue
+            mkt = str(w["target"].get("market_country") or row.market or "").strip().upper()
+            if mkt:
+                due_by_market[mkt] = due_by_market.get(mkt, 0) + 1
+        dispatcher_state = load_dispatcher_state()
+        picked_market = pick_fair_market(
+            due_by_market,
+            now=now,
+            state=dispatcher_state,
+            enabled_markets=self.config.allowed_markets,
+        )
+        if picked_market:
+            work_items = [
+                w
+                for w in work_items
+                if str(w["target"].get("market_country") or "").strip().upper() == picked_market
+            ]
+            dispatcher_state.last_pick = picked_market
+            save_dispatcher_state(dispatcher_state)
 
         mix_rows = select_fair_lane_mix(
             [w["demand_row"] for w in work_items],

@@ -1,0 +1,25 @@
+{
+  "description": "Offline currency/parser fixtures for browser-ready markets. No live network.",
+  "markets": {
+    "AU": {
+      "currency": "AUD",
+      "samples": ["AU $12.50", "A$3.00", "AUD 9.99"]
+    },
+    "US": {
+      "currency": "USD",
+      "samples": ["US $9.00", "USD 4.50"]
+    },
+    "GB": {
+      "currency": "GBP",
+      "samples": ["£4.20", "GBP 11.00"]
+    },
+    "CA": {
+      "currency": "CAD",
+      "samples": ["C $8.00", "CA $2.25", "CAD 15.00"]
+    }
+  },
+  "blocked": {
+    "JP": {"currency": "JPY", "reason": "BLOCKED_NEEDS_PROVIDER"},
+    "EU": {"currency": "EUR", "reason": "BLOCKED_NEEDS_PROVIDER"}
+  }
+}

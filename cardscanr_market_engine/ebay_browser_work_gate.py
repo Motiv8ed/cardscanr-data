@@ -85,6 +85,7 @@ def evaluate_ebay_browser_work_gate(
             path=availability_path,
             for_probe=for_probe,
             persist_transitions=False,
+            market=market_n,
         )
         result.availability_state = snap.state
         result.probe_in_flight = bool(snap.probe_in_flight)

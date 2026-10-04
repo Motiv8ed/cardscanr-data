@@ -1,0 +1,149 @@
+{
+  "AU": {
+    "region": "AU",
+    "currency": "AUD",
+    "canonicalMarketKey": "AU",
+    "provider": "ebay_browser",
+    "marketplaceHost": "ebay.com.au",
+    "homepage": "https://www.ebay.com.au/",
+    "locale": "en-AU",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": true,
+    "soldLabels": [
+      "sold items"
+    ],
+    "currencyParser": "AUD",
+    "availabilityNamespace": "AU",
+    "workerEnableDefault": true,
+    "productionReady": true,
+    "browserCapable": true,
+    "status": "CONTINUOUS",
+    "reason": null,
+    "providerMarketplaceId": "EBAY_AU",
+    "notes": [
+      "English Sold-items control identity; X11 activation only."
+    ]
+  },
+  "US": {
+    "region": "US",
+    "currency": "USD",
+    "canonicalMarketKey": "US",
+    "provider": "ebay_browser",
+    "marketplaceHost": "ebay.com",
+    "homepage": "https://www.ebay.com/",
+    "locale": "en-US",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": true,
+    "soldLabels": [
+      "sold items"
+    ],
+    "currencyParser": "USD",
+    "availabilityNamespace": "US",
+    "workerEnableDefault": false,
+    "productionReady": true,
+    "browserCapable": true,
+    "status": "READY_FOR_BROWSER_CANARY",
+    "reason": null,
+    "providerMarketplaceId": "EBAY_US",
+    "notes": [
+      "English Sold-items control identity; X11 activation only."
+    ]
+  },
+  "GB": {
+    "region": "GB",
+    "currency": "GBP",
+    "canonicalMarketKey": "GB",
+    "provider": "ebay_browser",
+    "marketplaceHost": "ebay.co.uk",
+    "homepage": "https://www.ebay.co.uk/",
+    "locale": "en-GB",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": true,
+    "soldLabels": [
+      "sold items"
+    ],
+    "currencyParser": "GBP",
+    "availabilityNamespace": "GB",
+    "workerEnableDefault": false,
+    "productionReady": true,
+    "browserCapable": true,
+    "status": "READY_FOR_BROWSER_CANARY",
+    "reason": null,
+    "providerMarketplaceId": "EBAY_GB",
+    "notes": [
+      "English Sold-items control identity; X11 activation only."
+    ]
+  },
+  "CA": {
+    "region": "CA",
+    "currency": "CAD",
+    "canonicalMarketKey": "CA",
+    "provider": "ebay_browser",
+    "marketplaceHost": "ebay.ca",
+    "homepage": "https://www.ebay.ca/",
+    "locale": "en-CA",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": true,
+    "soldLabels": [
+      "sold items"
+    ],
+    "currencyParser": "CAD",
+    "availabilityNamespace": "CA",
+    "workerEnableDefault": false,
+    "productionReady": true,
+    "browserCapable": true,
+    "status": "READY_FOR_BROWSER_CANARY",
+    "reason": null,
+    "providerMarketplaceId": "EBAY_CA",
+    "notes": [
+      "English Sold-items control identity; X11 activation only."
+    ]
+  },
+  "JP": {
+    "region": "JP",
+    "currency": "JPY",
+    "canonicalMarketKey": "JP",
+    "provider": "NONE",
+    "marketplaceHost": "",
+    "homepage": "",
+    "locale": "ja-JP",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": false,
+    "soldLabels": [],
+    "currencyParser": "JPY",
+    "availabilityNamespace": "JP",
+    "workerEnableDefault": false,
+    "productionReady": false,
+    "browserCapable": false,
+    "status": "BLOCKED_NEEDS_PROVIDER",
+    "reason": "NO_NATIVE_SOLD_ROUTE: CardScanR does not have a legitimate JP eBay sold browser path. JP fallback policy uses foreign estimates, not verified-local JP evidence.",
+    "providerMarketplaceId": "",
+    "notes": [
+      "Do not invent ebay.co.jp sold support.",
+      "Market and card language remain independent dimensions."
+    ]
+  },
+  "EU": {
+    "region": "EU",
+    "currency": "EUR",
+    "canonicalMarketKey": "EU",
+    "provider": "NONE",
+    "marketplaceHost": "",
+    "homepage": "",
+    "locale": "en-EU",
+    "searchMode": "RENDERED_UI_X11",
+    "soldCapability": false,
+    "soldLabels": [],
+    "currencyParser": "EUR",
+    "availabilityNamespace": "EU",
+    "workerEnableDefault": false,
+    "productionReady": false,
+    "browserCapable": false,
+    "status": "BLOCKED_NEEDS_PROVIDER",
+    "reason": "EU is a display-only CardScanR region. No ebay.eu host exists. Canonical EUR eBay sites are country markets DE/FR/IT/ES, not EU.",
+    "providerMarketplaceId": "",
+    "notes": [
+      "Do not treat DE/FR/IT/ES as EU verified-local without an owner canonical-country decision."
+    ]
+  }
+}
