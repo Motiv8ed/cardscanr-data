@@ -11,6 +11,7 @@ LOCAL_GUI_FAILURE = "LOCAL_GUI_FAILURE"  # not exported as outcome name historic
 # Local surface-state leak (e.g. typed into eBay Live) — not SORRY/403.
 LOCAL_SEARCH_SURFACE_STATE_LEAK = "LOCAL_SEARCH_SURFACE_STATE_LEAK"
 LOCAL_SEARCH_SURFACE_RECOVERY_FAILED = "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED"
+UNACCOUNTED_SEARCH_URL_NAVIGATION = "UNACCOUNTED_SEARCH_URL_NAVIGATION"
 UPDATED_FROM_EBAY = "UPDATED_FROM_EBAY"
 UNCHANGED_FROM_EBAY = "UNCHANGED_FROM_EBAY"
 CHECKED_NO_NEW_EXACT_EVIDENCE = "CHECKED_NO_NEW_EXACT_EVIDENCE"
@@ -109,6 +110,13 @@ def classify_exception_outcome(
     diag = diagnostics or {}
     reason = str(diag.get("reason") or "").lower()
     provider_outcome = str(diag.get("providerOutcome") or "").strip().lower()
+    fail_cls_early = str(diag.get("failureClass") or diag.get("terminal") or "").upper()
+    if (
+        fail_cls_early == UNACCOUNTED_SEARCH_URL_NAVIGATION
+        or UNACCOUNTED_SEARCH_URL_NAVIGATION.lower() in text
+        or "provider_invariant" in text
+    ):
+        return UNACCOUNTED_SEARCH_URL_NAVIGATION
     # Historical/stale control-plane blockers are NOT a live challenge.
     if provider_outcome in {
         "marketplace_ops_cooldown",

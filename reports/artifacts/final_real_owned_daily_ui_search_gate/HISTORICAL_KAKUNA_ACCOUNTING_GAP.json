@@ -1,0 +1,19 @@
+{
+  "attemptId": "c1dbfde5-3672-4cfc-8532-faaff8d2cdb3",
+  "card": "Kakuna / Chaos Rising / 2",
+  "fingerprint": "pokemon|en|me4|2|kakuna|raw|raw|au|aud",
+  "canonicalSearchSubmissionStarted": false,
+  "officialConsumed": false,
+  "querySearchUrlObserved": true,
+  "querySearchUrl": "https://www.ebay.com.au/sch/i.html?_nkw=Kakuna+2+chaos+rising+Pokemon",
+  "networkSearchPageReached": true,
+  "auSearchEntry": "homepage_then_clean_search_url",
+  "terminal": "PRE_SOLD_SORRY",
+  "ACCOUNTING_CONTRACT_VIOLATION_HISTORICAL": true,
+  "note": "Historical SEARCH_SUBMISSION_STARTED event remains ABSENT and must not be manufactured. A query-bearing /sch URL was reached via Playwright homepage_then_clean_search_url before the durable event boundary.",
+  "oldEntryMode": "homepage_then_clean_search_url",
+  "newEntryMode": "RENDERED_UI_X11",
+  "sourceFile": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+  "sourceFunction": "_fetch_with_playwright",
+  "sourceLines": "3686-3716"
+}

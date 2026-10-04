@@ -1053,7 +1053,13 @@ class MarketPriceJobRunner:
                     provider_diagnostics = build_provider_diagnostics_for_result(provider_result)
                 except Exception:
                     provider_diagnostics = None
-            if price_key is not None:
+            error_message = str(exc)
+            owned_outcome = classify_exception_outcome(
+                exc if isinstance(exc, Exception) else error_message,
+                diagnostics=(exc.diagnostics if isinstance(exc, ProviderError) else None),
+            )
+            # Programming invariants must not create marketplace cooldown.
+            if price_key is not None and owned_outcome != "UNACCOUNTED_SEARCH_URL_NAVIGATION":
                 maybe_record_failure_cooldown(
                     market=str(price_key.market_country or ""),
                     message=str(exc),
@@ -1061,16 +1067,13 @@ class MarketPriceJobRunner:
                     now=now,
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
-            error_message = str(exc)
-            owned_outcome = classify_exception_outcome(
-                exc if isinstance(exc, Exception) else error_message,
-                diagnostics=(exc.diagnostics if isinstance(exc, ProviderError) else None),
-            )
             # Worker-wide eBay availability circuit (do not re-open on cooldown skip).
             try:
                 diag = (exc.diagnostics if isinstance(exc, ProviderError) else None) or {}
                 operational = str(diag.get("operationalStatus") or "")
-                if operational in {EBAY_AVAILABILITY_COOLDOWN, AVAIL_CHALLENGE} or str(
+                if owned_outcome == "UNACCOUNTED_SEARCH_URL_NAVIGATION":
+                    release_probe_local_failure(now=now, reference=error_message)
+                elif operational in {EBAY_AVAILABILITY_COOLDOWN, AVAIL_CHALLENGE} or str(
                     diag.get("providerOutcome") or ""
                 ) in {"ebay_availability_cooldown", "ebay_availability_halt", "marketplace_ops_cooldown"}:
                     pass

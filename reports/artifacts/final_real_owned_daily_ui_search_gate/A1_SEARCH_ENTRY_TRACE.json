@@ -1,0 +1,31 @@
+{
+  "callChain": [
+    "OwnedPrintingRefreshScheduler.run_once",
+    "enqueue market_price_refresh_jobs",
+    "claim_jobs / claim_specific_refresh_job",
+    "MarketPriceJobRunner.run_job",
+    "EbayBrowserSoldCompsProvider.fetch_comps",
+    "_fetch_with_playwright",
+    "page.goto(search_query.search_url)  # REMOVED for AU"
+  ],
+  "oldPath": {
+    "file": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "function": "_fetch_with_playwright",
+    "lines": "3686-3716 (pre-fix)",
+    "label": "homepage_then_clean_search_url",
+    "constructs": "/sch/i.html?_nkw=<query>",
+    "caller": "_fetch_comps_serial -> _fetch_with_playwright",
+    "reason": "AU warm homepage then clean active-search URL to avoid _trksid homepage-box path",
+    "coldStartOnly": false,
+    "interCardCanUse": true,
+    "emitsSearchSubmissionStarted": false,
+    "networkBeforeEvent": true
+  },
+  "newPath": {
+    "searchEntryMode": "RENDERED_UI_X11",
+    "defaultNavMode": "linux_x11",
+    "function": "_fetch_with_desktop_win32 -> linux_x11_ebay_nav.navigate_query_to_sold -> linux_x11_ebay_search",
+    "directSearchUrlNavigation": false,
+    "guard": "assert_programmatic_navigation_allowed -> UNACCOUNTED_SEARCH_URL_NAVIGATION"
+  }
+}

@@ -2875,7 +2875,9 @@ class EbayBrowserSoldCompsProvider:
         return provider_result
 
     def _desktop_nav_mode_enabled(self) -> bool:
-        return os.getenv("EBAY_BROWSER_NAV_MODE", "").strip().lower() in {
+        from .search_entry_contract import resolved_ebay_browser_nav_mode
+
+        return resolved_ebay_browser_nav_mode() in {
             "desktop_win32",
             "desktop",
             "real_desktop",
@@ -2884,7 +2886,9 @@ class EbayBrowserSoldCompsProvider:
         }
 
     def _linux_x11_nav_mode_enabled(self) -> bool:
-        return os.getenv("EBAY_BROWSER_NAV_MODE", "").strip().lower() in {
+        from .search_entry_contract import resolved_ebay_browser_nav_mode
+
+        return resolved_ebay_browser_nav_mode() in {
             "linux_x11",
             "linux_gui",
         }
@@ -3059,18 +3063,46 @@ class EbayBrowserSoldCompsProvider:
                 stage_timings.fields["playwrightAttachedBeforeNav"] = True
 
         with _StageTimer(stage_timings, nav_stage):
+            from .search_entry_contract import (
+                SEARCH_ENTRY_MODE_RENDERED_UI_X11,
+                build_search_entry_evidence,
+            )
+
             ctx = load_navigation_runtime_context()
             pre_submit = pre_submit_only_requested(flag=False)
+            attempt_id = os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID")
+            # Production query entry: RENDERED_UI_X11 only (no manufactured /sch?_nkw=).
+            stage_timings.fields["searchEntryMode"] = SEARCH_ENTRY_MODE_RENDERED_UI_X11
+            stage_timings.fields["directSearchUrlNavigation"] = False
+            stage_timings.fields["auSearchEntry"] = "rendered_ui_x11"
             nav = navigate_query_to_sold(
                 search_query.query_text,
                 reset_homepage=not ctx.is_inter_card(),
-                attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                attempt_id=attempt_id,
                 price_key_id=str(getattr(request.price_key, "id", None) or "") or None,
                 pre_submit_only=pre_submit,
             )
             nav_diag = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
             search_diag = nav_diag.get("search") if isinstance(nav_diag.get("search"), dict) else {}
             gui_timings = search_diag.get("guiAttemptTimings") or (nav_diag.get("guiAttemptTimings"))
+            submission_event = search_diag.get("searchSubmissionStarted") or nav_diag.get(
+                "searchSubmissionStarted"
+            )
+            stage_timings.fields["searchEntryEvidence"] = build_search_entry_evidence(
+                search_input_located=bool(
+                    search_diag.get("searchInputLocated")
+                    or search_diag.get("ok")
+                    or nav.search_success
+                    or submission_event
+                ),
+                query_typed=bool(submission_event or nav.search_success or search_diag.get("queryTyped")),
+                query_before_submit=str(search_query.query_text or "") or None,
+                direct_search_url_navigation=False,
+                search_submission_event_written=bool(submission_event),
+                enter_pressed=bool(nav.search_success) and not pre_submit,
+                ordinary_results_confirmed=bool(nav.search_success and not nav.sorry and not nav.challenge),
+                attempt_id=attempt_id,
+            )
             stage_timings.fields["desktopNav"] = {
                 "ok": nav.ok,
                 "searchSuccess": nav.search_success,
@@ -3684,39 +3716,73 @@ class EbayBrowserSoldCompsProvider:
                     owned_pw = None
                     raise
             with _StageTimer(stage_timings, "open_ebay_page"):
-                # AU: warm authenticated session on homepage, then clean active-search URL
-                # (same path as the isolated Sold proof). Do NOT submit via homepage search
-                # box — that injects _trksid/_from and is more likely to hit SORRY.
+                # Production query entry is RENDERED_UI_X11 (linux_x11 / desktop_win32).
+                # Playwright must never navigate to a constructed /sch?_nkw= URL — that was
+                # the Kakuna ACCOUNTING_CONTRACT_VIOLATION (homepage_then_clean_search_url).
+                from .search_entry_contract import (
+                    SEARCH_ENTRY_MODE_RENDERED_UI_X11,
+                    UNACCOUNTED_SEARCH_URL_NAVIGATION,
+                    ProviderInvariantError,
+                    assert_programmatic_navigation_allowed,
+                    is_query_bearing_search_results_url,
+                )
+
                 domain = str(search_query.provider_domain or "").strip().lower()
                 is_au = domain.endswith("ebay.com.au") or str(search_query.market_country or "").upper() == "AU"
+                # Homepage warm is allowed; query-bearing results URL is forbidden here.
                 if is_au:
                     home = _ebay_https_origin(domain or "ebay.com.au") + "/"
+                    assert_programmatic_navigation_allowed(home)
                     page.goto(home, wait_until="domcontentloaded", timeout=timeout_ms)
                     time.sleep(2.0)
-                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
-                    time.sleep(3.0)
-                    stage_timings.fields["auSearchEntry"] = "homepage_then_clean_search_url"
                     entry_body = _safe_body_text(page)
                     entry_title = _safe_page_title(page)
                     entry_state = classify_browser_page_state(title=entry_title, body_text=entry_body)
                     if entry_state.get("reason") == "ebay_sorry_error_page" or str(page.url or "").lower().startswith(
                         "chrome-error:"
                     ):
+                        # CASE 1: pre-search Sorry on homepage — no query submitted, no event.
                         stage_timings.fields["preSoldSorry"] = "PRE_SOLD_SORRY"
+                        stage_timings.fields["searchEntryMode"] = SEARCH_ENTRY_MODE_RENDERED_UI_X11
+                        stage_timings.fields["directSearchUrlNavigation"] = False
+                        stage_timings.fields["auSearchEntry"] = "homepage_pre_search_sorry"
                         raise ProviderTemporaryError(
-                            "eBay PRE_SOLD_SORRY on clean active search before Sold items filter click",
+                            "eBay PRE_SOLD_SORRY on homepage before query submission",
                             diagnostics={
                                 "preSoldSorry": "PRE_SOLD_SORRY",
                                 "reason": "ebay_sorry_error_page",
+                                "preSearchSorry": True,
+                                "searchSubmissionStarted": False,
                                 "browserPageState": entry_state,
                                 "urlBeforeFilters": page.url,
-                                "auSearchEntry": "homepage_then_clean_search_url",
+                                "auSearchEntry": "homepage_pre_search_sorry",
+                                "searchEntryMode": SEARCH_ENTRY_MODE_RENDERED_UI_X11,
+                                "directSearchUrlNavigation": False,
                                 "stageTimings": stage_timings.snapshot(),
                             },
                         )
-                else:
-                    page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
-                    time.sleep(2.0)
+                    # Refuse manufactured query URL navigation (programming invariant).
+                    # assert_programmatic_navigation_allowed raises when event absent.
+                    assert_programmatic_navigation_allowed(search_query.search_url)
+                    # If somehow event exists, still refuse Playwright query-URL entry for AU.
+                    raise ProviderInvariantError(
+                        f"{UNACCOUNTED_SEARCH_URL_NAVIGATION}: Playwright path must not "
+                        "open constructed search-results URLs; use RENDERED_UI_X11",
+                        diagnostics={
+                            "failureClass": UNACCOUNTED_SEARCH_URL_NAVIGATION,
+                            "terminal": UNACCOUNTED_SEARCH_URL_NAVIGATION,
+                            "searchEntryMode": SEARCH_ENTRY_MODE_RENDERED_UI_X11,
+                            "directSearchUrlNavigation": True,
+                            "queryBearingUrl": is_query_bearing_search_results_url(search_query.search_url),
+                            "searchUrl": str(search_query.search_url or "")[:500],
+                            "auSearchEntry": "forbidden_homepage_then_clean_search_url",
+                            "stageTimings": stage_timings.snapshot(),
+                        },
+                    )
+                # Non-AU: still forbid unaccounted query-bearing URL navigation.
+                assert_programmatic_navigation_allowed(search_query.search_url)
+                page.goto(search_query.search_url, wait_until="domcontentloaded", timeout=timeout_ms)
+                time.sleep(2.0)
             if reuse:
                 self._session_navs += 1
             if is_ebay_authentication_url(page.url):

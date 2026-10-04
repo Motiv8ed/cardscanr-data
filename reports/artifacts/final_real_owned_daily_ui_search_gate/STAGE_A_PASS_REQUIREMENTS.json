@@ -1,0 +1,21 @@
+{
+  "realOwnedDailyUsesUiSearch": true,
+  "directSearchUrlNavigation": false,
+  "searchSubmissionAccountingAligned": true,
+  "historicalKakunaContractGapDocumented": true,
+  "preSearchSorryUnconsumed": true,
+  "postSubmitSorryConsumed": true,
+  "transientCooldownPausesScheduler": true,
+  "schedulerResumesAfterCooldown": true,
+  "hardChallengesRemainStopped": true,
+  "retryCountInsideAttempt": 0,
+  "focusedTests": "tests/test_owned_daily_ui_search_contract_closure.py",
+  "broaderTests": [
+    "tests/test_post_sold_page_health_closure.py",
+    "tests/test_sold_nav_control_plane_persistence_closure.py",
+    "tests/test_owned_daily_scheduler.py",
+    "tests/test_demand_aware_scheduler.py",
+    "tests/test_inter_card_browser_lifecycle_closure.py"
+  ],
+  "broaderResult": "110 passed (includes focused)"
+}

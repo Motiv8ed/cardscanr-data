@@ -116,6 +116,9 @@ def classify_provider_failure(message: str | None, *, diagnostics: dict[str, Any
         return "AUTH_REQUIRED"
     if "marketplace mismatch" in blob or "provider_marketplace_mismatch" in blob:
         return "ERROR"
+    if "unaccounted_search_url_navigation" in blob or "provider_invariant" in blob:
+        # Programming invariant — not marketplace unavailability; do not cooldown.
+        return "ERROR"
     if any(marker in blob for marker in NO_COMP_MARKERS):
         return "NO_COMPS"
     if any(
