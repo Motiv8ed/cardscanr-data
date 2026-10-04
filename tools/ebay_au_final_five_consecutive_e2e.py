@@ -886,12 +886,41 @@ def main() -> int:
             or diag.get("linuxNav")
             or {}
         )
+        sold_diag: dict[str, Any] = {}
+        if isinstance(nav, dict):
+            nested = nav.get("diagnostics") if isinstance(nav.get("diagnostics"), dict) else {}
+            raw_sold = nav.get("sold") or nested.get("sold") or {}
+            if isinstance(raw_sold, dict):
+                sold_diag = raw_sold
+        if not sold_diag and isinstance(diag.get("sold"), dict):
+            sold_diag = diag["sold"]
+        ident_blob = sold_diag.get("identity") if isinstance(sold_diag.get("identity"), dict) else {}
+        proven_flag = sold_diag.get("soldControlIdentityProven")
+        if proven_flag is None and isinstance(ident_blob, dict):
+            proven_flag = ident_blob.get("soldControlIdentityProven")
+        # Production Sold path requires identity before click; healthy + Sold verified implies proven.
+        if proven_flag is None and bool(classified.get("x11SoldStateVerified")):
+            proven_flag = True
+        report["soldControlIdentity"] = {
+            "soldControlIdentityProven": proven_flag,
+            "identity": ident_blob or None,
+            "failureClass": sold_diag.get("failureClass") or sold_diag.get("error"),
+            "click": sold_diag.get("click"),
+            "locateAid": sold_diag.get("locateAid"),
+            "pixelHighlightAuthoritative": sold_diag.get("pixelHighlightAuthoritative", False),
+            "physicalClickCount": sold_diag.get("physicalClickCount"),
+            "lhSoldAfter": sold_diag.get("lhSoldAfter"),
+            "x11SoldStateVerified": sold_diag.get("x11SoldStateVerified")
+            or classified.get("x11SoldStateVerified"),
+        }
+        report["sold"] = sold_diag
         report["navigation"] = {
             "liveAttemptNumber": accounting["liveNavigationStartedCount"] if search_started else None,
             "searchSubmitted": search_started,
             "desktopNav": nav,
             "finalUrl": (nav if isinstance(nav, dict) else {}).get("url") or diag.get("finalUrl") or result.get("sourceUrl"),
             "x11SoldStateVerified": classified.get("x11SoldStateVerified"),
+            "soldControlIdentityProven": proven_flag,
         }
         report["challenge"] = {
             "activeChallenge": challenge,
@@ -956,20 +985,67 @@ def main() -> int:
         if search_started:
             executed_live += 1
 
-        checkpoint_at = int(os.getenv("CARDSCANR_MID_RUN_CHECKPOINT_AT") or "0")
-        if (
-            checkpoint_at > 0
-            and accounting["completedHealthyPathCount"] == checkpoint_at
-            and not stop_run
-        ):
+        checkpoint_ats: list[int] = []
+        raw_multi = str(os.getenv("CARDSCANR_MID_RUN_CHECKPOINT_ATS") or "").strip()
+        if raw_multi:
+            for tok in raw_multi.replace(";", ",").split(","):
+                tok = tok.strip()
+                if tok.isdigit():
+                    checkpoint_ats.append(int(tok))
+        else:
+            single = int(os.getenv("CARDSCANR_MID_RUN_CHECKPOINT_AT") or "0")
+            if single > 0:
+                checkpoint_ats.append(single)
+        healthy_n = int(accounting["completedHealthyPathCount"])
+        if healthy_n in checkpoint_ats and not stop_run:
             g_ok_cp, g_payload_cp = _gate_ok()
             fresh_to_provider = 0
+            sold_identity_ok = 0
+            sold_identity_fail = 0
+            unexpected_filter = 0
             for c in card_reports:
                 elig = c.get("sourceAwareEligibility") or {}
                 if elig.get("wouldSkipFresh") and (c.get("job") or {}).get("searchSubmitted"):
                     fresh_to_provider += 1
+                v = str(c.get("cardVerdict") or "")
+                if v.startswith("NOT_ATTEMPTED"):
+                    continue
+                proven: bool | None = None
+                for blob in (
+                    c.get("soldControlIdentity"),
+                    c.get("sold"),
+                    c.get("navigation"),
+                    ((c.get("job") or {}).get("diagnostics") or {}).get("sold")
+                    if isinstance((c.get("job") or {}).get("diagnostics"), dict)
+                    else None,
+                ):
+                    if isinstance(blob, dict) and "soldControlIdentityProven" in blob:
+                        proven = bool(blob.get("soldControlIdentityProven"))
+                        break
+                    if isinstance(blob, dict) and isinstance(blob.get("identity"), dict):
+                        if "soldControlIdentityProven" in blob["identity"]:
+                            proven = bool(blob["identity"].get("soldControlIdentityProven"))
+                            break
+                if proven is True:
+                    sold_identity_ok += 1
+                elif proven is False:
+                    sold_identity_fail += 1
+                fc = ""
+                for blob in (c.get("sold"), c.get("navigation"), c.get("failureClass"), c.get("cardVerdict")):
+                    if isinstance(blob, dict):
+                        fc = str(blob.get("failureClass") or blob.get("error") or fc)
+                    elif blob:
+                        fc = str(blob)
+                if "UNEXPECTED_FILTER" in fc.upper():
+                    unexpected_filter += 1
+            require_sold = str(os.getenv("CARDSCANR_CHECKPOINT_REQUIRE_SOLD_IDENTITY") or "").strip() in {
+                "1",
+                "true",
+                "TRUE",
+                "yes",
+            }
             cp = {
-                "jobs": accounting["completedHealthyPathCount"],
+                "jobs": healthy_n,
                 "liveSubmissions": accounting["liveNavigationStartedCount"],
                 "controlPlaneOk": g_ok_cp,
                 "challenges": accounting["challengeStopCount"],
@@ -977,6 +1053,10 @@ def main() -> int:
                 "ownershipMutations": 0,
                 "retries": accounting["retryCount"],
                 "orphans": 0,
+                "failures": accounting["failedAttemptCount"],
+                "soldExactIdentityOk": sold_identity_ok,
+                "soldIdentityFailures": sold_identity_fail,
+                "unexpectedFilterTransitions": unexpected_filter,
                 "marketplace": g_payload_cp,
                 "ok": bool(
                     g_ok_cp
@@ -984,14 +1064,23 @@ def main() -> int:
                     and accounting["retryCount"] == 0
                     and accounting["failedAttemptCount"] == 0
                     and fresh_to_provider == 0
+                    and unexpected_filter == 0
+                    and (not require_sold or sold_identity_ok >= healthy_n)
                 ),
             }
-            run["midRunCheckpoint"] = cp
+            run.setdefault("midRunCheckpoints", {})[str(healthy_n)] = cp
+            if healthy_n == 10:
+                run["midRunCheckpoint"] = cp
+            if healthy_n == 20:
+                run["midRunCheckpoint20"] = cp
+            (BOOT / f"mid_run_checkpoint_{healthy_n}.json").write_text(
+                json.dumps(cp, indent=2) + "\n", encoding="utf-8"
+            )
             (BOOT / "mid_run_checkpoint.json").write_text(json.dumps(cp, indent=2) + "\n", encoding="utf-8")
             print(json.dumps({"MID_RUN_CHECKPOINT": cp}, indent=2), flush=True)
             if not cp["ok"]:
                 stop_run = True
-                stop_reason = f"mid_run_checkpoint_failed_at_{checkpoint_at}"
+                stop_reason = f"mid_run_checkpoint_failed_at_{healthy_n}"
 
         if stop_run:
             break

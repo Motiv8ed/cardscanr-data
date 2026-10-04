@@ -25,6 +25,8 @@ os.environ["CARDSCANR_RELIABILITY_MAX"] = str(ROLL_OUT_MAX)
 os.environ["CARDSCANR_RELIABILITY_SELECT_LIMIT"] = "80"
 os.environ["CARDSCANR_CONTINUE_ON_FRESH_SKIP"] = "1"
 os.environ["CARDSCANR_MID_RUN_CHECKPOINT_AT"] = "10"
+os.environ["CARDSCANR_MID_RUN_CHECKPOINT_ATS"] = "10,20"
+os.environ["CARDSCANR_CHECKPOINT_REQUIRE_SOLD_IDENTITY"] = "1"
 os.environ["EBAY_BROWSER_MAX_QUERY_ATTEMPTS"] = "1"
 os.environ["HOT_VERIFIED_TTL_HOURS"] = "12"
 os.environ["NORMAL_VERIFIED_TTL_HOURS"] = "24"
@@ -47,9 +49,14 @@ from tools.ebay_au_five_card_inter_card_handoff_e2e import (
     phase0_self_checks,
 )
 
-OUT = ROOT / "reports" / "artifacts" / "controlled_continuous_owned_daily_rollout"
-TASK_ID = "CARDSCANR-CONTROLLED-CONTINUOUS-OWNED-DAILY-ROLLOUT"
+OUT = ROOT / "reports" / "artifacts" / "final_controlled_25_job_rollout"
+TASK_ID = "CARDSCANR-FINAL-CONTROLLED-25-JOB-ROLLOUT"
 STATUS_PATH = OUT / "runtime_status.json"
+REQUIRED_COMMITS = (
+    "86973b7cd6dfddc0643492aac98b315be54c0ea8",
+    "d95f5482cb8b8f2880003776e4a38ade30b5bc12",
+    "cfdce5a68870d475d06ef4e251c3bb6e1de053f2",
+)
 
 
 def _utc() -> str:
@@ -317,13 +324,77 @@ def map_verdict(run: dict[str, Any]) -> str:
     return "CONTROLLED_CONTINUOUS_ROLLOUT_STOPPED_SAFE"
 
 
+def deployment_audit() -> dict[str, Any]:
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=str(ROOT)).strip()
+    ancestors = {}
+    for sha in REQUIRED_COMMITS:
+        rc = subprocess.call(
+            ["git", "merge-base", "--is-ancestor", sha, "HEAD"],
+            cwd=str(ROOT),
+        )
+        ancestors[sha] = rc == 0
+    dirty = subprocess.check_output(
+        [
+            "git",
+            "status",
+            "--short",
+            "--",
+            "cardscanr_market_engine",
+            "tools/linux_x11_ebay_sold.py",
+            "tools/ebay_au_controlled_continuous_owned_daily_rollout.py",
+            "tools/ebay_au_final_five_consecutive_e2e.py",
+            "workers",
+        ],
+        text=True,
+        cwd=str(ROOT),
+    ).strip()
+    return {
+        "ok": all(ancestors.values()),
+        "HEAD": head,
+        "requiredCommitsPresent": ancestors,
+        "productionWorkingTreeDirty": bool(dirty),
+        "productionWorkingTree": dirty or "(clean)",
+    }
+
+
+def readiness_bundle() -> dict[str, Any]:
+    from tools.exact_sold_control_targeting_readiness import readiness_bundle as sold_ready
+    from tools.sold_nav_control_plane_persistence_readiness import readiness_bundle as persist_ready
+
+    sold = sold_ready()
+    persist = persist_ready()
+    policy = policy_audit()
+    freshness = freshness_invariant_self_check()
+    pre_submit = os.environ.get(PRE_SUBMIT_ONLY_ENV)
+    pre_ok = pre_submit in (None, "", "0", "false", "False")
+    return {
+        "ok": bool(
+            sold.get("ok")
+            and persist.get("ok")
+            and policy.get("ok")
+            and freshness.get("ok")
+            and pre_ok
+        ),
+        "scheduler": policy.get("ok"),
+        "freshness": freshness.get("ok"),
+        "soldExactTargeting": sold.get("ok"),
+        "soldPhasePolicy": sold.get("phaseTimeoutRegression"),
+        "persistence": persist.get("ok"),
+        "PRE_SUBMIT_ONLY": pre_submit,
+        "PRE_SUBMIT_ONLY_false": pre_ok,
+        "sold": sold,
+        "persist": persist,
+        "policy": policy,
+    }
+
+
 def write_report(run: dict[str, Any]) -> Path:
-    path = OUT / "CONTROLLED_CONTINUOUS_OWNED_DAILY_ROLLOUT_REPORT.md"
+    path = OUT / "FINAL_CONTROLLED_25_JOB_ROLLOUT_REPORT.md"
     acc = run.get("attemptAccounting") or {}
     cards = run.get("cards") or []
     q = run.get("startingQueue") or {}
     lines = [
-        "# CONTROLLED CONTINUOUS OWNED DAILY ROLLOUT",
+        "# FINAL CONTROLLED 25-JOB ROLLOUT",
         "",
         f"**Task:** `{TASK_ID}`",
         f"**Verdict:** `{run.get('rolloutVerdict')}`",
@@ -333,6 +404,18 @@ def write_report(run: dict[str, Any]) -> Path:
         f"**Stop reason:** {run.get('stopReason')}",
         "",
         "NOT unrestricted continuous. Cap=25 then OWNED_DAILY_FULL_ENABLE=false.",
+        "",
+        "## Deployment",
+        "",
+        "```json",
+        json.dumps(run.get("deployment"), indent=2)[:8000],
+        "```",
+        "",
+        "## Readiness",
+        "",
+        "```json",
+        json.dumps(run.get("readiness"), indent=2)[:12000],
+        "```",
         "",
         "## Baseline commit",
         "",
@@ -443,7 +526,7 @@ def write_report(run: dict[str, Any]) -> Path:
 
 def write_zip(report_path: Path) -> dict[str, Any]:
     utc = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    zip_path = Path(rf"C:\Users\andyg\Downloads\CARDSCANR_CONTROLLED_CONTINUOUS_OWNED_DAILY_ROLLOUT_{utc}.zip")
+    zip_path = Path(rf"C:\Users\andyg\Downloads\CARDSCANR_FINAL_CONTROLLED_25_JOB_ROLLOUT_{utc}.zip")
     skip_suffix = {".sqlite", ".gz", ".cookie"}
     skip_names = {"cookies", "credentials", "token", "secret", ".env"}
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -495,24 +578,34 @@ def main() -> int:
         }
     )
 
+    deployment = deployment_audit()
+    (OUT / "deployment_audit.json").write_text(json.dumps(deployment, indent=2) + "\n", encoding="utf-8")
+    if not deployment["ok"]:
+        print("STOP: required commits missing from HEAD", json.dumps(deployment, indent=2))
+        return 2
+    if deployment.get("productionWorkingTreeDirty"):
+        print("STOP: unexplained production working-tree changes before eBay")
+        print(deployment.get("productionWorkingTree"))
+        return 2
+
     baseline = {
-        "hash": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=str(ROOT)).strip(),
+        "hash": deployment["HEAD"],
         "message": subprocess.check_output(
             ["git", "log", "-1", "--pretty=%s"], text=True, cwd=str(ROOT)
         ).strip(),
-        "filesChanged": int(
-            subprocess.check_output(
-                ["git", "show", "--stat", "--format=", "HEAD"], text=True, cwd=str(ROOT)
-            ).count("\n")
-        ),
+        "requiredCommits": deployment["requiredCommitsPresent"],
     }
     (OUT / "baseline_commit.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
 
-    policy = policy_audit()
-    (OUT / "policy_audit.json").write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
-    if not policy["ok"]:
-        print("STOP: policy audit failed", json.dumps(policy, indent=2))
+    os.environ.pop(PRE_SUBMIT_ONLY_ENV, None)
+    readiness = readiness_bundle()
+    (OUT / "readiness.json").write_text(json.dumps(readiness, indent=2) + "\n", encoding="utf-8")
+    if not readiness["ok"]:
+        print("STOP: readiness failed", json.dumps(readiness, indent=2)[:8000])
         return 2
+
+    policy = readiness["policy"]
+    (OUT / "policy_audit.json").write_text(json.dumps(policy, indent=2) + "\n", encoding="utf-8")
 
     freshness = freshness_invariant_self_check()
     (OUT / "freshness_invariants.json").write_text(json.dumps(freshness, indent=2) + "\n", encoding="utf-8")
@@ -525,7 +618,8 @@ def main() -> int:
     if not self_checks.get("ok"):
         print("STOP: five-card reliability self-check failed")
         return 2
-    os.environ.pop(PRE_SUBMIT_ONLY_ENV, None)
+    readiness["interCard"] = bool(self_checks.get("ok"))
+    readiness["capture"] = bool(self_checks.get("ok"))
 
     from cardscanr_market_engine.config import MarketEngineConfig, supabase_secret_key_from_env
     from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
@@ -628,6 +722,8 @@ def main() -> int:
     run["cards"] = cards
     run["baseline"] = baseline
     run["baselineCommit"] = baseline["hash"]
+    run["deployment"] = deployment
+    run["readiness"] = readiness
     run["policyAudit"] = policy
     run["demandSnapshot"] = demand_public
     run["freshnessInvariants"] = freshness
@@ -637,6 +733,13 @@ def main() -> int:
         cp_path = harness.BOOT / "mid_run_checkpoint.json"
         if cp_path.is_file():
             run["midRunCheckpoint"] = json.loads(cp_path.read_text(encoding="utf-8"))
+    if "midRunCheckpoint20" not in run:
+        cp20 = harness.BOOT / "mid_run_checkpoint_20.json"
+        if cp20.is_file():
+            run["midRunCheckpoint20"] = json.loads(cp20.read_text(encoding="utf-8"))
+    cp10 = harness.BOOT / "mid_run_checkpoint_10.json"
+    if cp10.is_file() and "midRunCheckpoint" not in run:
+        run["midRunCheckpoint"] = json.loads(cp10.read_text(encoding="utf-8"))
 
     lane_dist = {"DEMAND": 0, "STALE_OWNED": 0, "COVERAGE": 0, "ageBoosted": 0, "deduped": 0}
     updated = unchanged = safe = 0
