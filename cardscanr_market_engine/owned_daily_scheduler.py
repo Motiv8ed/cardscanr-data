@@ -19,6 +19,7 @@ from .ebay_availability import (
     EBAY_AVAILABILITY_COOLDOWN,
     browser_work_allowed,
 )
+from .owned_daily_enablement import owned_daily_full_enable
 from .owned_daily_pacing import OwnedDailyPacingConfig
 from .queue_capacity import QueueWatermarks, enqueue_budget
 from .scheduler import (
@@ -96,11 +97,11 @@ class OwnedDailySchedulerConfig:
             if not supabase_service_role_key:
                 raise ValueError("SUPABASE_SECRET_KEY is required")
         pilot_cap = _parse_positive_int("OWNED_DAILY_MAX_ENQUEUE", 25)
-        full_enable = _parse_bool("OWNED_DAILY_FULL_ENABLE", False)
+        full_enable = owned_daily_full_enable()
         if full_enable:
-            # Full mode still respects an optional hard ceiling (0 = use high default).
-            full_cap = _parse_non_negative_int("OWNED_DAILY_FULL_MAX_ENQUEUE", 500)
-            max_enqueues = full_cap if full_cap > 0 else 500
+            # Continuous AU: concurrency 1 — enqueue at most one due card per cycle.
+            full_cap = _parse_non_negative_int("OWNED_DAILY_FULL_MAX_ENQUEUE", 1)
+            max_enqueues = full_cap if full_cap > 0 else 1
         else:
             max_enqueues = pilot_cap
         return cls(
@@ -194,8 +195,12 @@ class OwnedPrintingRefreshScheduler:
             )
 
         # Worker-wide eBay availability circuit: do not consume due cards during COOLDOWN.
+        # PROBE_REQUIRED: allow a single recovery-slot evaluation (worker/job_runner
+        # uses for_probe); do not HOLD the entire queue permanently.
         allowed_browser, avail_reason, avail_snap = browser_work_allowed(now=now, for_probe=False)
-        if not allowed_browser:
+        probe_ok, _, _ = browser_work_allowed(now=now, for_probe=True)
+        probe_slot = (not allowed_browser) and probe_ok and str(avail_snap.state or "") == "PROBE_REQUIRED"
+        if not allowed_browser and not probe_slot:
             return SchedulerDecision(
                 should_enqueue=False,
                 priority=None,
@@ -211,6 +216,9 @@ class OwnedPrintingRefreshScheduler:
                     "owned_priority_band": "EBAY_AVAILABILITY_HOLD",
                 },
             )
+        if probe_slot:
+            details["probeSlot"] = True
+            details["ebay_availability_state"] = avail_snap.state
 
         # Source-aware + demand-aware owned_daily eBay policy.
         # Do NOT use cache stale_after alone — that is selected-price TTL, often
@@ -355,6 +363,12 @@ class OwnedPrintingRefreshScheduler:
             watermarks=watermarks,
             max_enqueues_per_run=self.config.max_enqueues_per_run,
         )
+        if any(
+            bool((item["decision"].details or {}).get("probeSlot"))
+            for item in decisions
+            if item["decision"].should_enqueue
+        ):
+            enqueue_limit = min(int(enqueue_limit or 0), 1)
 
         eligible = [item for item in decisions if item["decision"].should_enqueue]
         key_ids = []

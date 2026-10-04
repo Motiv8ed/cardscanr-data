@@ -25,8 +25,10 @@ FAILURE_CLASS_LATER = "retryable_later"
 FAILURE_CLASS_IDENTITY = "identity_unsupported"
 
 # Conservative defaults for classic eBay SORRY / Error Page (not challenge bypass).
-DEFAULT_EBAY_TRANSIENT_COOLDOWN_MINUTES = 15
-DEFAULT_EBAY_TRANSIENT_SECOND_COOLDOWN_MINUTES = 60
+# First-key backoff must outlast a typical marketplace cooldown so the same
+# failing card is not immediately reselected on the first post-resume cycle.
+DEFAULT_EBAY_TRANSIENT_COOLDOWN_MINUTES = 90
+DEFAULT_EBAY_TRANSIENT_SECOND_COOLDOWN_MINUTES = 180
 DEFAULT_EBAY_TRANSIENT_DEFER_HOURS = 6
 
 IDENTITY_ERROR_MARKERS = frozenset(

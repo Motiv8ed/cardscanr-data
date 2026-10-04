@@ -297,8 +297,8 @@ class FailureBackoffTests(unittest.TestCase):
         second = build_failure_policy(exc, now=NOW, consecutive_same_failures=2)
         third = build_failure_policy(exc, now=NOW, consecutive_same_failures=3)
         self.assertTrue(first.retryable)
-        self.assertEqual(first.backoff, timedelta(minutes=15))
-        self.assertEqual(second.backoff, timedelta(minutes=60))
+        self.assertEqual(first.backoff, timedelta(minutes=90))
+        self.assertEqual(second.backoff, timedelta(minutes=180))
         self.assertEqual(third.backoff, timedelta(hours=6))
 
 

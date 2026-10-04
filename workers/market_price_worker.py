@@ -18,8 +18,24 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import MarketEngineConfig
+from cardscanr_market_engine.continuous_au_status import append_daily_metrics, write_continuous_status
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_worker_policy import (
+    HARD_STOP_OUTCOMES,
+    classify_continuous_gate,
+    maybe_resume_transient_halt,
+)
 from cardscanr_market_engine.international.fallback_runner import InternationalMarketPriceJobRunner
-from cardscanr_market_engine.owned_daily_outcomes import CHALLENGE_REQUIRED
+from cardscanr_market_engine.owned_daily_enablement import (
+    apply_continuous_au_env,
+    owned_daily_full_enable,
+    write_owned_daily_flag,
+)
+from cardscanr_market_engine.owned_daily_outcomes import (
+    CHALLENGE_REQUIRED,
+    TEMPORARY_EBAY_SERVER_FAILURE,
+    TRANSIENT_EBAY_FAILURE_OUTCOMES,
+)
 from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingController
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
@@ -167,24 +183,109 @@ def run_worker_loop(
     pacing_controller = pacing
     if pacing_controller is None and _ebay_pacing_enabled(config):
         pacing_controller = OwnedDailyPacingController()
+    budget = ContinuousSafetyBudget.from_env()
+    last_success = None
+    last_transient = None
+    healthy_times: list[str] = []
 
     while True:
         cycle += 1
         started_at = utc_iso()
         cycle_t0 = time.monotonic()
+        continuous = owned_daily_full_enable()
+        gate_info: dict[str, Any] = {}
+        worker_state = "SELECTING"
+        hard = None
+        budget_reason = None
+        if continuous:
+            gate_info = classify_continuous_gate(market="AU")
+            if pacing_controller is not None:
+                maybe_resume_transient_halt(pacing_controller, gate_info)
+            budget_reason = budget.budget_exhausted()
+            transient_stop = budget.transient_hard_stop()
+            hard = gate_info.get("hardStop") or transient_stop
+            if pacing_controller is not None and pacing_controller.state.halt_reason in HARD_STOP_OUTCOMES:
+                hard = pacing_controller.state.halt_reason
+            worker_state = str(gate_info.get("workerState") or "SELECTING")
+            if budget_reason:
+                worker_state = "BUDGET_WAIT"
+            if hard:
+                worker_state = "HARD_STOP"
+                write_owned_daily_flag(False)
+                budget.last_hard_stop = str(hard)
+                budget.persist()
+            write_continuous_status(
+                {
+                    "enabled": continuous and not hard,
+                    "market": "AU",
+                    "workerState": worker_state,
+                    "submissions1h": budget.submissions_1h(),
+                    "submissions24h": budget.submissions_24h(),
+                    "healthy1h": len(healthy_times),
+                    "healthy24h": len(healthy_times),
+                    "transientFailures1h": budget.transients_1h(),
+                    "consecutiveTransientFailures": budget.consecutive_transient,
+                    "lastSuccessfulJobAt": last_success,
+                    "lastTransientFailureAt": last_transient,
+                    "cooldownUntil": gate_info.get("cooldownUntil"),
+                    "nextProbeAt": gate_info.get("nextProbeAt"),
+                    "lastHardStopReason": hard or budget.last_hard_stop,
+                    "activeChallenges": gate_info.get("activeChallenges") or 0,
+                }
+            )
+            if hard:
+                logger(
+                    "[market-engine] "
+                    f"cycle={cycle} status=HARD_STOP reason={hard} awaiting owner review"
+                )
+                if args.once:
+                    return 2
+                sleep_func(max(poll_seconds, 60))
+                continue
+            if budget_reason:
+                logger(
+                    "[market-engine] "
+                    f"cycle={cycle} status=BUDGET_WAIT reason={budget_reason}"
+                )
+                if args.once:
+                    return 0
+                sleep_func(max(poll_seconds, 60))
+                continue
+            if worker_state == "COOLDOWN":
+                logger(
+                    "[market-engine] "
+                    f"cycle={cycle} status=COOLDOWN until={gate_info.get('cooldownUntil')} "
+                    f"nextProbeAt={gate_info.get('nextProbeAt')} no provider"
+                )
+                if args.once:
+                    return 0
+                sleep_func(max(poll_seconds, 30))
+                continue
+
         if pacing_controller is not None and pacing_controller.state.browser_halted:
+            halt = pacing_controller.state.halt_reason
+            if halt in HARD_STOP_OUTCOMES:
+                logger(
+                    "[market-engine] "
+                    f"cycle={cycle} status=browser_halted reason={halt} "
+                    "awaiting human eBay session restoration"
+                )
+                if args.once:
+                    return 0
+                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                    return 0
+                sleep_func(max(poll_seconds, pacing_controller.config.max_inter_job_delay_seconds))
+                continue
             logger(
                 "[market-engine] "
-                f"cycle={cycle} status=browser_halted reason={pacing_controller.state.halt_reason} "
-                "awaiting human eBay session restoration"
+                f"cycle={cycle} status=transient_halt reason={halt} waiting control plane"
             )
             if args.once:
                 return 0
-            if args.max_cycles > 0 and cycle >= args.max_cycles:
-                return 0
-            # Long idle; do not hammer after CHALLENGE_REQUIRED.
-            sleep_func(max(poll_seconds, pacing_controller.config.max_inter_job_delay_seconds))
+            sleep_func(max(poll_seconds, 30))
             continue
+
+        runner._ebay_probe_mode = worker_state == "PROBE_REQUIRED"  # noqa: SLF001
         try:
             results = runner.run_once(max_jobs=max_jobs)
         except Exception as exc:
@@ -219,7 +320,6 @@ def run_worker_loop(
         transient_backoff_seconds = 0
         if pacing_controller is not None and results:
             elapsed = time.monotonic() - cycle_t0
-            # Attribute cycle duration across jobs in this claim batch.
             per_job = elapsed / max(1, len(results))
             for row in results:
                 pacing_controller.record_check_duration(per_job)
@@ -228,8 +328,37 @@ def run_worker_loop(
                     outcome,
                     last_good_retained=bool(row.get("lastGoodRetained")),
                 )
-                if outcome == CHALLENGE_REQUIRED:
+                if outcome in HARD_STOP_OUTCOMES:
                     break
+                if outcome == TEMPORARY_EBAY_SERVER_FAILURE or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES:
+                    last_transient = utc_iso()
+                    stop_reason = budget.record_transient()
+                    budget.persist()
+                    if stop_reason:
+                        write_owned_daily_flag(False)
+                        write_continuous_status(
+                            {
+                                "enabled": False,
+                                "workerState": "HARD_STOP",
+                                "lastHardStopReason": stop_reason,
+                                "consecutiveTransientFailures": budget.consecutive_transient,
+                            }
+                        )
+                        logger(
+                            "[market-engine] "
+                            f"cycle={cycle} status=HARD_STOP reason={stop_reason}"
+                        )
+                        if args.once:
+                            return 2
+                        break
+                elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
+                    budget.record_healthy()
+                    last_success = utc_iso()
+                    healthy_times.append(last_success)
+                    consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"
+                    if consumed:
+                        budget.record_submission()
+                    budget.persist()
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,
@@ -240,6 +369,15 @@ def run_worker_loop(
             summary["ownedDailyPacing"] = pacing_controller.state.snapshot()
         write_json(config.latest_report_path, summary)
         append_jsonl(config.runs_report_path, summary)
+        append_daily_metrics(
+            {
+                "cycle": cycle,
+                "jobCount": len(results),
+                "workerState": worker_state,
+                "submissions1h": budget.submissions_1h(),
+                "submissions24h": budget.submissions_24h(),
+            }
+        )
         try:
             if hasattr(runner.client, "upsert_pipeline_heartbeat"):
                 completed = sum(1 for row in results if str(row.get("status") or "") == "completed")
@@ -274,7 +412,7 @@ def run_worker_loop(
         if pacing_controller is not None and results:
             delay = pacing_controller.next_delay_seconds(more_jobs_pending=True)
             logger(f"[market-engine] paced_cooldown={delay}s outcome={pacing_controller.state.last_outcome}")
-            sleep_func(delay)
+            sleep_func(delay if delay > 0 else poll_seconds)
         else:
             sleep_func(poll_seconds)
 
@@ -290,6 +428,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if owned_daily_full_enable():
+        apply_continuous_au_env()
     config = MarketEngineConfig.from_env(require_supabase=True)
     if config.provider_name == "ebay_browser" and os.getenv("CONFIRM_LIVE_EBAY_WORKER", "").strip().lower() != "true":
         raise ValueError(
