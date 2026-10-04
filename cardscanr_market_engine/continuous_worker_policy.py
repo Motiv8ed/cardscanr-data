@@ -43,12 +43,12 @@ def classify_continuous_gate(*, market: str = "AU") -> dict[str, Any]:
         worker_state = "HARD_STOP"
     elif allowed:
         worker_state = "SELECTING"
+    elif state == "PROBE_REQUIRED" and bool(getattr(probe, "allowed", False)):
+        worker_state = "PROBE_REQUIRED"
     elif state == "COOLDOWN" or any(
         "COOLDOWN" in str(c) for c in (getattr(gate, "reason_codes", []) or [])
     ):
         worker_state = "COOLDOWN"
-    elif state == "PROBE_REQUIRED" and bool(getattr(probe, "allowed", False)):
-        worker_state = "PROBE_REQUIRED"
     else:
         worker_state = "WAITING"
     return {
