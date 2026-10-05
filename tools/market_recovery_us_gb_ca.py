@@ -139,6 +139,12 @@ def bind_env(market: str, *, mode: str) -> dict[str, str]:
         "MAX_LIVE_SUBMISSIONS_PER_HOUR": "20",
         "MAX_LIVE_SUBMISSIONS_PER_DAY": "200",
     }
+    # Region canaries prove browser lifecycle on keys that can retain/write a price.
+    # Never-priced empty Sold pages are not INTER_CARD defects — skip them in CANARY.
+    if mode == "CANARY":
+        values["OWNED_DAILY_SKIP_BANDS"] = "P0_NEVER_PRICED"
+    else:
+        os.environ.pop("OWNED_DAILY_SKIP_BANDS", None)
     os.environ.pop("PRE_SUBMIT_ONLY", None)
     os.environ.pop("CARDSCANR_PRE_SUBMIT_ONLY", None)
     for key, value in values.items():

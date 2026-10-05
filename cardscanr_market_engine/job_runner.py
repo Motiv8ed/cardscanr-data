@@ -1359,6 +1359,17 @@ class MarketPriceJobRunner:
                     result["errorType"] = type(exc).__name__
             if fail_job_error:
                 result["failJobError"] = fail_job_error
+            if owned_outcome == NO_PRICE_EVER_FOUND and (
+                result.get("x11SoldStateVerified")
+                or isinstance(result.get("currentJobCapture"), dict)
+            ):
+                persist_healthy_inter_card_handoff(
+                    logger=self.logger,
+                    price_key=price_key,
+                    provider_result=None,
+                    owned_outcome=NO_PRICE_EVER_FOUND,
+                    result=result,
+                )
             return result
 
     def run_once(self, *, max_jobs: int | None = None) -> list[dict[str, Any]]:

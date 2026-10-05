@@ -375,6 +375,8 @@ OWNED_OUTCOME_TO_CARD_VERDICT = {
     "UPDATED_FROM_EBAY": "PASS_PRICE_UPDATED",
     "UNCHANGED_FROM_EBAY": "PASS_PRICE_UNCHANGED",
     "CHECKED_NO_NEW_EXACT_EVIDENCE": "SAFE_NO_NEW_EXACT_EVIDENCE",
+    # Sold verified + capture but never had a price to retain — browser terminal is still healthy.
+    "NO_PRICE_EVER_FOUND": "SAFE_NO_NEW_EXACT_EVIDENCE",
 }
 
 

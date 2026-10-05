@@ -274,6 +274,20 @@ class OwnedPrintingRefreshScheduler:
                 details={**details, "owned_priority_band": "FRESH_SKIP"},
             )
 
+        skip_bands = {
+            part.strip().upper()
+            for part in str(os.getenv("OWNED_DAILY_SKIP_BANDS") or "").split(",")
+            if part.strip()
+        }
+        if band in skip_bands:
+            return SchedulerDecision(
+                should_enqueue=False,
+                priority=None,
+                reason=f"band_skipped:{band}",
+                score=0,
+                details={**details, "owned_priority_band": band, "bandSkippedByEnv": True},
+            )
+
         priority = PRIORITY_BY_BAND.get(band, 100)
         # Anti-starvation score: older eBay-success / more owners first within band.
         age_hours = 0.0
