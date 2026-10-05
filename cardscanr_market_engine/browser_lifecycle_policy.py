@@ -425,6 +425,17 @@ def prior_from_healthy_job_result(result: dict[str, Any] | None) -> PriorCardCon
         ),
         currency=_s(result.get("currency") or identity.get("currency")),
     )
+    if not prior.final_url and isinstance(result.get("providerDiagnostics"), dict):
+        nested = result["providerDiagnostics"].get("diagnostics")
+        if isinstance(nested, dict) and isinstance(nested.get("desktopNav"), dict):
+            prior.final_url = _s(nested["desktopNav"].get("url")) or prior.final_url
+            prior.query = prior.query or _s(nested["desktopNav"].get("queryExpected"))
+    if not prior.market:
+        prior.market = prior_market_of(prior)
+    if not prior.currency and prior.fingerprint:
+        parts = str(prior.fingerprint).split("|")
+        if len(parts) >= 2:
+            prior.currency = parts[-1].upper() or None
     if not prior_context_is_healthy_terminal(prior):
         return None
     return prior
