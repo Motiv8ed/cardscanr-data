@@ -74,6 +74,7 @@ SKIP_OUTCOMES = {
     "already_fresh_noop",
     "ALREADY_FRESH_NOOP",
     "owned_daily_fresh_noop",
+    "NO_PRICE_EVER_FOUND",
 }
 
 
