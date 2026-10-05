@@ -90,6 +90,32 @@ class GamingResourcePauseTests(unittest.TestCase):
         self.assertIn("FORTNITE_EXITED", names)
         self.assertIn("OWNED_PRICING_RESUMED", names)
 
+    def test_stuck_pause_with_fortnite_gone_starts_resume_delay(self) -> None:
+        """pause=true + fortnite_detected=false + no resumeEligibleAt must not deadlock."""
+
+        def probe() -> dict:
+            return {
+                "detected": False,
+                "method": "test",
+                "processes": [],
+                "canonicalExecutable": grp.DEFAULT_FORTNITE_PROCESS_NAMES[0],
+                "antiCheatOrGameModification": "NONE",
+            }
+
+        ctrl = grp.GamingResourcePauseController(process_probe=probe)
+        ctrl.state.gaming_resource_pause = True
+        ctrl.state.fortnite_detected = False
+        ctrl.state.resume_eligible_at = None
+        ctrl.state.worker_state = grp.WORKER_PAUSED
+        ctrl.state.pause_started_at = "2026-10-04T23:31:28Z"
+        grp.save_state(ctrl.state)
+        ctrl.tick()
+        self.assertTrue(ctrl.state.gaming_resource_pause)
+        self.assertIsNotNone(ctrl.state.resume_eligible_at)
+        ctrl.state.resume_eligible_at = "2000-01-01T00:00:00Z"
+        ctrl.tick()
+        self.assertFalse(ctrl.should_block_new_jobs())
+
     def test_manual_pause_blocks_resume(self) -> None:
         detected = {"flag": False}
 

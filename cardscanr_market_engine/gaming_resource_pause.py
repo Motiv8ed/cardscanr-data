@@ -411,12 +411,24 @@ class GamingResourcePauseController:
 
             # Fortnite absent
             self.state.fortnite_detected = False
-            if prev and not detected:
+            # Normal exit edge, or stuck pause where the edge was missed
+            # (pause=true, fortnite_detected already false, resumeEligibleAt null).
+            missed_exit = (
+                self.state.gaming_resource_pause
+                and not detected
+                and not self.state.resume_eligible_at
+                and not self.state.manual_pause
+            )
+            if (prev and not detected) or missed_exit:
                 self.state.fortnite_exited_at = _utc_iso()
                 delay = resume_delay_seconds()
                 eligible = _utc_now().timestamp() + delay
                 self.state.resume_eligible_at = _utc_iso(datetime.fromtimestamp(eligible, tz=timezone.utc))
-                _note_transition(self.state, "FORTNITE_EXITED")
+                _note_transition(
+                    self.state,
+                    "FORTNITE_EXITED",
+                    reason="missed_exit_recovery" if missed_exit and not prev else "transition_running_to_not_running",
+                )
                 _note_transition(self.state, "OWNED_PRICING_RESUME_DELAY", delaySeconds=delay)
                 save_state(self.state)
                 return self.state
