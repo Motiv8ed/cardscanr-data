@@ -542,8 +542,9 @@ def run_market_canary(
     elif healthy <= 0:
         force_cold_start_nav_context()
 
+    attempts_this_run = 0
     while healthy < target_healthy and submissions < target_healthy:
-        if len(cards) >= max(target_healthy * 4, 12):
+        if attempts_this_run >= max(target_healthy * 4, 12):
             stop_reason = "MAX_CANARY_ATTEMPTS"
             result = "STOPPED_SAFE"
             break
@@ -611,6 +612,7 @@ def run_market_canary(
             expected_mode = "COLD_START"
 
         cycle = run_scheduler_worker(market, mode="CANARY")
+        attempts_this_run += 1
         classification = classify_canary_failure(
             outcome=cycle.get("outcome"),
             error_message=str(cycle.get("error") or ""),
