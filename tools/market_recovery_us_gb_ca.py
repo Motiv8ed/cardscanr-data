@@ -35,7 +35,19 @@ from cardscanr_market_engine.live_navigation_attempt import (
     attempts_dir,
     has_search_submission_started,
 )
-from cardscanr_market_engine.local_browser_runtime import ensure_xvfb, probe_pre_live_runtime
+from cardscanr_market_engine.browser_lifecycle_policy import (
+    RUNTIME_INTER_CARD,
+    evaluate_runtime_targets,
+    required_runtime_mode,
+)
+from cardscanr_market_engine.local_browser_runtime import ensure_xvfb, probe_local_browser_runtime, probe_pre_live_runtime
+from cardscanr_market_engine.navigation_runtime_context import (
+    DEFAULT_CONTEXT_PATH,
+    RUNTIME_MODE_ENV,
+    clear_context_from_environ,
+    load_navigation_runtime_context,
+    persist_inter_card_from_healthy_result,
+)
 from cardscanr_market_engine.owned_daily_enablement import (
     apply_continuous_multi_region_env,
     owned_daily_full_enable,
@@ -56,6 +68,40 @@ HEALTHY_OUTCOMES = {
     "UNCHANGED_FROM_EBAY",
     "CHECKED_NO_NEW_EXACT_EVIDENCE",
 }
+
+
+SKIP_OUTCOMES = {
+    "already_fresh_noop",
+    "ALREADY_FRESH_NOOP",
+    "owned_daily_fresh_noop",
+}
+
+
+def next_card_index(market: str) -> int:
+    index = 1
+    while (ART / f"{market}_card_{index}.json").is_file():
+        index += 1
+    return index
+
+
+def healthy_price_keys_from_files(market: str) -> set[str]:
+    keys: set[str] = set()
+    index = 1
+    while True:
+        path = ART / f"{market}_card_{index}.json"
+        if not path.is_file():
+            break
+        try:
+            cycle = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            index += 1
+            continue
+        if cycle.get("healthy"):
+            price_key = str((cycle.get("result") or {}).get("priceKeyId") or "").strip()
+            if price_key:
+                keys.add(price_key)
+        index += 1
+    return keys
 
 
 def utc_now() -> str:
@@ -106,10 +152,48 @@ def cold_start_browser() -> dict[str, Any]:
     return cold_start_normalise()
 
 
+def needs_cold_start(market: str, *, healthy: int) -> bool:
+    if healthy <= 0:
+        return True
+    ctx = load_navigation_runtime_context()
+    if required_runtime_mode(next_market=market, prior=ctx.expected_prior) != RUNTIME_INTER_CARD:
+        return True
+    browser = probe_local_browser_runtime()
+    policy = evaluate_runtime_targets(
+        browser.raw_targets,
+        mode=RUNTIME_INTER_CARD,
+        prior=ctx.expected_prior,
+    )
+    return not any(c.belongs_to_expected_previous_card for c in policy.classified)
+
+
+def force_cold_start_nav_context() -> None:
+    """Drop persisted INTER_CARD prior so card-1 / market-switch workers stay COLD_START."""
+    clear_context_from_environ()
+    os.environ[RUNTIME_MODE_ENV] = "COLD_START"
+    for path in (
+        DEFAULT_CONTEXT_PATH,
+        DEFAULT_CONTEXT_PATH.with_name(DEFAULT_CONTEXT_PATH.stem + ".prior.json"),
+    ):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def local_ready(*, market: str, cold: bool = True) -> dict[str, Any]:
     xvfb = ensure_xvfb()
-    cold_norm = cold_start_browser() if cold else {"ok": True, "resetMethod": "skipped_inter_card"}
-    runtime = probe_pre_live_runtime(runtime_mode="COLD_START" if cold else "INTER_CARD")
+    if cold:
+        force_cold_start_nav_context()
+        cold_norm = cold_start_browser()
+        prior = None
+    else:
+        cold_norm = {"ok": True, "resetMethod": "skipped_inter_card"}
+        prior = load_navigation_runtime_context().expected_prior
+    runtime = probe_pre_live_runtime(
+        runtime_mode="COLD_START" if cold else "INTER_CARD",
+        expected_prior=prior,
+    )
     ready = bool(
         xvfb.get("ok")
         and cold_norm.get("ok")
@@ -247,7 +331,7 @@ def wait_for_probe_window(market: str, *, max_wait_seconds: int = 3700) -> dict[
             "canary": cont,
             "elapsedSec": int(time.time() - started),
         }
-        if snap.state in {"HEALTHY", "PROBE_REQUIRED"} and (gate.allowed or snap.state == "HEALTHY"):
+        if snap.state in {"HEALTHY", "PROBE_REQUIRED"}:
             payload["ready"] = True
             return payload
         if cont.get("hardStop"):
@@ -267,6 +351,23 @@ def recover_au() -> dict[str, Any]:
     _write(ART / "AU_gaming_wait.json", gaming)
     if gaming.get("blocked"):
         return {"ok": False, "reason": "GAMING_RESOURCE_PAUSE", "gaming": gaming}
+
+    before = peek_availability(market="AU")
+    _write(ART / "AU_availability_before.json", before.to_dict())
+    if before.state == "HEALTHY":
+        # Do not COLD_START/restart Chrome — other markets may have a live INTER_CARD tab.
+        budget = ContinuousSafetyBudget.from_env()
+        budget.record_healthy()
+        budget.persist()
+        write_owned_daily_flag(True)
+        apply_continuous_multi_region_env(markets="AU")
+        return {
+            "ok": True,
+            "alreadyHealthy": True,
+            "enabled": True,
+            "availability": before.state,
+            "chromeResetSkipped": True,
+        }
 
     ready = local_ready(market="AU", cold=True)
     _write(ART / "AU_local_ready.json", ready)
@@ -367,12 +468,72 @@ def enable_market_continuous(market: str) -> dict[str, Any]:
     }
 
 
-def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]:
+def reset_market_canary_artifacts(market: str) -> dict[str, Any]:
+    """Archive prior canary card/summary files so the next run starts at 0/5."""
+    stamped = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archive = ART / "_archive" / f"{market}_{stamped}"
+    moved: list[str] = []
+    archive.mkdir(parents=True, exist_ok=True)
+    for path in sorted(ART.glob(f"{market}_*")):
+        if not path.is_file():
+            continue
+        dest = archive / path.name
+        path.replace(dest)
+        moved.append(path.name)
+    force_cold_start_nav_context()
+    return {"market": market, "archivedTo": str(archive), "moved": moved}
+
+
+def run_market_canary(
+    market: str,
+    *,
+    target_healthy: int = 5,
+    fresh: bool = False,
+) -> dict[str, Any]:
+    if fresh:
+        reset_market_canary_artifacts(market)
     cards: list[dict[str, Any]] = []
     submissions = 0
     healthy = 0
     stop_reason = None
     result = "RUNNING"
+    runtime_modes: list[str] = []
+    healthy_keys = healthy_price_keys_from_files(market)
+    healthy = len(healthy_keys)
+    prev_path = ART / f"{market}_canary_summary.json"
+    if prev_path.is_file() and not fresh:
+        try:
+            previous = json.loads(prev_path.read_text(encoding="utf-8"))
+        except Exception:
+            previous = {}
+        if isinstance(previous, dict) and previous.get("result") == "PASS":
+            return previous
+        if isinstance(previous, dict):
+            cards = list(previous.get("cards") or [])
+            submissions = int(previous.get("submissions") or 0)
+            runtime_modes = list(previous.get("runtimeModes") or [])
+    last_healthy_path = None
+    index = next_card_index(market) - 1
+    while index >= 1:
+        candidate = ART / f"{market}_card_{index}.json"
+        try:
+            cycle = json.loads(candidate.read_text(encoding="utf-8"))
+        except Exception:
+            index -= 1
+            continue
+        if cycle.get("healthy"):
+            last_healthy_path = candidate
+            break
+        index -= 1
+    if last_healthy_path is not None and healthy > 0:
+        try:
+            persist_inter_card_from_healthy_result(
+                json.loads(last_healthy_path.read_text(encoding="utf-8")).get("result") or {}
+            )
+        except Exception:
+            pass
+    elif healthy <= 0:
+        force_cold_start_nav_context()
 
     while healthy < target_healthy and submissions < target_healthy:
         cont = canary_may_continue(market)
@@ -419,18 +580,35 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
             cards.append({"kind": "GAMING_PAUSE", "gaming": gaming, "at": utc_now()})
             break
 
-        ready = local_ready(market=market, cold=(healthy == 0))
+        ready = local_ready(market=market, cold=needs_cold_start(market, healthy=healthy))
         if not ready["ok"]:
             stop_reason = "LOCAL_RUNTIME_NOT_READY"
             result = "STOPPED_SAFE"
             cards.append({"kind": "LOCAL_READY_FAIL", "ready": ready, "at": utc_now()})
             break
 
+        expected_mode = "COLD_START" if needs_cold_start(market, healthy=healthy) else "INTER_CARD"
+        # After local_ready(cold=True) the prior is cleared; recompute from healthy count.
+        if healthy <= 0:
+            expected_mode = "COLD_START"
+        elif required_runtime_mode(
+            next_market=market,
+            prior=load_navigation_runtime_context().expected_prior,
+        ) == RUNTIME_INTER_CARD:
+            expected_mode = "INTER_CARD"
+        else:
+            expected_mode = "COLD_START"
+
         cycle = run_scheduler_worker(market, mode="CANARY")
         classification = classify_canary_failure(
             outcome=cycle.get("outcome"),
             error_message=str(cycle.get("error") or ""),
             search_submission_started=bool(cycle.get("searchSubmissionStarted")),
+        )
+        observed_mode = (
+            (cycle.get("result") or {}).get("runtimeMode")
+            or cycle.get("runtimeMode")
+            or expected_mode
         )
         card = {
             "kind": "CANARY",
@@ -442,11 +620,18 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
             "searchSubmissionStarted": cycle.get("searchSubmissionStarted"),
             "newAttemptIds": cycle.get("newAttemptIds"),
             "classification": classification,
+            "expectedRuntimeMode": expected_mode,
+            "observedRuntimeMode": observed_mode,
             "at": cycle.get("at"),
         }
         cards.append(card)
-        _write(ART / f"{market}_card_{len(cards)}.json", cycle)
+        cycle_out = dict(cycle)
+        cycle_out["expectedRuntimeMode"] = expected_mode
+        cycle_out["observedRuntimeMode"] = observed_mode
+        _write(ART / f"{market}_card_{next_card_index(market)}.json", cycle_out)
 
+        if str(cycle.get("outcome") or "") in SKIP_OUTCOMES or str(cycle.get("status") or "") == "skipped_already_fresh":
+            continue
         if classification["kind"] == "HARD_STOP":
             record_canary_episode(market, kind="HARD_STOP", outcome=classification["outcome"])
             stop_reason = classification["outcome"]
@@ -473,7 +658,12 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
             result = "STOPPED_SAFE"
             break
         if cycle.get("healthy"):
-            healthy += 1
+            persist_inter_card_from_healthy_result(cycle.get("result") or cycle)
+            price_key = str((cycle.get("result") or {}).get("priceKeyId") or "").strip()
+            if price_key:
+                healthy_keys.add(price_key)
+            healthy = max(healthy + 1, len(healthy_keys))
+            runtime_modes.append(str(expected_mode))
             continue
         # Non-healthy non-transient: stop safely.
         stop_reason = str(cycle.get("outcome") or cycle.get("error") or "NON_HEALTHY")
@@ -496,6 +686,14 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
         "targetHealthy": target_healthy,
         "maxPresubmitEpisodes": MAX_PRESUBMIT_TRANSIENT_EPISODES_24H,
         "stopReason": stop_reason,
+        "runtimeModes": runtime_modes,
+        "interCardSequenceOk": (
+            len(runtime_modes) >= 2
+            and runtime_modes[0] == "COLD_START"
+            and all(mode == "INTER_CARD" for mode in runtime_modes[1:])
+        )
+        if runtime_modes
+        else None,
         "cards": cards,
         "enablement": enablement,
         "availability": peek_availability(market=market).to_dict(),
@@ -506,10 +704,20 @@ def run_market_canary(market: str, *, target_healthy: int = 5) -> dict[str, Any]
     return summary
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    fresh_us = "--fresh-us" in args
+    fresh_gb = "--fresh-gb" in args
+    fresh_ca = "--fresh-ca" in args
     ART.mkdir(parents=True, exist_ok=True)
     _write(ART / "CONTROL_PLANE_BEFORE.json", multi_region_status())
-    stages: dict[str, Any] = {"startedAt": utc_now(), "operationModeInitial": parse_operation_mode()}
+    stages: dict[str, Any] = {
+        "startedAt": utc_now(),
+        "operationModeInitial": parse_operation_mode(),
+        "freshUs": fresh_us,
+        "freshGb": fresh_gb,
+        "freshCa": fresh_ca,
+    }
 
     au = recover_au()
     stages["AU"] = au
@@ -525,13 +733,17 @@ def main() -> int:
     write_owned_daily_flag(False)
     stages["AU"]["dispatchPausedForCanaries"] = True
 
-    for market in ("US", "GB", "CA"):
-        summary = run_market_canary(market)
+    for market, fresh in (("US", fresh_us), ("GB", fresh_gb), ("CA", fresh_ca)):
+        # When restarting US from 0/5, also force fresh GB/CA so prior PASS skip
+        # does not leave stale regional enablement half-applied.
+        if fresh_us and market in {"GB", "CA"}:
+            fresh = True
+        summary = run_market_canary(market, fresh=fresh)
         stages[market] = summary
         if summary.get("result") != "PASS":
             stages["result"] = "STOPPED_SAFE" if summary.get("result") == "STOPPED_SAFE" else "FAIL"
             stages["stopReason"] = summary.get("stopReason")
-            # Re-enable AU continuous if AU recovered earlier.
+            # Re-enable AU (+ any markets that already passed) continuous.
             write_owned_daily_flag(True)
             apply_continuous_multi_region_env(
                 markets=",".join(["AU"] + sorted(load_continuous_market_overrides() - {"AU"}))

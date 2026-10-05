@@ -29,8 +29,10 @@ from typing import Any
 
 from .browser_lifecycle_policy import (
     RUNTIME_COLD_START,
+    RUNTIME_INTER_CARD,
     PriorCardContext,
     evaluate_runtime_targets,
+    extra_inter_card_ebay_target_ids,
     is_ebay_marketplace_host,
     hostname_of,
 )
@@ -317,6 +319,44 @@ def assert_safe_chrome_start_url(start_url: str) -> str:
     return safe
 
 
+def reconcile_inter_card_cdp_tabs(
+    *,
+    cdp_port: int = DEFAULT_CDP_PORT,
+    prior: PriorCardContext | dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Close leftover top-level eBay tabs that are not the expected prior Sold page."""
+    prior_ctx = (
+        prior
+        if isinstance(prior, PriorCardContext)
+        else PriorCardContext.from_dict(prior if isinstance(prior, dict) else None)
+    )
+    browser = probe_local_browser_runtime(cdp_port=cdp_port)
+    policy = evaluate_runtime_targets(browser.raw_targets, mode=RUNTIME_INTER_CARD, prior=prior_ctx)
+    close_ids = extra_inter_card_ebay_target_ids(policy)
+    closed: list[str] = []
+    errors: list[str] = []
+    for target_id in close_ids:
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{cdp_port}/json/close/{target_id}",
+                timeout=3,
+            ) as resp:
+                resp.read()
+            closed.append(target_id)
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            errors.append(f"{target_id}:{exc}")
+    if closed:
+        time.sleep(0.4)
+        browser = probe_local_browser_runtime(cdp_port=cdp_port)
+        policy = evaluate_runtime_targets(browser.raw_targets, mode=RUNTIME_INTER_CARD, prior=prior_ctx)
+    return {
+        "closedTargetIds": closed,
+        "closeErrors": errors,
+        "ok": bool(policy.ok),
+        "targetPolicy": policy.to_dict(),
+    }
+
+
 def probe_pre_live_runtime(
     *,
     cdp_port: int = DEFAULT_CDP_PORT,
@@ -333,6 +373,8 @@ def probe_pre_live_runtime(
         else PriorCardContext.from_dict(expected_prior if isinstance(expected_prior, dict) else None)
     )
     mode = (runtime_mode or RUNTIME_COLD_START).upper()
+    if mode == RUNTIME_INTER_CARD and prior is not None:
+        reconcile_inter_card_cdp_tabs(cdp_port=cdp_port, prior=prior)
     browser = probe_local_browser_runtime(cdp_port=cdp_port, display=display)
     target_policy = evaluate_runtime_targets(browser.raw_targets, mode=mode, prior=prior)
     x11 = probe_x11_navigation_runtime(
@@ -381,4 +423,5 @@ __all__ = [
     "ensure_xvfb",
     "probe_local_browser_runtime",
     "probe_pre_live_runtime",
+    "reconcile_inter_card_cdp_tabs",
 ]

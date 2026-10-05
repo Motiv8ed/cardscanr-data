@@ -27,6 +27,7 @@ from cardscanr_market_engine.continuous_worker_policy import (
     maybe_resume_transient_halt,
 )
 from cardscanr_market_engine.international.fallback_runner import InternationalMarketPriceJobRunner
+from cardscanr_market_engine.navigation_runtime_context import bind_persisted_nav_context_path
 from cardscanr_market_engine.owned_daily_enablement import (
     apply_continuous_au_env,
     owned_daily_full_enable,
@@ -449,6 +450,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    bind_persisted_nav_context_path()
     args = parse_args()
     if owned_daily_full_enable():
         apply_continuous_au_env()

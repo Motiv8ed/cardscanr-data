@@ -276,6 +276,42 @@ class ContextPropagationTests(unittest.TestCase):
         self.assertTrue(str(exports["CARDSCANR_NAV_CONTEXT_JSON_PATH"]).startswith("/mnt/"))
         self.assertTrue(str(exports["CARDSCANR_EXPECTED_PRIOR_JSON_PATH"]).startswith("/mnt/"))
 
+    def test_05b_healthy_job_result_persists_across_env_clear(self) -> None:
+        from cardscanr_market_engine.browser_lifecycle_policy import required_runtime_mode
+        from cardscanr_market_engine.navigation_runtime_context import (
+            persist_inter_card_from_healthy_result,
+        )
+
+        persist_inter_card_from_healthy_result(
+            {
+                "jobId": "us-card-1",
+                "priceKeyId": "bulbasaur-key",
+                "ownedDailyOutcome": "UPDATED_FROM_EBAY",
+                "status": "completed",
+                "marketCountry": "US",
+                "currency": "USD",
+                "x11SoldStateVerified": True,
+                "currentJobCapture": {
+                    "jobId": "us-card-1",
+                    "priceKeyId": "bulbasaur-key",
+                    "targetId": TROPIUS_TARGET,
+                    "fingerprint": "pokemon|en|base1|44|bulbasaur|raw|raw|us|usd",
+                },
+                "desktopNav": {
+                    "SOLD_STATE_VERIFIED": True,
+                    "url": "https://www.ebay.com/sch/i.html?_nkw=Bulbasaur+44+base+Pokemon&LH_Sold=1",
+                    "queryExpected": "Bulbasaur 44 base Pokemon",
+                },
+            }
+        )
+        clear_context_from_environ()
+        loaded = load_navigation_runtime_context()
+        self.assertEqual(loaded.runtime_mode, RUNTIME_INTER_CARD)
+        self.assertTrue(loaded.is_inter_card())
+        self.assertEqual(loaded.expected_prior.target_id if loaded.expected_prior else None, TROPIUS_TARGET)
+        self.assertEqual(required_runtime_mode(next_market="US", prior=loaded.expected_prior), RUNTIME_INTER_CARD)
+        self.assertEqual(required_runtime_mode(next_market="GB", prior=loaded.expected_prior), RUNTIME_COLD_START)
+
     def test_06_wsl_search_args_receive_inter_card_and_skip_home(self) -> None:
         apply_context_to_environ(
             NavigationRuntimeContext(

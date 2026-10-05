@@ -88,6 +88,23 @@ class InterCardPolicyTests(unittest.TestCase):
         self.assertFalse(r.ok)
         self.assertIn("INTER_CARD_MULTIPLE_TOP_LEVEL_EBAY_TARGETS", r.reason_codes)
 
+    def test_extra_inter_card_tabs_are_closeable_without_dropping_prior(self) -> None:
+        from cardscanr_market_engine.browser_lifecycle_policy import extra_inter_card_ebay_target_ids
+
+        prior = _sandile_prior()
+        targets = _tropius_targets() + [
+            {
+                "id": "SECOND",
+                "type": "page",
+                "url": "https://www.ebay.com.au/itm/123",
+                "title": "Listing",
+            }
+        ]
+        r = evaluate_runtime_targets(targets, mode=RUNTIME_INTER_CARD, prior=prior)
+        ids = extra_inter_card_ebay_target_ids(r)
+        self.assertEqual(ids, ["SECOND"])
+        self.assertTrue(any(c.belongs_to_expected_previous_card for c in r.classified))
+
     def test_prior_failed_card_fail(self) -> None:
         prior = _sandile_prior()
         prior.card_verdict = "FAIL_CAPTURE"

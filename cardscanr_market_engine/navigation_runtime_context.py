@@ -16,6 +16,7 @@ from .browser_lifecycle_policy import (
     RUNTIME_COLD_START,
     RUNTIME_INTER_CARD,
     PriorCardContext,
+    prior_from_healthy_job_result,
     required_runtime_mode,
 )
 from .region_pricing_registry import region_definition
@@ -125,6 +126,55 @@ class NavigationRuntimeContext:
         return exports
 
 
+def bind_persisted_nav_context_path() -> Path:
+    """Point subsequent --once workers at the on-disk INTER_CARD handoff file."""
+    raw = (os.environ.get(NAV_CONTEXT_PATH_ENV) or "").strip()
+    if raw:
+        candidate = Path(raw)
+        posix = str(candidate).replace("\\", "/")
+        if not posix.startswith("/mnt/") and (candidate.is_file() or candidate.parent.exists()):
+            return candidate
+    os.environ[NAV_CONTEXT_PATH_ENV] = str(DEFAULT_CONTEXT_PATH)
+    return DEFAULT_CONTEXT_PATH
+
+
+def persist_inter_card_from_healthy_result(
+    result: dict[str, Any],
+    *,
+    provider_result: Any | None = None,
+) -> NavigationRuntimeContext | None:
+    """After a healthy owned-daily write, persist INTER_CARD prior for the next same-market card."""
+    merged: dict[str, Any] = dict(result or {})
+    if provider_result is not None:
+        meta = getattr(provider_result, "raw_metadata", None)
+        if isinstance(meta, dict):
+            if not isinstance(merged.get("desktopNav"), dict) and isinstance(meta.get("desktopNav"), dict):
+                merged["desktopNav"] = meta.get("desktopNav")
+            capture = meta.get("persistedCaptureArtifact") or meta.get("currentJobCapture")
+            if isinstance(capture, dict) and not isinstance(merged.get("currentJobCapture"), dict):
+                merged["currentJobCapture"] = capture
+            if merged.get("x11SoldStateVerified") is None and meta.get("x11SoldStateVerified"):
+                merged["x11SoldStateVerified"] = True
+    prior = prior_from_healthy_job_result(merged)
+    if prior is None:
+        return None
+    market = str(prior.market or merged.get("marketCountry") or merged.get("market") or "").strip().upper()
+    definition = region_definition(market) if market else None
+    ctx = NavigationRuntimeContext(
+        runtime_mode=RUNTIME_INTER_CARD,
+        expected_prior=prior,
+        current_market=market or None,
+        current_currency=prior.currency,
+        marketplace_home=(definition.homepage if definition is not None else None),
+        current_job_id=prior.job_id,
+        current_price_key_id=prior.price_key_id,
+        current_fingerprint=prior.fingerprint,
+        current_query=prior.query,
+    )
+    apply_context_to_environ(ctx)
+    return ctx
+
+
 def apply_context_to_environ(ctx: NavigationRuntimeContext) -> None:
     os.environ[RUNTIME_MODE_ENV] = ctx.runtime_mode
     os.environ[NAV_CONTEXT_ENV] = json.dumps(ctx.to_dict(), separators=(",", ":"))
@@ -151,6 +201,14 @@ def apply_context_to_environ(ctx: NavigationRuntimeContext) -> None:
     else:
         os.environ.pop(PRE_SUBMIT_ONLY_ENV, None)
     ctx.env_exports()
+    dest = DEFAULT_CONTEXT_PATH
+    raw_path = (os.environ.get(NAV_CONTEXT_PATH_ENV) or "").strip()
+    if raw_path:
+        candidate = Path(raw_path)
+        posix = str(candidate).replace("\\", "/")
+        if not posix.startswith("/mnt/"):
+            dest = candidate
+    os.environ[NAV_CONTEXT_PATH_ENV] = str(dest)
 
 
 def clear_context_from_environ() -> None:
@@ -175,19 +233,30 @@ def _load_json_env(raw: str) -> dict[str, Any]:
 
 def load_navigation_runtime_context() -> NavigationRuntimeContext:
     data: dict[str, Any] = {}
+    candidates: list[Path] = []
     path = (os.environ.get(NAV_CONTEXT_PATH_ENV) or os.environ.get(EXPECTED_PRIOR_PATH_ENV) or "").strip()
     if path:
-        candidate = Path(path)
-        if candidate.is_file():
-            try:
-                loaded = json.loads(candidate.read_text(encoding="utf-8"))
-                if isinstance(loaded, dict):
-                    if "runtimeMode" in loaded or "expectedPrior" in loaded or "currentJobId" in loaded:
-                        data.update(loaded)
-                    elif prior_dict_placeholder := loaded:
-                        data.setdefault("_priorFile", prior_dict_placeholder)
-            except (OSError, json.JSONDecodeError):
-                pass
+        candidates.append(Path(path))
+    candidates.append(DEFAULT_CONTEXT_PATH)
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if not candidate.is_file():
+            continue
+        try:
+            loaded = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(loaded, dict):
+            continue
+        if "runtimeMode" in loaded or "expectedPrior" in loaded or "currentJobId" in loaded:
+            data.update(loaded)
+            break
+        data.setdefault("_priorFile", loaded)
+        break
     if (os.environ.get(NAV_CONTEXT_ENV) or "").strip():
         data.update(_load_json_env(os.environ[NAV_CONTEXT_ENV]))
     prior_raw = (os.environ.get(EXPECTED_PRIOR_JSON_ENV) or "").strip()

@@ -34,6 +34,7 @@ from .providers.errors import (
 from .navigation_runtime_context import (
     apply_context_to_environ,
     load_navigation_runtime_context,
+    persist_inter_card_from_healthy_result,
     prepare_context_for_market,
 )
 from .scheduler import parse_market_allowlist
@@ -156,6 +157,28 @@ def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
         "generic_url_count": int(summary.get("generic_url_count") or 0),
         "missing_url_count": int(summary.get("missing_url_count") or 0),
     }
+
+
+def persist_healthy_inter_card_handoff(
+    *,
+    logger,
+    price_key: MarketPriceKey | None,
+    provider_result: ProviderResult | None,
+    owned_outcome: str,
+    result: dict[str, Any],
+) -> None:
+    payload = dict(result)
+    payload["ownedDailyOutcome"] = owned_outcome
+    if price_key is not None:
+        payload.setdefault("marketCountry", price_key.market_country)
+        payload.setdefault("currency", price_key.currency)
+        payload.setdefault("priceKeyId", price_key.id)
+        if getattr(price_key, "fingerprint", None):
+            payload.setdefault("fingerprint", price_key.fingerprint)
+    try:
+        persist_inter_card_from_healthy_result(payload, provider_result=provider_result)
+    except Exception as exc:
+        logger(f"[market-engine] inter_card_handoff_persist_failed: {exc}")
 
 
 def build_price_view_diagnostics(pricing_stats: PricingStats) -> dict[str, Any]:
@@ -869,6 +892,8 @@ class MarketPriceJobRunner:
                 currency=str(getattr(price_key, "currency", "") or ""),
             )
             apply_context_to_environ(nav_ctx)
+            os.environ["CARDSCANR_RUNTIME_MODE"] = str(nav_ctx.runtime_mode)
+            active_runtime_mode = str(nav_ctx.runtime_mode or "COLD_START")
 
             self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
@@ -959,12 +984,13 @@ class MarketPriceJobRunner:
                 except Exception as avail_exc:
                     self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
                 _diag = build_provider_diagnostics_for_result(provider_result)
-                return {
+                checked_result = {
                     "jobId": job.id,
                     "priceKeyId": price_key.id,
                     "status": "checked_no_new_exact_evidence",
                     "ownedDailyOutcome": CHECKED_NO_NEW_EXACT_EVIDENCE,
                     "outcomeClass": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    "runtimeMode": active_runtime_mode,
                     "noReliablePriceReason": sparse_reason or None,
                     "includedCount": int(pricing_stats.included_count or 0),
                     "rejectedCount": int(pricing_stats.rejected_count or 0),
@@ -975,6 +1001,14 @@ class MarketPriceJobRunner:
                     "providerDiagnostics": _diag,
                     **_phase_fields_from_provider_result(provider_result),
                 }
+                persist_healthy_inter_card_handoff(
+                    logger=self.logger,
+                    price_key=price_key,
+                    provider_result=provider_result,
+                    owned_outcome=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    result=checked_result,
+                )
+                return checked_result
             if new_price_f is None or new_price_f <= 0:
                 raise ValueError("no_reliable_price:refusing_zero_or_null_cache_write")
             provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
@@ -1030,7 +1064,7 @@ class MarketPriceJobRunner:
                 self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
             _diag = build_provider_diagnostics_for_result(provider_result)
             _phase = _phase_fields_from_provider_result(provider_result)
-            return {
+            completed_result = {
                 "jobId": job.id,
                 "priceKeyId": price_key.id,
                 "snapshotId": str(snapshot["id"]),
@@ -1056,10 +1090,19 @@ class MarketPriceJobRunner:
                 "status": "completed",
                 "ownedDailyOutcome": write_outcome,
                 "outcomeClass": write_outcome,
+                "runtimeMode": active_runtime_mode,
                 # Authoritative pipeline phases for harness/reporting (fail-closed consumers).
                 "providerDiagnostics": _diag,
                 **_phase,
             }
+            persist_healthy_inter_card_handoff(
+                logger=self.logger,
+                price_key=price_key,
+                provider_result=provider_result,
+                owned_outcome=write_outcome,
+                result=completed_result,
+            )
+            return completed_result
         except Exception as exc:
             provider_diagnostics: dict[str, Any] | None = None
             if isinstance(exc, ProviderError):
@@ -1193,7 +1236,7 @@ class MarketPriceJobRunner:
                         self.client.cancel_job(job_id=job.id, reason=CHECKED_NO_NEW_EXACT_EVIDENCE)
                 except Exception as checked_exc:
                     self.logger(f"[market-engine] checked_no_new_evidence finalize failed job={job.id}: {checked_exc}")
-                return {
+                checked_exc_result = {
                     "jobId": job.id,
                     "priceKeyId": job.price_key_id,
                     "status": "checked_no_new_exact_evidence",
@@ -1206,6 +1249,14 @@ class MarketPriceJobRunner:
                     **({"providerDiagnostics": provider_diagnostics} if provider_diagnostics else {}),
                     **_phase_fields_from_diagnostics(provider_diagnostics),
                 }
+                persist_healthy_inter_card_handoff(
+                    logger=self.logger,
+                    price_key=price_key,
+                    provider_result=None,
+                    owned_outcome=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    result=checked_exc_result,
+                )
+                return checked_exc_result
             consecutive = 1
             try:
                 consecutive = 1 + int(

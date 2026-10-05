@@ -350,6 +350,84 @@ def evaluate_runtime_targets(
     )
 
 
+def extra_inter_card_ebay_target_ids(policy: TargetPolicyResult) -> list[str]:
+    """Unknown extra marketplace tabs that can be closed while keeping the prior Sold tab."""
+    if policy is None or str(policy.mode or "").upper() != RUNTIME_INTER_CARD:
+        return []
+    expected_present = any(
+        c.belongs_to_expected_previous_card and c.top_level for c in policy.classified
+    )
+    if not expected_present:
+        return []
+    ids: list[str] = []
+    for classified in policy.classified:
+        if (
+            classified.top_level
+            and classified.origin_class == "ebay_marketplace"
+            and not classified.belongs_to_expected_previous_card
+            and classified.target_id
+        ):
+            ids.append(classified.target_id)
+    return ids
+
+
+OWNED_OUTCOME_TO_CARD_VERDICT = {
+    "UPDATED_FROM_EBAY": "PASS_PRICE_UPDATED",
+    "UNCHANGED_FROM_EBAY": "PASS_PRICE_UNCHANGED",
+    "CHECKED_NO_NEW_EXACT_EVIDENCE": "SAFE_NO_NEW_EXACT_EVIDENCE",
+}
+
+
+def prior_from_healthy_job_result(result: dict[str, Any] | None) -> PriorCardContext | None:
+    """Build a healthy-terminal prior from a production worker/job result payload."""
+    if not isinstance(result, dict) or not result:
+        return None
+    outcome = str(result.get("ownedDailyOutcome") or result.get("outcomeClass") or "").strip()
+    verdict = OWNED_OUTCOME_TO_CARD_VERDICT.get(outcome)
+    if not verdict:
+        return None
+    capture = result.get("currentJobCapture") if isinstance(result.get("currentJobCapture"), dict) else {}
+    desktop = result.get("desktopNav") if isinstance(result.get("desktopNav"), dict) else {}
+    if not desktop:
+        diagnostics = result.get("providerDiagnostics")
+        nested = diagnostics.get("diagnostics") if isinstance(diagnostics, dict) else None
+        if isinstance(nested, dict) and isinstance(nested.get("desktopNav"), dict):
+            desktop = nested.get("desktopNav")  # type: ignore[assignment]
+        elif isinstance(diagnostics, dict) and isinstance(diagnostics.get("desktopNav"), dict):
+            desktop = diagnostics.get("desktopNav")  # type: ignore[assignment]
+    identity = result.get("identity") if isinstance(result.get("identity"), dict) else {}
+    prior = PriorCardContext(
+        job_id=_s(result.get("jobId") or capture.get("jobId")),
+        attempt_id=_s(result.get("attemptId") or capture.get("attemptId")),
+        price_key_id=_s(result.get("priceKeyId") or capture.get("priceKeyId")),
+        fingerprint=_s(result.get("fingerprint") or capture.get("fingerprint") or identity.get("fingerprint")),
+        target_id=_s(capture.get("targetId") or desktop.get("targetId")),
+        final_url=_s(desktop.get("url") or result.get("finalUrl") or result.get("url")),
+        query=_s(
+            desktop.get("queryExpected")
+            or desktop.get("query")
+            or identity.get("query")
+            or result.get("query")
+        ),
+        x11_sold_state_verified=bool(
+            result.get("x11SoldStateVerified")
+            or desktop.get("SOLD_STATE_VERIFIED")
+            or desktop.get("x11SoldStateVerified")
+        ),
+        capture_correlated=bool(capture.get("targetId") or desktop.get("url") or capture.get("correlated")),
+        card_verdict=verdict,
+        market=_s(
+            result.get("marketCountry")
+            or result.get("market")
+            or identity.get("market")
+        ),
+        currency=_s(result.get("currency") or identity.get("currency")),
+    )
+    if not prior_context_is_healthy_terminal(prior):
+        return None
+    return prior
+
+
 def prior_from_card_report(report: dict[str, Any] | None) -> PriorCardContext | None:
     """Build PriorCardContext from a reliability card JSON report."""
     if not isinstance(report, dict):
@@ -431,10 +509,13 @@ __all__ = [
     "classify_cdp_targets",
     "correlates_to_prior",
     "evaluate_runtime_targets",
+    "extra_inter_card_ebay_target_ids",
     "hostname_of",
     "required_runtime_mode",
     "prior_market_of",
     "origin_class_for",
     "prior_context_is_healthy_terminal",
     "prior_from_card_report",
+    "prior_from_healthy_job_result",
+    "OWNED_OUTCOME_TO_CARD_VERDICT",
 ]

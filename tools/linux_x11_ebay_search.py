@@ -33,6 +33,7 @@ from cardscanr_market_engine.navigation_runtime_context import (  # noqa: E402
 from cardscanr_market_engine.browser_lifecycle_policy import (  # noqa: E402
     RUNTIME_COLD_START,
     evaluate_runtime_targets,
+    extra_inter_card_ebay_target_ids,
 )
 from cardscanr_market_engine.providers.linux_x11_gui_diagnostics import (  # noqa: E402
     GuiAttemptTimings,
@@ -942,6 +943,28 @@ def gui_search(
         mode=ctx.runtime_mode or RUNTIME_COLD_START,
         prior=ctx.expected_prior,
     )
+    if ctx.is_inter_card() and not policy.ok:
+        extra_ids = extra_inter_card_ebay_target_ids(policy)
+        closed: list[str] = []
+        cdp_port = int(os.environ.get("EBAY_BROWSER_CDP_PORT", "9444"))
+        for target_id in extra_ids:
+            try:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{cdp_port}/json/close/{target_id}",
+                    timeout=3,
+                ) as resp:
+                    resp.read()
+                closed.append(target_id)
+            except (urllib.error.URLError, TimeoutError, OSError):
+                continue
+        if closed:
+            time.sleep(0.4)
+            policy = evaluate_runtime_targets(
+                cdp_raw_targets(),
+                mode=ctx.runtime_mode or RUNTIME_COLD_START,
+                prior=ctx.expected_prior,
+            )
+            diag["closedExtraEbayTargets"] = closed
     diag["targetPolicy"] = policy.to_dict()
     diag["x11WindowId"] = g.get("wid")
     diag["cdpTargetIds"] = [
