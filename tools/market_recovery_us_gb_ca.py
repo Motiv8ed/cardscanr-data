@@ -537,6 +537,10 @@ def run_market_canary(
         force_cold_start_nav_context()
 
     while healthy < target_healthy and submissions < target_healthy:
+        if len(cards) >= max(target_healthy * 4, 12):
+            stop_reason = "MAX_CANARY_ATTEMPTS"
+            result = "STOPPED_SAFE"
+            break
         cont = canary_may_continue(market)
         if cont.get("hardStop"):
             stop_reason = str(cont.get("reason") or "HARD_STOP")
