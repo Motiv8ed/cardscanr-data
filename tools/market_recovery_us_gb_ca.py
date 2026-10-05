@@ -139,10 +139,10 @@ def bind_env(market: str, *, mode: str) -> dict[str, str]:
         "MAX_LIVE_SUBMISSIONS_PER_HOUR": "20",
         "MAX_LIVE_SUBMISSIONS_PER_DAY": "200",
     }
-    # Region canaries prove browser lifecycle on keys that can retain/write a price.
-    # Never-priced empty Sold pages are not INTER_CARD defects — skip them in CANARY.
+    # Region canaries prove browser lifecycle. Prefer non-empty Sold pages when possible,
+    # but do not exclude P0 entirely — US due inventory is often never-priced.
     if mode == "CANARY":
-        values["OWNED_DAILY_SKIP_BANDS"] = "P0_NEVER_PRICED"
+        os.environ.pop("OWNED_DAILY_SKIP_BANDS", None)
     else:
         os.environ.pop("OWNED_DAILY_SKIP_BANDS", None)
     os.environ.pop("PRE_SUBMIT_ONLY", None)
@@ -644,6 +644,10 @@ def run_market_canary(
         _write(ART / f"{market}_card_{next_card_index(market)}.json", cycle_out)
 
         if str(cycle.get("outcome") or "") in SKIP_OUTCOMES or str(cycle.get("status") or "") == "skipped_already_fresh":
+            continue
+        if not cycle.get("result") and not cycle.get("outcome") and not cycle.get("error"):
+            # Scheduler enqueued nothing this cycle — wait briefly and retry.
+            time.sleep(5)
             continue
         if classification["kind"] == "HARD_STOP":
             record_canary_episode(market, kind="HARD_STOP", outcome=classification["outcome"])
