@@ -8,6 +8,7 @@ from .ebay_browser_work_gate import evaluate_ebay_browser_work_gate
 from .owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
     EBAY_ACCESS_DENIED_403,
+    EBAY_AUTH_REQUIRED,
     EBAY_CHALLENGE_REQUIRED,
     TEMPORARY_EBAY_SERVER_FAILURE,
     UNACCOUNTED_SEARCH_URL_NAVIGATION,
@@ -20,6 +21,7 @@ HARD_STOP_OUTCOMES = frozenset(
     {
         CHALLENGE_REQUIRED,
         EBAY_CHALLENGE_REQUIRED,
+        EBAY_AUTH_REQUIRED,
         EBAY_ACCESS_DENIED_403,
         UNACCOUNTED_SEARCH_URL_NAVIGATION,
     }

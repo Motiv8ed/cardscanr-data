@@ -9,7 +9,7 @@ from enum import Enum
 from typing import Any
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
-from .sold_page_health import is_ebay_error_page
+from .sold_page_health import is_ebay_authentication_url, is_ebay_error_page
 
 # Operational outcomes
 TEMPORARY_EBAY_SERVER_FAILURE = "TEMPORARY_EBAY_SERVER_FAILURE"
@@ -53,6 +53,7 @@ class SearchPhase(str, Enum):
     TEMPORARY_EBAY_SERVER_FAILURE = "TEMPORARY_EBAY_SERVER_FAILURE"
     EBAY_ACCESS_DENIED_403 = "EBAY_ACCESS_DENIED_403"
     EBAY_CHALLENGE = "EBAY_CHALLENGE"
+    EBAY_AUTH_REQUIRED = "EBAY_AUTH_REQUIRED"
     LOCAL_GUI_FAILURE = "LOCAL_GUI_FAILURE"
     LOCAL_SEARCH_SURFACE_STATE_LEAK = "LOCAL_SEARCH_SURFACE_STATE_LEAK"
     LOCAL_SEARCH_SURFACE_RECOVERY_FAILED = "LOCAL_SEARCH_SURFACE_RECOVERY_FAILED"
@@ -68,6 +69,7 @@ class SoldPhase(str, Enum):
     SOLD_STATE_VERIFIED = "SOLD_STATE_VERIFIED"
     SOLD_UNAVAILABLE_ON_ALTERNATE_SURFACE = "SOLD_UNAVAILABLE_ON_ALTERNATE_SURFACE"
     EBAY_CHALLENGE = "EBAY_CHALLENGE"
+    EBAY_AUTH_REQUIRED = "EBAY_AUTH_REQUIRED"
     EBAY_SORRY = "EBAY_SORRY"
     TEMPORARY_EBAY_SERVER_FAILURE = "TEMPORARY_EBAY_SERVER_FAILURE"
     EBAY_ACCESS_DENIED_403 = "EBAY_ACCESS_DENIED_403"
@@ -299,11 +301,15 @@ def on_sold_terminal(
     about_blank: bool = False,
     sold_unavailable_alternate: bool = False,
     local_gui: bool = False,
+    auth_required: bool = False,
 ) -> SoldGateState:
     state.pending = False
     if about_blank:
         state.phase = SoldPhase.ABOUT_BLANK_ABORT
         state.note("ABOUT_BLANK_ABORT")
+    elif auth_required:
+        state.phase = SoldPhase.EBAY_AUTH_REQUIRED
+        state.note("EBAY_AUTH_REQUIRED")
     elif challenge:
         state.phase = SoldPhase.EBAY_CHALLENGE
         state.note("EBAY_CHALLENGE")
@@ -451,6 +457,15 @@ def classify_search_surface(
             "phase": SearchPhase.LOCAL_GUI_FAILURE.value,
             "outcome": "ABOUT_BLANK_ABORT",
             "terminal": "ABOUT_BLANK_ABORT",
+        }
+    if is_ebay_authentication_url(url):
+        return {
+            **base,
+            "routeClass": "EBAY_AUTH_REQUIRED",
+            "phase": SearchPhase.EBAY_AUTH_REQUIRED.value,
+            "outcome": "EBAY_AUTH_REQUIRED",
+            "terminal": "EBAY_AUTH_REQUIRED",
+            "challenge": False,
         }
     if is_ebay_challenge_page(title=title, url=url, body=body):
         return {

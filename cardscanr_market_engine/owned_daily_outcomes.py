@@ -24,6 +24,7 @@ EBAY_LIVE_RESULTS = "EBAY_LIVE_RESULTS"
 EBAY_ACCESS_DENIED_403 = "EBAY_ACCESS_DENIED_403"
 CHALLENGE_REQUIRED = "CHALLENGE_REQUIRED"
 EBAY_CHALLENGE_REQUIRED = "EBAY_CHALLENGE_REQUIRED"
+EBAY_AUTH_REQUIRED = "EBAY_AUTH_REQUIRED"
 PRE_FLIGHT_CONTROL_PLANE_BLOCKED = "PRE_FLIGHT_CONTROL_PLANE_BLOCKED"
 NO_PRICE_EVER_FOUND = "NO_PRICE_EVER_FOUND"
 
@@ -117,6 +118,20 @@ def classify_exception_outcome(
         or "provider_invariant" in text
     ):
         return UNACCOUNTED_SEARCH_URL_NAVIGATION
+    desktop_nav = diag.get("desktopNav") or diag.get("desktop_nav") or {}
+    url_blob = " ".join(
+        [
+            str(diag.get("url") or ""),
+            str(desktop_nav.get("url") or "") if isinstance(desktop_nav, dict) else "",
+        ]
+    )
+    if (
+        fail_cls_early == EBAY_AUTH_REQUIRED
+        or "ebay_auth_required" in text
+        or "signin.ebay" in text
+        or "signin.ebay" in url_blob.lower()
+    ):
+        return EBAY_AUTH_REQUIRED
     # Historical/stale control-plane blockers are NOT a live challenge.
     if provider_outcome in {
         "marketplace_ops_cooldown",
@@ -126,12 +141,12 @@ def classify_exception_outcome(
     } or str(diag.get("ownedDailyOutcome") or "") == PRE_FLIGHT_CONTROL_PLANE_BLOCKED:
         return PRE_FLIGHT_CONTROL_PLANE_BLOCKED
     if isinstance(exc, (ProviderAuthenticationRequiredError,)):
-        return CHALLENGE_REQUIRED
+        return EBAY_AUTH_REQUIRED
     category = classify_provider_failure(text, diagnostics=diag)
     if category == "CHALLENGE_REQUIRED":
         return CHALLENGE_REQUIRED
     if category == "AUTH_REQUIRED":
-        return CHALLENGE_REQUIRED
+        return EBAY_AUTH_REQUIRED
     if category == "DEFERRED":
         return PRE_FLIGHT_CONTROL_PLANE_BLOCKED
     # Marketplace Error Page after Sold filter — not a local CDP target-absent bug.
@@ -254,6 +269,8 @@ def summarize_outcome_counts(results: list[dict[str, Any]]) -> dict[str, int]:
             counts["OWNED_PRICE_LAST_GOOD_RETAINED"] += 1
         elif outcome in {CHALLENGE_REQUIRED, EBAY_CHALLENGE_REQUIRED}:
             counts["OWNED_PRICE_CHALLENGES"] += 1
+            counts["OWNED_PRICE_LAST_GOOD_RETAINED"] += 1
+        elif outcome == EBAY_AUTH_REQUIRED:
             counts["OWNED_PRICE_LAST_GOOD_RETAINED"] += 1
         elif outcome == PRE_FLIGHT_CONTROL_PLANE_BLOCKED:
             # Preflight control-plane block — no live challenge, retain last-good.

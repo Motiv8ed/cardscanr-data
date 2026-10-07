@@ -69,6 +69,7 @@ from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: 
     TERMINAL_SOLD_CONTROL_DISCOVERY_TIMEOUT,
     TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT,
     TERMINAL_SOLD_UNEXPECTED_FILTER,
+    TERMINAL_SOLD_AUTH_REQUIRED,
     build_sold_failure_evidence,
     classify_sold_observation,
     url_has_lh_sold,
@@ -227,6 +228,10 @@ def wait_sold_pending(
                     gate = on_sold_terminal(gate, challenge=True)
                     terminal_override = SoldPhase.EBAY_CHALLENGE.value
                     break
+                if obs.get("terminal") == TERMINAL_SOLD_AUTH_REQUIRED:
+                    gate = on_sold_terminal(gate, auth_required=True)
+                    terminal_override = TERMINAL_SOLD_AUTH_REQUIRED
+                    break
                 if obs.get("terminal") in {"EBAY_ERROR_PAGE", "EBAY_SORRY"}:
                     # Keep polling within budget; remember last unhealthy for terminal.
                     terminal_override = None
@@ -256,6 +261,9 @@ def wait_sold_pending(
         elif obs.get("terminal") == "EBAY_CHALLENGE":
             gate = on_sold_terminal(gate, challenge=True)
             terminal_override = SoldPhase.EBAY_CHALLENGE.value
+        elif obs.get("terminal") == TERMINAL_SOLD_AUTH_REQUIRED:
+            gate = on_sold_terminal(gate, auth_required=True)
+            terminal_override = TERMINAL_SOLD_AUTH_REQUIRED
         elif obs.get("terminal") == "EBAY_ERROR_PAGE":
             gate = on_sold_terminal(gate, sorry=True)
             terminal_override = "EBAY_ERROR_PAGE"
@@ -294,7 +302,7 @@ def wait_sold_pending(
         "marketplacePageClass": (
             "HEALTHY_SOLD_RESULTS"
             if verified
-            else (terminal if terminal in {"EBAY_ERROR_PAGE", "EBAY_SORRY", "EBAY_CHALLENGE"} else None)
+            else (terminal if terminal in {"EBAY_ERROR_PAGE", "EBAY_SORRY", "EBAY_CHALLENGE", "EBAY_AUTH_REQUIRED"} else None)
         ),
         "lhSoldAfter": url_has_lh_sold(url),
         "lhSoldBefore": url_has_lh_sold(url_before),
@@ -553,6 +561,8 @@ def gui_sold(*, tag: str) -> dict:
         in {SoldPhase.EBAY_SORRY, SoldPhase.TEMPORARY_EBAY_SERVER_FAILURE}
         or is_ebay_sorry_page(title=str(pending.get("title") or ""), url=str(pending.get("url") or "")),
         "challenge": gate.phase == SoldPhase.EBAY_CHALLENGE,
+        "authRequired": gate.phase == SoldPhase.EBAY_AUTH_REQUIRED
+        or pending.get("terminal") == TERMINAL_SOLD_AUTH_REQUIRED,
         "aboutBlank": bool(pending.get("aboutBlank")),
         "bodyChars": len(body),
         "lhSoldInjected": False,
@@ -579,6 +589,10 @@ def gui_sold(*, tag: str) -> dict:
     if out["sorry"]:
         out["error"] = TEMPORARY_EBAY_SERVER_FAILURE
         out["classification"] = TEMPORARY_EBAY_SERVER_FAILURE
+    elif out.get("authRequired"):
+        out["error"] = TERMINAL_SOLD_AUTH_REQUIRED
+        out["classification"] = TERMINAL_SOLD_AUTH_REQUIRED
+        out["challenge"] = False
     elif not out["ok"]:
         # Prefer phase-specific terminal over opaque SOLD_NAVIGATION_TIMEOUT.
         out["error"] = str(pending.get("terminal") or TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT)

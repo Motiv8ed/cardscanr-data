@@ -189,12 +189,24 @@ def classify_owned_daily_band(
     }
 
     if not view.has_any_price:
+        # Honor failure-policy backoff (e.g. NO_PRICE_EVER_FOUND → next_refresh_due_at).
+        # Without this, canaries loop forever on the same sparse P0 identity.
+        if next_due is not None and next_due > now:
+            return "P0_NEVER_PRICED", False, "p0_never_priced_backoff", view, extras
         return "P0_NEVER_PRICED", True, "p0_never_priced", view, extras
 
     if view.source_class in {"reference_only", "structured_fallback"}:
         # Recent reference must not FRESH_SKIP eBay verification.
         # Local X11/runtime failures may set refresh_status=failed but must not
         # demote this identity away from P0_NEEDS_VERIFIED_LOCAL.
+        if next_due is not None and next_due > now and refresh_status == "failed":
+            return (
+                "P0_NEEDS_VERIFIED_LOCAL",
+                False,
+                "p0_needs_verified_local_backoff",
+                view,
+                extras,
+            )
         return (
             "P0_NEEDS_VERIFIED_LOCAL",
             True,

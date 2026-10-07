@@ -344,12 +344,16 @@ def reason_code_for(
 ) -> str:
     if active_duplicate:
         return "DEDUPED_ACTIVE_CANONICAL_JOB"
+    if not due or band == "FRESH_SKIP":
+        if band == "P0_NEVER_PRICED":
+            return "P0_NEVER_PRICED_BACKOFF"
+        if band == "P0_NEEDS_VERIFIED_LOCAL":
+            return "P0_NEEDS_VERIFIED_LOCAL_BACKOFF"
+        return f"FRESH_SKIP_{demand_class}_LT_{threshold}H"
     if source_class in {"reference_only", "structured_fallback"}:
         return "DUE_REFERENCE_ONLY_NEEDS_VERIFIED_LOCAL"
     if source_class == "none" or band == "P0_NEVER_PRICED":
         return "DUE_NEVER_PRICED"
-    if not due or band == "FRESH_SKIP":
-        return f"FRESH_SKIP_{demand_class}_LT_{threshold}H"
     if demand_class == "HIGH":
         return f"DUE_HIGH_DEMAND_STALE_GE_{threshold}H"
     if band == "P2_FAILED_RETRY":

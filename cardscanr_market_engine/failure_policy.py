@@ -127,6 +127,8 @@ def ebay_transient_backoff_minutes(*, consecutive_same_failures: int = 1) -> tim
 
 def classify_pricing_failure(exc: BaseException | str | None) -> str:
     text = _message_blob(exc)
+    if isinstance(exc, ProviderAuthenticationRequiredError):
+        return FAILURE_CLASS_IDENTITY
     if isinstance(exc, ProviderIdentityUnavailableError):
         return FAILURE_CLASS_IDENTITY
     if isinstance(exc, ProviderUnsupportedMarketError):
@@ -143,7 +145,6 @@ def classify_pricing_failure(exc: BaseException | str | None) -> str:
             ProviderTemporaryError,
             ProviderRateLimitedError,
             ProviderBlockedError,
-            ProviderAuthenticationRequiredError,
         ),
     ):
         return FAILURE_CLASS_TRANSIENT

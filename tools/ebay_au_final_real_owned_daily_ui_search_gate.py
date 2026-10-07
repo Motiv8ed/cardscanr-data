@@ -332,11 +332,35 @@ def extract_sold_fields(result: dict[str, Any]) -> dict[str, Any]:
         return False
 
     final_url = None
+    target_id = None
+    query = None
     for layer in layers:
-        if isinstance(layer, dict):
-            final_url = layer.get("finalUrl") or layer.get("url") or layer.get("sourceUrl")
-            if final_url:
-                break
+        if not isinstance(layer, dict):
+            continue
+        post = layer.get("postSoldCapture") if isinstance(layer.get("postSoldCapture"), dict) else {}
+        persisted = layer.get("persistedCaptureArtifact") if isinstance(layer.get("persistedCaptureArtifact"), dict) else {}
+        current_cap = layer.get("currentJobCapture") if isinstance(layer.get("currentJobCapture"), dict) else {}
+        desktop = layer.get("desktopNav") if isinstance(layer.get("desktopNav"), dict) else {}
+        pre = desktop.get("preSubmit") if isinstance(desktop.get("preSubmit"), dict) else {}
+        final_url = (
+            final_url
+            or layer.get("finalUrl")
+            or layer.get("url")
+            or layer.get("sourceUrl")
+            or post.get("targetUrl")
+            or post.get("url")
+            or persisted.get("sourceUrl")
+            or current_cap.get("url")
+        )
+        target_id = (
+            target_id
+            or layer.get("targetId")
+            or _dig(layer, "soldControlIdentity", "targetId")
+            or post.get("targetId")
+            or persisted.get("targetId")
+            or current_cap.get("targetId")
+        )
+        query = query or pre.get("queryExpected") or pre.get("query") or layer.get("query")
     return {
         "soldControlIdentityProven": _flag("soldControlIdentityProven"),
         "soldFilterStateVerified": _flag("soldFilterStateVerified")
@@ -360,14 +384,8 @@ def extract_sold_fields(result: dict[str, Any]) -> dict[str, Any]:
             None,
         ),
         "finalUrl": final_url,
-        "targetId": next(
-            (
-                layer.get("targetId") or _dig(layer, "soldControlIdentity", "targetId")
-                for layer in layers
-                if isinstance(layer, dict) and (layer.get("targetId") or _dig(layer, "soldControlIdentity", "targetId"))
-            ),
-            None,
-        ),
+        "targetId": target_id,
+        "query": query,
     }
 
 
@@ -721,10 +739,6 @@ def main() -> int:
     else:
         needs_recovery_probe = False
 
-    baseline = capture_attempt_event_baseline()
-    _write(OUT / "bootstrap" / "attempt_baseline.json", baseline)
-    this_run_attempt_ids: list[str] = []
-
     own_before = {"ownedTargets": queue.get("targets"), "note": "snapshot_before"}
     _write(OUT / "before" / "ownership_before.json", own_before)
 
@@ -891,6 +905,35 @@ def main() -> int:
                     print("STOP: recovery probe retry did not restore HEALTHY", flush=True)
                     return 1
         print(json.dumps({"RECOVERY_PROBE": "complete", "gate": gate_after}, indent=2), flush=True)
+        # Probe is not a gate job. Return browser to true COLD_START so Card 1
+        # does not inherit the probe eBay tab (CDP_HAS_EBAY_TARGET).
+        from tools.ebay_au_final_five_sequential_production_proof import cold_start_normalise
+
+        cold_after_probe = cold_start_normalise()
+        _write(OUT / "bootstrap" / "phase0c_cold_start_after_recovery_probe.json", cold_after_probe)
+        print(
+            json.dumps(
+                {
+                    "PHASE0C_AFTER_PROBE": {
+                        "resetMethod": cold_after_probe.get("resetMethod"),
+                        "ebayTargetsAfter": cold_after_probe.get("ebayTargetsAfter"),
+                        "ok": cold_after_probe.get("ok"),
+                    }
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        if not cold_after_probe.get("ok"):
+            owned_daily_shutdown("cold_start_after_probe_failed")
+            print("STOP: cold-start normalisation after recovery probe failed", flush=True)
+            return 2
+
+    # Baseline AFTER recovery probe so probe SEARCH_SUBMISSION events are not
+    # attributed to Card 1 of the bounded gate.
+    baseline = capture_attempt_event_baseline()
+    _write(OUT / "bootstrap" / "attempt_baseline.json", baseline)
+    this_run_attempt_ids: list[str] = []
 
     cards: list[dict[str, Any]] = []
     cycle_logs: list[dict[str, Any]] = []
@@ -911,6 +954,7 @@ def main() -> int:
     unexpected_filter = ambiguous = 0
     ownership_mut = 0
     checkpoint10 = checkpoint20 = None
+    # First counted gate card is always COLD_START (probe is not a gate job).
     runtime_mode_next = RUNTIME_COLD_START
     prior_healthy: dict[str, Any] | None = None
     transient_episodes = 0
@@ -1163,19 +1207,18 @@ def main() -> int:
                 },
             )
 
+            # Count ONLY this card's minted attemptId (never inherit probe/prior events).
             card_attempts = [attempt_id]
             card_consumed = 1 if has_search_submission_started(attempt_id) else 0
-            # Also accept any additional delta attempt ids created during the job.
             after_baseline = capture_attempt_event_baseline()
             for aid in after_baseline.get("attemptIds") or []:
+                if aid == attempt_id:
+                    continue
                 if aid not in this_run_attempt_ids and aid not in set(baseline.get("attemptIds") or []):
+                    # Audit-only: foreign attempt ids must not mark this card consumed.
                     this_run_attempt_ids.append(aid)
-                    card_attempts.append(aid)
-                    if has_search_submission_started(aid):
-                        card_consumed = 1
-            consumed_n = count_consumed_live_navigations(this_run_attempt_ids)
             if card_consumed:
-                submissions = consumed_n
+                submissions = sum(1 for c in cards if c.get("searchSubmissionStarted")) + 1
 
             if submissions > MAX_LIVE:
                 stop_reason = "attempt_26_forbidden"
@@ -1349,11 +1392,20 @@ def main() -> int:
                     "fingerprint": fp or (da.get("fingerprint") if isinstance(da, dict) else None),
                     "targetId": sold.get("targetId"),
                     "finalUrl": sold.get("finalUrl"),
-                    "query": None,
+                    "query": sold.get("query"),
                     "x11SoldStateVerified": bool(sold.get("x11SoldStateVerified")),
-                    "captureCorrelated": bool(sold.get("x11SoldStateVerified")),
+                    "captureCorrelated": bool(
+                        sold.get("x11SoldStateVerified")
+                        and (sold.get("targetId") or sold.get("finalUrl"))
+                    ),
                     "verdict": verdict,
                 }
+                if not prior_healthy.get("targetId") and not prior_healthy.get("finalUrl"):
+                    # INTER_CARD requires correlatable prior; fail closed before next card.
+                    failures += 1
+                    stop_reason = f"prior_context_missing_target_card_{position}"
+                    gate_verdict = "STOPPED_SAFE"
+                    break
                 runtime_mode_next = RUNTIME_INTER_CARD
                 pacing.observe_outcome(outcome, last_good_retained=bool(result.get("lastGoodRetained")))
                 pacing.record_check_duration(check_sec)

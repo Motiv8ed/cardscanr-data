@@ -12,11 +12,13 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.marketplace_ops_state import classify_provider_failure
 from cardscanr_market_engine.owned_daily_outcomes import (
+    EBAY_AUTH_REQUIRED,
     POST_SOLD_CAPTURE_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
     classify_exception_outcome,
 )
-from cardscanr_market_engine.providers.errors import ProviderTemporaryError
+from cardscanr_market_engine.providers.errors import ProviderAuthenticationRequiredError, ProviderTemporaryError
+from cardscanr_market_engine.failure_policy import FAILURE_CLASS_IDENTITY, build_failure_policy
 from cardscanr_market_engine.providers.post_sold_capture import (
     CDP_TARGET_ATTACH_FAILURE,
     CDP_TARGET_NOT_FOUND,
@@ -98,6 +100,49 @@ class SoldHealthContractTests(unittest.TestCase):
         )
         self.assertEqual(ev["terminal"], "EBAY_CHALLENGE")
         self.assertFalse(ev["x11SoldStateVerified"])
+
+    def test_signin_redirect_is_auth_required_not_timeout_or_captcha(self) -> None:
+        url = (
+            "https://signin.ebay.com/ws/eBayISAPI.dll?SignIn&siteid=0"
+            "&ru=https%3A%2F%2Fwww.ebay.com%2Fsch%2Fi.html%3FLH_Sold%3D1"
+        )
+        ev = evaluate_sold_verification(url=url, title="Sign in or Register | eBay")
+        self.assertEqual(ev["terminal"], "EBAY_AUTH_REQUIRED")
+        self.assertNotEqual(ev["terminal"], "EBAY_CHALLENGE")
+        self.assertFalse(ev["x11SoldStateVerified"])
+        obs = classify_sold_observation(url=url, title="Sign in or Register | eBay")
+        self.assertEqual(obs["terminal"], "EBAY_AUTH_REQUIRED")
+        clock = FixtureClock(
+            frames=[
+                (0.0, ORDINARY, TITLE_OK, {}),
+                (0.8, url, "Sign in or Register | eBay", {}),
+            ],
+            sold_control_at=0.2,
+            click_at=0.4,
+        )
+        result = run_sold_fixture(clock, poll_s=0.05)
+        self.assertEqual(result["terminal"], "EBAY_AUTH_REQUIRED")
+        self.assertNotEqual(result["terminal"], TERMINAL_SOLD_STATE_VERIFIED)
+        self.assertNotEqual(result.get("error"), "SOLD_STATE_VERIFICATION_TIMEOUT")
+        self.assertFalse(result["ok"])
+
+    def test_auth_exception_maps_to_ebay_auth_required_not_challenge(self) -> None:
+        exc = ProviderAuthenticationRequiredError(
+            "EBAY_AUTH_REQUIRED: eBay redirected pricing to sign-in",
+            diagnostics={"providerOutcome": "authentication_required", "url": "https://signin.ebay.com/"},
+        )
+        self.assertEqual(classify_exception_outcome(exc, diagnostics=exc.diagnostics), EBAY_AUTH_REQUIRED)
+        policy = build_failure_policy(exc)
+        self.assertFalse(policy.retryable)
+        self.assertEqual(policy.classification, FAILURE_CLASS_IDENTITY)
+        timeout = ProviderTemporaryError(
+            "Desktop sold navigation failed: SOLD_STATE_VERIFICATION_TIMEOUT",
+            diagnostics={"desktopNav": {"url": "https://signin.ebay.com/ws/eBayISAPI.dll?SignIn"}},
+        )
+        self.assertEqual(
+            classify_exception_outcome(timeout, diagnostics=timeout.diagnostics),
+            EBAY_AUTH_REQUIRED,
+        )
 
     def test_sorry_class_distinct(self) -> None:
         ev = evaluate_sold_verification(

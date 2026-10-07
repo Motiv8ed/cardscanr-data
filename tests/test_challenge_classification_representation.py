@@ -139,6 +139,17 @@ class ChallengeClassificationTests(unittest.TestCase):
         )
         self.assertEqual(state["outcome"], "challenge_detected")
 
+    def test_signin_ebay_host_is_auth_not_captcha(self) -> None:
+        state = classify_browser_page_state(
+            title="Sign in or Register",
+            body_text="Please sign in",
+            url="https://signin.ebay.com/ws/eBayISAPI.dll?SignIn&siteid=0",
+        )
+        self.assertEqual(state["outcome"], "authentication_required")
+        self.assertEqual(state.get("securityClass"), "EBAY_AUTH_REQUIRED")
+        self.assertFalse(state.get("retryable"))
+        self.assertNotEqual(state["outcome"], "challenge_detected")
+
     def test_sorry_403_page_keeps_sorry_classification(self) -> None:
         state = classify_browser_page_state(
             title="Error Page | eBay",

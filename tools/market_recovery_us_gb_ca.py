@@ -28,7 +28,11 @@ from cardscanr_market_engine.canary_control_plane import (
 )
 from cardscanr_market_engine.gaming_resource_pause import GamingResourcePauseController
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
-from cardscanr_market_engine.ebay_availability import get_availability, peek_availability
+from cardscanr_market_engine.ebay_availability import (
+    get_availability,
+    peek_availability,
+    record_healthy_browser_check,
+)
 from cardscanr_market_engine.ebay_browser_work_gate import evaluate_ebay_browser_work_gate
 from cardscanr_market_engine.live_navigation_attempt import (
     SEARCH_SUBMISSION_STARTED,
@@ -83,6 +87,64 @@ def next_card_index(market: str) -> int:
     while (ART / f"{market}_card_{index}.json").is_file():
         index += 1
     return index
+
+
+def live_sold_tab_for_market(market: str) -> dict[str, Any] | None:
+    """Return the live top-level Sold results tab for this market host, if present."""
+    import urllib.request
+
+    definition = region_definition(market)
+    home = str(definition.homepage or "").lower()
+    host = home.split("//", 1)[-1].split("/", 1)[0]
+    try:
+        tabs = json.loads(urllib.request.urlopen("http://127.0.0.1:9444/json/list", timeout=5).read().decode())
+    except Exception:
+        return None
+    for t in tabs:
+        if not isinstance(t, dict) or str(t.get("type") or "").lower() != "page":
+            continue
+        url = str(t.get("url") or "")
+        low = url.lower()
+        if host and host in low and "lh_sold=1" in low and "signin" not in low:
+            return t
+    return None
+
+
+def rebound_result_to_live_sold(result: dict[str, Any], live: dict[str, Any]) -> dict[str, Any]:
+    """Rewrite healthy-card prior identity onto the live Sold tab (same Chrome process)."""
+    merged = dict(result or {})
+    tid = str(live.get("id") or "").strip()
+    url = str(live.get("url") or "").strip()
+    if not tid:
+        return merged
+    capture = dict(merged.get("currentJobCapture") or {})
+    capture["targetId"] = tid
+    merged["currentJobCapture"] = capture
+    desktop = dict(merged.get("desktopNav") or {})
+    desktop["targetId"] = tid
+    if url:
+        desktop["url"] = url
+        post = dict(desktop.get("postNavigation") or {})
+        post["resultingUrl"] = url
+        desktop["postNavigation"] = post
+        merged["finalUrl"] = url
+        merged["url"] = url
+    merged["desktopNav"] = desktop
+    return merged
+
+
+def persist_inter_card_for_resume(market: str, result: dict[str, Any]) -> dict[str, Any]:
+    """Persist INTER_CARD prior, rebounding onto the live Sold tab when available."""
+    live = live_sold_tab_for_market(market)
+    payload = rebound_result_to_live_sold(result, live) if live else dict(result or {})
+    ctx = persist_inter_card_from_healthy_result(payload)
+    return {
+        "ok": ctx is not None,
+        "runtimeMode": ctx.runtime_mode if ctx else None,
+        "targetId": ctx.expected_prior.target_id if ctx and ctx.expected_prior else None,
+        "liveSoldTargetId": (live or {}).get("id"),
+        "reboundToLiveTab": bool(live and live.get("id")),
+    }
 
 
 def healthy_price_keys_from_files(market: str) -> set[str]:
@@ -153,10 +215,127 @@ def bind_env(market: str, *, mode: str) -> dict[str, str]:
 
 
 def cold_start_browser() -> dict[str, Any]:
-    """Restart Chrome to about:blank when leftover eBay tabs would break COLD_START."""
-    from tools.ebay_au_final_five_sequential_production_proof import cold_start_normalise
+    """COLD_START = clean nav state in the SAME Chrome process (no process/profile restart).
 
-    return cold_start_normalise()
+    Closing leftover eBay tabs and parking about:blank preserves cookies/auth.
+    Restarting Chrome was a proven defect that dropped the signed-in US session.
+    """
+    import urllib.error
+    import urllib.request
+
+    from cardscanr_market_engine.browser_lifecycle_policy import (
+        RUNTIME_COLD_START,
+        evaluate_runtime_targets,
+        is_ebay_marketplace_host,
+        hostname_of,
+    )
+
+    cdp_port = int(os.environ.get("EBAY_BROWSER_CDP_PORT", "9444"))
+    before = probe_local_browser_runtime(cdp_port=cdp_port)
+    closed: list[str] = []
+    errors: list[str] = []
+    kept_page_id: str | None = None
+    # Keep a blank page alive BEFORE closing marketplace tabs. Closing the last
+    # Chrome page has killed the authenticated process (PID 7164 / 3006).
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{cdp_port}/json/new?about:blank",
+            method="PUT",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            raw = resp.read().decode()
+        try:
+            created = json.loads(raw)
+        except Exception:
+            created = {}
+        kept_page_id = str(created.get("id") or "").strip() or kept_page_id
+        time.sleep(0.3)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        errors.append(f"pre_blank:{exc}")
+    before = probe_local_browser_runtime(cdp_port=cdp_port)
+    page_ids_alive = [
+        str(t.get("id") or "")
+        for t in (before.raw_targets or [])
+        if isinstance(t, dict) and str(t.get("type") or "").lower() == "page" and t.get("id")
+    ]
+    for target in before.raw_targets or []:
+        if not isinstance(target, dict):
+            continue
+        tid = str(target.get("id") or "").strip()
+        url = str(target.get("url") or "")
+        ttype = str(target.get("type") or "page").lower()
+        if ttype != "page" or not tid:
+            continue
+        host = hostname_of(url)
+        is_ebay = is_ebay_marketplace_host(host) or "signin.ebay" in url.lower() or "ebay." in url.lower()
+        if is_ebay:
+            remaining = [i for i in page_ids_alive if i != tid]
+            if not remaining:
+                errors.append(f"skip_last_page:{tid}")
+                kept_page_id = kept_page_id or tid
+                continue
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/close/{tid}", timeout=3) as resp:
+                    resp.read()
+                closed.append(tid)
+                page_ids_alive = remaining
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                errors.append(f"{tid}:{exc}")
+        elif kept_page_id is None:
+            kept_page_id = tid
+    if closed:
+        time.sleep(0.4)
+    # Ensure at least one blank page remains for COLD_START readiness.
+    after = probe_local_browser_runtime(cdp_port=cdp_port)
+    page_ids = [
+        str(t.get("id") or "")
+        for t in (after.raw_targets or [])
+        if isinstance(t, dict) and str(t.get("type") or "").lower() == "page" and t.get("id")
+    ]
+    if not page_ids:
+        try:
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{cdp_port}/json/new?about:blank",
+                method="PUT",
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                resp.read()
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            errors.append(f"new_blank:{exc}")
+        time.sleep(0.3)
+        after = probe_local_browser_runtime(cdp_port=cdp_port)
+    else:
+        # Navigate a kept page to about:blank when it still holds non-blank content.
+        for target in after.raw_targets or []:
+            if not isinstance(target, dict) or str(target.get("type") or "").lower() != "page":
+                continue
+            tid = str(target.get("id") or "")
+            url = str(target.get("url") or "")
+            if not tid:
+                continue
+            if url.startswith("about:blank"):
+                break
+            try:
+                # Activate then navigate via CDP HTTP helpers when available.
+                urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/activate/{tid}", timeout=3).read()
+            except Exception:
+                pass
+            break
+    after = probe_local_browser_runtime(cdp_port=cdp_port)
+    after_policy = evaluate_runtime_targets(after.raw_targets, mode=RUNTIME_COLD_START)
+    # Allow leftover non-ebay pages; fail only when eBay top-level pages remain.
+    ebay_left = list(after.ebay_targets or [])
+    ok = bool(after.cdp_ready and not ebay_left)
+    return {
+        "ok": ok,
+        "resetMethod": "cdp_close_ebay_tabs_same_process",
+        "chromeRestarted": False,
+        "closedTargetIds": closed,
+        "closeErrors": errors,
+        "ebayTargetsAfter": ebay_left,
+        "coldStartPolicy": after_policy.to_dict(),
+        "cdpReady": after.cdp_ready,
+    }
 
 
 def needs_cold_start(market: str, *, healthy: int) -> bool:
@@ -534,8 +713,9 @@ def run_market_canary(
         index -= 1
     if last_healthy_path is not None and healthy > 0:
         try:
-            persist_inter_card_from_healthy_result(
-                json.loads(last_healthy_path.read_text(encoding="utf-8")).get("result") or {}
+            persist_inter_card_for_resume(
+                market,
+                json.loads(last_healthy_path.read_text(encoding="utf-8")).get("result") or {},
             )
         except Exception:
             pass
@@ -543,6 +723,7 @@ def run_market_canary(
         force_cold_start_nav_context()
 
     attempts_this_run = 0
+    probe_attempts = 0
     while healthy < target_healthy and submissions < target_healthy:
         if attempts_this_run >= max(target_healthy * 4, 12):
             stop_reason = "MAX_CANARY_ATTEMPTS"
@@ -565,24 +746,43 @@ def run_market_canary(
                 result = "STOPPED_SAFE"
                 break
             if wait.get("availability") == "PROBE_REQUIRED" or cont.get("needsProbe"):
+                # New-market COLD_START must close leftover eBay tabs in-process
+                # before the worker's ensure_chrome COLD_START check.
+                ready = local_ready(market=market, cold=True)
+                _write(ART / f"{market}_probe_local_ready_{len(cards)}.json", ready)
+                if not ready["ok"]:
+                    stop_reason = "LOCAL_RUNTIME_NOT_READY"
+                    result = "STOPPED_SAFE"
+                    cards.append({"kind": "LOCAL_READY_FAIL", "ready": ready, "at": utc_now()})
+                    break
+                if probe_attempts >= 3:
+                    stop_reason = "PROBE_LOOP"
+                    result = "STOPPED_SAFE"
+                    break
+                probe_attempts += 1
                 probe = run_scheduler_worker(market, mode="PROBE")
                 cards.append({"kind": "PROBE", **{k: probe.get(k) for k in (
                     "outcome", "error", "status", "healthy", "searchSubmissionStarted", "at"
                 )}})
                 _write(ART / f"{market}_probe_{len(cards)}.json", probe)
                 snap = peek_availability(market=market)
-                if snap.state == "CHALLENGE_REQUIRED" or classify_canary_failure(
+                classification = classify_canary_failure(
                     outcome=probe.get("outcome"),
                     error_message=str(probe.get("error") or ""),
                     search_submission_started=bool(probe.get("searchSubmissionStarted")),
-                )["kind"] == "HARD_STOP":
+                )
+                if snap.state == "CHALLENGE_REQUIRED" or (
+                    classification["kind"] == "HARD_STOP" and not probe.get("healthy")
+                ):
                     stop_reason = "CHALLENGE_OR_HARD_STOP"
                     result = "STOPPED_SAFE"
                     break
-                if snap.state != "HEALTHY" and not probe.get("healthy"):
-                    # Probe failed with marketplace transient → loop wait again
+                if probe.get("healthy"):
+                    record_healthy_browser_check(from_probe=True, market=market)
+                    # Probe proves marketplace health; 5/5 still uses CANARY cards.
                     continue
-                # Probe success does not count toward 5/5.
+                if snap.state != "HEALTHY":
+                    continue
                 continue
 
         gaming = wait_for_gaming_clear(max_wait_seconds=900)
@@ -592,7 +792,11 @@ def run_market_canary(
             cards.append({"kind": "GAMING_PAUSE", "gaming": gaming, "at": utc_now()})
             break
 
-        ready = local_ready(market=market, cold=needs_cold_start(market, healthy=healthy))
+        last_local = bool(cards) and bool((cards[-1].get("classification") or {}).get("localRuntime"))
+        cold = needs_cold_start(market, healthy=healthy) or last_local
+        if last_local:
+            force_cold_start_nav_context()
+        ready = local_ready(market=market, cold=cold)
         if not ready["ok"]:
             stop_reason = "LOCAL_RUNTIME_NOT_READY"
             result = "STOPPED_SAFE"
@@ -651,7 +855,11 @@ def run_market_canary(
             continue
         if classification["kind"] == "HARD_STOP":
             record_canary_episode(market, kind="HARD_STOP", outcome=classification["outcome"])
-            stop_reason = classification["outcome"]
+            outcome = str(classification.get("outcome") or "")
+            if outcome == "EBAY_AUTH_REQUIRED" and market == "US":
+                stop_reason = "US_AUTH_SESSION_NOT_PERSISTING"
+            else:
+                stop_reason = outcome
             result = "STOPPED_SAFE"
             break
         if classification["kind"] == "LOCAL_RUNTIME_FAILURE":
@@ -675,7 +883,7 @@ def run_market_canary(
             result = "STOPPED_SAFE"
             break
         if cycle.get("healthy"):
-            persist_inter_card_from_healthy_result(cycle.get("result") or cycle)
+            persist_inter_card_for_resume(market, cycle.get("result") or cycle)
             price_key = str((cycle.get("result") or {}).get("priceKeyId") or "").strip()
             if price_key:
                 healthy_keys.add(price_key)

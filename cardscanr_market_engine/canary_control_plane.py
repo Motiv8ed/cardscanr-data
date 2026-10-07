@@ -18,6 +18,7 @@ from .ebay_availability import peek_availability
 from .owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
     EBAY_ACCESS_DENIED_403,
+    EBAY_AUTH_REQUIRED,
     TEMPORARY_BROWSER_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
 )
@@ -33,6 +34,7 @@ MAX_PRESUBMIT_TRANSIENT_EPISODES_24H = 3
 HARD_STOP_OUTCOMES = frozenset(
     {
         CHALLENGE_REQUIRED,
+        EBAY_AUTH_REQUIRED,
         EBAY_ACCESS_DENIED_403,
         "UNACCOUNTED_SEARCH_URL_NAVIGATION",
         "STATE_INTEGRITY_FAILURE",
@@ -227,7 +229,22 @@ def classify_canary_failure(
         or "linux_chrome_cdp_failed" in text.lower()
         or "x11_" in text.lower()
     )
-    if owned in HARD_STOP_OUTCOMES or any(h.lower() in text.lower() for h in ("captcha", "challenge_required", "access_denied_403")):
+    text_l = text.lower()
+    if (
+        owned == EBAY_AUTH_REQUIRED
+        or "ebay_auth_required" in text_l
+        or "signin.ebay" in text_l
+        or "authentication_required" in text_l
+        or "provider_authentication_required" in text_l
+    ):
+        return {
+            "kind": "HARD_STOP",
+            "consumed": bool(search_submission_started),
+            "opensMarketplaceCooldown": False,
+            "localRuntime": False,
+            "outcome": EBAY_AUTH_REQUIRED,
+        }
+    if owned in HARD_STOP_OUTCOMES or any(h.lower() in text_l for h in ("captcha", "challenge_required", "access_denied_403")):
         return {
             "kind": "HARD_STOP",
             "consumed": bool(search_submission_started),

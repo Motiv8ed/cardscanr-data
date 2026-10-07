@@ -110,6 +110,17 @@ class CanaryControlPlaneTests(unittest.TestCase):
         self.assertEqual(kind["kind"], "POST_SUBMIT_TRANSIENT")
         self.assertTrue(kind["consumed"])
 
+    def test_signin_auth_required_is_hard_stop_not_captcha(self) -> None:
+        kind = classify_canary_failure(
+            outcome="SOLD_STATE_VERIFICATION_TIMEOUT",
+            error_message="Desktop sold navigation failed: EBAY_AUTH_REQUIRED https://signin.ebay.com/ws/eBayISAPI.dll?SignIn",
+            search_submission_started=True,
+        )
+        self.assertEqual(kind["kind"], "HARD_STOP")
+        self.assertEqual(kind["outcome"], "EBAY_AUTH_REQUIRED")
+        self.assertFalse(kind["opensMarketplaceCooldown"])
+        self.assertTrue(kind["consumed"])
+
     def test_market_scoped_sorry_cooldown(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "ebay_availability_state.json"

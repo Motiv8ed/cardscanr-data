@@ -46,6 +46,7 @@ TERMINAL_SOLD_CLICK_FAILURE = "SOLD_CLICK_FAILURE"
 TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT = "SOLD_STATE_VERIFICATION_TIMEOUT"
 TERMINAL_SOLD_UNEXPECTED_FILTER = "SOLD_UNEXPECTED_FILTER_TRANSITION"
 TERMINAL_SOLD_CHALLENGE = "EBAY_CHALLENGE"
+TERMINAL_SOLD_AUTH_REQUIRED = "EBAY_AUTH_REQUIRED"
 TERMINAL_SOLD_SORRY = "EBAY_SORRY"
 TERMINAL_SOLD_ERROR_PAGE = EBAY_ERROR_PAGE
 TERMINAL_ABOUT_BLANK = "ABOUT_BLANK_ABORT"
@@ -161,6 +162,13 @@ def classify_sold_observation(
             "verified": False,
             "phase": SoldPhase.ABOUT_BLANK_ABORT.value,
         }
+    if term == TERMINAL_SOLD_AUTH_REQUIRED or term == "EBAY_AUTH_REQUIRED":
+        return {
+            **base,
+            "terminal": TERMINAL_SOLD_AUTH_REQUIRED,
+            "verified": False,
+            "phase": TERMINAL_SOLD_AUTH_REQUIRED,
+        }
     if term == TERMINAL_SOLD_CHALLENGE or is_ebay_challenge_page(title=title, url=url, body=body):
         return {
             **base,
@@ -216,6 +224,7 @@ def classify_sold_observation(
         "SOLD_UNAVAILABLE_ON_ALTERNATE_SURFACE",
         "ABOUT_BLANK_ABORT",
         "EBAY_CHALLENGE",
+        "EBAY_AUTH_REQUIRED",
         "EBAY_SORRY",
         "EBAY_ERROR_PAGE",
         "EBAY_ACCESS_DENIED_403",
@@ -480,7 +489,7 @@ def run_sold_fixture(
         term = classified.get("terminal")
         # Challenge / about:blank are immediate. Error/SORRY keep polling until budget
         # (PAGE_HEALTH_VERIFICATION) so a transient interstitial can settle healthy.
-        if term in {TERMINAL_SOLD_CHALLENGE, TERMINAL_ABOUT_BLANK}:
+        if term in {TERMINAL_SOLD_CHALLENGE, TERMINAL_SOLD_AUTH_REQUIRED, TERMINAL_ABOUT_BLANK}:
             trans.finish(status="FAIL", reason_code=str(term), now=elapsed)
             ver.finish(status="FAIL", reason_code=str(term), now=elapsed)
             diagnostics.update(
@@ -544,6 +553,9 @@ def run_sold_fixture(
     stable_term = diagnostics.get("lastUnhealthyTerminal") or final_obs.get("terminal")
     if stable_term in {TERMINAL_SOLD_ERROR_PAGE, TERMINAL_SOLD_SORRY}:
         terminal = str(stable_term)
+        stage = PHASE_PAGE_HEALTH_VERIFICATION
+    elif stable_term == TERMINAL_SOLD_AUTH_REQUIRED:
+        terminal = TERMINAL_SOLD_AUTH_REQUIRED
         stage = PHASE_PAGE_HEALTH_VERIFICATION
     else:
         terminal = TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT
@@ -695,4 +707,5 @@ __all__ = [
     "TERMINAL_SOLD_CLICK_FAILURE",
     "TERMINAL_SOLD_STATE_VERIFICATION_TIMEOUT",
     "TERMINAL_SOLD_UNEXPECTED_FILTER",
+    "TERMINAL_SOLD_AUTH_REQUIRED",
 ]

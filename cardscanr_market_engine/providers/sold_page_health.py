@@ -20,9 +20,11 @@ MARKETPLACE_ERROR_PAGE = "MARKETPLACE_ERROR_PAGE"
 TARGET_REJECTED_UNHEALTHY_PAGE = "TARGET_REJECTED_UNHEALTHY_PAGE"
 EBAY_SORRY_PAGE = "EBAY_SORRY"
 EBAY_CHALLENGE_PAGE = "EBAY_CHALLENGE"
+EBAY_AUTH_REQUIRED = "EBAY_AUTH_REQUIRED"
 EBAY_ACCESS_DENIED_403 = "EBAY_ACCESS_DENIED_403"
 HEALTHY_SOLD_RESULTS = "HEALTHY_SOLD_RESULTS"
 HEALTHY_SOLD_ZERO_RESULTS = "HEALTHY_SOLD_ZERO_RESULTS"
+EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity/")
 
 PHASE_PAGE_HEALTH_VERIFICATION = "PAGE_HEALTH_VERIFICATION"
 
@@ -46,6 +48,18 @@ def is_ebay_error_page(
         return True
     _ = body  # body may reinforce but title/url suffice
     return False
+
+
+def is_ebay_authentication_url(url: str | None) -> bool:
+    """True when navigation left public browsing for eBay sign-in (not CAPTCHA)."""
+    parsed = urlparse(str(url or "").strip())
+    host = (parsed.netloc or "").lower().split(":", 1)[0]
+    if not host or "ebay." not in host:
+        return False
+    if host.startswith(("signin.", "login.")):
+        return True
+    path = parsed.path.lower()
+    return any(marker in path for marker in EBAY_AUTH_PATH_MARKERS)
 
 
 def marketplace_hostname_ok(url: str | None, *, expected_origin: str = "ebay.com.au") -> bool:
@@ -143,6 +157,8 @@ def classify_marketplace_page_class(
     """Return a marketplace page class or None when not a known unhealthy class."""
     if http_status == 403:
         return EBAY_ACCESS_DENIED_403
+    if is_ebay_authentication_url(url):
+        return EBAY_AUTH_REQUIRED
     if _is_challenge_blob(title, url, body):
         return EBAY_CHALLENGE_PAGE
     if is_ebay_error_page(title=title, url=url, body=body):
@@ -272,6 +288,18 @@ def evaluate_sold_verification(
     )
     unhealthy = health.get("unhealthyClass")
 
+    if unhealthy == EBAY_AUTH_REQUIRED:
+        return {
+            "soldFilterStateVerified": filter_ok,
+            "soldPageHealthVerified": False,
+            "x11SoldStateVerified": False,
+            "verified": False,
+            "terminal": EBAY_AUTH_REQUIRED,
+            "marketplacePageClass": EBAY_AUTH_REQUIRED,
+            "health": health,
+            "captureReady": False,
+            "phaseHint": PHASE_PAGE_HEALTH_VERIFICATION,
+        }
     if unhealthy == EBAY_CHALLENGE_PAGE:
         return {
             "soldFilterStateVerified": filter_ok,

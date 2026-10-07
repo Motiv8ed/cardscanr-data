@@ -66,7 +66,7 @@ class ProviderBlockedError(ProviderError):
 
 class ProviderAuthenticationRequiredError(ProviderError):
     error_code = "provider_authentication_required"
-    retryable = True
+    retryable = False
 
 
 class ProviderUnsupportedMarketError(ProviderError):

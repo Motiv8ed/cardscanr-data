@@ -28,6 +28,7 @@ from .errors import (
     ProviderUnsupportedMarketError,
     sanitize_provider_diagnostics,
 )
+from .sold_page_health import is_ebay_authentication_url
 from .identity_guard import ENGLISH_MARKET_IDENTITY_UNAVAILABLE, evaluate_english_market_identity
 from .query_builder import ProviderSearchQuery, build_provider_search_queries
 from ..marketplaces import ebay_host_matches_provider_domain, normalize_ebay_host
@@ -58,7 +59,6 @@ ACTIVE_CHALLENGE_URL_MARKERS = (
     "captcha.ebay.",
     "/challenge?",
     "/challenge/",
-    "signin.ebay.",
 )
 # Backward-compatible alias used by older tests/helpers (active visible text only).
 CHALLENGE_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS
@@ -548,18 +548,6 @@ def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
     return False
 
 
-def is_ebay_authentication_url(url: str) -> bool:
-    """Return true when an eBay navigation has left public browsing for authentication."""
-    parsed = urlparse(url)
-    host = parsed.netloc.lower().split(":", 1)[0]
-    if not (host == "ebay.com" or host.endswith(".ebay.com") or ".ebay." in host):
-        return False
-    if host.startswith(("signin.", "login.")):
-        return True
-    path = parsed.path.lower()
-    return any(marker in path for marker in EBAY_AUTH_PATH_MARKERS)
-
-
 def classify_browser_page_state(
     *,
     title: str = "",
@@ -640,11 +628,21 @@ def classify_browser_page_state(
         },
     }
 
+    # Auth wall is not CAPTCHA. Classify before active-challenge URL markers.
+    if is_ebay_authentication_url(url):
+        return {
+            "outcome": "authentication_required",
+            "reason": "signin.ebay",
+            "retryable": False,
+            "securityClass": "EBAY_AUTH_REQUIRED",
+            **base_diag,
+        }
+
     # SORRY / maintenance / auth / access — evaluate on visible text (and title), not CSS.
     if marker := matched_visible(ACCESS_BLOCK_TEXT_MARKERS):
         return {"outcome": "access_blocked", "reason": marker, "retryable": True, **base_diag}
     if marker := matched_visible(AUTH_TEXT_MARKERS):
-        return {"outcome": "authentication_required", "reason": marker, "retryable": True, **base_diag}
+        return {"outcome": "authentication_required", "reason": marker, "retryable": False, **base_diag}
     if marker := matched_visible(MAINTENANCE_TEXT_MARKERS):
         return {"outcome": "provider_unavailable", "reason": marker, "retryable": True, **base_diag}
     if marker := matched_visible(SORRY_ERROR_TEXT_MARKERS) or (
@@ -3144,6 +3142,25 @@ class EbayBrowserSoldCompsProvider:
                         "stageTimings": stage_timings.snapshot(),
                     }
                 ),
+            )
+        if is_ebay_authentication_url(nav.url or "") or str(nav.error or "") in {
+            "EBAY_AUTH_REQUIRED",
+            "AUTH_REQUIRED",
+        }:
+            raise ProviderAuthenticationRequiredError(
+                "EBAY_AUTH_REQUIRED: eBay redirected pricing to sign-in; credentials are not entered automatically",
+                diagnostics={
+                    "providerOutcome": "authentication_required",
+                    "ownedDailyOutcome": "EBAY_AUTH_REQUIRED",
+                    "operationalStatus": "EBAY_AUTH_REQUIRED",
+                    "failureClass": "EBAY_AUTH_REQUIRED",
+                    "navMode": nav_mode_label,
+                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "stageTimings": stage_timings.snapshot(),
+                    "url": nav.url,
+                    "markFresh": False,
+                    "lastGoodRetained": True,
+                },
             )
         if nav.challenge:
             raise ProviderBlockedError(
