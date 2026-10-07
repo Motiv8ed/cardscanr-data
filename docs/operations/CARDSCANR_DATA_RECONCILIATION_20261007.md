@@ -4,7 +4,7 @@
 **Date:** 2026-10-07  
 **Worktree:** `D:\CardScanR_Data\cardscanr-data` (== `D:\cardscanr-data` junction)  
 **Branch:** `cursor/cjk-search-normalizer-safe` (alias `pricing/us-gb-ca-canary-stack`)  
-**HEAD:** `7023761b`  
+**HEAD:** `047b508c`  
 **origin/main:** `3d1b16a6` (unchanged)
 
 Did **not** touch: product main, Ops, Runtime, Facebook, Play, or live pricing processes/Chrome.
@@ -76,7 +76,7 @@ Hold copy of uncommitted canary report WIP:
 
 ## RETAINED_UNMERGED
 
-- Entire **35-commit** stack on `pricing/us-gb-ca-canary-stack` / `cursor/cjk-search-normalizer-safe`
+- Entire **36-commit** stack on `pricing/us-gb-ca-canary-stack` / `cursor/cjk-search-normalizer-safe`
 - Ignored on-disk evidence under `reports/`, `artifacts/`, `reports/runtime/`
 - Underscore probe scripts `tools/_*` (gitignored, kept on disk)
 - Separate branch `tools/en-jp-production-packs-20260926` (CJK/pack work â€” not part of this tip)
@@ -114,4 +114,4 @@ python -m unittest tests.test_canary_control_plane \
 
 **Decide whether to merge `pricing/us-gb-ca-canary-stack` â†’ `cardscanr-data` `main`.**
 
-That is the reviewed preservation tip (`7023761b`). It is the real pricing canary/owned-daily stack (not CJK). Until merged, `origin/main` stays at `3d1b16a6` while this worktree remains the live path for data-repo scripts.
+That is the reviewed preservation tip (`047b508c`). It is the real pricing canary/owned-daily stack (not CJK). Until merged, `origin/main` stays at `3d1b16a6` while this worktree remains the live path for data-repo scripts.
