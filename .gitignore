@@ -308,3 +308,44 @@ data/global/catalogue/*.jsonl
 reports/global_rollout/artifacts/*.sqlite
 reports/global_catalogue_qa/artifacts/
 reports/global_rollout/physical_printing_reconciliation.json.tmp
+
+# Data-repo reconciliation hygiene (2026-10-07)
+# Probe/scratch outputs and local evidence dumps — keep on disk, do not commit
+reports/_*/
+reports/_*
+artifacts/
+*.deb
+supabase/.temp/
+data/images/*.bak*
+data/images/*.bak_*/
+reports/runtime/cs012r_*
+reports/runtime/**/cs012r_*
+# Zip staging / code snapshots inside evidence packs (duplicates of real source)
+reports/artifacts/**/_zip_stage/
+reports/artifacts/**/code_snapshot/
+reports/artifacts/**/files/
+reports/artifacts/**/sources/
+reports/artifacts/**/tests/
+
+# Live pricing / scheduler runtime state (must stay on disk; never commit)
+reports/runtime/*.json
+reports/runtime/*.jsonl
+reports/runtime/*.json.lock
+reports/runtime/*.txt
+reports/runtime/*.flag
+reports/runtime/*.pid.json
+reports/runtime/live_nav_attempts/
+reports/runtime/**/*.json
+reports/runtime/**/*.jsonl
+
+# Ephemeral status / latest dumps
+reports/*_latest.json
+reports/*_runs.jsonl
+reports/*_latest.md
+reports/prod_post_deploy_verify.json
+reports/prod_pricing_baseline_*.json
+reports/owned_daily_andrew_action_required.json
+reports/freshness_search_index_closeout/
+
+# Local underscore probe scripts (keep on disk)
+tools/_*
