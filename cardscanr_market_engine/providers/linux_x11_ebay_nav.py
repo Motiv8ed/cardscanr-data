@@ -198,16 +198,32 @@ echo CDP_FAIL
 tail -40 /tmp/chrome_cardscanr.log 2>/dev/null || true
 exit 1
 """
-    tmp = Path(r"D:\DevCache\Temp\wsl_chrome_cdp.sh")
-    tmp.write_bytes(check.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8"))
-    proc = subprocess.run(
-        ["wsl", "-d", WSL_DISTRO, "--", "bash", "/mnt/d/DevCache/Temp/wsl_chrome_cdp.sh"],
-        capture_output=True,
-        text=True,
-        timeout=90,
-        encoding="utf-8",
-        errors="replace",
-    )
+    def _run_cdp_check() -> subprocess.CompletedProcess[str]:
+        tmp = Path(r"D:\DevCache\Temp\wsl_chrome_cdp.sh")
+        tmp.write_bytes(check.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8"))
+        return subprocess.run(
+            ["wsl", "-d", WSL_DISTRO, "--", "bash", "/mnt/d/DevCache/Temp/wsl_chrome_cdp.sh"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            encoding="utf-8",
+            errors="replace",
+        )
+
+    proc = _run_cdp_check()
+    # COLD_START leftover same-process eBay tabs: clean via cold_start mechanism
+    # once, then re-check. Avoid burning consecutive-transient budget on a
+    # recoverable control-plane condition.
+    if (
+        not allow_ebay
+        and proc.returncode == 4
+        and "CDP_HAS_EBAY_TARGET" in (proc.stdout or "")
+    ):
+        from ..local_browser_runtime import cold_start_close_leftover_ebay_tabs
+
+        cleanup = cold_start_close_leftover_ebay_tabs(cdp_port=cdp_port)
+        if cleanup.get("ok"):
+            proc = _run_cdp_check()
     if "CDP_OK" not in proc.stdout and "CDP_READY" not in proc.stdout:
         raise RuntimeError(
             "linux_chrome_cdp_failed: "

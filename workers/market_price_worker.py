@@ -354,6 +354,8 @@ def run_worker_loop(
                     or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES
                 ):
                     last_transient = utc_iso()
+                    # No-op (no extra history) when already HARD_STOPPED; still
+                    # returns the latched reason.
                     stop_reason = budget.record_transient()
                     budget.persist()
                     if stop_reason:

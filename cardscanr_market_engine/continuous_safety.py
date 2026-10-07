@@ -69,10 +69,14 @@ class ContinuousSafetyBudget:
                 if parsed is not None:
                     tagged.append((parsed, market))
         self.market_submissions = tagged
+        # Repair impossible consecutiveTransient vs retained history after load.
+        self._reconcile_consecutive_with_history()
 
     def persist(self, path: Path | None = None) -> None:
         target = path or BUDGET_LEDGER_PATH
         target.parent.mkdir(parents=True, exist_ok=True)
+        # Never write a contradictory consecutiveTransient > retained history.
+        self._reconcile_consecutive_with_history()
         payload = {
             "submissions": [utc_iso(x) for x in self.submissions[-400:]],
             "transients": [utc_iso(x) for x in self.transients[-200:]],
@@ -85,12 +89,26 @@ class ContinuousSafetyBudget:
         }
         target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
+    def _reconcile_consecutive_with_history(self) -> None:
+        """Keep consecutiveTransient consistent with retained transient timestamps.
+
+        Pruning must not leave consecutiveTransient above len(transients). A
+        legitimate HARD_STOP remains latched via last_hard_stop until owner
+        record_healthy(); pruning alone never clears that latch.
+        """
+        retained = len(self.transients)
+        if self.consecutive_transient > retained:
+            self.consecutive_transient = retained
+        if self.consecutive_transient < 0:
+            self.consecutive_transient = 0
+
     def _prune(self, now: datetime) -> None:
         hour = now - timedelta(hours=1)
         day = now - timedelta(hours=24)
         self.submissions = [t for t in self.submissions if t >= day]
         self.transients = [t for t in self.transients if t >= hour]
         self.market_submissions = [(t, m) for t, m in self.market_submissions if t >= day]
+        self._reconcile_consecutive_with_history()
 
     def submissions_1h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
@@ -131,6 +149,9 @@ class ContinuousSafetyBudget:
     def transient_hard_stop(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
         self._prune(current)
+        # Owner-latched HARD_STOP survives prune; consecutive may drop with history.
+        if self.last_hard_stop:
+            return self.last_hard_stop
         if self.consecutive_transient >= self.max_consecutive_transient:
             return "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES"
         if self.transients_1h(current) >= self.max_transient_per_hour:
@@ -145,14 +166,24 @@ class ContinuousSafetyBudget:
         self._prune(current)
 
     def record_healthy(self) -> None:
+        """Owner-clear / healthy reset: clear consecutive streak and HARD_STOP latch."""
         self.consecutive_transient = 0
+        self.last_hard_stop = None
 
     def record_transient(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
+        # Already HARD_STOPPED: do not manufacture additional equivalent history.
+        existing = self.transient_hard_stop(current)
+        if existing:
+            return existing
         self.transients.append(current)
         self.consecutive_transient += 1
         self._prune(current)
-        reason = self.transient_hard_stop(current)
+        reason: str | None = None
+        if self.consecutive_transient >= self.max_consecutive_transient:
+            reason = "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES"
+        elif self.transients_1h(current) >= self.max_transient_per_hour:
+            reason = "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR"
         if reason:
             self.last_hard_stop = reason
         return reason

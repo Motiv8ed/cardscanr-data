@@ -219,122 +219,18 @@ def cold_start_browser() -> dict[str, Any]:
 
     Closing leftover eBay tabs and parking about:blank preserves cookies/auth.
     Restarting Chrome was a proven defect that dropped the signed-in US session.
+    Delegates to local_browser_runtime.cold_start_close_leftover_ebay_tabs.
     """
-    import urllib.error
-    import urllib.request
-
-    from cardscanr_market_engine.browser_lifecycle_policy import (
-        RUNTIME_COLD_START,
-        evaluate_runtime_targets,
-        is_ebay_marketplace_host,
-        hostname_of,
+    from cardscanr_market_engine.local_browser_runtime import (
+        cold_start_close_leftover_ebay_tabs,
     )
 
     cdp_port = int(os.environ.get("EBAY_BROWSER_CDP_PORT", "9444"))
-    before = probe_local_browser_runtime(cdp_port=cdp_port)
-    closed: list[str] = []
-    errors: list[str] = []
-    kept_page_id: str | None = None
-    # Keep a blank page alive BEFORE closing marketplace tabs. Closing the last
-    # Chrome page has killed the authenticated process (PID 7164 / 3006).
-    try:
-        req = urllib.request.Request(
-            f"http://127.0.0.1:{cdp_port}/json/new?about:blank",
-            method="PUT",
-        )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            raw = resp.read().decode()
-        try:
-            created = json.loads(raw)
-        except Exception:
-            created = {}
-        kept_page_id = str(created.get("id") or "").strip() or kept_page_id
-        time.sleep(0.3)
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        errors.append(f"pre_blank:{exc}")
-    before = probe_local_browser_runtime(cdp_port=cdp_port)
-    page_ids_alive = [
-        str(t.get("id") or "")
-        for t in (before.raw_targets or [])
-        if isinstance(t, dict) and str(t.get("type") or "").lower() == "page" and t.get("id")
-    ]
-    for target in before.raw_targets or []:
-        if not isinstance(target, dict):
-            continue
-        tid = str(target.get("id") or "").strip()
-        url = str(target.get("url") or "")
-        ttype = str(target.get("type") or "page").lower()
-        if ttype != "page" or not tid:
-            continue
-        host = hostname_of(url)
-        is_ebay = is_ebay_marketplace_host(host) or "signin.ebay" in url.lower() or "ebay." in url.lower()
-        if is_ebay:
-            remaining = [i for i in page_ids_alive if i != tid]
-            if not remaining:
-                errors.append(f"skip_last_page:{tid}")
-                kept_page_id = kept_page_id or tid
-                continue
-            try:
-                with urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/close/{tid}", timeout=3) as resp:
-                    resp.read()
-                closed.append(tid)
-                page_ids_alive = remaining
-            except (urllib.error.URLError, TimeoutError, OSError) as exc:
-                errors.append(f"{tid}:{exc}")
-        elif kept_page_id is None:
-            kept_page_id = tid
-    if closed:
-        time.sleep(0.4)
-    # Ensure at least one blank page remains for COLD_START readiness.
-    after = probe_local_browser_runtime(cdp_port=cdp_port)
-    page_ids = [
-        str(t.get("id") or "")
-        for t in (after.raw_targets or [])
-        if isinstance(t, dict) and str(t.get("type") or "").lower() == "page" and t.get("id")
-    ]
-    if not page_ids:
-        try:
-            req = urllib.request.Request(
-                f"http://127.0.0.1:{cdp_port}/json/new?about:blank",
-                method="PUT",
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                resp.read()
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            errors.append(f"new_blank:{exc}")
-        time.sleep(0.3)
-        after = probe_local_browser_runtime(cdp_port=cdp_port)
-    else:
-        # Navigate a kept page to about:blank when it still holds non-blank content.
-        for target in after.raw_targets or []:
-            if not isinstance(target, dict) or str(target.get("type") or "").lower() != "page":
-                continue
-            tid = str(target.get("id") or "")
-            url = str(target.get("url") or "")
-            if not tid:
-                continue
-            if url.startswith("about:blank"):
-                break
-            try:
-                # Activate then navigate via CDP HTTP helpers when available.
-                urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/activate/{tid}", timeout=3).read()
-            except Exception:
-                pass
-            break
-    after = probe_local_browser_runtime(cdp_port=cdp_port)
-    after_policy = evaluate_runtime_targets(after.raw_targets, mode=RUNTIME_COLD_START)
-    # Allow leftover non-ebay pages; fail only when eBay top-level pages remain.
-    ebay_left = list(after.ebay_targets or [])
-    ok = bool(after.cdp_ready and not ebay_left)
+    result = cold_start_close_leftover_ebay_tabs(cdp_port=cdp_port)
+    after = result.get("after") if isinstance(result.get("after"), dict) else {}
     return {
-        "ok": ok,
-        "resetMethod": "cdp_close_ebay_tabs_same_process",
-        "chromeRestarted": False,
-        "closedTargetIds": closed,
-        "closeErrors": errors,
-        "ebayTargetsAfter": ebay_left,
-        "coldStartPolicy": after_policy.to_dict(),
-        "cdpReady": after.cdp_ready,
+        **result,
+        "cdpReady": bool(after.get("cdpReady") if after else result.get("ok")),
     }
 
 

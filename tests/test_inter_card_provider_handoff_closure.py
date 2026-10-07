@@ -382,10 +382,17 @@ class EnsureChromeGateTests(unittest.TestCase):
     def test_08_historical_cold_start_rejects_tropius_tab(self) -> None:
         apply_context_to_environ(NavigationRuntimeContext(runtime_mode=RUNTIME_COLD_START))
         proc = mock.Mock(returncode=4, stdout="CDP_HAS_EBAY_TARGET\n", stderr="")
-        with mock.patch("cardscanr_market_engine.providers.linux_x11_ebay_nav.subprocess.run", return_value=proc):
+        with mock.patch(
+            "cardscanr_market_engine.providers.linux_x11_ebay_nav.subprocess.run",
+            return_value=proc,
+        ):
             with mock.patch.object(Path, "write_bytes", return_value=None):
-                with self.assertRaises(RuntimeError) as ctx:
-                    ensure_chrome_with_cdp(cdp_port=9444)
+                with mock.patch(
+                    "cardscanr_market_engine.local_browser_runtime.cold_start_close_leftover_ebay_tabs",
+                    return_value={"ok": False, "ebayTargetsAfter": ["https://www.ebay.com.au/"]},
+                ):
+                    with self.assertRaises(RuntimeError) as ctx:
+                        ensure_chrome_with_cdp(cdp_port=9444)
         self.assertIn("CDP_HAS_EBAY_TARGET", str(ctx.exception))
         self.assertIn("linux_chrome_cdp_failed", str(ctx.exception))
 
