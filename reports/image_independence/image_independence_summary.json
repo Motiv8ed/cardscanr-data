@@ -1,10 +1,10 @@
 {
-  "generatedAtUtc": "2026-10-08T07:58:54Z",
+  "generatedAtUtc": "2026-10-08T13:14:49Z",
   "en": {
     "total": 39558,
-    "localMaster": 38312,
-    "hosted": 38312,
-    "unresolved": 1246
+    "localMaster": 38313,
+    "hosted": 38313,
+    "unresolved": 1245
   },
   "ja": {
     "total": 28453,
@@ -16,10 +16,10 @@
   "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
   "unresolvedCategoryCounts": {
     "auth_only_source_no_alternate": 2462,
-    "not_yet_resolved": 7,
+    "not_yet_resolved": 6,
     "no_permitted_image_after_reresolution": 5
   },
-  "masterRows": 65537,
+  "masterRows": 65538,
   "rescues": {
     "from_previous_pokewallet_only": 23071,
     "from_tcgdex_reresolution": 0,
@@ -27,293 +27,70 @@
     "from_other_sources": 27089
   },
   "independentPct": 96.36,
-  "verdict": "CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS4_COMPLETE",
-  "pass": "pass4",
-  "bases": {
-    "cardscanr": "fb4ec343",
-    "cardscanr_data": "2092e3c7"
+  "pass5": {
+    "generatedAtUtc": "2026-10-08T13:13:41Z",
+    "verdict": "CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS5_DISCOVERY",
+    "targets": 2474,
+    "searched": 2474,
+    "acquiredThisPass": 1,
+    "recoveredBySource": {
+      "catalogue_url": 1
+    },
+    "rightsReviewCandidateRows": 2516,
+    "cardsAwaitingPermission": 16,
+    "genuinelyUndiscoverable": 0,
+    "classificationRows": 2473,
+    "summaryAfter": {
+      "generatedAtUtc": "2026-10-08T13:13:41Z",
+      "en": {
+        "total": 39558,
+        "localMaster": 38313,
+        "hosted": 38313,
+        "unresolved": 1245
+      },
+      "ja": {
+        "total": 28453,
+        "localMaster": 27225,
+        "hosted": 27225,
+        "unresolved": 1228
+      },
+      "masterRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\master",
+      "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
+      "unresolvedCategoryCounts": {
+        "auth_only_source_no_alternate": 2462,
+        "not_yet_resolved": 6,
+        "no_permitted_image_after_reresolution": 5
+      },
+      "masterRows": 65538,
+      "rescues": {
+        "from_previous_pokewallet_only": 23071,
+        "from_tcgdex_reresolution": 0,
+        "from_scrydex_written_authorization": 0,
+        "from_other_sources": 27089
+      },
+      "independentPct": 96.36
+    },
+    "sourcesNotAccessibleWithoutPaymentOrPermission": [
+      "Brave Image Search API (no API key; paid registration not approved)",
+      "Pok\u00e9Wallet image API (auth-gated; no written rehost authorization)",
+      "pokemon-card.com official images (registry: metadata_only)",
+      "Pokellector (watermark; evidence-only)",
+      "Serebii / Bulbagarden / Limitless / pkmncards (fan/community; rights review)",
+      "Marketplace listing photos (link/evidence only)"
+    ],
+    "artifacts": {
+      "rightsReviewCsv": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass5_rights_review_candidates.csv",
+      "classificationCsv": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass5_undiscoverable_or_blocked.csv",
+      "progressJsonl": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\independence\\pass5\\discovery_progress.jsonl"
+    },
+    "classificationCounts": {
+      "auth_only_after_pass5_search": 2457,
+      "discovered_awaiting_permission": 16
+    },
+    "authOnlyAfterSearch": 2457,
+    "hostedAfter": 65538,
+    "independentPct": 96.36,
+    "remainingUnresolved": 2473
   },
-  "pass4": {
-    "pass4_recovered": 2003,
-    "pass4_by_provider": {
-      "scrydex": 1170,
-      "tcgdex": 805,
-      "pokemon_tcg_api": 28
-    },
-    "pass4_by_match_basis_top": {
-      "provider_card_id_scrydex_cdn": 815,
-      "stamp_collector_tcgdex": 718,
-      "scrydex_from_code:ja_alias_map": 218,
-      "stamp_collector_scrydex": 114,
-      "tcgdex_set_map:en_alias_map": 87,
-      "pokemontcg_from_map:en_alias_map": 25,
-      "scrydex_from_code:extracted_set_code": 23,
-      "catalogue_url": 1,
-      "pokemontcg_authoritative:en_alias_map": 1,
-      "pokemontcg_from_map:promo_collector_prefix": 1
-    },
-    "unresolved_total": 2474,
-    "unresolved_by_category": {
-      "auth_only_source_no_alternate": 2462,
-      "not_yet_resolved": 7,
-      "no_permitted_image_after_reresolution": 5
-    },
-    "unresolved_by_progress_reason": {
-      "unknown": 2474
-    },
-    "unresolved_top_sets": [
-      {
-        "n": 195,
-        "language": "en",
-        "set_id": "22880",
-        "set_name": "Prize Pack Series Cards"
-      },
-      {
-        "n": 171,
-        "language": "en",
-        "set_id": "2282",
-        "set_name": "World Championship Decks"
-      },
-      {
-        "n": 144,
-        "language": "en",
-        "set_id": "1840",
-        "set_name": "Deck Exclusives"
-      },
-      {
-        "n": 143,
-        "language": "en",
-        "set_id": "2374",
-        "set_name": "Miscellaneous Cards & Products"
-      },
-      {
-        "n": 96,
-        "language": "ja",
-        "set_id": "23912",
-        "set_name": "EX Battle Boost"
-      },
-      {
-        "n": 77,
-        "language": "en",
-        "set_id": "2289",
-        "set_name": "Blister Exclusives"
-      },
-      {
-        "n": 53,
-        "language": "en",
-        "set_id": "1539",
-        "set_name": "League & Championship Cards"
-      },
-      {
-        "n": 48,
-        "language": "en",
-        "set_id": "1938",
-        "set_name": "Alternate Art Promos"
-      },
-      {
-        "n": 43,
-        "language": "en",
-        "set_id": "23520",
-        "set_name": "Battle Academy 2024"
-      },
-      {
-        "n": 41,
-        "language": "en",
-        "set_id": "1853",
-        "set_name": "EX Battle Stadium"
-      },
-      {
-        "n": 40,
-        "language": "ja",
-        "set_id": "24168",
-        "set_name": "Intro Pack (Bulbasaur)"
-      },
-      {
-        "n": 40,
-        "language": "ja",
-        "set_id": "24169",
-        "set_name": "Intro Pack (Squirtle)"
-      },
-      {
-        "n": 37,
-        "language": "en",
-        "set_id": "3051",
-        "set_name": "Battle Academy 2022"
-      },
-      {
-        "n": 35,
-        "language": "en",
-        "set_id": "2686",
-        "set_name": "Battle Academy"
-      },
-      {
-        "n": 35,
-        "language": "ja",
-        "set_id": "23940",
-        "set_name": "Master Deck Build Box EX"
-      },
-      {
-        "n": 34,
-        "language": "en",
-        "set_id": "23323",
-        "set_name": "Trading Card Game Classic"
-      },
-      {
-        "n": 34,
-        "language": "ja",
-        "set_id": "23817",
-        "set_name": "Pokemon TCG Classic: Blastoise"
-      },
-      {
-        "n": 34,
-        "language": "ja",
-        "set_id": "23818",
-        "set_name": "Pokemon TCG Classic: Charizard"
-      },
-      {
-        "n": 31,
-        "language": "ja",
-        "set_id": "24122",
-        "set_name": "Aqua Deck Kit"
-      },
-      {
-        "n": 30,
-        "language": "en",
-        "set_id": "1540",
-        "set_name": "HGSS Trainer Kit: Gyarados & Raichu"
-      },
-      {
-        "n": 30,
-        "language": "ja",
-        "set_id": "23983",
-        "set_name": "XY Beginning Set"
-      },
-      {
-        "n": 29,
-        "language": "ja",
-        "set_id": "23963",
-        "set_name": "BREAK Starter Pack"
-      },
-      {
-        "n": 28,
-        "language": "en",
-        "set_id": "23266",
-        "set_name": "Trick or Trade BOOster Bundle 2023"
-      },
-      {
-        "n": 28,
-        "language": "en",
-        "set_id": "3179",
-        "set_name": "Trick or Trade BOOster Bundle"
-      },
-      {
-        "n": 28,
-        "language": "ja",
-        "set_id": "24123",
-        "set_name": "Magma Deck Kit"
-      },
-      {
-        "n": 26,
-        "language": "en",
-        "set_id": "23561",
-        "set_name": "Trick or Trade BOOster Bundle 2024"
-      },
-      {
-        "n": 25,
-        "language": "ja",
-        "set_id": "23985",
-        "set_name": "M Master Deck Build Box Power Style"
-      },
-      {
-        "n": 24,
-        "language": "ja",
-        "set_id": "24167",
-        "set_name": "Pokemon-e Starter Deck"
-      },
-      {
-        "n": 22,
-        "language": "en",
-        "set_id": "2155",
-        "set_name": "Countdown Calendar Promos"
-      },
-      {
-        "n": 22,
-        "language": "en",
-        "set_id": "2208",
-        "set_name": "SM Trainer Kit: Alolan Sandslash & Alolan Ninetales"
-      },
-      {
-        "n": 20,
-        "language": "ja",
-        "set_id": "23910",
-        "set_name": "Dragon Selection"
-      },
-      {
-        "n": 20,
-        "language": "ja",
-        "set_id": "23986",
-        "set_name": "M Master Deck Build Box Speed Style"
-      },
-      {
-        "n": 19,
-        "language": "en",
-        "set_id": "2332",
-        "set_name": "Professor Program Promos"
-      },
-      {
-        "n": 18,
-        "language": "ja",
-        "set_id": "24118",
-        "set_name": "Metagross Constructed Starter Deck"
-      },
-      {
-        "n": 18,
-        "language": "ja",
-        "set_id": "24132",
-        "set_name": "Torchic Constructed Starter Deck"
-      },
-      {
-        "n": 17,
-        "language": "ja",
-        "set_id": "23938",
-        "set_name": "Blastoise + Kyurem-EX Combo Deck"
-      },
-      {
-        "n": 17,
-        "language": "ja",
-        "set_id": "24054",
-        "set_name": "Arceus LV.X Deck: Grass & Fire"
-      },
-      {
-        "n": 17,
-        "language": "ja",
-        "set_id": "24126",
-        "set_name": "Salamence Constructed Starter Deck"
-      },
-      {
-        "n": 17,
-        "language": "ja",
-        "set_id": "24133",
-        "set_name": "Treecko Constructed Starter Deck"
-      },
-      {
-        "n": 17,
-        "language": "ja",
-        "set_id": "24150",
-        "set_name": "Theater Limited VS Pack"
-      }
-    ]
-  },
-  "thirdPartyHostsRemaining": {
-    "api.pokewallet.io": 2470,
-    "images.pokemontcg.io": 1
-  },
-  "thirdPartyRuntimeDependenciesRemaining": 2471,
-  "localEqualsHosted": true,
-  "scrydexPolicy": {
-    "imageRehostingStatus": "approved_written_authorization_cardscanr_cdn",
-    "writtenAuthorizationDate": "2026-10-07",
-    "evidencePath": "reports/image_independence/SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md",
-    "missingImagePlaceholderSha256": "fd7c3800f9b8ebadf4b31a735f569a180e66201741b00fafa17879967884ad2c"
-  }
+  "verdict": "CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS5_DISCOVERY_COMPLETE"
 }

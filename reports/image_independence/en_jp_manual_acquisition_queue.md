@@ -1,24 +1,23 @@
 # EN/JA Manual Acquisition Queue
 
-Generated: `2026-10-08T08:00:14Z`
+Generated: `2026-10-08T13:14:51Z`
 
-Total unresolved queued: **2474**
+Total unresolved queued: **2473**
 
 ## By language
 
-- `en`: 1246
+- `en`: 1245
 - `ja`: 1228
 
 ## By failure reason
 
 - `auth_only_source_no_alternate`: 2462
-- `not_yet_resolved`: 7
+- `not_yet_resolved`: 6
 - `no_permitted_image_after_reresolution`: 5
 
 ## By permission status
 
 - `pokewallet_auth_gated_no_bypass`: 2473
-- `manual_review_required`: 1
 
 ## Largest remaining sets
 
