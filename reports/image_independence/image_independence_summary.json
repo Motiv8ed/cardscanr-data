@@ -1,0 +1,57 @@
+{
+  "generatedAtUtc": "2026-10-08T04:35:00Z",
+  "verdict": "CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_FINAL_PASS",
+  "en": {
+    "total": 39558,
+    "localMaster": 37343,
+    "hosted": 37342,
+    "unresolved": 2215
+  },
+  "ja": {
+    "total": 28453,
+    "localMaster": 26195,
+    "hosted": 26195,
+    "unresolved": 2258
+  },
+  "masterRoot": "D:\\cardscanr-data\\data\\images\\master",
+  "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
+  "r2Bucket": "cardscanr-card-images",
+  "independentPct": 93.42,
+  "masterRows": 63538,
+  "localArchive": {
+    "displayWebpCount": 63538,
+    "bytes": 5651651316,
+    "gib": 5.26
+  },
+  "r2UploadedThisPass": 37306,
+  "r2HostedMetaCount": 63537,
+  "thirdPartyRuntimeDependenciesRemaining": 4474,
+  "thirdPartyHostsRemaining": {
+    "api.pokewallet.io": 4472,
+    "images.pokemontcg.io": 2
+  },
+  "unresolvedCategoryCounts": {
+    "auth_only_source_no_alternate": 3614,
+    "corrupt_or_unreachable_across_sources": 855,
+    "not_yet_resolved": 4
+  },
+  "unresolvedCategoryCountsRefined": {
+    "auth_only_source_no_alternate": 2689,
+    "ambiguous_identity": 928,
+    "corrupt_image_across_available_sources": 855,
+    "dead_source_only_after_reresolution": 1
+  },
+  "rescues": {
+    "fromPreviousPokewalletOnlyClassification": 36591,
+    "byCurrentTcgdexReresolution": 14665,
+    "byScrydexWrittenAuthorization": 25099,
+    "fromOtherSources": 76,
+    "priorCdnReconcileRetained": 23696,
+    "note": "Rescue dimensions overlap; a single card may count in PW + Scrydex/TCGdex."
+  },
+  "scrydexPolicy": {
+    "imageRehostingStatus": "approved_written_authorization_cardscanr_cdn",
+    "writtenAuthorizationDate": "2026-10-07",
+    "evidencePath": "reports/image_independence/SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md"
+  }
+}

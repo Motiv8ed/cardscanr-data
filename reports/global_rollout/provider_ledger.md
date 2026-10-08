@@ -41,14 +41,14 @@ Metadata access and artwork redistribution are evaluated separately. No provider
 - Terms: https://www.pokewallet.io/terms-conditions
 
 ## scrydex
-- Terms status: **prohibited**
+- Terms status: **approved_with_conditions**
 - Metadata: pending_human_review
-- Image rehosting: prohibited_without_written_authorization
+- Image rehosting: approved_written_authorization_cardscanr_cdn
 - Authentication: X-Api-Key plus X-Team-ID
 - Required environment variables: SCRYDEX_API_KEY, SCRYDEX_TEAM_ID
 - Free limits: No $0 catalogue plan found on the current pricing page.
 - Paid requirements: Starter: US$29/month, 5,000 credits, US$0.006 per overage credit
-- Adapter: credential_preflight_prepared_no_paid_requests_executed
+- Adapter: credential_preflight_prepared_image_rehost_authorized
 - Documentation: https://scrydex.com/docs
 - Terms: https://scrydex.com/terms
 
