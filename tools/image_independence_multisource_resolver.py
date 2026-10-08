@@ -36,7 +36,9 @@ ROOT = Path(__file__).resolve().parent.parent
 CATALOGUE = ROOT / "public" / "v1" / "catalog" / "pokemon"
 MASTER = ROOT / "data" / "images" / "master"
 STATE = ROOT / "data" / "images" / "independence"
-REPORT = Path(r"D:\CardScanR\reports\image_independence")
+REPORT = ROOT / "reports" / "image_independence"
+# Mirror key reports into the app repo for operator-facing FINAL docs.
+REPORT_MIRROR = Path(r"D:\CardScanR\reports\image_independence")
 CDN = "https://cardscanr-images.andygore149.workers.dev"
 BUCKET = "cardscanr-card-images"
 WORKER = Path(r"D:\CardScanR\card_scanner_app\scripts\card_image_cloud\worker-cardscanr-images")
@@ -232,10 +234,142 @@ EN_SET_NAME_ALIASES: dict[str, str] = {
     "hidden fates": "sm115",
     "shining fates": "swsh45",
     "champion's path": "swsh35",
-    "pokemon go": "pgo",
-    "crown zenith": "swsh12pt5",
+    "pokemon go": "swsh10.5",
+    "crown zenith": "swsh12.5",
     "paldean fates": "sv3pt5",
     "shrouded fable": "sv6pt5",
+    "sv: scarlet & violet promo cards": "svp",
+    "scarlet & violet promo cards": "svp",
+    "mcdonald's 25th anniversary promos": "2021swsh",
+    "mcdonalds 25th anniversary promos": "2021swsh",
+    "pps1": "pps1",
+    "pps2": "pps2",
+    "pps3": "pps3",
+    "pps4": "pps4",
+    "pps5": "pps5",
+    "pps6": "pps6",
+    "pps7": "pps7",
+}
+
+# English PokéWallet setName → TCGdex JA set id (authoritative historical aliases).
+JA_SET_NAME_ALIASES: dict[str, str] = {
+    "base expansion pack": "E1",
+    "the town on no map": "E2",
+    "wind from the sea": "E3",
+    "split earth": "E4",
+    "mysterious mountains": "E5",
+    "mysterious mountain": "E5",
+    "adv expansion pack": "ADV1",
+    "miracle of the desert": "ADV2",
+    "rulers of the heavens": "ADV3",
+    "magma vs aqua: two ambitions": "ADV4",
+    "undone seal": "ADV5",
+    "flight of legends": "PCG1",
+    "clash of the blue sky": "PCG2",
+    "rocket gang strikes back": "PCG3",
+    "golden sky, silvery ocean": "PCG4",
+    "golden sky silvery ocean": "PCG4",
+    "mirage forest": "PCG5",
+    "holon research tower": "PCG6",
+    "holon phantom": "PCG7",
+    "miracle crystal": "PCG8",
+    "offense and defense of the furthest ends": "PCG9",
+}
+
+# Scrydex CDN returns this fixed JPEG for unknown card ids (HTTP 200).
+SCRYDEX_MISSING_IMAGE_SHA256 = (
+    "fd7c3800f9b8ebadf4b31a735f569a180e66201741b00fafa17879967884ad2c"
+)
+
+# Image CDN set ids when they differ from TCGdex API set ids.
+IMAGE_SET_ID_OVERRIDES: dict[str, str] = {
+    "swsh10.5": "pgo",
+    "2021swsh": "mcd21",
+    "2019sm": "mcd19",
+    "2018sm": "mcd18",
+    "2017sm": "mcd17",
+    "2016xy": "mcd16",
+    "2015xy": "mcd15",
+    "2014xy": "mcd14",
+    "2012bw": "mcd12",
+    "2011bw": "mcd11",
+    "2022swsh": "mcd22",
+    "2023sv": "mcd23",
+    "2024sv": "mcd24",
+}
+
+# Prize-pack / stamped collector prefixes → TCGdex EN set ids.
+STAMP_PREFIX_TO_TCGDEX: dict[str, str] = {
+    "bst": "swsh5",
+    "cre": "swsh6",
+    "evs": "swsh7",
+    "fst": "swsh8",
+    "brs": "swsh9",
+    "asr": "swsh10",
+    "pgo": "swsh10.5",
+    "lor": "swsh11",
+    "sit": "swsh12",
+    "crz": "swsh12.5",
+    "svi": "sv01",
+    "pal": "sv02",
+    "obf": "sv03",
+    "mew": "sv03.5",
+    "par": "sv04",
+    "paf": "sv04.5",
+    "tef": "sv05",
+    "twm": "sv06",
+    "sfa": "sv06.5",
+    "scr": "sv07",
+    "ssp": "sv08",
+    "pre": "sv08.5",
+    "jtg": "sv09",
+    "dri": "sv10",
+    "cel": "cel25",
+    "swsh": "swshp",
+    "svp": "svp",
+    "sm": "smp",
+}
+
+# Same prefixes → pokemontcg.io image folder ids.
+STAMP_PREFIX_TO_POKEMONTCG: dict[str, str] = {
+    "bst": "bst",
+    "cre": "cre",
+    "evs": "evs",
+    "fst": "fst",
+    "brs": "brs",
+    "asr": "asr",
+    "pgo": "pgo",
+    "lor": "lor",
+    "sit": "sit",
+    "crz": "crz",
+    "svi": "svi",
+    "pal": "pal",
+    "obf": "obf",
+    "mew": "mew",
+    "par": "par",
+    "paf": "paf",
+    "tef": "tef",
+    "twm": "twm",
+    "sfa": "sfa",
+    "scr": "scr",
+    "ssp": "ssp",
+    "pre": "pre",
+    "cel": "cel25",
+    "swsh": "swshp",
+    "svp": "svp",
+    "sm": "smp",
+}
+
+# Collector-number promo prefixes → image/API set ids.
+PROMO_COLLECTOR_PREFIXES: dict[str, str] = {
+    "svp": "svp",
+    "swsh": "swshp",
+    "sm": "smp",
+    "xy": "xyp",
+    "bw": "bwp",
+    "hgss": "hgssp",
+    "dp": "dpp",
+    "base": "basep",
 }
 
 LOCK = threading.Lock()
@@ -248,6 +382,9 @@ _set_map_cache: dict[str, Any] = {}
 # Normalized alias keys (spaces/punctuation stripped) for reliable lookup.
 EN_SET_NAME_ALIASES_NORM: dict[str, str] = {
     re.sub(r"[^a-z0-9]+", "", k.lower()): v for k, v in EN_SET_NAME_ALIASES.items()
+}
+JA_SET_NAME_ALIASES_NORM: dict[str, str] = {
+    re.sub(r"[^a-z0-9]+", "", k.lower()): v for k, v in JA_SET_NAME_ALIASES.items()
 }
 
 
@@ -333,21 +470,63 @@ def to_webp(data: bytes) -> bytes:
     return out
 
 
+def parse_promo_collector(collector: str) -> tuple[str | None, str | None]:
+    """Parse 'SVP 175' / 'SWSH 001' / 'BST 006' style collectors → (set_key, number)."""
+    raw = str(collector or "").strip()
+    m = re.match(r"^([A-Za-z]{2,8})\s+(\d{1,4})$", raw)
+    if not m:
+        return None, None
+    prefix = m.group(1).lower()
+    number = m.group(2)
+    set_key = PROMO_COLLECTOR_PREFIXES.get(prefix, prefix)
+    return set_key, number
+
+
+def parse_stamp_collector(collector: str) -> tuple[str | None, str | None]:
+    """Prize-pack style 'BST 006' / 'EVS 007' → underlying expansion code + number."""
+    raw = str(collector or "").strip()
+    m = re.match(r"^([A-Za-z]{2,8})\s+(\d{1,4}[a-zA-Z]?)$", raw)
+    if not m:
+        return None, None
+    return m.group(1).lower(), m.group(2)
+
+
 def collector_candidates(collector: str) -> list[str]:
     raw = str(collector or "").strip()
+    # Normalize PokéWallet float-like collectors ("1.0" → "1")
+    if re.fullmatch(r"\d+\.0+", raw):
+        raw = raw.split(".", 1)[0]
     out: list[str] = []
     if raw:
         out.append(raw)
+    promo_set, promo_num = parse_promo_collector(raw)
+    if promo_num:
+        out.append(promo_num)
+    # Prefer left side of "056/128"; never treat the denominator as a localId.
     left = raw.split("/", 1)[0].strip() if raw else ""
     if left and left not in out:
         out.append(left)
-    # strip leading zeros but keep "0"
-    if left:
-        stripped = left.lstrip("0") or "0"
-        if stripped not in out:
-            out.append(stripped)
-        # zero-padded 3
-        if stripped.isdigit():
+    # Digit forms only from left / promo number (not from "056/128" trailing denom)
+    digit_seeds: list[str] = []
+    if promo_num:
+        digit_seeds.append(promo_num)
+    if left and left != raw:
+        digit_seeds.append(left)
+    elif left and "/" not in left:
+        digit_seeds.append(left)
+    for seed in digit_seeds:
+        compact = seed.replace(" ", "")
+        m = re.search(r"(\d+[a-zA-Z]?)$", compact)
+        if not m:
+            continue
+        digits = m.group(1)
+        if digits not in out:
+            out.append(digits)
+        num_only = re.match(r"(\d+)", digits)
+        if num_only:
+            stripped = num_only.group(1).lstrip("0") or "0"
+            if stripped not in out:
+                out.append(stripped)
             z3 = stripped.zfill(3)
             if z3 not in out:
                 out.append(z3)
@@ -366,8 +545,25 @@ def collector_candidates(collector: str) -> list[str]:
     return uniq
 
 
+def _script_kind(text: str) -> str:
+    if re.search(r"[\u3040-\u30ff\u3400-\u9fff]", text or ""):
+        return "cjk"
+    if re.search(r"[A-Za-z]", text or ""):
+        return "latin"
+    return "other"
+
+
 def names_compatible(catalogue_name: str | None, provider_name: str | None) -> bool:
     """Secondary identity check. Empty on either side → pass. Ambiguous mismatch → fail."""
+    if not (catalogue_name or "").strip() or not (provider_name or "").strip():
+        return True
+    # Cross-script names cannot be compared (EN PokéWallet vs JA TCGdex). Defer to
+    # set+collector uniqueness from an authoritative mapping.
+    if _script_kind(catalogue_name or "") != _script_kind(provider_name or "") and {
+        _script_kind(catalogue_name or ""),
+        _script_kind(provider_name or ""),
+    } == {"cjk", "latin"}:
+        return True
     a = norm_text(catalogue_name)
     b = norm_text(provider_name)
     if not a or not b:
@@ -383,6 +579,10 @@ def names_compatible(catalogue_name: str | None, provider_name: str | None) -> b
     if len(a2) >= 4 and len(b2) >= 4 and (a2[:4] == b2[:4]):
         return True
     return False
+
+
+def image_set_id(set_id: str) -> str:
+    return IMAGE_SET_ID_OVERRIDES.get(set_id, set_id)
 
 
 def load_tcgdex_sets() -> None:
@@ -456,45 +656,81 @@ def map_set_to_tcgdex(lang: str, set_id: str, set_name: str | None, collector: s
 
     index = _sets_by_id.get(lang, {})
     sets = _sets_by_lang.get(lang, [])
+    n = norm_text(set_name)
+    promo_set, _promo_num = parse_promo_collector(collector)
+
+    def _remember(result: tuple[str | None, str]) -> tuple[str | None, str]:
+        _set_map_cache[cache_key] = result
+        return result
 
     # 1) catalogue set id already a TCGdex id
     if set_id in index:
-        result = (set_id, "direct_set_id")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((set_id, "direct_set_id"))
+    # case-insensitive set id
+    for sid in index:
+        if sid.lower() == str(set_id or "").lower():
+            return _remember((sid, "direct_set_id_ci"))
 
-    code = extract_set_code(set_name)
+    # 1b) Bare promo / specialty set ids used as catalogue setId (pps1, svp, …)
+    sid_raw = str(set_id or "").strip()
+    if sid_raw and re.fullmatch(r"[A-Za-z][A-Za-z0-9.-]{1,12}", sid_raw):
+        for sid in index:
+            if sid.lower() == sid_raw.lower():
+                return _remember((sid, "direct_set_id_ci"))
+        # Not in TCGdex — still authoritative for Scrydex/pokemontcg CDN keys
+        if re.fullmatch(r"(?i)pps\d+|svp|smp|swshp|xyp|bwp|hgssp|dpp|basep|mep", sid_raw):
+            return _remember((sid_raw.lower() if sid_raw.lower().startswith("pps") else sid_raw, "promo_set_id_cdn"))
+
+    # 2) Promo collector prefix (SVP 175) — authoritative before fuzzy name matching
+    if promo_set:
+        if promo_set in index:
+            return _remember((promo_set, "promo_collector_prefix"))
+        for sid in index:
+            if sid.lower() == promo_set.lower():
+                return _remember((sid, "promo_collector_prefix_ci"))
+        # Promo sets may exist only on image CDNs (not TCGdex). Still return key
+        # so Scrydex/pokemontcg candidates can be built.
+        return _remember((promo_set, "promo_collector_prefix_cdn"))
+
+    # 3) set code from name / id
+    code = extract_set_code(set_name) or extract_set_code(set_id)
     if code and code in index:
-        result = (code, "set_code_from_name")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((code, "set_code_from_name"))
     if code:
-        # case-insensitive id match
         for sid in index:
             if sid.lower() == code.lower():
-                result = (sid, "set_code_ci")
-                _set_map_cache[cache_key] = result
-                return result
+                return _remember((sid, "set_code_ci"))
 
-    n = norm_text(set_name)
+    # 4) Authoritative language aliases (EN names → EN/JA TCGdex ids)
     if lang == "en" and n in EN_SET_NAME_ALIASES_NORM:
         alias = EN_SET_NAME_ALIASES_NORM[n]
+        if alias in index or alias in IMAGE_SET_ID_OVERRIDES or alias in IMAGE_SET_ID_OVERRIDES.values():
+            return _remember((alias, "en_alias_map"))
+        for sid in index:
+            if sid.lower() == alias.lower():
+                return _remember((sid, "en_alias_map"))
+    if lang == "ja" and n in JA_SET_NAME_ALIASES_NORM:
+        alias = JA_SET_NAME_ALIASES_NORM[n]
         if alias in index:
-            result = (alias, "en_alias_map")
-            _set_map_cache[cache_key] = result
-            return result
+            return _remember((alias, "ja_alias_map"))
+        for sid in index:
+            if sid.lower() == alias.lower():
+                return _remember((sid, "ja_alias_map"))
+        # Authoritative alias even if not yet in local index cache
+        return _remember((alias, "ja_alias_map"))
 
+    # 5) exact set name
     exact = [s for s in sets if norm_text(s.get("name")) == n]
     if len(exact) == 1:
-        result = (exact[0]["id"], "exact_name")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((exact[0]["id"], "exact_name"))
     if len(exact) > 1:
-        result = (None, "ambiguous_exact_name")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((None, "ambiguous_exact_name"))
 
-    # denominator from collector (001/165 → 165) vs official count
+    # Deny fuzzy contains for promo-named sets (avoids SVP → sv01)
+    if "promo" in n:
+        return _remember((None, "no_set_mapping_promo_name"))
+
+    # 6) denominator from collector (001/165 → 165) vs official count
     denom = None
     if "/" in str(collector or ""):
         right = str(collector).split("/", 1)[1].strip()
@@ -517,25 +753,15 @@ def map_set_to_tcgdex(lang: str, set_id: str, set_name: str | None, collector: s
             or int((s.get("cardCount") or {}).get("total") or 0) == denom
         ]
         if len(filtered) == 1:
-            result = (filtered[0]["id"], "contains_name_cardcount")
-            _set_map_cache[cache_key] = result
-            return result
+            return _remember((filtered[0]["id"], "contains_name_cardcount"))
         if len(filtered) > 1:
-            result = (None, "ambiguous_contains_cardcount")
-            _set_map_cache[cache_key] = result
-            return result
+            return _remember((None, "ambiguous_contains_cardcount"))
     if len(contains) == 1:
-        result = (contains[0]["id"], "unique_contains_name")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((contains[0]["id"], "unique_contains_name"))
     if len(contains) > 1:
-        result = (None, "ambiguous_set_name")
-        _set_map_cache[cache_key] = result
-        return result
+        return _remember((None, "ambiguous_set_name"))
 
-    result = (None, "no_set_mapping")
-    _set_map_cache[cache_key] = result
-    return result
+    return _remember((None, "no_set_mapping"))
 
 
 @dataclass
@@ -809,7 +1035,23 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
     # 3) set mapping + localId match via TCGdex set cards
     mapped_set, map_reason = map_set_to_tcgdex(card.language, card.set_id, card.set_name, card.collector)
     attempts.append(f"set_map:{map_reason}:{mapped_set or '-'}")
-    if mapped_set:
+    img_set = image_set_id(mapped_set) if mapped_set else None
+    authoritative = map_reason in {
+        "direct_set_id",
+        "direct_set_id_ci",
+        "promo_collector_prefix",
+        "promo_collector_prefix_ci",
+        "promo_collector_prefix_cdn",
+        "promo_set_id_cdn",
+        "set_code_from_name",
+        "set_code_ci",
+        "en_alias_map",
+        "ja_alias_map",
+        "exact_name",
+        "contains_name_cardcount",
+    }
+    cdn_only_map = map_reason in {"promo_collector_prefix_cdn", "promo_set_id_cdn"}
+    if mapped_set and not cdn_only_map:
         try:
             by_local = tcgdex_set_cards(card.language, mapped_set)
             matches: list[dict] = []
@@ -818,7 +1060,6 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
                 if hit and hit not in matches:
                     matches.append(hit)
             if len(matches) > 1:
-                # disambiguate by name
                 named = [m for m in matches if names_compatible(card.name, m.get("name"))]
                 if len(named) == 1:
                     matches = named
@@ -827,12 +1068,15 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
                     matches = []
             if len(matches) == 1:
                 m = matches[0]
-                if not names_compatible(card.name, m.get("name")):
+                if not names_compatible(card.name, m.get("name")) and not (
+                    authoritative
+                    and {_script_kind(card.name or ""), _script_kind(str(m.get("name") or ""))}
+                    == {"cjk", "latin"}
+                ):
                     attempts.append("tcgdex_set:name_mismatch_fail_closed")
                 else:
                     pid = str(m.get("id") or f"{mapped_set}-{m.get('localId')}")
                     provider_ids.append(pid)
-                    # fetch full card for image if list entry lacks it
                     img = m.get("image")
                     pname = m.get("name")
                     if not img:
@@ -858,20 +1102,21 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
                                     provider_name=pname,
                                 )
                             )
-                    # Pokémon TCG CDN for EN mapped sets
-                    if card.language == "en":
+                    if card.language == "en" and img_set:
                         local = str(m.get("localId") or "")
                         for num in collector_candidates(local or card.collector):
-                            if "/" in num or num in {"?", "？"}:
+                            if "/" in num or " " in num or num in {"?", "？"}:
+                                continue
+                            if not re.fullmatch(r"\d+[a-zA-Z]?", num):
                                 continue
                             for suffix in (f"{num}_hires.png", f"{num}.png"):
                                 cands.append(
                                     Candidate(
-                                        url=f"https://images.pokemontcg.io/{mapped_set}/{suffix}",
+                                        url=f"https://images.pokemontcg.io/{img_set}/{suffix}",
                                         provider="pokemon_tcg_api",
                                         match_basis=f"pokemontcg_from_map:{map_reason}",
-                                        provider_card_id=f"{mapped_set}-{num}",
-                                        provider_set_id=mapped_set,
+                                        provider_card_id=f"{img_set}-{num}",
+                                        provider_set_id=img_set,
                                         provider_name=pname,
                                     )
                                 )
@@ -881,8 +1126,101 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
         except Exception as exc:  # noqa: BLE001
             attempts.append(f"tcgdex_set:fail:{type(exc).__name__}")
 
+    # 3b2) Stamp/prize-pack collectors ("BST 006") → underlying EN expansion images
+    stamp_prefix, stamp_num = parse_stamp_collector(card.collector)
+    if card.language == "en" and stamp_prefix and stamp_num:
+        tcgdex_stamp = STAMP_PREFIX_TO_TCGDEX.get(stamp_prefix, stamp_prefix)
+        ptcg_stamp = STAMP_PREFIX_TO_POKEMONTCG.get(stamp_prefix, stamp_prefix)
+        try:
+            by_local = tcgdex_set_cards("en", tcgdex_stamp)
+            hit = None
+            for num in collector_candidates(stamp_num):
+                hit = by_local.get(num) or by_local.get(num.lower())
+                if hit:
+                    break
+            if hit and names_compatible(card.name, hit.get("name")):
+                pid = str(hit.get("id") or f"{tcgdex_stamp}-{hit.get('localId')}")
+                provider_ids.append(pid)
+                img = hit.get("image")
+                pname = hit.get("name")
+                if not img:
+                    try:
+                        full = http_get_json(
+                            f"https://api.tcgdex.net/v2/en/cards/{urllib.parse.quote(pid)}"
+                        )
+                        img = full.get("image")
+                        pname = full.get("name") or pname
+                    except Exception as exc:  # noqa: BLE001
+                        attempts.append(f"stamp_tcgdex_detail_fail:{type(exc).__name__}")
+                if img:
+                    for quality in ("high.webp", "high.png", "low.webp"):
+                        cands.append(
+                            Candidate(
+                                url=f"{img}/{quality}",
+                                provider="tcgdex",
+                                match_basis="stamp_collector_tcgdex",
+                                provider_card_id=pid,
+                                provider_set_id=tcgdex_stamp,
+                                provider_name=pname,
+                            )
+                        )
+                attempts.append(f"stamp_tcgdex:matched:{pid}")
+            else:
+                attempts.append("stamp_tcgdex:no_match")
+        except Exception as exc:  # noqa: BLE001
+            attempts.append(f"stamp_tcgdex:fail:{type(exc).__name__}")
+        for num in collector_candidates(stamp_num):
+            if not re.fullmatch(r"\d+[a-zA-Z]?", num):
+                continue
+            for suffix in (f"{num}_hires.png", f"{num}.png"):
+                cands.append(
+                    Candidate(
+                        url=f"https://images.pokemontcg.io/{ptcg_stamp}/{suffix}",
+                        provider="pokemon_tcg_api",
+                        match_basis="stamp_collector_pokemontcg",
+                        provider_card_id=f"{ptcg_stamp}-{num}",
+                        provider_set_id=ptcg_stamp,
+                    )
+                )
+            for c in scrydex_urls_for_ids(
+                [
+                    f"{ptcg_stamp}-{num}",
+                    f"{ptcg_stamp.upper()}-{num}",
+                    f"{tcgdex_stamp}-{num}",
+                    f"{stamp_prefix.upper()}-{num}",
+                ]
+            ):
+                c.match_basis = "stamp_collector_scrydex"
+                cands.append(c)
+            attempts.append(f"stamp_collector:{tcgdex_stamp}/{ptcg_stamp}-{num}")
+            break
+
+    # 3b) EN image CDN from authoritative mapping even without TCGdex list hit
+    if card.language == "en" and img_set and authoritative:
+        digit_nums: list[str] = []
+        for num in collector_candidates(card.collector):
+            if "/" in num or " " in num or num in {"?", "？"}:
+                continue
+            if not re.fullmatch(r"\d+[a-zA-Z]?", num):
+                continue
+            if num not in digit_nums:
+                digit_nums.append(num)
+        # Prefer unpadded forms first (pokemontcg.io often uses 1.png not 001.png)
+        digit_nums.sort(key=lambda n: (len(re.sub(r"\D", "", n)), n))
+        for num in digit_nums[:4]:
+            for suffix in (f"{num}_hires.png", f"{num}.png"):
+                cands.append(
+                    Candidate(
+                        url=f"https://images.pokemontcg.io/{img_set}/{suffix}",
+                        provider="pokemon_tcg_api",
+                        match_basis=f"pokemontcg_authoritative:{map_reason}",
+                        provider_card_id=f"{img_set}-{num}",
+                        provider_set_id=img_set,
+                    )
+                )
+            attempts.append(f"pokemontcg_authoritative:{img_set}-{num}")
+
     # 4) Scrydex CDN by known / derived provider card ids
-    # Deduplicate ids
     uniq_ids: list[str] = []
     for pid in provider_ids:
         if pid and pid not in uniq_ids:
@@ -893,16 +1231,13 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
 
     # 5) Scrydex CDN from mapped/extracted set code + collector when unique
     scrydex_set_keys: list[tuple[str, str]] = []
-    if mapped_set and map_reason not in {
-        "ambiguous_set_name",
-        "ambiguous_exact_name",
-        "ambiguous_contains_cardcount",
-    }:
-        scrydex_set_keys.append((mapped_set, map_reason))
+    if mapped_set and authoritative:
+        scrydex_set_keys.append((img_set or mapped_set, map_reason))
+        if img_set and img_set != mapped_set:
+            scrydex_set_keys.append((mapped_set, f"{map_reason}_api_id"))
     code = extract_set_code(card.set_name) or extract_set_code(card.set_id)
     if code and all(code.lower() != k[0].lower() for k in scrydex_set_keys):
         scrydex_set_keys.append((code, "extracted_set_code"))
-    # Collector forms like "001/SM-P" → also try prefix after slash as set code
     if "/" in str(card.collector or ""):
         right = str(card.collector).split("/", 1)[1].strip()
         if right and re.fullmatch(r"[A-Za-z][A-Za-z0-9.-]{0,12}", right):
@@ -912,15 +1247,21 @@ def resolve_candidates(card: CardRow) -> tuple[list[Candidate], list[str]]:
     for set_key, basis in scrydex_set_keys:
         for num in collector_candidates(card.collector):
             if "/" in num:
-                # prefer left side only
                 num = num.split("/", 1)[0].strip()
+            if " " in num:
+                continue
             if not num or num in {"?", "？"}:
                 continue
-            for c in scrydex_urls_for_ids([f"{set_key}-{num}"]):
+            ids = [f"{set_key}-{num}"]
+            if num.isdigit():
+                ids.append(f"{set_key}-{num.zfill(3)}")
+                ids.append(f"{set_key.upper()}-{num}")
+                ids.append(f"{set_key.upper()}-{num.zfill(3)}")
+            for c in scrydex_urls_for_ids(ids):
                 c.match_basis = f"scrydex_from_code:{basis}"
                 cands.append(c)
             attempts.append(f"scrydex_from_code:{set_key}-{num}:{basis}")
-            break  # primary collector form per set key
+            break
 
     # de-dupe by URL preserve order
     seen: set[str] = set()
@@ -966,6 +1307,11 @@ def acquire(card: CardRow, upload: bool) -> dict:
             raw = http_get(cand.url)
             if not magic_ok(raw):
                 last_err = "invalid_payload"
+                continue
+            raw_digest = sha256(raw)
+            if raw_digest == SCRYDEX_MISSING_IMAGE_SHA256:
+                last_err = "scrydex_missing_placeholder"
+                attempts.append(f"reject_placeholder:{cand.url}")
                 continue
             card_id = cand.provider_card_id or (card.candidate_ids[0] if card.candidate_ids else f"{card.set_id}-{card.collector}")
             dest = master_dir(card.language, card.set_id, card_id)
@@ -1101,7 +1447,30 @@ def rebuild_reports(cards: list[CardRow], covered: dict[str, dict], progress: di
         prog = progress.get(card.canonical) or {}
         reason = prog.get("reason") or "not_yet_resolved"
         attempts = prog.get("attempts") or []
+        last_err = str(prog.get("last_error") or "")
         hosts = prog.get("hosts") or sorted({host_of(u) for u in card.urls if host_of(u)})
+        attempt_blob = " ".join(str(a) for a in attempts)
+        if "reject_placeholder" in attempt_blob or last_err == "scrydex_missing_placeholder":
+            reason = "no_permitted_image_after_reresolution"
+        elif last_err.startswith("http_") or "corrupt" in reason:
+            reason = "corrupt_or_unreachable_across_sources"
+        elif reason == "auth_only_source_no_alternate" and any(
+            a.startswith("set_map:ja_alias_map")
+            or a.startswith("set_map:en_alias_map")
+            or a.startswith("stamp_")
+            or a.startswith("scrydex_")
+            or a.startswith("tcgdex_")
+            for a in attempts
+        ):
+            # Alternates were attempted; still no usable image.
+            reason = "no_permitted_image_after_reresolution"
+        next_path = "manual_or_new_permitted_source"
+        if reason == "auth_only_source_no_alternate":
+            next_path = "obtain_pokewallet_written_rehost_then_auth_import"
+        elif reason == "ambiguous_identity":
+            next_path = "resolve_identity_with_printed_number_variant_evidence"
+        elif "pokewallet" in ",".join(hosts):
+            next_path = "collector_scan_or_pokewallet_written_rehost"
         unresolved.append(
             {
                 "canonical_card_id": card.canonical,
@@ -1111,11 +1480,7 @@ def rebuild_reports(cards: list[CardRow], covered: dict[str, dict], progress: di
                 "attempted_sources": ",".join(attempts[:20]) if attempts else ",".join(hosts),
                 "failure_reason": reason,
                 "category": reason,
-                "next_recovery_path": (
-                    "obtain_pokewallet_written_rehost_then_auth_import"
-                    if reason == "auth_only_source_no_alternate"
-                    else "manual_or_new_permitted_source"
-                ),
+                "next_recovery_path": next_path,
             }
         )
 
@@ -1197,6 +1562,19 @@ def rebuild_reports(cards: list[CardRow], covered: dict[str, dict], progress: di
     }
     (REPORT / "image_independence_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     (STATE / "set_map_cache.json").write_text(json.dumps(_set_map_cache, indent=2), encoding="utf-8")
+    # Mirror operator-facing artifacts into the app repo reports tree.
+    try:
+        REPORT_MIRROR.mkdir(parents=True, exist_ok=True)
+        for name in (
+            "en_jp_unresolved_images.csv",
+            "en_jp_image_master_manifest.csv",
+            "image_independence_summary.json",
+        ):
+            src = REPORT / name
+            if src.exists():
+                (REPORT_MIRROR / name).write_bytes(src.read_bytes())
+    except OSError:
+        pass
     return summary
 
 

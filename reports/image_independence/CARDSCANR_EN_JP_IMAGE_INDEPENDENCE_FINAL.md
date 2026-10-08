@@ -1,85 +1,101 @@
-# CardScanR EN/JA Image Independence — Final Pass Report
+# CardScanR EN/JA Image Independence — Pass 4 Final Report
 
 **Date:** 2026-10-08  
-**CardScanR base:** `20a9d551` (+ this pass commits)  
-**cardscanr-data base:** `97b7b12d` (+ this pass commits)  
+**CardScanR base:** `fb4ec343` (+ this pass)  
+**cardscanr-data base:** `2092e3c7` (+ this pass)  
 **Branch:** `task/en-jp-image-independence-20261007`
 
 ## Verdict
 
-`CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_FINAL_PASS`
+`CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS4_COMPLETE`
 
 | | EN | JA | Combined |
 | --- | ---: | ---: | ---: |
 | Catalogue cards | 39,558 | 28,453 | 68,011 |
-| Local master | **37,343** | **26,195** | **63,538** |
-| CardScanR-hosted (CDN) | **37,342** | **26,195** | **63,537** |
-| Unresolved | **2,215** | **2,258** | **4,473** |
-| Independent (hosted) % | 94.40% | 92.06% | **93.42%** |
+| Local master | **38,312** | **27,225** | **65,537** |
+| CardScanR-hosted (CDN) | **38,312** | **27,225** | **65,537** |
+| Unresolved | **1,246** | **1,228** | **2,474** |
+| Independent (hosted) % | 96.85% | 95.68% | **96.36%** |
 
-100% remains the target. Remaining gaps are genuine after multi-source resolution (see ledger). No fabricated matches.
+Baseline before this pass: **63,537** hosted / **4,473** unresolved (93.42%).  
+This pass recovered **+2,000** hosted (run stats **2,006** acquired+uploaded; **2,003** timestamped pass4 sidecars; **+1** prior local-only Unown reconciled).
 
-## What changed in this pass
+No fabricated matches. No PokéWallet auth bypass. No purchases.
 
-1. **Scrydex policy corrected** — written Scrydex Support authorization (2026-10-07) recorded; `imageRehostingStatus` → `approved_written_authorization_cardscanr_cdn`. Evidence: `SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md`.
-2. **Multi-source ingestion resolver** (idempotent, resumable) — `tools/image_independence_multisource_resolver.py`:
-   owned local/R2 → catalogue permitted URL (incl. Scrydex) → current TCGdex API/set map → pokemontcg by mapped set → Scrydex CDN by provider/set code → validate → hash → local master → R2 → CardScanR URL + provenance.
-3. **PokéWallet-only rejected as a source conclusion** — alternates searched via set name/code/collector identity (no PokéWallet auth bypass).
-4. **Dead URLs re-resolved** via current TCGdex/Scrydex identity, not stale path retry alone.
-5. **Strict identity** — fail-closed on ambiguous set maps / name mismatches.
-6. **Local master required** for every success; R2 upload via Cloudflare API (Wrangler OAuth).
-7. **Catalogue + search** rewritten to CardScanR CDN only after hosted verification.
+## Pass 4 recovery by method
 
-## Rescue accounting (vs prior PARTIAL 23,696 hosted)
-
-Prior unresolved **44,314** → now **4,473** (rescued **39,841** into local+hosted).
-
-| Rescue dimension | Count | Notes |
+| Method / match basis | Recovered | Notes |
 | --- | ---: | --- |
-| From previous PokéWallet-only classification | **~36,591** | Prior 41,063 − remaining PokéWallet third-party ~4,472 |
-| By current TCGdex re-resolution (primary provider) | **14,665** | `tcgdex_set_map*` match basis |
-| By Scrydex written authorization | **25,099** | `sourceProvider=scrydex` (includes former 343 + PW/dead alternates) |
-| From other permitted sources | **76** | `pokemon_tcg_api` / pokemontcg.io via mapped set |
-| Prior CDN reconcile retained | **23,696** | Unchanged owned bytes |
+| Scrydex CDN (provider id / code) | **1,170** | Includes JA e-Card/PCG aliases; placeholder JPEG rejected |
+| TCGdex stamp collectors (`BST 006` → swsh5) | **718** | PPS1–7 underlying expansion art |
+| TCGdex EN alias maps (GO, McDonald’s, …) | **87** | `swsh10.5` / `2021swsh`→`mcd21` |
+| Scrydex JA authoritative aliases | **218** | E1–E5 / ADV / PCG English PokéWallet names |
+| Scrydex stamp collectors | **114** | PPS stamp ids on Scrydex |
+| pokemontcg.io mapped | **28** | McDonald’s `mcd21`, GO `pgo`, promos |
+| Other (catalogue / authoritative) | **~3** | Edge cases |
+| **Pass 4 total (sidecar-dated)** | **2,003** | Plus prior Unown local→hosted reconcile |
 
-Dimensions overlap (a former PW card rescued via Scrydex counts in both PW and Scrydex rows).
+Provider mix (pass4 sidecars): scrydex 1170 · tcgdex 805 · pokemon_tcg_api 28.
 
-## Remaining unresolved (after multi-source exhaustion)
+## What changed
+
+1. **Local-only reconcile** — uploaded `pokemon|en|ex10|?|unown` so local == hosted.
+2. **JA authoritative aliases** — English PokéWallet set names → TCGdex JA ids (E1–E5, ADV1–5, PCG1–9).
+3. **Promo / stamp collectors** — `SVP 175`, `BST 006` → set+number with fail-closed name checks; SWSH/SV abbreviation→TCGdex map.
+4. **Image set overrides** — `swsh10.5`→`pgo`, `2021swsh`→`mcd21`, etc.
+5. **Scrydex missing-image guard** — reject fixed placeholder SHA `fd7c3800…` (HTTP 200 empty art).
+6. **Cross-script names** — EN catalogue vs JA TCGdex names allowed only with authoritative set+unique collector.
+7. **Catalogue apply** — 65,537 cards rewritten to CardScanR CDN display URLs.
+8. **Manual acquisition queue** — definitive ledger for the remaining 2,474.
+
+## Remaining unresolved (definitive)
 
 | Category | Count | Meaning |
 | --- | ---: | --- |
-| `auth_only_source_no_alternate` | **~2,689–3,614** | PokéWallet URL; alternate resolution attempted and failed |
-| `ambiguous_identity` | **~928** | Set/name/collector mapping not unique — fail closed |
-| `corrupt_or_unreachable_across_sources` | **855** | Candidates found but bytes unreachable/invalid |
-| `dead_source_only_after_reresolution` | **~1–2** | Live catalogue still on dead pokemontcg.io after re-resolution |
-| `not_yet_resolved` | **4** | Edge cases |
+| `auth_only_source_no_alternate` | **2,462** | PokéWallet-only; no permitted alternate found |
+| `no_permitted_image_after_reresolution` | **5** | Alternates tried; no usable bytes |
+| `not_yet_resolved` | **7** | Edge / progress gaps |
 
-**Genuine PokéWallet-only remaining (catalogue still on api.pokewallet.io):** **4,472**  
-**Dead-source-only remaining:** **2** (`images.pokemontcg.io`)
+**Catalogue third-party remaining:** `api.pokewallet.io` **2,470** · `images.pokemontcg.io` **1**
 
-### Representative examples (alternates attempted)
+### Largest remaining sets (no public permitted CDN)
 
-- `pokemon|en|1455|004/009|rockets_scizor_4_winner` — PokéWallet; `set_map:no_set_mapping` / no permitted alternate.
-- `pokemon|jp|23730|001/128|koffing` — PokéWallet; `set_map:ambiguous_*` fail-closed.
-- `pokemon|en|ex10|!|unown` — pokemontcg.io dead after current resolution.
-- `pokemon|en|22872|SVP 175|espeon_ex_175` — candidates tried; corrupt/unreachable across sources.
+| n | Lang | Set | Why blocked |
+| ---: | --- | --- | --- |
+| 195 | EN | Prize Pack Series Cards (22880) | Product-specific; not PPS1–7 stamp set |
+| 171 | EN | World Championship Decks | Staff/deck exclusives |
+| 144 | EN | Deck Exclusives | No public CDN |
+| 143 | EN | Miscellaneous Cards & Products | Mixed exclusives |
+| 96 | JA | EX Battle Boost | No TCGdex image set / no Scrydex art |
+| 77 | EN | Blister Exclusives | Retail exclusives |
+| 53 | EN | League & Championship Cards | League stamps |
+| 40+40 | JA | Intro Pack Bulbasaur/Squirtle | Float collectors; no public art |
+| … | … | Battle Academy / TCG Classic / Trick or Trade / Deck Kits | Product kits |
 
-## Storage
+Cleared entirely in this pass (examples): Base Expansion Pack, Town on No Map, Wind from the Sea, Split Earth, PCG/ADV mapped sets, PPS1–7, Pokémon GO, McDonald’s 25th Anniversary.
 
-- **Local master:** `D:\cardscanr-data\data\images\master\<lang>\<set>\<card-id>\` (~63,538 `display.webp`)
-- **R2:** `cardscanr-card-images` (alias keys `cards/<lang>/<set>/<card_id>/display.webp`)
-- **Public:** `https://cardscanr-images.andygore149.workers.dev`
-- Third-party URLs retained only under `imageProvenance` for hosted cards.
+## Unlock paths for further recovery
 
-## Tests / gates
+1. **PokéWallet written rehost authorization** (same class as Scrydex 2026-10-07) — unlocks most of the 2,462 auth-only rows without identity risk.
+2. **Collector physical scans** — JA kits/intro packs, WCD/deck exclusives, Prize Pack Series Cards (22880), League stamps.
+3. **New permitted APIs/CDNs** with clear rehost terms for product exclusives.
+4. **Identity repairs** only with printed number + set evidence (fail-closed; do not guess EX Battle Boost → S9a).
 
-See final handoff block in chat / companion `image_independence_summary.json` for exact commands run in this pass.
+## Storage / provenance
+
+- Local master: `data/images/master/<lang>/<set>/<card-id>/`
+- R2: `cardscanr-card-images` · CDN: `https://cardscanr-images.andygore149.workers.dev`
+- Canonical IDs preserved; third-party URLs provenance-only on hosted cards.
+- No new app runtime third-party image dependency introduced.
 
 ## Artifacts
 
-- `reports/image_independence/CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_FINAL.md` (this file)
 - `reports/image_independence/en_jp_image_master_manifest.csv`
 - `reports/image_independence/en_jp_unresolved_images.csv`
+- `reports/image_independence/en_jp_manual_acquisition_queue.csv`
+- `reports/image_independence/en_jp_manual_acquisition_queue.md`
+- `reports/image_independence/pass4_recovery_breakdown.json`
 - `reports/image_independence/image_independence_summary.json`
 - `reports/image_independence/SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md`
-- cardscanr-data: `tools/image_independence_multisource_resolver.py`, `tools/image_independence_upload_local_master.py`, provider ledger update
+- `tools/image_independence_multisource_resolver.py`
+- `tools/image_independence_manual_queue.py`
