@@ -33,7 +33,7 @@ UA = "CardScanR-ImageIndependence/1.0"
 PERMITTED = {"images.pokemontcg.io": "pokemon_tcg_api", "assets.tcgdex.net": "tcgdex"}
 PROHIBITED = {
     "images.scrydex.com": "scrydex_rehost_prohibited",
-    "api.pokewallet.io": "pokewallet_auth_and_rehost_pending",
+    "api.pokewallet.io": "pokewallet_authenticated_acquire_path",
 }
 LOCK = threading.Lock()
 
@@ -310,7 +310,7 @@ def rebuild_reports(cards: list[dict], covered: set[str]) -> None:
                 "failure_reason": reason or "acquire_failed",
                 "category": reason or "acquire_failed",
                 "next_recovery_path": (
-                    "obtain_written_pokewallet_rehost_permission_then_authenticated_api_import"
+                    "run_pokewallet_authenticated_acquire"
                     if reason and "pokewallet" in reason
                     else (
                         "do_not_mirror_without_written_authorization;_seek_alternate_lawful_source"

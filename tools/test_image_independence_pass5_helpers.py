@@ -30,7 +30,7 @@ def test_classify_permitted_and_wayback() -> None:
     rights, auto = p5.classify_url(
         "https://web.archive.org/web/20250101000000id_/https://api.pokewallet.io/images/pk_abc"
     )
-    assert not auto and "auth_gated" in rights
+    assert not auto and "pokewallet" in rights
     rights, auto = p5.classify_url("https://www.serebii.net/card/x/001.shtml")
     assert not auto
 

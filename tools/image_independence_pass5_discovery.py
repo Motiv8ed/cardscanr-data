@@ -53,7 +53,7 @@ RIGHTS_REVIEW_HOSTS = {
     "limitlesstcg.com": "community_site_rights_review",
     "limitlesstcg.nyc3.cdn.digitaloceanspaces.com": "community_cdn_rights_review",
     "pkmncards.com": "fan_site_rights_review",
-    "api.pokewallet.io": "pokewallet_auth_gated_no_bypass",
+    "api.pokewallet.io": "pokewallet_authenticated_acquire_path",
 }
 
 SCRYDEX_PLACEHOLDER = m.SCRYDEX_MISSING_IMAGE_SHA256
@@ -216,7 +216,7 @@ def classify_url(url: str) -> tuple[str, bool]:
             if orig_host in PERMITTED_ACQUIRE_HOSTS:
                 return ("wayback_of_permitted_host", True)
             if orig_host == "api.pokewallet.io":
-                return ("wayback_of_auth_gated_source_no_bypass", False)
+                return ("wayback_of_pokewallet_prefer_live_auth_acquire", False)
         return ("wayback_unknown_original_rights_review", False)
     if h in RIGHTS_REVIEW_HOSTS:
         return (RIGHTS_REVIEW_HOSTS[h], False)
@@ -260,8 +260,8 @@ def discover_catalogue_and_lightweight_permitted(card: CardTarget) -> list[Candi
                     url=url,
                     source="catalogue_pokewallet",
                     page_url=None,
-                    rights_status="pokewallet_auth_gated_no_bypass",
-                    match_evidence="catalogue_url_skipped_wayback_auth_gated",
+                    rights_status="pokewallet_authenticated_acquire_path",
+                    match_evidence="catalogue_url_use_authenticated_acquire_tool",
                     auto_acquire=False,
                     query=url,
                 )

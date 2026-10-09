@@ -7,7 +7,9 @@ Resolution order for unresolved canonical cards:
   → Scrydex CDN by known provider card id → validate → download once → hash
   → local master → R2/CDN → CardScanR canonical URL (+ provenance)
 
-Does not bypass PokéWallet authentication. Does not run in the production app.
+PokéWallet authenticated acquisition is handled by
+`image_independence_pokewallet_acquire.py` (documented /images/:id + app cache).
+Does not run in the production app.
 """
 
 from __future__ import annotations
@@ -50,8 +52,10 @@ PERMITTED_HOSTS = {
     "assets.tcgdex.net": "tcgdex",
     "images.scrydex.com": "scrydex",
 }
+# Unauthenticated /images fetches remain blocked here. Authenticated acquisition
+# uses image_independence_pokewallet_acquire.py with POKEWALLET_API_KEY.
 BLOCKED_HOSTS = {
-    "api.pokewallet.io": "pokewallet_auth_gated_no_bypass",
+    "api.pokewallet.io": "pokewallet_requires_authenticated_acquire",
 }
 
 # Common EN PokéWallet setName → TCGdex / pokemontcg set id (fail-closed if wrong).
@@ -1466,11 +1470,11 @@ def rebuild_reports(cards: list[CardRow], covered: dict[str, dict], progress: di
             reason = "no_permitted_image_after_reresolution"
         next_path = "manual_or_new_permitted_source"
         if reason == "auth_only_source_no_alternate":
-            next_path = "obtain_pokewallet_written_rehost_then_auth_import"
+            next_path = "run_pokewallet_authenticated_acquire"
         elif reason == "ambiguous_identity":
             next_path = "resolve_identity_with_printed_number_variant_evidence"
         elif "pokewallet" in ",".join(hosts):
-            next_path = "collector_scan_or_pokewallet_written_rehost"
+            next_path = "run_pokewallet_authenticated_acquire_or_collector_scan"
         unresolved.append(
             {
                 "canonical_card_id": card.canonical,

@@ -54,7 +54,7 @@ def load_catalogue_meta() -> dict[str, dict]:
 
 def permission_status(reason: str, hosts: str) -> str:
     if "pokewallet" in (hosts or "").lower() or reason == "auth_only_source_no_alternate":
-        return "pokewallet_auth_gated_no_bypass"
+        return "pokewallet_authenticated_acquire_path"
     if "ambiguous" in reason:
         return "identity_unconfirmed_fail_closed"
     if "placeholder" in reason or "corrupt" in reason or "dead" in reason:
@@ -64,7 +64,7 @@ def permission_status(reason: str, hosts: str) -> str:
 
 def next_action(reason: str) -> str:
     if reason == "auth_only_source_no_alternate":
-        return "obtain_pokewallet_written_rehost_or_collector_scan"
+        return "run_pokewallet_authenticated_acquire_or_collector_scan"
     if "ambiguous" in reason:
         return "resolve_identity_with_printed_number_variant_evidence"
     if "corrupt" in reason or "dead" in reason or "placeholder" in reason:
