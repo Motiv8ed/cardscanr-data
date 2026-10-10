@@ -101,6 +101,13 @@ def apply_card(card: dict, meta: dict) -> bool:
         "provenanceConfidence": meta.get("provenanceConfidence") or "CONFIRMED",
         "sha256": meta.get("sha256"),
     }
+    review_status = meta.get("rightsReviewStatus") or existing_prov.get("rightsReviewStatus")
+    if review_status not in (None, ""):
+        card["imageProvenance"]["rightsReviewStatus"] = review_status
+    if "licenceConfirmed" in meta:
+        card["imageProvenance"]["licenceConfirmed"] = bool(meta.get("licenceConfirmed"))
+    elif "licenceConfirmed" in existing_prov:
+        card["imageProvenance"]["licenceConfirmed"] = bool(existing_prov.get("licenceConfirmed"))
     if card["imageProvenance"].get("rightsBasis") in (None, ""):
         card["imageProvenance"].pop("rightsBasis", None)
     card["imageSourceOriginal"] = card.get("imageSource")

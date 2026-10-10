@@ -48,13 +48,15 @@ def _index_master_canonicals() -> set[str]:
 class EnJpImageIndependenceRegressionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.master_canonicals = _index_master_canonicals()
-        cls.failures: list[str] = []
+        cls.master_available = MASTER.is_dir() and any(MASTER.rglob("asset.json"))
+        cls.master_canonicals = _index_master_canonicals() if cls.master_available else set()
+        cls.catalogue_failures: list[str] = []
+        cls.master_failures: list[str] = []
         cls.total = 0
         for folder in ("en", "jp"):
             cards_dir = CATALOGUE / folder / "cards"
             if not cards_dir.is_dir():
-                cls.failures.append(f"missing_catalogue_dir:{cards_dir}")
+                cls.catalogue_failures.append(f"missing_catalogue_dir:{cards_dir}")
                 continue
             for path in sorted(cards_dir.glob("*.json")):
                 data = json.loads(path.read_text(encoding="utf-8"))
@@ -87,12 +89,19 @@ class EnJpImageIndependenceRegressionTest(unittest.TestCase):
                         reasons.append("small_not_cdn")
                     if not card.get("imageCached"):
                         reasons.append("imageCached_false")
-                    if cid and cid not in cls.master_canonicals:
-                        reasons.append("missing_local_master_or_cdn_publicUrl")
                     if reasons:
-                        cls.failures.append(
+                        cls.catalogue_failures.append(
                             f"{folder}/{path.stem}|{card.get('normalizedName')}|{cid}|"
                             + ",".join(reasons)
+                        )
+                    if (
+                        cls.master_available
+                        and cid
+                        and cid not in cls.master_canonicals
+                    ):
+                        cls.master_failures.append(
+                            f"{folder}/{path.stem}|{card.get('normalizedName')}|{cid}|"
+                            "missing_local_master_or_cdn_publicUrl"
                         )
 
     def test_catalogue_dirs_exist(self) -> None:
@@ -103,15 +112,23 @@ class EnJpImageIndependenceRegressionTest(unittest.TestCase):
         # Guard against accidental empty/partial catalogue checkout.
         self.assertGreaterEqual(self.total, 68011)
 
-    def test_no_en_jp_cards_missing_master_and_cdn(self) -> None:
-        if self.failures:
-            sample = "\n".join(self.failures[:40])
+    def test_no_en_jp_cards_missing_cdn_bindings(self) -> None:
+        if self.catalogue_failures:
+            sample = "\n".join(self.catalogue_failures[:40])
             self.fail(
-                f"{len(self.failures)} / {self.total} EN/JA cards lack local-master + "
-                f"verified CDN imagery.\nFirst failures:\n{sample}"
+                f"{len(self.catalogue_failures)} / {self.total} EN/JA cards lack "
+                f"CardScanR CDN catalogue bindings.\nFirst failures:\n{sample}"
             )
 
-    def test_master_index_covers_catalogue_scale(self) -> None:
+    def test_local_master_covers_catalogue_when_present(self) -> None:
+        if not self.master_available:
+            self.skipTest("local master archive not present in this environment")
+        if self.master_failures:
+            sample = "\n".join(self.master_failures[:40])
+            self.fail(
+                f"{len(self.master_failures)} / {self.total} EN/JA cards lack local "
+                f"master + verified CDN publicUrl.\nFirst failures:\n{sample}"
+            )
         self.assertGreaterEqual(len(self.master_canonicals), 68011)
 
 

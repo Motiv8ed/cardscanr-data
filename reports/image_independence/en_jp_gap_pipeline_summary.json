@@ -1,23 +1,18 @@
 {
-  "generatedAtUtc": "2026-10-10T09:24:32Z",
-  "en": {
-    "total": 39558,
-    "localMaster": 39558,
-    "hosted": 39558,
-    "unresolved": 0
+  "generatedAtUtc": "2026-10-10T09:24:10Z",
+  "steps": [
+    {
+      "step": "detect",
+      "exitCode": 0
+    }
+  ],
+  "policy": {
+    "skipAlreadyHosted": true,
+    "noSilentPrintingSubstitution": true,
+    "failClosedIdentity": true,
+    "sellerLicenceNotInferredFromPublicAvailability": true
   },
-  "ja": {
-    "total": 28453,
-    "localMaster": 28453,
-    "hosted": 28453,
-    "unresolved": 0
-  },
-  "masterRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\master",
-  "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
-  "unresolvedCategoryCounts": {},
-  "masterRows": 68011,
-  "independentPct": 100.0,
-  "closeout": {
+  "detect": {
     "generatedAtUtc": "2026-10-10T09:24:32Z",
     "totalCards": 68011,
     "en": {
@@ -57,6 +52,8 @@
       "no_duplicate_cdn_mappings": true,
       "cdn_reachable": true
     },
-    "allGatesPassed": true
-  }
+    "allGatesPassed": true,
+    "elapsedSeconds": 23.19
+  },
+  "status": "no_gaps"
 }

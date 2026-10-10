@@ -28,3 +28,6 @@ jobs:
 
       - name: Validate cache
         run: CARDSCANR_VALIDATE_QUIET=1 python tools/validate_cache.py
+
+      - name: EN/JA image independence catalogue CDN regression
+        run: python -m pytest tests/test_en_jp_image_independence_regression.py -q --tb=line
