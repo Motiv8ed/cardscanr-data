@@ -1,38 +1,25 @@
 # EN/JA Manual Acquisition Queue
 
-Generated: `2026-10-10T05:21:11Z`
+Generated: `2026-10-10T06:01:49Z`
 
-Total unresolved queued: **67**
+Total unresolved queued: **3**
 
 ## By language
 
-- `ja`: 60
-- `en`: 7
+- `en`: 3
 
 ## By failure reason
 
-- `auth_only_source_no_alternate`: 65
-- `not_yet_resolved`: 2
+- `auth_only_source_no_alternate`: 3
 
 ## By permission status
 
-- `pokewallet_authenticated_acquire_path`: 67
+- `pokewallet_authenticated_acquire_path`: 3
 
 ## Largest remaining sets
 
-- 14: `ja` `24091` — Imprison, Gardevoir ex Constructed Standard Deck
-- 9: `ja` `24083` — Ocean's Kyogre ex Constructed Starter Deck
-- 8: `ja` `24086` — Holon Research Tower Fire Quarter Deck
-- 7: `ja` `24087` — Holon Research Tower Lightning Quarter Deck
-- 7: `ja` `24088` — Holon Research Tower Water Quarter Deck
-- 4: `ja` `24046` — Giratina vs Dialga Deck Kit (Giratina)
-- 4: `ja` `24159` — Master Kit (Side Deck)
-- 3: `en` `2374` — Miscellaneous Cards & Products
-- 3: `ja` `24045` — Giratina vs Dialga Deck Kit (Dialga)
-- 3: `ja` `24082` — Earth's Groudon ex Constructed Starter Deck
 - 2: `en` `2282` — World Championship Decks
-- 2: `en` `pkmtch` — PKMTCH
-- 1: `ja` `24112` — Water Quick Construction Pack
+- 1: `en` `2374` — Miscellaneous Cards & Products
 
 ## Unlock paths
 
