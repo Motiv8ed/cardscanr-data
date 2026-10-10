@@ -23,12 +23,15 @@ import csv
 import hashlib
 import json
 import os
+import queue
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -40,16 +43,21 @@ REPORT = ROOT / "reports" / "image_independence"
 STATE = ROOT / "data" / "images" / "independence" / "pokewallet_acquire"
 REPORT_MIRROR = Path(r"D:\CardScanR\reports\image_independence")
 CATALOGUE = ROOT / "public" / "v1" / "catalog" / "pokemon"
+LOCAL_ENV = ROOT / "pokewallet_env.local.json"
+LOCAL_CREDS = ROOT / "config" / "provider_credentials.local.json"
 
 UA = "CardScanR-PokewalletAcquire/1.0"
 API_BASE = "https://api.pokewallet.io"
 PK_RE = re.compile(r"(pk_[0-9a-f]+)", re.I)
 
-# Free plan documented limits; keep headroom.
+# Free plan documented limits; keep headroom. Pro limits are detected live per key.
 HOUR_LIMIT = 100
 DAY_LIMIT = 1000
 HOUR_SAFE = 90
 DAY_SAFE = 900
+PROGRESS_LOCK = threading.Lock()
+LEDGER_LOCK = threading.Lock()
+SLEEP_LOCK = threading.Lock()
 
 RIGHTS_BASIS = (
     "pokewallet_terms_commercial_api_use_documented_image_download_and_cache_2026-10-09"
@@ -86,15 +94,147 @@ class Target:
     variant: str = ""
 
 
+@dataclass
+class KeyAccount:
+    """One PokéWallet API key with its own safe quota ledger."""
+
+    key: str
+    fingerprint: str
+    hour_limit: int = HOUR_LIMIT
+    day_limit: int = DAY_LIMIT
+    hour_safe: int = HOUR_SAFE
+    day_safe: int = DAY_SAFE
+    ledger: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def label(self) -> str:
+        return f"key_{self.fingerprint}"
+
+
+def key_fingerprint(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+
+
+def load_api_keys() -> list[str]:
+    """Load API keys from env + gitignored local files. Never logs values."""
+    keys: list[str] = []
+
+    def add(value: str | None) -> None:
+        text = (value or "").strip()
+        if text and text not in keys:
+            keys.append(text)
+
+    add(os.environ.get("POKEWALLET_API_KEY"))
+    multi = (os.environ.get("POKEWALLET_API_KEYS") or "").strip()
+    if multi:
+        for part in re.split(r"[\s,;]+", multi):
+            add(part)
+
+    for path in (LOCAL_ENV, LOCAL_CREDS):
+        if not path.exists():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(data, dict):
+            if isinstance(data.get("apiKeys"), list):
+                for item in data["apiKeys"]:
+                    if isinstance(item, str):
+                        add(item)
+            pw = data.get("pokewallet")
+            if isinstance(pw, dict):
+                if isinstance(pw.get("apiKeys"), list):
+                    for item in pw["apiKeys"]:
+                        if isinstance(item, str):
+                            add(item)
+                add(pw.get("apiKey") if isinstance(pw.get("apiKey"), str) else None)
+                add(pw.get("api_key") if isinstance(pw.get("api_key"), str) else None)
+
+    if not keys:
+        raise SystemExit(
+            "No PokéWallet API keys configured "
+            "(POKEWALLET_API_KEY / POKEWALLET_API_KEYS / pokewallet_env.local.json)"
+        )
+    return keys
+
+
 def api_key() -> str:
-    key = (os.environ.get("POKEWALLET_API_KEY") or "").strip()
-    if not key:
-        raise SystemExit("POKEWALLET_API_KEY is not configured")
-    return key
+    """Back-compat: first configured key."""
+    return load_api_keys()[0]
 
 
-def ledger_path() -> Path:
+def probe_key_limits(key: str) -> tuple[int, int, int, int]:
+    """Return (hour_limit, hour_remaining, day_limit, day_remaining)."""
+    req = urllib.request.Request(
+        f"{API_BASE}/sets",
+        headers={"User-Agent": UA, "Accept": "application/json", "X-API-Key": key},
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        h_lim = int(resp.headers.get("X-RateLimit-Limit-Hour") or HOUR_LIMIT)
+        h_rem = int(resp.headers.get("X-RateLimit-Remaining-Hour") or h_lim)
+        d_lim = int(resp.headers.get("X-RateLimit-Limit-Day") or DAY_LIMIT)
+        d_rem = int(resp.headers.get("X-RateLimit-Remaining-Day") or d_lim)
+        return h_lim, h_rem, d_lim, d_rem
+
+
+def build_accounts(keys: list[str]) -> list[KeyAccount]:
+    accounts: list[KeyAccount] = []
+    for key in keys:
+        fp = key_fingerprint(key)
+        try:
+            h_lim, h_rem, d_lim, d_rem = probe_key_limits(key)
+        except Exception as exc:  # noqa: BLE001
+            print(json.dumps({"event": "key_probe_failed", "fp": fp, "error": type(exc).__name__}))
+            continue
+        # Keep ~10% headroom under published limits.
+        hour_safe = max(1, int(h_lim * 0.9))
+        day_safe = max(1, int(d_lim * 0.9))
+        # Align local counters with live remaining when possible.
+        hour_used = max(0, h_lim - h_rem)
+        day_used = max(0, d_lim - d_rem)
+        acct = KeyAccount(
+            key=key,
+            fingerprint=fp,
+            hour_limit=h_lim,
+            day_limit=d_lim,
+            hour_safe=hour_safe,
+            day_safe=day_safe,
+        )
+        ledger = load_ledger(fp)
+        # Prefer the higher of local count vs live-implied usage for safety.
+        ledger["hourCount"] = max(int(ledger.get("hourCount") or 0), hour_used)
+        ledger["dayCount"] = max(int(ledger.get("dayCount") or 0), day_used)
+        ledger["hourLimit"] = h_lim
+        ledger["dayLimit"] = d_lim
+        ledger["hourSafe"] = hour_safe
+        ledger["daySafe"] = day_safe
+        save_ledger(fp, ledger)
+        acct.ledger = ledger
+        accounts.append(acct)
+        print(
+            json.dumps(
+                {
+                    "event": "key_ready",
+                    "fp": fp,
+                    "hourLimit": h_lim,
+                    "hourRemaining": h_rem,
+                    "dayLimit": d_lim,
+                    "dayRemaining": d_rem,
+                    "hourSafe": hour_safe,
+                    "daySafe": day_safe,
+                }
+            )
+        )
+    if not accounts:
+        raise SystemExit("No usable PokéWallet API keys after probe")
+    return accounts
+
+
+def ledger_path(fingerprint: str | None = None) -> Path:
     STATE.mkdir(parents=True, exist_ok=True)
+    if fingerprint:
+        return STATE / f"request_ledger_{fingerprint}.json"
     return STATE / "request_ledger.json"
 
 
@@ -103,8 +243,11 @@ def progress_path() -> Path:
     return STATE / "progress.jsonl"
 
 
-def load_ledger() -> dict[str, Any]:
-    path = ledger_path()
+def load_ledger(fingerprint: str | None = None) -> dict[str, Any]:
+    path = ledger_path(fingerprint)
+    # Migrate legacy single-ledger onto the first fingerprint if present.
+    if fingerprint and not path.exists() and ledger_path(None).exists() and fingerprint == "legacy":
+        path = ledger_path(None)
     if not path.exists():
         return {"day": utc_day(), "hour": utc_hour(), "dayCount": 0, "hourCount": 0, "events": []}
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -117,36 +260,55 @@ def load_ledger() -> dict[str, Any]:
     return data
 
 
-def save_ledger(data: dict[str, Any]) -> None:
-    # Keep only recent events to avoid unbounded growth.
+def save_ledger(fingerprint: str | None, data: dict[str, Any]) -> None:
     events = list(data.get("events") or [])[-200:]
     data["events"] = events
-    ledger_path().write_text(json.dumps(data, indent=2), encoding="utf-8")
+    ledger_path(fingerprint).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def record_request(data: dict[str, Any], kind: str, status: int | None) -> dict[str, Any]:
-    if data.get("day") != utc_day():
-        data["day"] = utc_day()
-        data["dayCount"] = 0
-    if data.get("hour") != utc_hour():
-        data["hour"] = utc_hour()
-        data["hourCount"] = 0
-    data["dayCount"] = int(data.get("dayCount") or 0) + 1
-    data["hourCount"] = int(data.get("hourCount") or 0) + 1
-    data.setdefault("events", []).append({"at": utc_now(), "kind": kind, "status": status})
-    save_ledger(data)
+def record_request(
+    data: dict[str, Any],
+    kind: str,
+    status: int | None,
+    *,
+    fingerprint: str | None = None,
+    hour_safe: int | None = None,
+    day_safe: int | None = None,
+) -> dict[str, Any]:
+    with LEDGER_LOCK:
+        if data.get("day") != utc_day():
+            data["day"] = utc_day()
+            data["dayCount"] = 0
+        if data.get("hour") != utc_hour():
+            data["hour"] = utc_hour()
+            data["hourCount"] = 0
+        data["dayCount"] = int(data.get("dayCount") or 0) + 1
+        data["hourCount"] = int(data.get("hourCount") or 0) + 1
+        if hour_safe is not None:
+            data["hourSafe"] = hour_safe
+        if day_safe is not None:
+            data["daySafe"] = day_safe
+        data.setdefault("events", []).append({"at": utc_now(), "kind": kind, "status": status})
+        save_ledger(fingerprint, data)
     return data
 
 
-def budget_ok(data: dict[str, Any]) -> tuple[bool, str]:
+def budget_ok(
+    data: dict[str, Any],
+    *,
+    hour_safe: int | None = None,
+    day_safe: int | None = None,
+) -> tuple[bool, str]:
     if data.get("day") != utc_day():
         data["day"] = utc_day()
         data["dayCount"] = 0
     if data.get("hour") != utc_hour():
         data["hour"] = utc_hour()
         data["hourCount"] = 0
-    hour_left = HOUR_SAFE - int(data.get("hourCount") or 0)
-    day_left = DAY_SAFE - int(data.get("dayCount") or 0)
+    hs = int(hour_safe if hour_safe is not None else data.get("hourSafe") or HOUR_SAFE)
+    ds = int(day_safe if day_safe is not None else data.get("daySafe") or DAY_SAFE)
+    hour_left = hs - int(data.get("hourCount") or 0)
+    day_left = ds - int(data.get("dayCount") or 0)
     if day_left <= 0:
         return False, "day_budget_exhausted"
     if hour_left <= 0:
@@ -155,8 +317,9 @@ def budget_ok(data: dict[str, Any]) -> tuple[bool, str]:
 
 
 def append_progress(row: dict[str, Any]) -> None:
-    with progress_path().open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    with PROGRESS_LOCK:
+        with progress_path().open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def load_progress() -> dict[str, dict]:
@@ -295,6 +458,9 @@ def acquire_one(
     key: str,
     upload: bool,
     ledger: dict[str, Any],
+    fingerprint: str | None = None,
+    hour_safe: int | None = None,
+    day_safe: int | None = None,
 ) -> dict[str, Any]:
     ok_id, match_basis = verify_identity(target, card)
     if not ok_id:
@@ -308,20 +474,35 @@ def acquire_one(
         append_progress(row)
         return row
 
-    ok_budget, budget_msg = budget_ok(ledger)
+    ok_budget, budget_msg = budget_ok(ledger, hour_safe=hour_safe, day_safe=day_safe)
     if not ok_budget:
         return {"status": "budget_blocked", "id": target.canonical, "reason": budget_msg, "at": utc_now()}
 
     try:
         raw, headers, status = http_get_auth(target.image_url, key)
-        record_request(ledger, "image", status)
+        record_request(
+            ledger,
+            "image",
+            status,
+            fingerprint=fingerprint,
+            hour_safe=hour_safe,
+            day_safe=day_safe,
+        )
     except urllib.error.HTTPError as exc:
-        record_request(ledger, "image", exc.code)
+        record_request(
+            ledger,
+            "image",
+            exc.code,
+            fingerprint=fingerprint,
+            hour_safe=hour_safe,
+            day_safe=day_safe,
+        )
         if exc.code == 429:
             row = {
                 "status": "rate_limited",
                 "id": target.canonical,
                 "reason": "http_429",
+                "key_fp": fingerprint,
                 "at": utc_now(),
             }
             append_progress(row)
@@ -336,7 +517,14 @@ def acquire_one(
         append_progress(row)
         return row
     except Exception as exc:  # noqa: BLE001
-        record_request(ledger, "image", None)
+        record_request(
+            ledger,
+            "image",
+            None,
+            fingerprint=fingerprint,
+            hour_safe=hour_safe,
+            day_safe=day_safe,
+        )
         row = {
             "status": "missing",
             "id": target.canonical,
@@ -511,35 +699,107 @@ def write_summary(stats: dict[str, Any]) -> None:
     (REPORT_MIRROR / md.name).write_text("\n".join(lines), encoding="utf-8")
 
 
-def sleep_until_hour_budget(ledger: dict[str, Any]) -> None:
+def sleep_until_hour_budget(accounts: list[KeyAccount]) -> None:
     """Sleep until the UTC hour rolls (hourly quota resets)."""
-    now = datetime.now(timezone.utc)
-    seconds = 3600 - (now.minute * 60 + now.second) + 5
-    print(json.dumps({"event": "wait_hour_reset", "sleepSeconds": seconds, "at": utc_now()}))
-    time.sleep(max(seconds, 30))
-    ledger["hour"] = utc_hour()
-    ledger["hourCount"] = 0
-    save_ledger(ledger)
+    with SLEEP_LOCK:
+        # Re-check after lock — another worker may have already waited.
+        acct, reason = pick_account(accounts)
+        if acct is not None or reason != "hour_budget_exhausted":
+            return
+        now = datetime.now(timezone.utc)
+        seconds = 3600 - (now.minute * 60 + now.second) + 5
+        print(json.dumps({"event": "wait_hour_reset", "sleepSeconds": seconds, "at": utc_now()}))
+        time.sleep(max(seconds, 30))
+        with LEDGER_LOCK:
+            for acct in accounts:
+                acct.ledger["hour"] = utc_hour()
+                acct.ledger["hourCount"] = 0
+                save_ledger(acct.fingerprint, acct.ledger)
 
 
-def sleep_until_day_budget(ledger: dict[str, Any]) -> None:
+def sleep_until_day_budget(accounts: list[KeyAccount]) -> None:
     """Sleep until the UTC day rolls (daily quota resets)."""
-    now = datetime.now(timezone.utc)
-    tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    seconds = int((tomorrow - now).total_seconds()) + 5
-    print(json.dumps({"event": "wait_day_reset", "sleepSeconds": seconds, "at": utc_now()}))
-    # Chunked sleep so process stays interruptible and ledger stays honest.
-    remaining = max(seconds, 60)
-    while remaining > 0:
-        chunk = min(remaining, 900)
-        time.sleep(chunk)
-        remaining -= chunk
-        print(json.dumps({"event": "wait_day_reset_progress", "remainingSeconds": remaining, "at": utc_now()}))
-    ledger["day"] = utc_day()
-    ledger["dayCount"] = 0
-    ledger["hour"] = utc_hour()
-    ledger["hourCount"] = 0
-    save_ledger(ledger)
+    with SLEEP_LOCK:
+        acct, reason = pick_account(accounts)
+        if acct is not None or reason != "day_budget_exhausted":
+            return
+        now = datetime.now(timezone.utc)
+        tomorrow = now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        seconds = int((tomorrow - now).total_seconds()) + 5
+        print(json.dumps({"event": "wait_day_reset", "sleepSeconds": seconds, "at": utc_now()}))
+        remaining = max(seconds, 60)
+        while remaining > 0:
+            chunk = min(remaining, 900)
+            time.sleep(chunk)
+            remaining -= chunk
+            print(
+                json.dumps(
+                    {"event": "wait_day_reset_progress", "remainingSeconds": remaining, "at": utc_now()}
+                )
+            )
+        with LEDGER_LOCK:
+            for acct in accounts:
+                acct.ledger["day"] = utc_day()
+                acct.ledger["dayCount"] = 0
+                acct.ledger["hour"] = utc_hour()
+                acct.ledger["hourCount"] = 0
+                save_ledger(acct.fingerprint, acct.ledger)
+
+
+def pick_account(accounts: list[KeyAccount]) -> tuple[KeyAccount | None, str]:
+    """Choose the account with the most remaining safe day budget."""
+    best: KeyAccount | None = None
+    best_day_left = -1
+    any_hour_blocked = False
+    any_day_blocked = False
+    for acct in accounts:
+        ok, reason = budget_ok(acct.ledger, hour_safe=acct.hour_safe, day_safe=acct.day_safe)
+        if not ok:
+            if reason == "hour_budget_exhausted":
+                any_hour_blocked = True
+            if reason == "day_budget_exhausted":
+                any_day_blocked = True
+            continue
+        day_left = acct.day_safe - int(acct.ledger.get("dayCount") or 0)
+        if day_left > best_day_left:
+            best = acct
+            best_day_left = day_left
+    if best:
+        return best, budget_ok(best.ledger, hour_safe=best.hour_safe, day_safe=best.day_safe)[1]
+    if any_hour_blocked and not all(
+        budget_ok(a.ledger, hour_safe=a.hour_safe, day_safe=a.day_safe)[1] == "day_budget_exhausted"
+        for a in accounts
+    ):
+        return None, "hour_budget_exhausted"
+    if any_day_blocked:
+        return None, "day_budget_exhausted"
+    return None, "no_budget"
+
+
+def aggregate_budget(accounts: list[KeyAccount]) -> dict[str, Any]:
+    hour_left = 0
+    day_left = 0
+    for acct in accounts:
+        ok, _ = budget_ok(acct.ledger, hour_safe=acct.hour_safe, day_safe=acct.day_safe)
+        hl = max(0, acct.hour_safe - int(acct.ledger.get("hourCount") or 0))
+        dl = max(0, acct.day_safe - int(acct.ledger.get("dayCount") or 0))
+        if ok:
+            hour_left += hl
+            day_left += dl
+    return {
+        "keys": len(accounts),
+        "hour_left_total": hour_left,
+        "day_left_total": day_left,
+        "per_key": [
+            {
+                "fp": a.fingerprint,
+                "hourLimit": a.hour_limit,
+                "dayLimit": a.day_limit,
+                "budget": budget_ok(a.ledger, hour_safe=a.hour_safe, day_safe=a.day_safe)[1],
+            }
+            for a in accounts
+        ],
+    }
 
 
 def main() -> int:
@@ -558,13 +818,20 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--limit", type=int, default=0, help="Alias for --max-cards")
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=0,
+        help="Parallel workers (default = number of API keys)",
+    )
     args = parser.parse_args()
     max_cards = args.max_cards or args.limit
 
-    key = api_key()
+    keys = load_api_keys()
+    accounts = build_accounts(keys)
+    workers = args.concurrency or len(accounts)
     covered = m.covered_canonicals()
     progress = load_progress()
-    ledger = load_ledger()
     pairs = load_targets()
 
     stats: dict[str, Any] = {
@@ -580,7 +847,9 @@ def main() -> int:
         "stopReason": None,
         "rightsBasis": RIGHTS_BASIS,
         "upload": args.upload,
+        "keyCount": len(accounts),
     }
+    stats_lock = threading.Lock()
 
     todo: list[tuple[dict[str, str], Target | None, dict | None]] = []
     permanent_missing = 0
@@ -593,8 +862,6 @@ def main() -> int:
         if prev and prev.get("status") == "ok" and (not args.upload or prev.get("uploaded")):
             stats["alreadyCovered"] += 1
             continue
-        # Do not re-burn Free-plan quota on confirmed provider 404 / no-id misses
-        # unless the operator explicitly requests a retry pass.
         if prev and prev.get("status") == "missing" and not args.retry_missing:
             reason = str(prev.get("reason") or "")
             if reason.startswith("http_404") or reason == "no_pokewallet_provider_id" or reason.startswith(
@@ -605,7 +872,16 @@ def main() -> int:
         todo.append((row, target, card))
     stats["previouslyMissingSkipped"] = permanent_missing
 
-    print(json.dumps({"todo": len(todo), "covered": stats["alreadyCovered"], "budget": budget_ok(ledger)[1]}))
+    print(
+        json.dumps(
+            {
+                "todo": len(todo),
+                "covered": stats["alreadyCovered"],
+                "budget": aggregate_budget(accounts),
+                "workers": workers,
+            }
+        )
+    )
 
     if args.dry_run:
         stats["pending"] = len(todo)
@@ -614,79 +890,116 @@ def main() -> int:
         print(json.dumps(stats, indent=2))
         return 0
 
-    i = 0
-    while i < len(todo):
-        if max_cards and stats["attempted"] >= max_cards:
-            stats["stopReason"] = "max_cards"
-            break
-        ok_budget, budget_msg = budget_ok(ledger)
-        if not ok_budget:
-            if budget_msg == "hour_budget_exhausted" and args.wait_for_budget:
-                sleep_until_hour_budget(ledger)
-                continue
-            if budget_msg == "day_budget_exhausted" and args.wait_for_budget:
-                sleep_until_day_budget(ledger)
-                continue
-            stats["stopReason"] = budget_msg
-            break
+    work: queue.Queue[tuple[dict[str, str], Target | None, dict | None]] = queue.Queue()
+    for item in todo:
+        work.put(item)
 
-        row, target, card = todo[i]
-        i += 1
-        if target is None:
-            stats["missing"] += 1
-            append_progress(
-                {
-                    "status": "missing",
-                    "id": row["canonical_card_id"],
-                    "reason": "no_pokewallet_provider_id",
-                    "at": utc_now(),
-                }
-            )
-            continue
+    stop_flag = threading.Event()
 
-        result = acquire_one(target, card, key=key, upload=args.upload, ledger=ledger)
-        stats["attempted"] += 1
-        status = result.get("status")
-        if status == "ok":
-            stats["downloaded"] += 1
-            if result.get("uploaded"):
-                stats["hosted"] += 1
-        elif status == "rights_uncertain":
-            stats["rightsUncertain"] += 1
-        elif status == "rate_limited":
-            if args.wait_for_budget:
-                sleep_until_hour_budget(ledger)
-                i -= 1  # retry same card
-                continue
-            stats["stopReason"] = "rate_limited"
-            stats["pending"] += len(todo) - i + 1
-            break
-        elif status == "budget_blocked":
-            stats["stopReason"] = result.get("reason")
-            stats["pending"] += len(todo) - i + 1
-            break
-        else:
-            stats["missing"] += 1
+    def worker() -> None:
+        while not stop_flag.is_set():
+            if max_cards:
+                with stats_lock:
+                    if stats["attempted"] >= max_cards:
+                        return
+            try:
+                item = work.get(timeout=1.0)
+            except queue.Empty:
+                return
+            row, target, card = item
 
-        if stats["attempted"] % 10 == 0:
-            print(
-                json.dumps(
+            # Wait until at least one key has budget (or stop).
+            while not stop_flag.is_set():
+                acct, budget_msg = pick_account(accounts)
+                if acct is not None:
+                    break
+                if budget_msg == "hour_budget_exhausted" and args.wait_for_budget:
+                    sleep_until_hour_budget(accounts)
+                    continue
+                if budget_msg == "day_budget_exhausted" and args.wait_for_budget:
+                    sleep_until_day_budget(accounts)
+                    continue
+                with stats_lock:
+                    stats["stopReason"] = budget_msg
+                stop_flag.set()
+                work.put(item)
+                return
+            else:
+                work.put(item)
+                return
+
+            if target is None:
+                with stats_lock:
+                    stats["missing"] += 1
+                    stats["attempted"] += 1
+                append_progress(
                     {
-                        "attempted": stats["attempted"],
-                        "downloaded": stats["downloaded"],
-                        "hosted": stats["hosted"],
-                        "budget": budget_ok(ledger)[1],
+                        "status": "missing",
+                        "id": row["canonical_card_id"],
+                        "reason": "no_pokewallet_provider_id",
+                        "at": utc_now(),
                     }
                 )
-            )
+                continue
 
-    stats["pending"] = max(0, len(todo) - stats["attempted"])
-    stats["hourCount"] = ledger.get("hourCount")
-    stats["dayCount"] = ledger.get("dayCount")
+            result = acquire_one(
+                target,
+                card,
+                key=acct.key,
+                upload=args.upload,
+                ledger=acct.ledger,
+                fingerprint=acct.fingerprint,
+                hour_safe=acct.hour_safe,
+                day_safe=acct.day_safe,
+            )
+            status = result.get("status")
+            if status == "budget_blocked" or status == "rate_limited":
+                work.put(item)
+                if status == "rate_limited" and args.wait_for_budget:
+                    sleep_until_hour_budget(accounts)
+                elif status == "rate_limited":
+                    with stats_lock:
+                        stats["stopReason"] = "rate_limited"
+                    stop_flag.set()
+                    return
+                continue
+
+            with stats_lock:
+                stats["attempted"] += 1
+                if status == "ok":
+                    stats["downloaded"] += 1
+                    if result.get("uploaded"):
+                        stats["hosted"] += 1
+                elif status == "rights_uncertain":
+                    stats["rightsUncertain"] += 1
+                else:
+                    stats["missing"] += 1
+                if max_cards and stats["attempted"] >= max_cards:
+                    stats["stopReason"] = "max_cards"
+                    stop_flag.set()
+                if stats["attempted"] % 10 == 0:
+                    print(
+                        json.dumps(
+                            {
+                                "attempted": stats["attempted"],
+                                "downloaded": stats["downloaded"],
+                                "hosted": stats["hosted"],
+                                "budget": aggregate_budget(accounts),
+                            }
+                        )
+                    )
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = [pool.submit(worker) for _ in range(workers)]
+        for fut in as_completed(futs):
+            fut.result()
+
+    stats["pending"] = work.qsize()
+    stats["hourCount"] = sum(int(a.ledger.get("hourCount") or 0) for a in accounts)
+    stats["dayCount"] = sum(int(a.ledger.get("dayCount") or 0) for a in accounts)
     if not stats["stopReason"]:
         stats["stopReason"] = "complete" if stats["pending"] == 0 else "stopped"
 
-    # Cumulative progress across resumes (authoritative for reports).
     cum = load_progress()
     by_id = {cid: row for cid, row in cum.items()}
     stats["cumulative"] = {
@@ -696,6 +1009,7 @@ def main() -> int:
         "rightsUncertain": sum(1 for r in by_id.values() if r.get("status") == "rights_uncertain"),
         "missing": sum(1 for r in by_id.values() if r.get("status") == "missing"),
     }
+    stats["budget"] = aggregate_budget(accounts)
     write_summary(stats)
     print(json.dumps(stats, indent=2))
     return 0

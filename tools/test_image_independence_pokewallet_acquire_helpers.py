@@ -70,9 +70,17 @@ def test_budget_helpers() -> None:
     print("ok test_budget_helpers")
 
 
+def test_key_fingerprint_stable() -> None:
+    fp = pw.key_fingerprint("pk_test_example_not_real")
+    assert len(fp) == 12
+    assert fp == pw.key_fingerprint("pk_test_example_not_real")
+    print("ok test_key_fingerprint_stable")
+
+
 if __name__ == "__main__":
     test_extract_pk()
     test_target_from_unresolved()
     test_verify_rejects_mismatch()
     test_budget_helpers()
+    test_key_fingerprint_stable()
     print("all_pass")

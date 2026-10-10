@@ -1,27 +1,24 @@
 # CardScanR EN/JA PokéWallet authenticated acquire
 
-Generated: 2026-10-09T10:04:11Z
+Generated: 2026-10-10T01:21:13Z
 
 ## Rights review
 
 Terms permit commercial API use; docs demonstrate file download and caching. CardScanR stores verified application-cache copies and serves them via its own CDN for in-app catalogue display. Not treated as unlimited redistribution.
 
-Rights basis label: pokewallet_terms_commercial_api_use_documented_image_download_and_cache_2026-10-09
+Rights basis: pokewallet_terms_commercial_api_use_documented_image_download_and_cache_2026-10-09
 
-## Cumulative acquire progress
+## Final counts
 
-- Downloaded / locally cached: **1217**
-- Newly hosted on CardScanR CDN: **1217**
+- This run downloaded/hosted: **1142** / **1142**
+- Cumulative downloaded/hosted: **2359** / **2359**
 - Rights-uncertain: **0**
-- Genuinely missing / failed fetch (HTTP 404 etc.): **44**
+- Genuinely missing: **114**
+- Stop reason: complete
+- Keys used: **4**
 
-## Catalogue independence (after apply + report rebuild)
+## Catalogue independence
 
-- Hosted: **66755**
-- Independent: **98.15%**
-- Remaining unresolved: **1256** (EN 44, JA 1212)
-- Unresolved CSV rows: **1256**
-
-## Status
-
-Acquire process is sleeping on Free-plan daily quota reset (wait_day_reset, ~UTC midnight) and will auto-resume at 900/day safe budget. No rate-limit evasion.
+- Hosted: **67897**
+- Independent: **99.83%**
+- Remaining unresolved: **114** (CSV rows 114)
