@@ -1,10 +1,10 @@
 {
-  "generatedAtUtc": "2026-10-10T06:01:47Z",
+  "generatedAtUtc": "2026-10-10T08:14:41Z",
   "en": {
     "total": 39558,
-    "localMaster": 39555,
-    "hosted": 39555,
-    "unresolved": 3
+    "localMaster": 39558,
+    "hosted": 39558,
+    "unresolved": 0
   },
   "ja": {
     "total": 28453,
@@ -14,15 +14,49 @@
   },
   "masterRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\master",
   "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
-  "unresolvedCategoryCounts": {
-    "auth_only_source_no_alternate": 3
-  },
-  "masterRows": 68008,
-  "rescues": {
-    "from_previous_pokewallet_only": 23071,
-    "from_tcgdex_reresolution": 0,
-    "from_scrydex_written_authorization": 0,
-    "from_other_sources": 27089
-  },
-  "independentPct": 99.9956
+  "unresolvedCategoryCounts": {},
+  "masterRows": 68011,
+  "independentPct": 100.0,
+  "closeout": {
+    "generatedAtUtc": "2026-10-10T08:14:41Z",
+    "totalCards": 68011,
+    "en": {
+      "total": 39558,
+      "hosted": 39558,
+      "localMasterOk": 39558
+    },
+    "ja": {
+      "total": 28453,
+      "hosted": 28453,
+      "localMasterOk": 28453
+    },
+    "hostedCount": 68011,
+    "localMasterCount": 68011,
+    "missingCount": 0,
+    "masterSidecarCount": 68011,
+    "manifestRows": 68011,
+    "duplicateCanonicalCount": 0,
+    "duplicatePublicUrlCount": 0,
+    "duplicateHostedKeyCount": 0,
+    "emptyCanonicalCount": 0,
+    "missingMasterCount": 0,
+    "missingDisplayCount": 0,
+    "hashMismatchCount": 0,
+    "nonCdnUrlCount": 0,
+    "cdnChecked": 68011,
+    "cdnFailureCount": 0,
+    "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
+    "masterRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\master",
+    "independentPct": 100.0,
+    "gates": {
+      "all_hosted_cdn": true,
+      "no_duplicate_canonicals": true,
+      "no_empty_canonicals": true,
+      "master_covers_all": true,
+      "hashes_match": true,
+      "no_duplicate_cdn_mappings": true,
+      "cdn_reachable": true
+    },
+    "allGatesPassed": true
+  }
 }

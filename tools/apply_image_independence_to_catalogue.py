@@ -69,8 +69,24 @@ def apply_card(card: dict, meta: dict) -> bool:
     thumb = public
     if public.endswith("/display.webp"):
         thumb = public[: -len("display.webp")] + "thumb.webp"
-    original_small = card.get("imageSmall") or card.get("imageUrlSmall") or card.get("imageUrl")
-    original_large = card.get("imageLarge") or card.get("imageUrlLarge") or card.get("imageUrl")
+    existing_prov = card.get("imageProvenance") if isinstance(card.get("imageProvenance"), dict) else {}
+    original_small = (
+        existing_prov.get("originalSmallUrl")
+        or card.get("imageSmall")
+        or card.get("imageUrlSmall")
+        or card.get("imageUrl")
+    )
+    original_large = (
+        existing_prov.get("originalLargeUrl")
+        or card.get("imageLarge")
+        or card.get("imageUrlLarge")
+        or card.get("imageUrl")
+    )
+    rights_status = (
+        meta.get("rightsStatus")
+        or existing_prov.get("rightsStatus")
+        or "approved_for_mirror"
+    )
     card["imageProvenance"] = {
         "provider": meta.get("sourceProvider") or card.get("imageSource"),
         "originalUrl": meta.get("originalSourceUrl") or original_large or original_small,
@@ -80,10 +96,13 @@ def apply_card(card: dict, meta: dict) -> bool:
         "cdnPath": meta.get("hostedObjectKey"),
         "publicUrl": public,
         "derivativeStatus": meta.get("derivativeStatus"),
-        "rightsStatus": "approved_for_mirror",
+        "rightsStatus": rights_status,
+        "rightsBasis": meta.get("rightsBasis") or existing_prov.get("rightsBasis"),
         "provenanceConfidence": meta.get("provenanceConfidence") or "CONFIRMED",
         "sha256": meta.get("sha256"),
     }
+    if card["imageProvenance"].get("rightsBasis") in (None, ""):
+        card["imageProvenance"].pop("rightsBasis", None)
     card["imageSourceOriginal"] = card.get("imageSource")
     card["imageUrl"] = thumb
     card["imageUrlSmall"] = thumb
