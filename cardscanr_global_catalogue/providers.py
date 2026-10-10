@@ -161,15 +161,38 @@ PROVIDER_LEDGER: tuple[dict[str, Any], ...] = (
         "bulkExportCapability": "paginated card and expansion endpoints; credit-metered",
         "stableProviderIds": True,
         "imageHostBehaviour": "images.scrydex.com; image access advertised for application UI",
-        "cachingPolicy": "caching recommended, but terms restrict mirroring and wholesale competing data use",
-        "selfHostingOrRehostingPolicy": "terms prohibit redistribution or mirroring of the Services without prior written authorization",
-        "attributionRequirements": "third-party rights remain with their owners",
-        "commercialUseStatus": "paid commercial API subject to anti-redistribution and fair-use restrictions",
-        "termsReviewDate": TERMS_REVIEW_DATE,
-        "termsStatus": "prohibited",
+        "cachingPolicy": (
+            "Written Scrydex Support authorization (2026-10-07) permits on-device and server-side "
+            "caching of card images for CardScanR; generate/store resized images and thumbnails."
+        ),
+        "selfHostingOrRehostingPolicy": (
+            "Written Scrydex Support authorization (2026-10-07) permits CardScanR to display Scrydex "
+            "card images, rehost them on CardScanR's own CDN, use them for CardScanR identification/"
+            "matching, and retain previously retrieved metadata/images/derived data after subscription "
+            "cancellation. Scope is CardScanR's own use only; authorization does not sublicense "
+            "underlying Pokémon IP to third parties."
+        ),
+        "attributionRequirements": "third-party rights remain with their owners; Pokémon IP not sublicensed",
+        "commercialUseStatus": "paid commercial API; image rehost for CardScanR approved in writing",
+        "termsReviewDate": "2026-10-07",
+        "termsStatus": "approved_with_conditions",
         "metadataTermsStatus": "pending_human_review",
-        "imageRehostingStatus": "prohibited_without_written_authorization",
-        "adapterImplementationStatus": "credential_preflight_prepared_no_paid_requests_executed",
+        "imageRehostingStatus": "approved_written_authorization_cardscanr_cdn",
+        "writtenAuthorizationDate": "2026-10-07",
+        "writtenAuthorizationFrom": "Scrydex Support",
+        "writtenAuthorizationEvidencePath": (
+            "reports/image_independence/SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md"
+        ),
+        "writtenAuthorizationScope": [
+            "display_scrydex_card_images",
+            "cache_on_device_or_server_side",
+            "rehost_on_cardscanr_cdn",
+            "generate_store_resized_images_and_thumbnails",
+            "use_for_cardscanr_identification_matching",
+            "retain_retrieved_metadata_images_derived_data_after_subscription_cancellation",
+        ],
+        "writtenAuthorizationLimitation": "does_not_sublicense_underlying_pokemon_ip",
+        "adapterImplementationStatus": "credential_preflight_prepared_image_rehost_authorized",
     },
     {
         "provider": "ximilar",

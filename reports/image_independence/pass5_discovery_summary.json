@@ -1,0 +1,65 @@
+{
+  "generatedAtUtc": "2026-10-08T13:13:41Z",
+  "verdict": "CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS5_DISCOVERY",
+  "targets": 2474,
+  "searched": 2474,
+  "acquiredThisPass": 1,
+  "recoveredBySource": {
+    "catalogue_url": 1
+  },
+  "rightsReviewCandidateRows": 2516,
+  "cardsAwaitingPermission": 16,
+  "genuinelyUndiscoverable": 0,
+  "classificationRows": 2473,
+  "summaryAfter": {
+    "generatedAtUtc": "2026-10-08T13:13:41Z",
+    "en": {
+      "total": 39558,
+      "localMaster": 38313,
+      "hosted": 38313,
+      "unresolved": 1245
+    },
+    "ja": {
+      "total": 28453,
+      "localMaster": 27225,
+      "hosted": 27225,
+      "unresolved": 1228
+    },
+    "masterRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\master",
+    "cdnBase": "https://cardscanr-images.andygore149.workers.dev",
+    "unresolvedCategoryCounts": {
+      "auth_only_source_no_alternate": 2462,
+      "not_yet_resolved": 6,
+      "no_permitted_image_after_reresolution": 5
+    },
+    "masterRows": 65538,
+    "rescues": {
+      "from_previous_pokewallet_only": 23071,
+      "from_tcgdex_reresolution": 0,
+      "from_scrydex_written_authorization": 0,
+      "from_other_sources": 27089
+    },
+    "independentPct": 96.36
+  },
+  "sourcesNotAccessibleWithoutPaymentOrPermission": [
+    "Brave Image Search API (no API key; paid registration not approved)",
+    "Pok\u00e9Wallet image API (auth-gated; no written rehost authorization)",
+    "pokemon-card.com official images (registry: metadata_only)",
+    "Pokellector (watermark; evidence-only)",
+    "Serebii / Bulbagarden / Limitless / pkmncards (fan/community; rights review)",
+    "Marketplace listing photos (link/evidence only)"
+  ],
+  "artifacts": {
+    "rightsReviewCsv": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass5_rights_review_candidates.csv",
+    "classificationCsv": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass5_undiscoverable_or_blocked.csv",
+    "progressJsonl": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\independence\\pass5\\discovery_progress.jsonl"
+  },
+  "classificationCounts": {
+    "auth_only_after_pass5_search": 2457,
+    "discovered_awaiting_permission": 16
+  },
+  "authOnlyAfterSearch": 2457,
+  "hostedAfter": 65538,
+  "independentPct": 96.36,
+  "remainingUnresolved": 2473
+}

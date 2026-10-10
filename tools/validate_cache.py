@@ -28,6 +28,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -2731,10 +2732,70 @@ def check_catalogues() -> None:
     check_catalog_card_files()
 
 
+_CARDSCANR_CDN_HOSTS = {
+    "cardscanr-images.andygore149.workers.dev",
+    "cards.cardscanr.com",
+    "images.cardscanr.com",
+    "assets.cardscanr.com",
+}
+
+
+def _host_of(url: object) -> str:
+    if not isinstance(url, str) or not url:
+        return ""
+    try:
+        return (urlparse(url).netloc or "").lower()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _is_cardscanr_cdn_url(url: object) -> bool:
+    host = _host_of(url)
+    if not host:
+        return False
+    if host in _CARDSCANR_CDN_HOSTS:
+        return True
+    if host.startswith("cardscanr-images.") and host.endswith(".workers.dev"):
+        return True
+    return host.endswith(".cardscanr.com")
+
+
+def _jp_requires_tcgdex_id(card: dict, set_source: object) -> bool:
+    """TCGdex IDs are required only when the card genuinely carries a TCGdex identity.
+
+    PokéWallet-only JP printings (including CardScanR CDN hosts rebound from
+    PokéWallet) must not be forced to invent a TCGdex id.
+    """
+    provider_ids = card.get("providerIds") if isinstance(card.get("providerIds"), dict) else {}
+    external_ids = card.get("externalIds") if isinstance(card.get("externalIds"), dict) else {}
+    has_pokewallet = isinstance(provider_ids.get("pokewallet"), str) and bool(provider_ids.get("pokewallet"))
+    has_tcgdex_provider = isinstance(provider_ids.get("tcgdex"), str) and bool(provider_ids.get("tcgdex"))
+    has_tcgdex_external = isinstance(external_ids.get("tcgdexCardId"), str) and bool(
+        external_ids.get("tcgdexCardId")
+    )
+    image_source = card.get("imageSource")
+    image_source_original = card.get("imageSourceOriginal")
+    if has_tcgdex_provider or has_tcgdex_external:
+        return True
+    if image_source == "tcgdex" or image_source_original == "tcgdex":
+        return True
+    if set_source == "tcgdex" and not has_pokewallet:
+        return True
+    return False
+
+
 def check_catalog_card_files() -> None:
     for language, expected_sources, expected_image_sources in [
-        ("en", {"pokemon_tcg_api", "pokewallet"}, {"pokemon_tcg_api", "pokewallet"}),
-        ("jp", {"tcgdex", "pokewallet"}, {"tcgdex", "pokewallet"}),
+        (
+            "en",
+            {"pokemon_tcg_api", "pokewallet"},
+            {"pokemon_tcg_api", "pokewallet", "cardscanr_cdn"},
+        ),
+        (
+            "jp",
+            {"tcgdex", "pokewallet"},
+            {"tcgdex", "pokewallet", "cardscanr_cdn"},
+        ),
         ("zh", {"pokewallet"}, {"pokewallet"}),
     ]:
         cards_dir = V1_DIR / "catalog" / "pokemon" / language / "cards"
@@ -2785,20 +2846,58 @@ def check_catalog_card_files() -> None:
                     err(f"{label} missing fields: {sorted(missing)}")
                     entry_errors += 1
                 canonical_base_id = card.get("canonicalBaseId")
-                if canonical_base_id in seen_base_ids:
+                if not isinstance(canonical_base_id, str) or not canonical_base_id:
+                    err(f"{label} canonicalBaseId must be a non-empty string")
+                    entry_errors += 1
+                elif canonical_base_id in seen_base_ids:
                     err(f"{rel}: duplicate canonicalBaseId: {canonical_base_id}")
                     entry_errors += 1
-                elif canonical_base_id:
+                else:
                     seen_base_ids.add(canonical_base_id)
-                if card.get("imageCached") is not False:
-                    err(f"{label} imageCached must be false")
+
+                image_source = card.get("imageSource")
+                if image_source not in expected_image_sources:
+                    err(f"{label} imageSource must be one of {sorted(expected_image_sources)}")
                     entry_errors += 1
+
                 if "imageSmall" not in card or "imageLarge" not in card:
                     err(f"{label} imageSmall and imageLarge fields must exist")
                     entry_errors += 1
-                if card.get("imageSource") not in expected_image_sources:
-                    err(f"{label} imageSource must be one of {sorted(expected_image_sources)}")
-                    entry_errors += 1
+
+                large_url = card.get("imageUrlLarge") or card.get("imageLarge") or card.get("imageUrl")
+                small_url = card.get("imageUrlSmall") or card.get("imageSmall") or card.get("imageUrl")
+
+                if image_source == "cardscanr_cdn":
+                    if card.get("imageCached") is not True:
+                        err(f"{label} imageCached must be true for cardscanr_cdn")
+                        entry_errors += 1
+                    if not _is_cardscanr_cdn_url(large_url):
+                        err(f"{label} imageLarge/imageUrlLarge must be a CardScanR CDN URL")
+                        entry_errors += 1
+                    if not _is_cardscanr_cdn_url(small_url):
+                        err(f"{label} imageSmall/imageUrlSmall must be a CardScanR CDN URL")
+                        entry_errors += 1
+                    provenance = card.get("imageProvenance")
+                    if provenance is not None:
+                        if not isinstance(provenance, dict):
+                            err(f"{label} imageProvenance must be an object when present")
+                            entry_errors += 1
+                        else:
+                            public_url = provenance.get("publicUrl")
+                            if public_url not in (None, "") and not _is_cardscanr_cdn_url(public_url):
+                                err(f"{label} imageProvenance.publicUrl must be a CardScanR CDN URL")
+                                entry_errors += 1
+                            if provenance.get("sha256") not in (None, "") and (
+                                not isinstance(provenance.get("sha256"), str)
+                                or len(str(provenance.get("sha256"))) != 64
+                            ):
+                                err(f"{label} imageProvenance.sha256 must be a 64-char hex digest when present")
+                                entry_errors += 1
+                else:
+                    if card.get("imageCached") is not False:
+                        err(f"{label} imageCached must be false")
+                        entry_errors += 1
+
                 external_ids = card.get("externalIds")
                 if not isinstance(external_ids, dict):
                     err(f"{label} externalIds must be an object")
@@ -2808,14 +2907,7 @@ def check_catalog_card_files() -> None:
                     if missing_external:
                         err(f"{label} externalIds missing fields: {sorted(missing_external)}")
                         entry_errors += 1
-                    provider_ids = card.get("providerIds")
-                    is_pokewallet_promoted = (
-                        isinstance(provider_ids, dict)
-                        and isinstance(provider_ids.get("pokewallet"), str)
-                        and bool(provider_ids.get("pokewallet"))
-                        and card.get("imageSource") == "pokewallet"
-                    )
-                    if language == "jp" and not is_pokewallet_promoted:
+                    if language == "jp" and _jp_requires_tcgdex_id(card, data.get("source")):
                         tcgdex_id = external_ids.get("tcgdexCardId")
                         if not isinstance(tcgdex_id, str) or not tcgdex_id:
                             err(f"{label} externalIds.tcgdexCardId must be a non-empty string for JP")

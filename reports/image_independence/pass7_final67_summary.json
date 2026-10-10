@@ -1,0 +1,39 @@
+{
+  "generatedAtUtc": "2026-10-10T05:21:44Z",
+  "targets": 67,
+  "recovered": 0,
+  "hosted": 0,
+  "provisionalRecoveriesQuarantined": 13,
+  "stillMissing": 67,
+  "catalogueHosted": 67944,
+  "catalogueTotal": 68011,
+  "independentPct": 99.9,
+  "blockerCounts": {
+    "stamped_or_exclusive_printing_no_permitted_public_image": 5,
+    "promo_or_match_exclusive_no_permitted_exact_image": 2,
+    "ja_constructed_deck_kit_no_permitted_image": 60
+  },
+  "identityRejectReasons": {
+    "pokemon|en|2282|077/167|iron_thorns_ex_077_167_2024_fernando_cifuentes_gold_signature": "signature_stamp_not_proven_in_match",
+    "pokemon|en|2374|110/193|larvitar_110_193_cosmo_foil": "cosmo_foil_variant_not_proven",
+    "pokemon|en|2374|112/203|dialga_112_203_cosmos_holo": "cosmos_holo_variant_not_proven",
+    "pokemon|en|pkmtch|S-P 163|cyndaquil": "wrong_collector_number_matched_55_95",
+    "pokemon|en|pkmtch|S-P 164|oshawott": "wrong_set_pokemontcg_mcd11_4",
+    "pokemon|jp|24045|009/014|super_scoop_up": "kit_exact_printing_not_proven_shared_asset",
+    "pokemon|jp|24046|009/014|energy_switch": "wrong_set_pokemontcg_pop5_9_en",
+    "pokemon|jp|24082|009/016|energy_search": "wrong_set_latias_9_10",
+    "pokemon|jp|24083|007/016|treecko_delta_species": "wrong_set_pop_tournament",
+    "pokemon|jp|24083|008/016|grovyle_delta_species": "wrong_set_adv_p_promo",
+    "pokemon|jp|24083|012/016|poke_ball": "wrong_card_victini_poke_ball_pattern",
+    "pokemon|jp|24086|008/015|dual_ball": "wrong_set_number_008_014_vs_008_015",
+    "pokemon|jp|24087|009/015|super_scoop_up": "kit_exact_printing_not_proven_shared_asset"
+  },
+  "falsePositiveCandidatesRejected": 61,
+  "artifacts": {
+    "ledger": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass7_final67_ledger.csv",
+    "scanRequest": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_collector_scan_request_final67.csv",
+    "permissionCandidates": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\en_jp_pass7_permission_candidates.csv",
+    "report": "D:\\CardScanR_Data\\cardscanr-data\\reports\\image_independence\\CARDSCANR_EN_JP_IMAGE_INDEPENDENCE_PASS7_FINAL67.md",
+    "quarantineRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\independence\\pass7_quarantine"
+  }
+}
