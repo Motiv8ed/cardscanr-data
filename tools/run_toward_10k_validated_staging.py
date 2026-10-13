@@ -15,7 +15,7 @@ TOOLS = ROOT / "tools"
 STAGING = Path(r"D:\CardScanR_Archive\image_staging\global_acq_20261013")
 REPORT = ROOT / "reports" / "global_image_acquisition"
 TARGET = 10_000
-BATCH = 1500
+BATCH = 2500
 
 
 def utc_now() -> str:
@@ -60,9 +60,9 @@ def main() -> int:
             "--exclude-languages",
             "en,ja",
             "--concurrency",
-            "5",
+            "6",
             "--min-interval",
-            "0.22",
+            "0.15",
             "--limit",
             str(limit),
         ]
