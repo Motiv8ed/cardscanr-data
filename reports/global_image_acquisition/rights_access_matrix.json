@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-10-13T07:15:28Z",
+  "sources": [
+    {
+      "source": "tcgdex_assets",
+      "api": "https://api.tcgdex.net/v2/{lang}/...",
+      "bulk": "list endpoints + set details; cache recommended",
+      "languages": "en,ja,fr,de,it,es,pt,zh-cn,zh-tw,ko,th,id,nl,pl,ru (+variants)",
+      "technicalAvailability": "public CDN assets.tcgdex.net",
+      "metadataRights": "MIT cards-database",
+      "imageRights": "not expressly licensed for redistribution",
+      "cardscanrActionThisRun": "download_to_isolated_staging",
+      "productionLibrary": "blocked_pending_formal_confirmation_for_non_en_ja",
+      "notes": "EN/JA already in production master via independence programme."
+    },
+    {
+      "source": "pokemon_tcg_api",
+      "api": "https://api.pokemontcg.io/v2",
+      "bulk": "paginated; rate limits",
+      "languages": "en",
+      "technicalAvailability": "images.pokemontcg.io",
+      "metadataRights": "API terms",
+      "imageRights": "archive rehost not expressly documented",
+      "cardscanrActionThisRun": "staging_if_present_in_candidates",
+      "productionLibrary": "en_already_covered_via_independence"
+    },
+    {
+      "source": "scrydex",
+      "api": "paid credits",
+      "bulk": "paginated credit-metered",
+      "languages": "en,ja",
+      "technicalAvailability": "images.scrydex.com",
+      "metadataRights": "paid API",
+      "imageRights": "written authorization 2026-10-07 for CardScanR CDN/cache/rehost",
+      "cardscanrActionThisRun": "no_paid_api_spend; URLs eligible if already known",
+      "productionLibrary": "approved_for_cardscanr_cdn_en_ja"
+    },
+    {
+      "source": "pokewallet",
+      "api": "authenticated",
+      "bulk": "set-by-set; plan limits",
+      "languages": "en,ja,+EU/CJK subsets",
+      "technicalAvailability": "auth-gated binaries",
+      "imageRights": "bulk rehost unclear",
+      "cardscanrActionThisRun": "discovery_only_no_new_download",
+      "productionLibrary": "existing_en_ja_independence_used_prior_acquire_path"
+    },
+    {
+      "source": "official_regional_catalogues",
+      "api": "none",
+      "bulk": "none",
+      "languages": "id,th,zh-Hant,ko,zh-Hans,jp,en",
+      "technicalAvailability": "consumer sites",
+      "imageRights": "terms prohibit external reuse (Asia trainers policy reviewed)",
+      "cardscanrActionThisRun": "discovery_only",
+      "productionLibrary": "prohibited_without_written_permission"
+    },
+    {
+      "source": "PokemonTCG/pokemon-tcg-data",
+      "api": "GitHub dataset",
+      "bulk": "JSON metadata",
+      "languages": "en",
+      "technicalAvailability": "metadata only",
+      "imageRights": "dataset does not grant artwork",
+      "cardscanrActionThisRun": "discovery_only",
+      "productionLibrary": "n/a"
+    },
+    {
+      "source": "tcgdex/cards-database",
+      "api": "GitHub MIT",
+      "bulk": "card metadata",
+      "languages": "multilingual",
+      "technicalAvailability": "metadata",
+      "imageRights": "MIT does not cover artwork CDN",
+      "cardscanrActionThisRun": "metadata_reference_only",
+      "productionLibrary": "n/a"
+    },
+    {
+      "source": "community_collector_submissions",
+      "api": "n/a",
+      "bulk": "manual",
+      "languages": "all gaps",
+      "technicalAvailability": "requires intake workflow",
+      "imageRights": "contributor licence required",
+      "cardscanrActionThisRun": "ranked_opportunity_only",
+      "productionLibrary": "requires_contributor_terms"
+    }
+  ]
+}

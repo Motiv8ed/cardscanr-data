@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAtUtc": "2026-07-10T23:58:06Z",
+  "generatedAtUtc": "2026-10-13T07:19:33Z",
   "requestsSent": false,
   "providers": [
     {
@@ -38,7 +38,12 @@
       "permittedRate": null,
       "expiryDate": null,
       "conditions": [],
-      "finalStatus": "pending"
+      "finalStatus": "pending",
+      "stagingDownloadAllowed": true,
+      "productionMirrorAllowed": false,
+      "notes": [
+        "2026-10-13: staging-only downloads permitted for validation; production rehost still pending written permission"
+      ]
     },
     {
       "provider": "pokemon_tcg_api",
@@ -113,6 +118,30 @@
       "expiryDate": null,
       "conditions": [],
       "finalStatus": "pending"
+    },
+    {
+      "provider": "scrydex",
+      "status": "approved_with_conditions",
+      "finalStatus": "approved_with_conditions",
+      "evidenceFile": "reports/image_independence/SCRYDEX_WRITTEN_AUTHORIZATION_2026-10-07.md",
+      "metadataRetentionAllowed": true,
+      "imageDownloadAllowed": true,
+      "resizingAllowed": true,
+      "r2StorageAllowed": true,
+      "publicServingAllowed": true,
+      "commercialUseAllowed": true,
+      "indefiniteRetentionAllowed": true,
+      "permittedLanguages": [
+        "en",
+        "ja"
+      ],
+      "conditions": [
+        "cardscanr_own_use_only",
+        "no_pokemon_ip_sublicense",
+        "written_auth_2026-10-07"
+      ],
+      "responseDate": "2026-10-07",
+      "notes": "Synced from provider_ledger during global image acquisition task; evidence lives in CardScanR app reports mirror / independence pack."
     }
   ]
 }

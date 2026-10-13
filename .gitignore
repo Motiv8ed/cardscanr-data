@@ -353,4 +353,16 @@ tools/_*
 # Local EN/JA image master archive (bytes; not for git)
 data/images/master/
 data/images/independence/
+# Isolated worldwide staging acquisitions (bytes; not for git / not production)
+data/images/staging/
+# Isolated worldwide acquisition staging (bytes; not for git)
+data/images/staging/
 
+
+# Volatile global image acquisition runtime artifacts
+reports/global_image_acquisition/progress.jsonl
+reports/global_image_acquisition/_continue_*.ps1
+reports/global_image_acquisition/*.log
+reports/global_image_acquisition/*.err.log
+reports/global_image_acquisition/expanded_tcgdex_candidates.jsonl
+reports/global_image_acquisition/toward_10k_run.json

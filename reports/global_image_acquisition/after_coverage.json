@@ -1,0 +1,60 @@
+{
+  "generatedAtUtc": "2026-10-13T07:38:09Z",
+  "productionMasterVerifiedFiles": {
+    "en": 39558,
+    "ja": 28453
+  },
+  "stagingVerifiedFilesAfter": {
+    "de": 661,
+    "es": 207,
+    "es-419": 205,
+    "fr": 205,
+    "id": 204,
+    "it": 205,
+    "pt-BR": 204,
+    "th": 203,
+    "zh-Hant": 204
+  },
+  "stagingVerifiedTotal": 2298,
+  "progressStatusCounts": {
+    "ok": 790,
+    "skip_existing": 1820,
+    "fail": 2
+  },
+  "progressOkByLanguage": {
+    "de": 88,
+    "es": 85,
+    "es-419": 91,
+    "fr": 87,
+    "id": 90,
+    "it": 90,
+    "pt-BR": 84,
+    "th": 87,
+    "zh-Hant": 88
+  },
+  "integrity": {
+    "missingDisplayBesideAssetJson": 0,
+    "quarantineSidecars": 0,
+    "duplicateContentShaGroups": 0
+  },
+  "globalCatalogueWithoutImageCandidate": {
+    "de": 5106,
+    "en": 1585,
+    "es": 1051,
+    "es-419": 36,
+    "fr": 3349,
+    "id": 1636,
+    "it": 1007,
+    "ja": 2949,
+    "ko": 239,
+    "pt-BR": 26,
+    "th": 1697,
+    "zh-Hans": 877,
+    "zh-Hant": 5290
+  },
+  "notes": [
+    "Staging files are verified on disk with asset.json provenance.",
+    "Production promotion of TCGdex staging assets is NOT performed.",
+    "EN/JA production master remains 100% from prior independence work."
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-10-13T07:15:50Z",
+  "masterLanguagesPresent": [
+    "en",
+    "ja"
+  ],
+  "enJaIndependence": {
+    "total": 39558,
+    "localMaster": 39558,
+    "hosted": 39558,
+    "unresolved": 0
+  },
+  "jaIndependence": {
+    "total": 28453,
+    "localMaster": 28453,
+    "hosted": 28453,
+    "unresolved": 0
+  },
+  "independenceMasterRows": 68011,
+  "independencePct": 100.0,
+  "globalDirectImageCandidatesByLanguage": {
+    "de": 14436,
+    "en": 21738,
+    "es": 14121,
+    "es-419": 1293,
+    "fr": 18085,
+    "id": 1152,
+    "it": 14227,
+    "ja": 3297,
+    "pt-BR": 1098,
+    "th": 1224,
+    "zh-Hant": 2146
+  },
+  "globalDirectImageCandidateTotal": 92817,
+  "candidateHostsByLanguage": {
+    "de": {
+      "assets.tcgdex.net": 14436
+    },
+    "en": {
+      "assets.tcgdex.net": 21738
+    },
+    "es": {
+      "assets.tcgdex.net": 14121
+    },
+    "es-419": {
+      "assets.tcgdex.net": 1293
+    },
+    "fr": {
+      "assets.tcgdex.net": 18085
+    },
+    "id": {
+      "assets.tcgdex.net": 1152
+    },
+    "it": {
+      "assets.tcgdex.net": 14227
+    },
+    "ja": {
+      "assets.tcgdex.net": 3297
+    },
+    "pt-BR": {
+      "assets.tcgdex.net": 1098
+    },
+    "th": {
+      "assets.tcgdex.net": 1224
+    },
+    "zh-Hant": {
+      "assets.tcgdex.net": 2146
+    }
+  },
+  "stagingVerifiedByLanguage": {
+    "de": 72
+  },
+  "stagingQuarantineByLanguage": {},
+  "stagingRoot": "D:\\CardScanR_Data\\cardscanr-data\\data\\images\\staging\\global_acq_20261013",
+  "rightsNote": "Non-EN/JA candidates are overwhelmingly assets.tcgdex.net with formal productionMirrorStatus pending; this census counts verified local files only (master for EN/JA, staging for this run)."
+}

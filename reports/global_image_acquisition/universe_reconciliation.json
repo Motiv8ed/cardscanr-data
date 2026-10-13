@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAtUtc": "2026-10-13T07:42:33Z",
+  "definitions": {
+    "printing": "unique canonicalPrintingId in global cards.jsonl",
+    "urlCandidate": "row in direct_images.jsonl with a provider image URL (not verified coverage)",
+    "verifiedStaging": "on-disk display.webp + asset.json under isolated staging",
+    "enJaProduction": "separate EN/JP product catalogue identity; 68,011 local master assets",
+    "attemptedUrl": "progress.jsonl row (ok/fail/skip/quarantine) \u2014 not equal to unique printings"
+  },
+  "totals": {
+    "globalPrintings": 117665,
+    "globalPrintingsByLanguage": {
+      "de": 19542,
+      "en": 23323,
+      "es": 15172,
+      "es-419": 1329,
+      "fr": 21434,
+      "id": 2788,
+      "it": 15234,
+      "ja": 6246,
+      "ko": 239,
+      "pt-BR": 1124,
+      "th": 2921,
+      "zh-Hans": 877,
+      "zh-Hant": 7436
+    },
+    "urlCandidates": 92817,
+    "urlCandidatesByLanguage": {
+      "de": 14436,
+      "en": 21738,
+      "es": 14121,
+      "es-419": 1293,
+      "fr": 18085,
+      "id": 1152,
+      "it": 14227,
+      "ja": 3297,
+      "pt-BR": 1098,
+      "th": 1224,
+      "zh-Hant": 2146
+    },
+    "urlCandidateHosts": {
+      "assets.tcgdex.net": 92817
+    },
+    "printingsWithoutUrlCandidate": 24848,
+    "printingsWithoutUrlCandidateByLanguage": {
+      "de": 5106,
+      "en": 1585,
+      "es": 1051,
+      "es-419": 36,
+      "fr": 3349,
+      "id": 1636,
+      "it": 1007,
+      "ja": 2949,
+      "ko": 239,
+      "pt-BR": 26,
+      "th": 1697,
+      "zh-Hans": 877,
+      "zh-Hant": 5290
+    },
+    "enJaProductionVerifiedFiles": {
+      "en": 39558,
+      "ja": 28453,
+      "total": 68011
+    },
+    "stagingUniqueValidatedByLanguage": {
+      "de": 702,
+      "es": 248,
+      "es-419": 247,
+      "fr": 244,
+      "id": 245,
+      "it": 245,
+      "pt-BR": 244,
+      "th": 242,
+      "zh-Hant": 244
+    },
+    "stagingUniqueValidatedTotal": 2661,
+    "stagingQuarantineSidecars": 0,
+    "progressAttemptLinesByStatus": {
+      "skip_existing": 1826,
+      "ok": 836
+    },
+    "uniquePrintingsAttemptedInProgress": 2662,
+    "nonEnJaUrlCandidateUniverse": 67782,
+    "remainingNonEnJaUrlCandidatesNotYetStagedApprox": 65121
+  },
+  "reconciliationNotes": [
+    "92,817 URL candidates include EN+JA TCGdex URLs; do not subtract from 68,011 EN/JA master 1:1 (different ID systems).",
+    "Unique missing for this staging programme \u2248 non-EN/JA URL candidates minus validated staging files.",
+    "Progress line counts can exceed unique printings (retries) or lag behind disk after path moves.",
+    "24,848 printings without URL candidates require other permitted sources or permission outreach."
+  ]
+}
