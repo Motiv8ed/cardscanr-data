@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAtUtc": "2026-10-13T07:42:33Z",
+  "generatedAtUtc": "2026-10-13T08:21:39Z",
   "definitions": {
     "printing": "unique canonicalPrintingId in global cards.jsonl",
     "urlCandidate": "row in direct_images.jsonl with a provider image URL (not verified coverage)",
@@ -64,25 +64,26 @@
       "total": 68011
     },
     "stagingUniqueValidatedByLanguage": {
-      "de": 702,
-      "es": 248,
-      "es-419": 247,
-      "fr": 244,
-      "id": 245,
-      "it": 245,
-      "pt-BR": 244,
-      "th": 242,
-      "zh-Hant": 244
+      "de": 914,
+      "es": 510,
+      "es-419": 481,
+      "fr": 433,
+      "id": 502,
+      "it": 505,
+      "pt-BR": 502,
+      "th": 500,
+      "zh-Hant": 502
     },
-    "stagingUniqueValidatedTotal": 2661,
+    "stagingUniqueValidatedTotal": 4849,
     "stagingQuarantineSidecars": 0,
     "progressAttemptLinesByStatus": {
-      "skip_existing": 1826,
-      "ok": 836
+      "skip_existing": 1845,
+      "ok": 3040,
+      "quarantine": 156
     },
-    "uniquePrintingsAttemptedInProgress": 2662,
+    "uniquePrintingsAttemptedInProgress": 5001,
     "nonEnJaUrlCandidateUniverse": 67782,
-    "remainingNonEnJaUrlCandidatesNotYetStagedApprox": 65121
+    "remainingNonEnJaUrlCandidatesNotYetStagedApprox": 62933
   },
   "reconciliationNotes": [
     "92,817 URL candidates include EN+JA TCGdex URLs; do not subtract from 68,011 EN/JA master 1:1 (different ID systems).",

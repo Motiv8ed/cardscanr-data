@@ -1,6 +1,6 @@
 # CardScanR Global Image Acquisition Report
 
-Generated: `2026-10-13T07:38:09Z`  
+Generated: `2026-10-13T08:23:01Z`  
 Branch: `task/global-image-acquisition-20261013`  
 Scope: isolated staging only — **no production master/CDN writes**
 
@@ -21,18 +21,18 @@ URL/metadata candidates are **not** counted as coverage.
 
 | Language | Verified staging display.webp |
 | --- | ---: |
-| de | 661 |
-| es | 207 |
-| es-419 | 205 |
-| fr | 205 |
-| id | 204 |
-| it | 205 |
-| pt-BR | 204 |
-| th | 203 |
-| zh-Hant | 204 |
-| **Total newly staged unique printings** | **2298** |
+| de | 914 |
+| es | 522 |
+| es-419 | 493 |
+| fr | 445 |
+| id | 515 |
+| it | 517 |
+| pt-BR | 515 |
+| th | 512 |
+| zh-Hant | 513 |
+| **Total newly staged unique printings** | **4946** |
 
-Progress ledger: `{'ok': 790, 'skip_existing': 1820, 'fail': 2}`
+Progress ledger: `{'skip_existing': 1845, 'ok': 3136, 'quarantine': 168}`
 
 Integrity: missing_display=0, quarantine=0, duplicate_sha_groups=0
 
@@ -51,5 +51,19 @@ See `RANKED_NEXT_OPPORTUNITIES.md`. Resume:
 
 ```powershell
 cd D:\CardScanR_Data_worktrees\global-image-acq-20261013
-python tools\global_image_staging_acquire.py --execute --exclude-languages en,ja --concurrency 8
+$env:CARDSCANR_IMAGE_STAGING_ROOT = 'D:\CardScanR_Archive\image_staging\global_acq_20261013'
+python tools\global_image_staging_acquire.py --execute --exclude-languages en,ja --concurrency 3 --min-interval 0.40
+python tools\reconcile_global_image_universe.py
+python tools\validate_staging_images_and_contact_sheets.py
+python tools\build_global_image_acquisition_report_bundle.py
 ```
+
+Do **not** promote staging to production CDN without written TCGdex clarification.
+
+## Universe reconciliation
+
+See `universe_reconciliation.json` / `.md`.
+
+## Post-acquire validation
+
+See `staging_validation_summary.json` and `contact_sheets/`.

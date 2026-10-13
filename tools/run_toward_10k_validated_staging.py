@@ -26,12 +26,10 @@ def count_validated() -> int:
     if not STAGING.exists():
         return 0
     n = 0
-    for asset in STAGING.rglob("asset.json"):
-        if "_quarantine" in asset.parts:
+    for lang in STAGING.iterdir():
+        if not lang.is_dir() or lang.name.startswith("_"):
             continue
-        if not (asset.parent / "display.webp").exists():
-            continue
-        n += 1
+        n += sum(1 for _ in lang.rglob("display.webp"))
     return n
 
 
