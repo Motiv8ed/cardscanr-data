@@ -76,3 +76,29 @@ def test_validate_url_identity_language_mismatch() -> None:
 def test_normalize_collector() -> None:
     assert g.normalize_collector("001/165") == "1"
     assert g.normalize_collector("020") == "20"
+
+
+def test_validate_url_identity_hyphenated_set_ok() -> None:
+    issues = g.validate_url_identity(
+        {
+            "language": "de",
+            "providerSetId": "P-A",
+            "providerCardId": "P-A-010",
+            "printedCollectorNumber": "010",
+        },
+        "https://assets.tcgdex.net/de/tcgp/P-A/010/high.webp",
+    )
+    assert issues == []
+
+
+def test_validate_url_identity_es419_esmx_alias() -> None:
+    issues = g.validate_url_identity(
+        {
+            "language": "es-419",
+            "providerSetId": "sv1",
+            "providerCardId": "sv1-1",
+            "printedCollectorNumber": "1",
+        },
+        "https://assets.tcgdex.net/es-mx/sv/sv1/1/high.webp",
+    )
+    assert issues == []

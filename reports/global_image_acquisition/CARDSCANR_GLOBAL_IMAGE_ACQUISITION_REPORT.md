@@ -1,6 +1,6 @@
 # CardScanR Global Image Acquisition Report
 
-Generated: `2026-10-13T08:23:01Z`  
+Generated: `2026-10-13T09:38:45Z`  
 Branch: `task/global-image-acquisition-20261013`  
 Scope: isolated staging only — **no production master/CDN writes**
 
@@ -21,20 +21,20 @@ URL/metadata candidates are **not** counted as coverage.
 
 | Language | Verified staging display.webp |
 | --- | ---: |
-| de | 914 |
-| es | 522 |
-| es-419 | 493 |
-| fr | 445 |
-| id | 515 |
-| it | 517 |
-| pt-BR | 515 |
-| th | 512 |
-| zh-Hant | 513 |
-| **Total newly staged unique printings** | **4946** |
+| de | 1472 |
+| es | 1090 |
+| es-419 | 1062 |
+| fr | 1014 |
+| id | 1084 |
+| it | 1085 |
+| pt-BR | 1083 |
+| th | 1079 |
+| zh-Hant | 1080 |
+| **Total newly staged unique printings** | **10049** |
 
-Progress ledger: `{'skip_existing': 1845, 'ok': 3136, 'quarantine': 168}`
+Progress ledger: `{'skip_existing': 1845, 'ok': 8239, 'quarantine': 5, 'permanent_404': 2}`
 
-Integrity: missing_display=0, quarantine=0, duplicate_sha_groups=0
+Integrity: missing_display=0, quarantine=0, duplicate_sha_groups=2
 
 ## Unresolved gaps (still need other sources / permissions)
 

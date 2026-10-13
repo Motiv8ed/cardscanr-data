@@ -1,13 +1,14 @@
 {
-  "generatedAtUtc": "2026-10-13T08:23:02Z",
+  "generatedAtUtc": "2026-10-13T09:38:46Z",
   "targetUniqueValidated": 10000,
-  "achievedUniqueValidated": 4849,
-  "reachedTarget": false,
-  "stopReason": "wall_clock_and_conservative_rate_limit_not_indefinite_run",
+  "achievedUniqueValidated": 10049,
+  "diskDisplayWebpCount": 10049,
+  "reachedTarget": true,
+  "stopReason": "target_reached",
   "validation": {
-    "generatedAtUtc": "2026-10-13T08:23:00Z",
-    "checked": 4850,
-    "validatedOk": 4850,
+    "generatedAtUtc": "2026-10-13T09:37:50Z",
+    "checked": 10049,
+    "validatedOk": 10049,
     "quarantinedOrFailed": 0,
     "issueCounts": {},
     "contactSheets": [
@@ -23,11 +24,37 @@
     ],
     "stagingRoot": "D:\\CardScanR_Archive\\image_staging\\global_acq_20261013"
   },
-  "remainingNonEnJaUrlCandidatesApprox": 62933,
+  "visualValidation": {
+    "checked": 2500,
+    "validatedOk": 2500,
+    "suspiciousOrFailed": 0,
+    "issueCounts": {},
+    "ocrEngine": "opencv_template_ncc_lite_no_tesseract",
+    "contactSheets": [
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_de.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_es.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_es-419.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_fr.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_id.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_it.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_pt-BR.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_th.jpg",
+      "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\contact_sheets\\visual_samples\\visual_contact_zh-Hant.jpg"
+    ]
+  },
+  "remainingNonEnJaUrlCandidatesApprox": 57733,
   "permissionBlockers": [
-    "TCGdex artwork production CDN rehost clarification (draft only)",
-    "Official KO/zh-Hans artwork permission (TCGdex imageCards=0)",
+    "TCGdex artwork production CDN rehost clarification (draft email ready, not sent)",
+    "Official KO/zh-Hans artwork permission (TCGdex imageCards=0; catalogue 239/877 with 0 URLs)",
     "Official Asia residual catalogue permission",
-    "Pok\u00e9Wallet bulk rehost clarification; no spend"
-  ]
+    "PokeWallet bulk rehost clarification; no spend"
+  ],
+  "zipPath": "C:\\Users\\andyg\\Downloads\\CardScanR_global_image_acquisition_20261013T093845Z.zip",
+  "universe": {
+    "globalPrintings": 117665,
+    "urlCandidates": 92817,
+    "enJaProduction": 68011,
+    "stagingUniqueValidatedTotal": 10049,
+    "nonEnJaUrlCandidateUniverse": 67782
+  }
 }

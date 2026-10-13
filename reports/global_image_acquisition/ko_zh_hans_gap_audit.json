@@ -1,0 +1,157 @@
+{
+  "generatedAtUtc": "2026-10-13T09:23:38Z",
+  "catalogueLanguageTotals": {
+    "ko": 239,
+    "zh-Hans": 877
+  },
+  "catalogueGap": {
+    "ko": {
+      "printings": 239,
+      "withAnyImageUrl": 0,
+      "withoutImageUrl": 239,
+      "urlHosts": {},
+      "languageFieldValues": {
+        "ko": 239
+      },
+      "cataloguePath": "D:\\CardScanR_Data\\cardscanr-data\\data\\global\\catalogue\\cards.jsonl"
+    },
+    "zh-Hans": {
+      "printings": 877,
+      "withAnyImageUrl": 0,
+      "withoutImageUrl": 877,
+      "urlHosts": {},
+      "languageFieldValues": {
+        "zh-Hans": 877
+      },
+      "cataloguePath": "D:\\CardScanR_Data\\cardscanr-data\\data\\global\\catalogue\\cards.jsonl"
+    }
+  },
+  "directImageCandidatesByLanguage": {},
+  "tcgdexLiveProbe": {
+    "ko": {
+      "setsListed": 95,
+      "nonemptySets": 3,
+      "cardTotalSampled": 239,
+      "imageCards": 0,
+      "samples": [
+        {
+          "set": "SM1+",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "set": "SM3+",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "set": "SM4+",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "set": "SM5+",
+          "error": "HTTP Error 404: Not Found"
+        },
+        {
+          "set": "SV4M",
+          "cards": 95,
+          "images": 0
+        }
+      ]
+    },
+    "zh-cn": {
+      "setsListed": 57,
+      "nonemptySets": 8,
+      "cardTotalSampled": 877,
+      "imageCards": 0,
+      "samples": [
+        {
+          "set": "CSMPiC",
+          "cards": 48,
+          "images": 0
+        },
+        {
+          "set": "SV9",
+          "cards": 100,
+          "images": 0
+        },
+        {
+          "set": "SV9a",
+          "cards": 92,
+          "images": 0
+        },
+        {
+          "set": "SV8a",
+          "cards": 237,
+          "images": 0
+        },
+        {
+          "set": "SV7",
+          "cards": 132,
+          "images": 0
+        }
+      ]
+    }
+  },
+  "lawfulSourcesAndContributionPaths": [
+    {
+      "source": "TCGdex metadata API (ko / zh-cn)",
+      "yield": "Set/card metadata only; imageCards currently 0",
+      "lawfulAction": "Continue metadata sync; do not invent artwork URLs",
+      "downloadAllowed": false,
+      "basis": "No image field on live cards; MIT covers DB not artwork"
+    },
+    {
+      "source": "pokemoncard.co.kr (Pokémon Korea official)",
+      "yield": "Likely dense KO checklist + official thumbs",
+      "lawfulAction": "Seek prior written agreement before any reuse",
+      "downloadAllowed": false,
+      "basis": "Official ToS require prior agreement; discovery-only"
+    },
+    {
+      "source": "Asia Pokémon Card Game Trainers Website / CN official channels",
+      "yield": "zh-Hans checklists; possible official gallery pages",
+      "lawfulAction": "Permission request; no bulk scrape",
+      "downloadAllowed": false,
+      "basis": "Official terms typically prohibit copying Data/images"
+    },
+    {
+      "source": "Scrydex / commercial catalog APIs",
+      "yield": "May add KO/CN if licensed in CardScanR plan",
+      "lawfulAction": "Confirm language coverage + written CDN grant (EN/JA already)",
+      "downloadAllowed": "pending_contract_scope",
+      "basis": "Existing written auth is EN/JA CDN; do not assume KO/CN"
+    },
+    {
+      "source": "Collector-contributed photos (CardScanR intake)",
+      "yield": "Long-tail KO/zh-Hans printings with contributor licence",
+      "lawfulAction": "Design intake + licence terms after promotion policy",
+      "downloadAllowed": "after_contributor_licence",
+      "basis": "Contributor grant separate from Pokémon IP; no public serve until rights clear"
+    },
+    {
+      "source": "Community GitHub / Discord image dumps",
+      "yield": "Often complete but provenance unclear",
+      "lawfulAction": "Do not download; prefer origin hosts with permission",
+      "downloadAllowed": false,
+      "basis": "Usually no better rights than scraped origins"
+    },
+    {
+      "source": "PokéWallet authenticated media",
+      "yield": "Possible multilingual assets if licensed",
+      "lawfulAction": "Clarification on bulk rehost; no spend this run",
+      "downloadAllowed": false,
+      "basis": "Discovery-only in staging allowlist"
+    }
+  ],
+  "blockedActionsThisRun": [
+    "No downloads from pokemoncard.co.kr",
+    "No downloads from asia.pokemon-card.com / official CN mirrors",
+    "No community dump ingestion",
+    "No production promotion"
+  ],
+  "recommendedNextHumanSteps": [
+    "Send TCGdex clarification (draft) — does not unlock KO/zh-Hans artwork",
+    "Draft permission letters to Pokémon Korea and CN/Asia official digital teams",
+    "Ask Scrydex whether KO/zh-Hans images are in-scope of written CDN grant",
+    "Plan collector-photo intake for residual gaps"
+  ]
+}

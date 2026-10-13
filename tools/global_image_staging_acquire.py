@@ -331,13 +331,22 @@ def validate_url_identity(row: dict[str, Any], url: str) -> list[str]:
     if row_num and url_num and row_num != url_num:
         issues.append(f"collector_mismatch:row={row_num}:url={url_num}")
     provider_card = str(row.get("providerCardId") or "")
-    if provider_card and "-" in provider_card:
-        # e.g. bw10-100
-        pset, _, plocal = provider_card.partition("-")
-        if pset and pset.casefold() != parsed["urlSetId"].casefold():
-            issues.append(f"provider_card_set_mismatch:{provider_card}")
-        if plocal and normalize_collector(plocal) != url_num:
-            issues.append(f"provider_card_num_mismatch:{provider_card}")
+    url_set = parsed["urlSetId"]
+    if provider_card and url_set:
+        # Prefer prefix match so hyphenated set ids (e.g. P-A-010) are not
+        # mis-split as set="P" / local="A-010".
+        prefix = url_set + "-"
+        if provider_card.casefold().startswith(prefix.casefold()):
+            plocal = provider_card[len(prefix) :]
+            if plocal and normalize_collector(plocal) != url_num:
+                issues.append(f"provider_card_num_mismatch:{provider_card}")
+        elif "-" in provider_card:
+            # Legacy single-hyphen form: bw10-100
+            pset, _, plocal = provider_card.partition("-")
+            if pset and pset.casefold() != url_set.casefold():
+                issues.append(f"provider_card_set_mismatch:{provider_card}")
+            if plocal and normalize_collector(plocal) != url_num:
+                issues.append(f"provider_card_num_mismatch:{provider_card}")
     return issues
 
 
