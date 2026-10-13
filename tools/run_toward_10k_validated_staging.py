@@ -60,9 +60,9 @@ def main() -> int:
             "--exclude-languages",
             "en,ja",
             "--concurrency",
-            "3",
+            "4",
             "--min-interval",
-            "0.40",
+            "0.28",
             "--limit",
             str(limit),
         ]
