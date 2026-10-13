@@ -24,6 +24,7 @@ No prohibited scraping; no production ingestion from uncertain rights.
 | Pokémon Card Game Trainers Website Asia | ID/TH/ZH-Hant dense coverage | Express prohibition on copying Data | Discovery-only |
 | Pokémon Korea card list | KO set fill for sparse 239 rows | Prior agreement required | Seek permission |
 | Chinese simplified official / PTCG CN community datasets | zh-Hans (877 missing candidates) | Unclear / often unlicensed mirrors | Seek permission or collector photos |
+| **PokéCardex** | **zh-Hans ~8.9k standard metadata rows / 59 sets (2026-10-13 sync)** | Written permission 2026-10-13 for metadata + retrieve images to own storage; no Pokémon IP grant | Metadata sync + isolated staging active; attribution required; no production image promotion |
 | Community GitHub image mirrors of TCGdex/PTCG | Duplicate of hosts above | Usually no better rights than origin | Prefer origin hosts; avoid double-unknown provenance |
 | Collector photo intake (CardScanR) | Long-tail variants, stamped promos | Requires contributor licence terms | Build after promotion policy settled |
 

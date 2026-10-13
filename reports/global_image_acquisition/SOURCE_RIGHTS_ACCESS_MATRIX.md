@@ -14,6 +14,7 @@ Distinguish **technical availability** from **permitted CardScanR use**.
 | Pokémon Asia trainers sites (id/th/tw/…) | id, th, zh-Hant, … | Consumer search | n/a | Site Data | **No** | Terms prohibit copy/display outside Services | $0 | Discovery only — do not scrape |
 | Pokémon Korea official | ko | Consumer site | n/a | Site images | **No** | Prior agreement required | $0 | Discovery only |
 | Official CN catalogues / community CN datasets | zh-Hans | Varies | varies | Varies | **No** until written grant | Unclear | unknown | Discovery only |
+| **PokéCardex** (pokecardex.com / scans CDN) | **zh-Hans (hosted images); metadata multilingual** | Public site (no API); client-encrypted page payloads | none | Hosts Chinese scans only; **no artwork licence** | **Yes** — retrieve to own storage; **no hotlink** | Metadata commercial OK; images **blocked** pending Pokémon/IP review | $0 | Written permission 2026-10-13 — see `POKECARDEX_WRITTEN_PERMISSION_2026-10-13.md` |
 | GitHub community card dumps / fan archives | varies | ad-hoc | n/a | Often unlicensed scrapes | **No** by default | High copyright risk | $0 | Discovery; do not ingest without provenance+rights |
 | Collector submissions | any | CardScanR intake | user grant | Photos | Future path | Needs contributor licence | $0 | Gap path for missing printings |
 | Ximilar | n/a | Recognition API | token | Not an artwork source | N/A | N/A | credits | Not used for acquisition |
@@ -28,5 +29,10 @@ Distinguish **technical availability** from **permitted CardScanR use**.
 
 1. Written permission (or explicit accepted risk) to **promote** TCGdex/pokemontcg staging bytes into production CDN for non-EN/JA.
 2. PokéWallet written clarification for authenticated image archive rehost.
-3. Official regional catalogue commercial ingestion permission (Asia / Korea / CN).
+3. Official regional catalogue commercial ingestion permission (Asia / Korea / CN residual beyond PokéCardex metadata).
 4. Any paid Scrydex/PokéWallet/Ximilar spend above $0.
+5. Separate Pokémon/IP rights review before **promoting** PokéCardex-hosted Chinese images (host retrieve allowed; artwork rights not granted).
+
+## Attribution obligation
+
+- PokéCardex: visible website credit “Data courtesy of PokéCardex” → https://pokecardex.com (ideally also in-app).

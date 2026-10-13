@@ -1,0 +1,44 @@
+{
+  "generatedAtUtc": "2026-10-13T19:59:48Z",
+  "source": "pokecardex",
+  "permission": "pokecardex_written_permission_2026-10-13",
+  "attributionRequired": "Data courtesy of PokéCardex (https://pokecardex.com)",
+  "setsDiscovered": 59,
+  "metadataStatus": {
+    "skip_existing_set": 59
+  },
+  "metadataRowsTotal": 15039,
+  "uniqueCardVersionKeys": 15039,
+  "standardVersionRows": 8931,
+  "reconciliation": {
+    "catalogueZhHansPrintings": 877,
+    "pokecardexMetadataPrintings": 8931,
+    "matchedBySetCodeAndCollector": 0,
+    "unmatchedPokecardexRows": 8931,
+    "pokecardexSetCodes": 59,
+    "catalogueProviderSetCodes": 8,
+    "note": "Match uses provider set code + normalized collector number only. PokéCardex set codes often differ from TCGdex codes, so unmatched does not always mean a physically new printing."
+  },
+  "images": {
+    "executed": true,
+    "statusCounts": {
+      "ok": 30
+    },
+    "newlyDownloaded": 30,
+    "stagedDisplayFiles": 0,
+    "stagingRoot": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014",
+    "productionPromotion": "forbidden_pending_pokemon_ip_review"
+  },
+  "preservedTcgdexStagingCountExpected": 10049,
+  "denominators": {
+    "globalPrintings": 117665,
+    "urlCandidatesTcgdex": 92817,
+    "enJaProduction": 68011,
+    "tcgdexStagingValidatedNonEnJa": 10049,
+    "catalogueZhHansPrintings": 877,
+    "pokecardexZhHansMetadataStandard": 8931,
+    "note": "Do not subtract these denominators from each other as one coverage %: EN/JA production IDs, global catalogue IDs, TCGdex URL candidates, TCGdex staging, and PokéCardex zh-Hans metadata are different universes."
+  },
+  "imagesLiveCount": 312,
+  "imagesLiveAtUtc": "2026-10-13T20:02:11Z"
+}

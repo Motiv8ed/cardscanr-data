@@ -11,4 +11,5 @@ Generated: `2026-10-13T07:15:28Z`
 | official_regional_catalogues | id,th,zh-Hant,ko,zh-Hans,jp,en | consumer sites | terms prohibit external reuse (Asia trainers policy reviewed) | discovery_only | prohibited_without_written_permission |
 | PokemonTCG/pokemon-tcg-data | en | metadata only | dataset does not grant artwork | discovery_only | n/a |
 | tcgdex/cards-database | multilingual | metadata | MIT does not cover artwork CDN | metadata_reference_only | n/a |
+| pokecardex | zh-Hans (+ site metadata) | public site; written permission 2026-10-13 | metadata commercial OK; images host-only (no Pokémon IP grant); no hotlink | metadata_sync + isolated_image_staging | metadata_ok_with_attribution; images_blocked_pending_ip_review |
 | community_collector_submissions | all gaps | requires intake workflow | contributor licence required | ranked_opportunity_only | requires_contributor_terms |
