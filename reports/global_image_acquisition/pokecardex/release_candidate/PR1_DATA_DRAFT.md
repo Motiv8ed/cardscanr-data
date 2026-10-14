@@ -1,6 +1,6 @@
-# PR 1 (data) — Chinese metadata RC + acquisition tooling (DRAFT — do not push without approval)
+# PR 1 (data) — Chinese metadata RC + acquisition tooling (DRAFT PR)
 
-**Branch:** `task/global-image-acquisition-20261013`  
+**Branch:** `task/zh-hans-metadata-rc-pr-20261014`  
 **Base:** `main`  
 **Depends on:** nothing  
 **Blocks:** PR 2 can merge after this is accepted (website attribution may land independently)
