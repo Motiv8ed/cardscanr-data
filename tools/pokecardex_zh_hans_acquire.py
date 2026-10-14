@@ -213,6 +213,47 @@ def normalize_collector(value: Any) -> str:
         return left.casefold()
 
 
+def collector_staging_token(card: dict[str, Any]) -> str:
+    """Unique path/key token. Energies often share printed '—' — fall back to sort."""
+    num = normalize_collector(card.get("num_card") or card.get("printedCollectorNumber"))
+    if num and num not in {"—", "-", "–", "−", "?"} and re.fullmatch(r"\d+", num):
+        return num
+    sort = card.get("sort") or card.get("ordre_affichage")
+    if sort is not None and str(sort).strip() != "":
+        try:
+            return f"s{int(sort)}"
+        except (TypeError, ValueError):
+            return f"s{safe_seg(sort)}"
+    return num or "unknown"
+
+
+def cdn_set_path_candidates(set_code: str) -> list[str]:
+    """BunnyCDN paths are case-sensitive; PokéCardex shortNames are often ALLCAPS.
+
+    Example: metadata `CS1AC` 404s, but CDN folder is `CS1aC`. Most other sets
+    use the uppercase shortName as-is (`CS2AC`, `CSM1AC`, `CS1BC`, …).
+    """
+    code = str(set_code or "").strip()
+    if not code:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str) -> None:
+        if value and value not in seen:
+            seen.add(value)
+            out.append(value)
+
+    add(code)
+    # Letter immediately before a trailing region marker C: CS1AC -> CS1aC
+    m = re.fullmatch(r"([A-Za-z]+)(\d+)([A-Za-z])C", code)
+    if m:
+        add(f"{m.group(1)}{m.group(2)}{m.group(3).lower()}C")
+        add(f"{m.group(1)}{m.group(2)}{m.group(3).upper()}C")
+    # Half-sets: CS15C is the PokéCardex shortName; CDN uses CS15C (not CS1.5C).
+    return out
+
+
 def image_url(set_code: str, sort_or_num: int, *, version_id: int | None = None) -> str:
     # BunnyCDN optimizer requires ?class=md (returns webp); bare .jpg is 403.
     if version_id and version_id not in {0, 1}:
@@ -222,8 +263,29 @@ def image_url(set_code: str, sort_or_num: int, *, version_id: int | None = None)
 
 def staging_card_dir(staging_root: Path, set_code: str, card: dict[str, Any], version: dict[str, Any] | None) -> Path:
     ver = str((version or {}).get("id_version") or "1")
-    num = normalize_collector(card.get("num_card") or card.get("sort") or card.get("ordre_affichage"))
+    num = collector_staging_token(card)
     return staging_root / "zh-Hans" / safe_seg(set_code) / f"{safe_seg(num)}_v{safe_seg(ver)}"
+
+
+def pid_alive(pid: int) -> bool:
+    """True if process exists. Windows: os.kill(pid, 0) is unreliable (WinError 87)."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
 
 
 def acquire_run_lock(staging_root: Path) -> Path:
@@ -234,12 +296,8 @@ def acquire_run_lock(staging_root: Path) -> Path:
             old = int(lock_path.read_text(encoding="utf-8").strip() or "0")
         except ValueError:
             old = 0
-        if old and old != os.getpid():
-            try:
-                os.kill(old, 0)
-                raise SystemExit(f"another pokecardex acquire holds {lock_path} (pid={old})")
-            except OSError:
-                pass
+        if old and old != os.getpid() and pid_alive(old):
+            raise SystemExit(f"another pokecardex acquire holds {lock_path} (pid={old})")
     lock_path.write_text(str(os.getpid()), encoding="utf-8")
     return lock_path
 
@@ -298,15 +356,25 @@ def process_image(
     sort_num = int(card.get("sort") or card.get("ordre_affichage") or normalize_collector(card.get("num_card")) or 0)
     if sort_num <= 0:
         return {"status": "skip", "reason": "no_sort_num"}
-    url = image_url(set_code, sort_num, version_id=int(ver.get("id_version") or 1))
     # Prefer base image path for standard; versioned path may 404 — try base then versioned.
-    candidates = [image_url(set_code, sort_num)]
-    if int(ver.get("id_version") or 1) not in {0, 1}:
-        candidates.insert(0, url)
+    # Also try CDN case variants (CS1AC metadata vs CS1aC on BunnyCDN).
+    candidates: list[str] = []
+    seen_urls: set[str] = set()
+    ver_id = int(ver.get("id_version") or 1)
+    for cdn_code in cdn_set_path_candidates(set_code):
+        urls = [image_url(cdn_code, sort_num)]
+        if ver_id not in {0, 1}:
+            urls.insert(0, image_url(cdn_code, sort_num, version_id=ver_id))
+        for u in urls:
+            if u not in seen_urls:
+                seen_urls.add(u)
+                candidates.append(u)
     out_dir = staging_card_dir(staging_root, set_code, card, ver)
     display = out_dir / "display.webp"
     asset = out_dir / "asset.json"
-    staging_key = f"pokecardex|zh-Hans|{set_code}|{normalize_collector(card.get('num_card'))}|v{ver.get('id_version')}"
+    staging_key = (
+        f"pokecardex|zh-Hans|{set_code}|{collector_staging_token(card)}|v{ver.get('id_version')}"
+    )
     if display.exists() and asset.exists():
         return {"status": "skip_existing", "stagingKey": staging_key, "path": str(display)}
     if rate_limit_state.get("paused"):
@@ -340,6 +408,7 @@ def process_image(
             "status": "permanent_404",
             "stagingKey": staging_key,
             "reason": f"404:{last_err}",
+            "triedUrls": candidates[:8],
         }
     if not magic_ok(data):
         return {"status": "quarantine", "stagingKey": staging_key, "reason": "invalid_magic"}
@@ -627,7 +696,7 @@ def main() -> int:
                 }
                 staging_key = (
                     f"pokecardex|zh-Hans|{set_code}|"
-                    f"{normalize_collector(r.get('printedCollectorNumber'))}|v{ver['id_version']}"
+                    f"{collector_staging_token(card)}|v{ver['id_version']}"
                 )
                 if staging_key in done:
                     status_counts[done[staging_key]] += 1

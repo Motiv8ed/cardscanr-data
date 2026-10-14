@@ -1,42 +1,54 @@
-# PokéCardex Simplified Chinese expansion — status
+# PokéCardex zh-Hans acquisition — final status
 
-Generated as part of `task/global-image-acquisition-20261013` continuation.
+Worktree branch: `task/global-image-acquisition-20261013`  
+Permission: written 2026-10-13 (private Archive evidence). Chinese images **staged only**.
 
-## Permission
+## Acquisition (standard inventory)
 
-- Written grant 2026-10-13 from `contact@pokecardex.com` (private full text under Archive rights evidence).
-- Metadata: commercial collect/store/cache/sync OK; attribution required.
-- Images: may retrieve to own servers; **no** Pokémon artwork rights; **no** hotlinking; production promotion blocked pending IP review.
-
-## Results (this run)
-
-| Metric | Value |
-| --- | ---: |
-| CHN sets discovered | 59 |
+| Metric | Count |
+|--------|------:|
 | Metadata rows (all versions) | 15,039 |
-| Standard-version metadata rows | 8,931 |
-| Existing catalogue zh-Hans printings | 877 |
-| Set-code overlaps with TCGdex provider IDs | 0 |
-| TCGdex non-EN/JA staging preserved | 10,049 |
-| PokéCardex image staging root | `D:\CardScanR_Archive\image_staging\pokecardex_zh_hans_20261014` (outside Git) |
+| Standard (v1) target | 8,931 |
+| Acquire progress `ok` | 8,922 |
+| Permanent CDN 404 (true gaps) | 9 |
+| Staged `display.webp` | 8,932 |
+| CS1AC recovered (CDN `CS1aC`) | 217 |
+| NRGY recovered (sort-keyed) | 43 |
+| Preserved TCGdex staging | **10,049** |
 
-## Denominator hygiene
+True remaining CDN gaps are primarily a handful of 30THC / SMP / SVP slots that 404 on BunnyCDN. Energy rows that printed `—` are staged under `s{sort}_v1`.
 
-Do **not** combine into one “% covered” figure:
+## Layers (keep distinct)
 
-1. Global catalogue printings — 117,665  
-2. TCGdex URL candidates — 92,817  
-3. EN/JA production master — 68,011  
-4. TCGdex non-EN/JA staging validated — 10,049  
-5. Catalogue zh-Hans — 877  
-6. PokéCardex zh-Hans standard metadata — 8,931  
+| Layer | Count |
+|-------|------:|
+| Metadata coverage (standard) | 8,931 |
+| Acquired images | 8,932 |
+| Visually verified | 8,932 |
+| Production-cleared | **0** |
 
-PokéCardex expands the Simplified Chinese *metadata* universe far beyond the thin TCGdex zh-Hans catalogue. Image bytes are staged separately and are not promoted.
+Near-duplicate art pairs across different collectors: 14 (flagged for review; not production-cleared).
 
-## Gaps / next
+## Crosswalk PokéCardex ↔ TCGdex
 
-- Continue gated image downloads for remaining standard printings (`?class=md` required).
-- Build PokéCardex ↔ TCGdex/official set-code crosswalk.
-- Website attribution: “Data courtesy of PokéCardex”.
-- Pokémon/IP review before any public serve of Chinese artwork.
-- KO remains outside PokéCardex scope.
+- 59 CHN sets → **40** mapped to TCGdex zh-cn (31 exact + 9 half-set `CS15C↔CS1.5C`)
+- EN bridges: 2 (incl. manual Collect 151 / 30th promo)
+- Unmatched sets: 17 (promos, radiant-energy packs, some CN exclusives)
+- Standard rows inside mapped TCGdex sets: **6,750** (known CN printings missing from CardScanR catalogue — not automatically net-new)
+- Genuinely unmapped standard candidates: **2,181** (need human/visual review before calling “new printings”)
+- Non-standard 6,108 rows: reverse / reverse-masterball / special-alternate **variants** of collector numbers
+
+Zero catalogue set-code overlap ≠ zero duplicate cards.
+
+## Attribution (isolated website, not deployed)
+
+Footer + `/data/` FAQ: “Data courtesy of PokéCardex” → https://pokecardex.com
+
+## Korean
+
+Investigation only — TCGdex `ko` 95 sets; no KO bytes downloaded. See `../korean_image_sources_investigation.md`.
+
+## Evidence ZIP
+
+`D:\CardScanR_Archive\Downloads\CardScanR_pokecardex_zh_hans_evidence_*.zip`  
+(Private permission body remains under Archive `rights_evidence\pokecardex\`.)
