@@ -1,0 +1,124 @@
+{
+  "generatedAtUtc": "2026-10-14T07:18:41Z",
+  "disjointOnDisk": {
+    "standardCanonicalDisplays": 8920,
+    "nonStandardDisplays": 0,
+    "orphanExtras": 12,
+    "totalWebp": 8932,
+    "sumParts": 8932,
+    "balanced": true
+  },
+  "standardInventory": {
+    "metadataRows": 8931,
+    "onDiskCanonicalRows": 8922,
+    "onDiskCanonicalUniquePaths": 8920,
+    "permanent404": 9,
+    "missingUnexpected": 0,
+    "sumRows": 8931,
+    "balancedRows": true,
+    "sharedCanonicalPaths": 2,
+    "sharedCanonicalPathSamples": {
+      "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CS2BC\\115_v1\\display.webp": [
+        "pokecardex|zh-Hans|CS2BC|115|v1",
+        "pokecardex|zh-Hans|CS2BC|115|v1"
+      ],
+      "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CSM1CC\\56_v1\\display.webp": [
+        "pokecardex|zh-Hans|CSM1CC|56|v1",
+        "pokecardex|zh-Hans|CSM1CC|56|v1"
+      ]
+    },
+    "rowVsUniqueGap": 2
+  },
+  "identity": {
+    "note": "Canonical standard display path uses collector_staging_token (numeric collector or s{sort} for energies). Orphans are leftover folders from earlier path normalisations (e.g. __v1, gra_v1) and are disjoint from canonical standard paths. If onDiskCanonicalRows > unique paths, multiple metadata rows share one display file."
+  },
+  "orphans": [
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\dar_v1\\display.webp",
+      "set": "30THC",
+      "folder": "dar_v1",
+      "bytes": 5396,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\fig_v1\\display.webp",
+      "set": "30THC",
+      "folder": "fig_v1",
+      "bytes": 5778,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\fir_v1\\display.webp",
+      "set": "30THC",
+      "folder": "fir_v1",
+      "bytes": 6572,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\gra_v1\\display.webp",
+      "set": "30THC",
+      "folder": "gra_v1",
+      "bytes": 6074,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\lig_v1\\display.webp",
+      "set": "30THC",
+      "folder": "lig_v1",
+      "bytes": 5260,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\met_v1\\display.webp",
+      "set": "30THC",
+      "folder": "met_v1",
+      "bytes": 4736,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\psy_v1\\display.webp",
+      "set": "30THC",
+      "folder": "psy_v1",
+      "bytes": 5842,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\wat_v1\\display.webp",
+      "set": "30THC",
+      "folder": "wat_v1",
+      "bytes": 5698,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\NRGY\\__v1\\display.webp",
+      "set": "NRGY",
+      "folder": "__v1",
+      "bytes": 5234,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SMP\\__v1\\display.webp",
+      "set": "SMP",
+      "folder": "__v1",
+      "bytes": 12808,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SPP\\s-p_v1\\display.webp",
+      "set": "SPP",
+      "folder": "s-p_v1",
+      "bytes": 9248,
+      "classification": "legacy_path_token_or_collapsed_key"
+    },
+    {
+      "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SVPU\\sv-p_v1\\display.webp",
+      "set": "SVPU",
+      "folder": "sv-p_v1",
+      "bytes": 8694,
+      "classification": "legacy_path_token_or_collapsed_key"
+    }
+  ],
+  "equation": "totalWebp(8932) = standardCanonical(8920) + nonStandard(0) + orphanExtras(12)",
+  "standardEquation": "standardMeta(8931) = onDiskRows(8922) + 404(9) + missing(0); uniqueCanonicalPaths=8920; sharedPaths=2",
+  "reconciliationNote": "totalWebp 8932 = uniqueStd 8920 + nonStd 0 + orphan 12. Row-level std on-disk 8922 can exceed uniqueStd when 2 paths are shared by multiple metadata rows."
+}

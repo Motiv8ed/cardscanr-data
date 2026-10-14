@@ -353,4 +353,43 @@ tools/_*
 # Local EN/JA image master archive (bytes; not for git)
 data/images/master/
 data/images/independence/
+# Isolated worldwide staging acquisitions (bytes; not for git / not production)
+data/images/staging/
+# Isolated worldwide acquisition staging (bytes; not for git)
+data/images/staging/
+
+
+# Volatile global image acquisition runtime artifacts
+reports/global_image_acquisition/progress.jsonl
+reports/global_image_acquisition/_continue_*.ps1
+reports/global_image_acquisition/*.log
+reports/global_image_acquisition/*.err.log
+reports/global_image_acquisition/expanded_tcgdex_candidates.jsonl
+reports/global_image_acquisition/toward_10k_run.json
+
+reports/global_image_acquisition/progress.jsonl.bak_*
+reports/global_image_acquisition/staging_acquire_summary.json
+
+
+# PokéCardex acquisition volatiles
+reports/global_image_acquisition/pokecardex/metadata_progress.jsonl
+reports/global_image_acquisition/pokecardex/zh_hans_cards.jsonl
+reports/global_image_acquisition/_zh_hans_id_samples.json
+reports/global_image_acquisition/pokecardex_*.json
+reports/global_image_acquisition/pokecardex_key_extract.txt
+tools/_probe_pokecardex_*.py
+tools/_extract_pokecardex_key.py
+
+
+tools/_debug_*.py
+
+# Korean TCGdex HTTP cache (regenerable)
+reports/global_image_acquisition/korean/tcgdex_cache/
+
+# Local RC QA pack sqlite (regenerate via tools/build_zh_hans_rc_qa_pack.py)
+reports/global_image_acquisition/pokecardex/release_candidate/qa_pack/*.sqlite
+reports/global_image_acquisition/pokecardex/release_candidate/qa_pack/*.sqlite.tmp
+reports/global_image_acquisition/pokecardex/release_candidate/pack_install_layout/**/*.sqlite
+reports/global_image_acquisition/pokecardex/release_candidate/pack_install_layout/**/*.sqlite.gz
+
 

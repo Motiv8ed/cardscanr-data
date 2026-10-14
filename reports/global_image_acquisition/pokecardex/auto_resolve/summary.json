@@ -1,0 +1,26 @@
+{
+  "generatedAtUtc": "2026-10-14T07:17:50Z",
+  "standardRowsConsidered": 8931,
+  "autoResolved": 8199,
+  "needsReview": 732,
+  "decisionCounts": {
+    "auto_accept_parallel_printing": 402,
+    "auto_accept_chinese_exclusive_candidate": 1001,
+    "auto_accept_known_cn_printing": 6750,
+    "auto_link_related_to_catalogue": 4,
+    "auto_accept_utility_energy": 42,
+    "review_promo_uncertain": 732
+  },
+  "nearDuplicateAutoFlagged": 0,
+  "nearDuplicateNeedsReview": 15,
+  "catalogueOverlap": {
+    "highConfidenceRelated": 28,
+    "softParallelOrRelated": 388,
+    "noSoftMatch": 461,
+    "exactSetCodeOverlap": 0
+  },
+  "thresholds": {
+    "autoAcceptMin": 0.75,
+    "nearDupAutoFlagMaxHamming": 2
+  }
+}

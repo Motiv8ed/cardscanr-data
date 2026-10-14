@@ -1,0 +1,94 @@
+{
+  "generatedAtUtc": "2026-10-14T09:29:49Z",
+  "passed": 16,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "en_unchanged",
+      "pass": true,
+      "detail": {
+        "live": 23323,
+        "wt": 23323
+      }
+    },
+    {
+      "name": "ja_unchanged",
+      "pass": true,
+      "detail": {
+        "live": 6246,
+        "wt": 6246
+      }
+    },
+    {
+      "name": "zh_hans_count",
+      "pass": true,
+      "detail": 14923
+    },
+    {
+      "name": "original_877_preserved",
+      "pass": true,
+      "detail": 877
+    },
+    {
+      "name": "links_count_28",
+      "pass": true,
+      "detail": 28
+    },
+    {
+      "name": "links_preserve_live_ids",
+      "pass": true,
+      "detail": true
+    },
+    {
+      "name": "linked_identity_fields_unchanged",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "excluded_not_in_new_rows",
+      "pass": true,
+      "detail": 993
+    },
+    {
+      "name": "excluded_count_993",
+      "pass": true,
+      "detail": 993
+    },
+    {
+      "name": "new_rows_no_staging_public_urls",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "new_rows_no_unapproved_cdn",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "new_rows_attribution",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "pack_card_count_14923",
+      "pass": true,
+      "detail": 14923
+    },
+    {
+      "name": "pack_placeholders_only",
+      "pass": true,
+      "detail": 0
+    },
+    {
+      "name": "website_attribution",
+      "pass": true,
+      "detail": 2
+    },
+    {
+      "name": "all_non_zh_hans_language_counts_unchanged",
+      "pass": true,
+      "detail": {}
+    }
+  ],
+  "verdict": "PASS"
+}

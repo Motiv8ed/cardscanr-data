@@ -1,0 +1,60 @@
+{
+  "generatedAtUtc": "2026-10-14T09:29:33Z",
+  "purpose": "isolated_branch_catalogue_integration_pokecardex_zh_hans",
+  "liveCatalogueUntouched": "D:\\CardScanR_Data\\cardscanr-data\\data\\global\\catalogue\\cards.jsonl",
+  "outputCards": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\data\\global\\catalogue\\cards.jsonl",
+  "beforeLanguageCounts": {
+    "en": 23323,
+    "ja": 6246,
+    "zh-Hans": 877,
+    "zh-Hant": 7436,
+    "ko": 239,
+    "th": 2921,
+    "id": 2788,
+    "fr": 21434,
+    "de": 19542,
+    "it": 15234,
+    "es": 15172,
+    "es-419": 1329,
+    "pt-BR": 1124
+  },
+  "afterLanguageCounts": {
+    "en": 23323,
+    "ja": 6246,
+    "zh-Hans": 14923,
+    "zh-Hant": 7436,
+    "ko": 239,
+    "th": 2921,
+    "id": 2788,
+    "fr": 21434,
+    "de": 19542,
+    "it": 15234,
+    "es": 15172,
+    "es-419": 1329,
+    "pt-BR": 1124
+  },
+  "zhHansBefore": 877,
+  "zhHansAfter": 14923,
+  "zhHansDelta": 14046,
+  "linkedExistingZhHansToPokecardex": 28,
+  "addedPokecardexRows": 14046,
+  "skippedAlreadyPresent": 0,
+  "skippedNotAutoAccepted": 993,
+  "enJaPreserved": {
+    "enBefore": 23323,
+    "enAfter": 23323,
+    "jaBefore": 6246,
+    "jaAfter": 6246,
+    "unchanged": true
+  },
+  "artworkPolicy": "placeholders_only",
+  "attributionRequired": "Data courtesy of PokéCardex (https://pokecardex.com)",
+  "productionPromotionAllowed": false,
+  "readiness": {
+    "metadataIntegrationReadyForReview": true,
+    "searchBinderReady": true,
+    "artworkProductionReady": false,
+    "mergeToLiveReady": false,
+    "verdict": "Chinese metadata is integration-ready on this isolated branch with placeholders and attribution. Do not merge or promote artwork until Pokémon IP review and human sign-off on remaining review-queue rows."
+  }
+}

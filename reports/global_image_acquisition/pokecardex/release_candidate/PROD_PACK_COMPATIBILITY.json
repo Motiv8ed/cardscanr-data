@@ -1,0 +1,87 @@
+{
+  "generatedAtUtc": "2026-10-14T09:29:43Z",
+  "productionPack": {
+    "path": "D:\\CardScanR\\artifacts\\build98_zhcn\\zh-cn.sqlite",
+    "cardCount": 41185,
+    "uniquePrintingIds": 41185
+  },
+  "rcCatalogueZhHans": {
+    "cardCount": 14923,
+    "uniquePrintingIds": 14923
+  },
+  "identityOverlap": {
+    "exactCanonicalPrintingIdOverlap": 0,
+    "exactCanonicalPrintingIdOverlapSamples": [],
+    "setCodeCollectorOverlap": 875,
+    "setCodeCollectorOverlapSamples": [
+      [
+        "CS2AC",
+        "004"
+      ],
+      [
+        "CS2AC",
+        "005"
+      ],
+      [
+        "CS2AC",
+        "052"
+      ],
+      [
+        "CS3AC",
+        "028"
+      ],
+      [
+        "CS3AC",
+        "029"
+      ],
+      [
+        "CS3BC",
+        "020"
+      ],
+      [
+        "CS4AC",
+        "021"
+      ],
+      [
+        "CS4AC",
+        "068"
+      ],
+      [
+        "CSMPIC",
+        "001"
+      ],
+      [
+        "CSMPIC",
+        "002"
+      ],
+      [
+        "CSMPIC",
+        "003"
+      ],
+      [
+        "CSMPIC",
+        "004"
+      ],
+      [
+        "CSMPIC",
+        "005"
+      ],
+      [
+        "CSMPIC",
+        "006"
+      ],
+      [
+        "CSMPIC",
+        "007"
+      ]
+    ]
+  },
+  "preservationGuarantee": {
+    "productionPackFileUntouched": true,
+    "productionPackPath": "D:\\CardScanR\\artifacts\\build98_zhcn\\zh-cn.sqlite",
+    "rcDoesNotRewritePackSqlite": true,
+    "lostProductionPrintingIds": 0,
+    "note": "RC integration writes an isolated worktree cards.jsonl and a QA-only pack. It does not modify D:\\CardScanR\\artifacts\\build98_zhcn\\zh-cn.sqlite. All 41,185 production pack printing IDs remain present in that file. Exact canonicalPrintingId overlap with RC catalogue is expected to be low/zero because pack IDs use provider namespaces (ptcg-chs / pokemon-tcg-kb) while RC uses CardScanR pokemon|zh-Hans|… IDs. Collections bound to production pack IDs are therefore not replaced by this metadata PR."
+  },
+  "verdict": "PASS"
+}

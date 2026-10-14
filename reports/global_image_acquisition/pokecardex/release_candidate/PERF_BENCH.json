@@ -1,0 +1,99 @@
+{
+  "generatedAtUtc": "2026-10-14T09:05:45Z",
+  "host": "MOTIV8ED",
+  "rc": {
+    "label": "rc_14923",
+    "path": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\release_candidate\\pack_install_layout\\zh-cn\\zh-cn.sqlite",
+    "bytes": 34033664,
+    "coldOpen": {
+      "repeats": 5,
+      "cardCount": 14923,
+      "coldOpenMsMean": 3.01,
+      "coldOpenMsMedian": 3.1,
+      "coldOpenMsMin": 2.67,
+      "coldOpenMsMax": 3.44
+    },
+    "search": {
+      "sample": {
+        "set_code": "CSM2CC",
+        "printed": "001/150",
+        "name": "Reshiram & Charizard-GX"
+      },
+      "collectorLookup": {
+        "meanMs": 27.07,
+        "medianMs": 26.837,
+        "p95Ms": 28.123
+      },
+      "setPlusCollector": {
+        "meanMs": 28.949,
+        "medianMs": 28.705,
+        "p95Ms": 30.991
+      },
+      "nameFts": {
+        "meanMs": 0.053,
+        "medianMs": 0.03,
+        "p95Ms": 0.105
+      }
+    },
+    "memory": {
+      "rowsSampled": 500,
+      "setsLoaded": 63,
+      "elapsedMs": 4.81,
+      "tracemallocCurrentKb": 143.7,
+      "tracemallocPeakKb": 144.6,
+      "sqliteFileMb": 32.46,
+      "note": "Python process tracemalloc; not Flutter RSS. Useful relative RC vs baseline."
+    }
+  },
+  "baseline_build98": {
+    "label": "baseline_build98",
+    "path": "D:\\CardScanR\\artifacts\\build98_zhcn\\zh-cn.sqlite",
+    "bytes": 181108736,
+    "coldOpen": {
+      "repeats": 5,
+      "cardCount": 41185,
+      "coldOpenMsMean": 2.83,
+      "coldOpenMsMedian": 2.83,
+      "coldOpenMsMin": 2.69,
+      "coldOpenMsMax": 3.03
+    },
+    "search": {
+      "sample": {
+        "set_code": "cn-151c",
+        "printed": "001",
+        "name": "Bulbasaur Master Ball Holo"
+      },
+      "collectorLookup": {
+        "meanMs": 163.473,
+        "medianMs": 159.038,
+        "p95Ms": 169.027
+      },
+      "setPlusCollector": {
+        "meanMs": 171.377,
+        "medianMs": 170.262,
+        "p95Ms": 177.648
+      },
+      "nameFts": {
+        "meanMs": 0.046,
+        "medianMs": 0.031,
+        "p95Ms": 0.048
+      }
+    },
+    "memory": {
+      "rowsSampled": 500,
+      "setsLoaded": 338,
+      "elapsedMs": 4.24,
+      "tracemallocCurrentKb": 167.2,
+      "tracemallocPeakKb": 168.0,
+      "sqliteFileMb": 172.72,
+      "note": "Python process tracemalloc; not Flutter RSS. Useful relative RC vs baseline."
+    }
+  },
+  "deltas": {
+    "coldOpenMedianMs_rc_minus_baseline": 0.27,
+    "fileMb_rc_minus_baseline": -140.26,
+    "tracemallocPeakKb_rc_minus_baseline": -23.4,
+    "cardCount_rc": 14923,
+    "cardCount_baseline": 41185
+  }
+}

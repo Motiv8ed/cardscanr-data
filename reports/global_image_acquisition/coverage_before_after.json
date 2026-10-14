@@ -1,0 +1,106 @@
+{
+  "generatedAtUtc": "2026-10-14T07:20:51Z",
+  "before": {
+    "zhHansCatalogue": 877,
+    "koCatalogue": 239,
+    "enCatalogue": 23323,
+    "jaCatalogue": 6246,
+    "pokecardexStagedWebp": 8932,
+    "tcgdexStagedWebpPreserved": 10049
+  },
+  "afterIsolatedBranch": {
+    "zhHansCatalogue": 14923,
+    "zhHansDelta": 14046,
+    "koCatalogue": 239,
+    "koNewMetadataCandidates": 0,
+    "enCatalogue": 23323,
+    "jaCatalogue": 6246,
+    "enJaUnchanged": true
+  },
+  "webpDisjoint": {
+    "standardCanonicalDisplays": 8920,
+    "nonStandardDisplays": 0,
+    "orphanExtras": 12,
+    "totalWebp": 8932,
+    "sumParts": 8932,
+    "balanced": true
+  },
+  "standardInventory": {
+    "metadataRows": 8931,
+    "onDiskCanonicalRows": 8922,
+    "onDiskCanonicalUniquePaths": 8920,
+    "permanent404": 9,
+    "missingUnexpected": 0,
+    "sumRows": 8931,
+    "balancedRows": true,
+    "sharedCanonicalPaths": 2,
+    "sharedCanonicalPathSamples": {
+      "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CS2BC\\115_v1\\display.webp": [
+        "pokecardex|zh-Hans|CS2BC|115|v1",
+        "pokecardex|zh-Hans|CS2BC|115|v1"
+      ],
+      "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CSM1CC\\56_v1\\display.webp": [
+        "pokecardex|zh-Hans|CSM1CC|56|v1",
+        "pokecardex|zh-Hans|CSM1CC|56|v1"
+      ]
+    },
+    "rowVsUniqueGap": 2
+  },
+  "catalogueOverlap": {
+    "exactSetCodeOverlap": 0,
+    "highConfidenceRelated": 28,
+    "softParallelOrRelated": 388,
+    "noSoftMatch": 461,
+    "explanation": "Zero set-code overlap is expected: live catalogue zh-Hans rows use TCGdex IDs ['CSMPiC', 'SV10', 'SV7', 'SV7a', 'SV8', 'SV8a', 'SV9', 'SV9a'], while PokéCardex CHN shortNames are Chinese-market codes (CSV*C/CS*C/…). Unmatched provider IDs do not mean physically new cards. Soft matches use JA species→EN bridge + collector number."
+  },
+  "autoResolve": {
+    "generatedAtUtc": "2026-10-14T07:17:50Z",
+    "standardRowsConsidered": 8931,
+    "autoResolved": 8199,
+    "needsReview": 732,
+    "decisionCounts": {
+      "auto_accept_parallel_printing": 402,
+      "auto_accept_chinese_exclusive_candidate": 1001,
+      "auto_accept_known_cn_printing": 6750,
+      "auto_link_related_to_catalogue": 4,
+      "auto_accept_utility_energy": 42,
+      "review_promo_uncertain": 732
+    },
+    "nearDuplicateAutoFlagged": 0,
+    "nearDuplicateNeedsReview": 15,
+    "catalogueOverlap": {
+      "highConfidenceRelated": 28,
+      "softParallelOrRelated": 388,
+      "noSoftMatch": 461,
+      "exactSetCodeOverlap": 0
+    },
+    "thresholds": {
+      "autoAcceptMin": 0.75,
+      "nearDupAutoFlagMaxHamming": 2
+    }
+  },
+  "korean": {
+    "generatedAtUtc": "2026-10-14T07:19:51Z",
+    "imagesDownloaded": 0,
+    "catalogueKoExisting": 239,
+    "tcgdexKoSets": 95,
+    "tcgdexCardsReturnedInSetDetails": 239,
+    "tcgdexOfficialCountSum": 7588,
+    "existingReconciledHits": 239,
+    "newMetadataCandidates": 0,
+    "apiLimitation": "Many TCGdex ko set detail payloads return cardCount but empty cards[]. Candidates are emitted only for concrete card objects returned by the API. Official-count sum remains the coverage proxy for remaining gap.",
+    "nextSteps": [
+      "When TCGdex exposes ko card lists, re-run to fill candidates.",
+      "Classify image hosts before any KO image staging.",
+      "Seek written permission for non-API image sources."
+    ]
+  },
+  "readinessVerdict": {
+    "chineseMetadataIntegrationReady": true,
+    "chineseArtworkProductionReady": false,
+    "koreanMetadataApiExhaustedForNow": true,
+    "koreanArtworkReady": false,
+    "mergeToLiveReady": false,
+    "summary": "Chinese PokéCardex metadata is integrated on the isolated worktree catalogue (877 → 14923 zh-Hans) with attribution and artwork placeholders. EN/JA unchanged. WebP partitions are balanced. TCGdex KO API currently exposes only the same 239 cards already in catalogue (official-count proxy 7588); no new KO metadata rows could be created without additional permitted sources. Do not merge/deploy or promote artwork."
+  }
+}
