@@ -33,6 +33,8 @@ def main() -> int:
         "pokecardex/release_candidate/*.md",
         "pokecardex/release_candidate/*.json",
         "pokecardex/release_candidate/qa_pack/*.json",
+        "pokecardex/release_candidate/pack_install_layout/*.json",
+        "pokecardex/release_candidate/pack_install_layout/**/*.json",
         "korean/*",
         "korean_image_sources_investigation.md",
         "korean_permission_opportunities.md",
