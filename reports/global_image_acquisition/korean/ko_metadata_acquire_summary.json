@@ -1,0 +1,16 @@
+{
+  "generatedAtUtc": "2026-10-14T07:19:51Z",
+  "imagesDownloaded": 0,
+  "catalogueKoExisting": 239,
+  "tcgdexKoSets": 95,
+  "tcgdexCardsReturnedInSetDetails": 239,
+  "tcgdexOfficialCountSum": 7588,
+  "existingReconciledHits": 239,
+  "newMetadataCandidates": 0,
+  "apiLimitation": "Many TCGdex ko set detail payloads return cardCount but empty cards[]. Candidates are emitted only for concrete card objects returned by the API. Official-count sum remains the coverage proxy for remaining gap.",
+  "nextSteps": [
+    "When TCGdex exposes ko card lists, re-run to fill candidates.",
+    "Classify image hosts before any KO image staging.",
+    "Seek written permission for non-API image sources."
+  ]
+}

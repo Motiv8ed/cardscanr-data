@@ -1,0 +1,27 @@
+{
+  "generatedAtUtc": "2026-10-14T07:17:50Z",
+  "catalogueZhHans": 877,
+  "pokecardexStandard": 8931,
+  "catalogueProviderSetIds": [
+    "CSMPiC",
+    "SV10",
+    "SV7",
+    "SV7a",
+    "SV8",
+    "SV8a",
+    "SV9",
+    "SV9a"
+  ],
+  "exactProviderSetCodeOverlap": [],
+  "exactProviderSetCodeOverlapCount": 0,
+  "anomalyExplanation": "Zero set-code overlap is expected: live catalogue zh-Hans rows use TCGdex IDs ['CSMPiC', 'SV10', 'SV7', 'SV7a', 'SV8', 'SV8a', 'SV9', 'SV9a'], while PokéCardex CHN shortNames are Chinese-market codes (CSV*C/CS*C/…). Unmatched provider IDs do not mean physically new cards. Soft matches use JA species→EN bridge + collector number.",
+  "matchStatusCounts": {
+    "no_pokecardex_soft_match": 461,
+    "high_confidence_related_printing": 28,
+    "soft_match_parallel_or_related": 388
+  },
+  "highConfidenceRelated": 28,
+  "softParallelOrRelated": 388,
+  "noSoftMatch": 461,
+  "matchesPath": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_catalogue_overlap_matches.jsonl"
+}

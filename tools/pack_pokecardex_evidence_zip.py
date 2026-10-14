@@ -29,10 +29,15 @@ def main() -> int:
         "pokecardex/*.md",
         "pokecardex/contact_sheets/*",
         "pokecardex/catalogue_review/*",
+        "pokecardex/auto_resolve/*",
+        "korean/*",
         "korean_image_sources_investigation.md",
+        "korean_permission_opportunities.md",
         "korean_tcgdex_probe.json",
         "korean_acquisition_opportunity.json",
         "KOREAN_ACQUISITION_OPPORTUNITY.md",
+        "COVERAGE_BEFORE_AFTER.md",
+        "coverage_before_after.json",
         "before_coverage.json",
         "staging_acquire_summary.json",
     ]
@@ -42,6 +47,10 @@ def main() -> int:
         "pokecardex_zh_hans_printings_review.jsonl",  # large; summary + manifest in zip
         "zh_hans_image_manifest.jsonl",
         "zh_hans_variant_links.jsonl",
+        "zh_hans_catalogue_overlap_matches.jsonl",
+        "auto_resolved.jsonl",
+        "needs_review.jsonl",
+        "ko_tcgdex_metadata_candidates.jsonl",
         "tcgdex_sets_en.json",
         "tcgdex_sets_ja.json",
         "tcgdex_sets_ko.json",
@@ -57,8 +66,12 @@ def main() -> int:
                     continue
                 if path.name in skip_names:
                     continue
-                arc = path.relative_to(REPORT).as_posix()
-                zf.write(path, arcname=f"global_image_acquisition/{arc}")
+                rel = path.relative_to(REPORT).as_posix()
+                if "tcgdex_cache/" in rel or "/tcgdex_card_cache/" in rel:
+                    continue
+                if path.stat().st_size > 2_000_000:
+                    continue
+                zf.write(path, arcname=f"global_image_acquisition/{rel}")
                 written += 1
         zf.writestr(
             "global_image_acquisition/RIGHTS_POINTER.txt",
@@ -74,12 +87,10 @@ def main() -> int:
                 "pokecardex_zh_hans_printings_review.jsonl\n"
             ),
         )
-        # Also copy a second archive under CardScanR_Archive/Downloads for operator continuity
-        alt = Path(r"D:\CardScanR_Archive\Downloads")
-        alt.mkdir(parents=True, exist_ok=True)
-    # Write primary then copy
     print(f"wrote {out} files={written}")
-    alt_out = Path(r"D:\CardScanR_Archive\Downloads") / out.name
+    alt = Path(r"D:\CardScanR_Archive\Downloads")
+    alt.mkdir(parents=True, exist_ok=True)
+    alt_out = alt / out.name
     alt_out.write_bytes(out.read_bytes())
     print(f"copied {alt_out}")
     return 0
