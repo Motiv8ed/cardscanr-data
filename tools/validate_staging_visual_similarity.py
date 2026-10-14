@@ -26,8 +26,6 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-import global_image_staging_acquire as g
-
 ROOT = Path(__file__).resolve().parent.parent
 REPORT = ROOT / "reports" / "global_image_acquisition"
 DEFAULT_STAGING = Path(r"D:\CardScanR_Archive\image_staging\global_acq_20261013")
@@ -36,6 +34,17 @@ DEFAULT_LIVE = Path(r"D:\CardScanR_Data\cardscanr-data")
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def safe_seg(value: str) -> str:
+    """Filesystem-safe path segment (local; avoids importing staging-acquire)."""
+    text = re.sub(r"[^\w.\-]+", "_", str(value or "").strip())
+    return text[:180] or "unknown"
+
+
+def normalize_collector(value: object) -> str:
+    text = str(value or "").strip().upper().replace(" ", "")
+    return text
 
 
 def load_rgb(path: Path) -> np.ndarray | None:
@@ -123,7 +132,7 @@ def write_quarantine(
     issues: list[str],
     staging_path: Path,
 ) -> None:
-    qdir = quarantine_root / g.safe_seg(cid or staging_path.name)
+    qdir = quarantine_root / safe_seg(cid or staging_path.name)
     qdir.mkdir(parents=True, exist_ok=True)
     (qdir / "quarantine_visual.json").write_text(
         json.dumps(
@@ -268,7 +277,7 @@ def main() -> int:
             for b in group[i + 1 :]:
                 if not a["collector"] or not b["collector"]:
                     continue
-                if g.normalize_collector(a["collector"]) == g.normalize_collector(b["collector"]):
+                if normalize_collector(a["collector"]) == normalize_collector(b["collector"]):
                     continue
                 dist = hamming(a["bits"], b["bits"])
                 if dist <= args.dup_hamming_threshold:
