@@ -1,0 +1,240 @@
+{
+  "generatedAtUtc": "2026-10-14T08:45:13Z",
+  "purpose": "zh_hans_release_candidate_source_vs_integrated_reconciliation",
+  "identity": {
+    "sourceReviewRows": 15039,
+    "liveZhHans": 877,
+    "worktreeZhHans": 14923,
+    "integratedNewPokecardexRows": 14046,
+    "linkedOriginalsWithPokecardex": 28,
+    "originalIdsPreserved": true,
+    "originalCountInWorktree": 877,
+    "expectedWorktreeZh": 14923,
+    "worktreeMatchesExpected": true,
+    "sourcePartition": {
+      "integrated_as_new": 14046,
+      "excluded_sum": 993,
+      "other_buckets": {},
+      "sumBuckets": 15039,
+      "balanced": true
+    },
+    "unexplainedMissing": 0,
+    "priorManifestIdentity": {
+      "added": 14046,
+      "skippedNotAutoAcceptedApprox": 993,
+      "note": "skippedNotAutoAccepted includes review-gate exclusions; links attach to live rows without consuming a review row as 'added'."
+    }
+  },
+  "exclusionBuckets": {
+    "integrated_as_new_pokecardex_row": 14046,
+    "excluded_not_auto_accepted_review_gate": 152,
+    "excluded_uncertain_promo_review_queue": 841
+  },
+  "exclusionSamples": {
+    "integrated_as_new_pokecardex_row": [
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:0c06f4e59039452f|1%2F151|unspecified",
+        "providerSetId": "151C",
+        "printedCollectorNumber": "001/151",
+        "cardVariant": "unspecified",
+        "setClassification": "en_card_name_parallel_candidate",
+        "autoAcceptedKey": true,
+        "mappedOrBridge": true
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:0c06f4e59039452f|1%2F151|reverse_holo",
+        "providerSetId": "151C",
+        "printedCollectorNumber": "001/151",
+        "cardVariant": "reverse_holo",
+        "setClassification": "en_card_name_parallel_candidate",
+        "autoAcceptedKey": true,
+        "mappedOrBridge": true
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:0c06f4e59039452f|1%2F151|reverse_masterball",
+        "providerSetId": "151C",
+        "printedCollectorNumber": "001/151",
+        "cardVariant": "reverse_masterball",
+        "setClassification": "en_card_name_parallel_candidate",
+        "autoAcceptedKey": true,
+        "mappedOrBridge": true
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:0c06f4e59039452f|2%2F151|unspecified",
+        "providerSetId": "151C",
+        "printedCollectorNumber": "002/151",
+        "cardVariant": "unspecified",
+        "setClassification": "en_card_name_parallel_candidate",
+        "autoAcceptedKey": true,
+        "mappedOrBridge": true
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:0c06f4e59039452f|2%2F151|reverse_holo",
+        "providerSetId": "151C",
+        "printedCollectorNumber": "002/151",
+        "cardVariant": "reverse_holo",
+        "setClassification": "en_card_name_parallel_candidate",
+        "autoAcceptedKey": true,
+        "mappedOrBridge": true
+      }
+    ],
+    "excluded_not_auto_accepted_review_gate": [
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:3a2c77fe19cb021d|S1|unspecified",
+        "providerSetId": "NRGY",
+        "printedCollectorNumber": "s1",
+        "cardVariant": "unspecified",
+        "setClassification": "utility_energy",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:3a2c77fe19cb021d|S2|unspecified",
+        "providerSetId": "NRGY",
+        "printedCollectorNumber": "s2",
+        "cardVariant": "unspecified",
+        "setClassification": "utility_energy",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:3a2c77fe19cb021d|S3|unspecified",
+        "providerSetId": "NRGY",
+        "printedCollectorNumber": "s3",
+        "cardVariant": "unspecified",
+        "setClassification": "utility_energy",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:3a2c77fe19cb021d|S4|unspecified",
+        "providerSetId": "NRGY",
+        "printedCollectorNumber": "s4",
+        "cardVariant": "unspecified",
+        "setClassification": "utility_energy",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:3a2c77fe19cb021d|S5|unspecified",
+        "providerSetId": "NRGY",
+        "printedCollectorNumber": "s5",
+        "cardVariant": "unspecified",
+        "setClassification": "utility_energy",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      }
+    ],
+    "excluded_uncertain_promo_review_queue": [
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:21ecef01a46ecb2a|1%2FSM-P|unspecified",
+        "providerSetId": "SMP",
+        "printedCollectorNumber": "001/SM-P",
+        "cardVariant": "unspecified",
+        "setClassification": "promo_or_special_unmapped",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:21ecef01a46ecb2a|2%2FSM-P|unspecified",
+        "providerSetId": "SMP",
+        "printedCollectorNumber": "002/SM-P",
+        "cardVariant": "unspecified",
+        "setClassification": "promo_or_special_unmapped",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:21ecef01a46ecb2a|3%2FSM-P|unspecified",
+        "providerSetId": "SMP",
+        "printedCollectorNumber": "003/SM-P",
+        "cardVariant": "unspecified",
+        "setClassification": "promo_or_special_unmapped",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:21ecef01a46ecb2a|4%2FSM-P|unspecified",
+        "providerSetId": "SMP",
+        "printedCollectorNumber": "004/SM-P",
+        "cardVariant": "unspecified",
+        "setClassification": "promo_or_special_unmapped",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      },
+      {
+        "canonicalPrintingId": "pokemon|zh-Hans|CN|set:21ecef01a46ecb2a|5%2FSM-P|unspecified",
+        "providerSetId": "SMP",
+        "printedCollectorNumber": "005/SM-P",
+        "cardVariant": "unspecified",
+        "setClassification": "promo_or_special_unmapped",
+        "autoAcceptedKey": false,
+        "mappedOrBridge": false
+      }
+    ]
+  },
+  "autoResolveDecisionCounts": {
+    "auto_accept_parallel_printing": 402,
+    "auto_accept_chinese_exclusive_candidate": 1001,
+    "auto_accept_known_cn_printing": 6750,
+    "auto_link_related_to_catalogue": 4,
+    "auto_accept_utility_energy": 42
+  },
+  "needsReviewDecisionCounts": {
+    "review_promo_uncertain": 732
+  },
+  "needsReviewRows": 732,
+  "overlap": {
+    "highConfidenceRelatedLinks": 28,
+    "softParallelOrRelated": 388,
+    "noSoftMatchOrLow": 461,
+    "totalOverlapRows": 877
+  },
+  "variants": {
+    "sourceByCardVariant": {
+      "unspecified": 8931,
+      "reverse_holo": 2936,
+      "reverse_masterball": 1823,
+      "special_alternate": 1340,
+      "rare_promo": 8,
+      "holo": 1
+    },
+    "integratedNewByCardVariant": {
+      "unspecified": 8157,
+      "reverse_holo": 2926,
+      "reverse_masterball": 1723,
+      "special_alternate": 1240
+    },
+    "integratedNewBySetClassification": {
+      "en_card_name_parallel_candidate": 471,
+      "en_bridge_parallel_candidate": 209,
+      "chinese_exclusive_or_uncertain_set": 1400,
+      "mapped_tcgdex_zh_cn": 11965,
+      "promo_or_special_unmapped": 1
+    },
+    "excludedBySetClassification": {
+      "utility_energy": 50,
+      "promo_or_special_unmapped": 943
+    }
+  },
+  "nearDuplicates": {
+    "pairCount": 15,
+    "policy": "preserve_uncertainty_no_forced_merge",
+    "autoFlagged": 0,
+    "needsReview": 15
+  },
+  "artwork": {
+    "newRowsPlaceholderOk": 14046,
+    "newRowsTotal": 14046,
+    "stagingPublicUrlLeaks": 0,
+    "stagingLeakSamples": [],
+    "attributionMissingCount": 0,
+    "attributionMissingSamples": []
+  },
+  "verdictHints": {
+    "countsBalanced": true,
+    "originalsPreserved": true,
+    "placeholdersOnly": true,
+    "attributionPresent": true
+  }
+}

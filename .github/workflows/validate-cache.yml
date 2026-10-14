@@ -32,3 +32,6 @@ jobs:
 
       - name: EN/JA image independence catalogue CDN regression
         run: python -m pytest tests/test_en_jp_image_independence_regression.py -q --tb=line
+
+      - name: Future zh-cn identity crosswalk contract (no pack publish)
+        run: python tools/test_future_zhcn_identity_crosswalk.py -q

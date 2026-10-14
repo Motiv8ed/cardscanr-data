@@ -1,0 +1,79 @@
+{
+  "generatedAtUtc": "2026-10-14T08:43:14Z",
+  "packPath": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\release_candidate\\qa_pack\\zh-cn.sqlite",
+  "passed": 14,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "pack_card_count",
+      "pass": true,
+      "detail": "cards=14923 expected=14923"
+    },
+    {
+      "name": "pack_set_count",
+      "pass": true,
+      "detail": "sets=63"
+    },
+    {
+      "name": "set_browse_top_sets",
+      "pass": true,
+      "detail": "top=[{'set_id': 'pokemon|zh-Hans|CN|pokecardex:CSV10C', 'set_name': 'Chasing Glory Together', 'n': 683}, {'set_id': 'pokemon|zh-Hans|CN|pokecardex:CSV9C', 'set_name': 'Stellar Crystal', 'n': 620}, {'set_id': 'pokemon|zh-Hans|CN|pokecardex:CSV8C', 'set_name': 'Brilliant Fantasy', 'n': 616}, {'set_id': 'pokemon|zh-Hans|CN|pokecardex:CSV7C', 'set_name': 'Blade Awakenings', 'n': 605}, {'set_id': 'pokemon|zh-Hans|CN|pokecardex:CSV95C', 'set_name': 'Terastal Gathering', 'n': 601}]"
+    },
+    {
+      "name": "search_by_chinese_name_fts",
+      "pass": true,
+      "detail": "name='迷你芙' hits=1"
+    },
+    {
+      "name": "search_by_collector_number",
+      "pass": true,
+      "detail": "collector=001/150 hits=90"
+    },
+    {
+      "name": "set_plus_collector_identity",
+      "pass": true,
+      "detail": "set=csm2cc collector=001 hits=1"
+    },
+    {
+      "name": "variant_rows_present",
+      "pass": true,
+      "detail": "samples=[{'set_code': '151C', 'printed_collector_number': '001/151', 'n': 3}, {'set_code': '151C', 'printed_collector_number': '002/151', 'n': 3}, {'set_code': '151C', 'printed_collector_number': '004/151', 'n': 3}, {'set_code': '151C', 'printed_collector_number': '005/151', 'n': 3}, {'set_code': '151C', 'printed_collector_number': '007/151', 'n': 3}]"
+    },
+    {
+      "name": "placeholders_only",
+      "pass": true,
+      "detail": "nonPlaceholder=0 bad=0"
+    },
+    {
+      "name": "original_877_ids_preserved",
+      "pass": true,
+      "detail": "live=877 preserved=877"
+    },
+    {
+      "name": "binder_identity_fields",
+      "pass": true,
+      "detail": "missing_in_sample500=0"
+    },
+    {
+      "name": "pack_storage_language_zh_cn",
+      "pass": true,
+      "detail": "langs={'zh-cn'}"
+    },
+    {
+      "name": "near_dups_unresolved_preserved",
+      "pass": true,
+      "detail": "unresolved=15"
+    },
+    {
+      "name": "website_pokecardex_attribution",
+      "pass": true,
+      "detail": "pages_ok=4 missing=[]"
+    },
+    {
+      "name": "commercial_metadata_permission_stated",
+      "pass": true,
+      "detail": "public_website/data/index.html"
+    }
+  ],
+  "verdict": "PASS"
+}

@@ -1,0 +1,529 @@
+{
+  "generatedAtUtc": "2026-10-14T02:07:39Z",
+  "metadataRowsTotal": 15039,
+  "versionIdCounts": {
+    "1": 8931,
+    "2": 2936,
+    "3": 1,
+    "10": 1823,
+    "11": 1340,
+    "71": 8
+  },
+  "versionKindCounts": {
+    "standard": 8931,
+    "reverse": 2936,
+    "reverse_masterball": 1823,
+    "special_alternate": 1340,
+    "rare_promo_style": 8,
+    "holo_or_special": 1
+  },
+  "setCrosswalk": {
+    "pokecardexSets": 59,
+    "mappedToTcgdexZhCn": 40,
+    "enBridgeOnly": 2,
+    "unmatchedSets": 17,
+    "methods": {
+      "unmatched": 17,
+      "en_name_bridge_only": 1,
+      "manual_alias_30th_promo": 1,
+      "exact_set_id": 31,
+      "half_set_transform": 9
+    }
+  },
+  "cardMatchStatusCounts": {
+    "genuinely_unmapped_candidate": 3074,
+    "in_tcgdex_zh_cn_set_not_in_catalogue": 11965
+  },
+  "standardRows": 8931,
+  "standardRowsInMappedTcgdexSet": 6750,
+  "genuinelyUnmappedStandardCandidates": 2181,
+  "genuinelyUnmappedNonStandardCandidates": 893,
+  "interpretation": "Rows in a mapped TCGdex zh-cn set are treated as known Chinese printings (often missing from the CardScanR catalogue). Genuinely unmapped candidates lack both a mapped TCGdex zh-cn set and a catalogue soft-match — these need human/visual review before calling them new printings. Non-standard version rows (reverse / masterball / special) are variants of the same collector number, not automatically additive printings.",
+  "samplesAdditive": [
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "001/151",
+      "name": "Bulbasaur",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "001/151",
+      "name": "Bulbasaur",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "001/151",
+      "name": "Bulbasaur",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "002/151",
+      "name": "Ivysaur",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "002/151",
+      "name": "Ivysaur",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "002/151",
+      "name": "Ivysaur",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "003/151",
+      "name": "Venusaur ex",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "004/151",
+      "name": "Charmander",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "004/151",
+      "name": "Charmander",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "004/151",
+      "name": "Charmander",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "005/151",
+      "name": "Charmeleon",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "005/151",
+      "name": "Charmeleon",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "005/151",
+      "name": "Charmeleon",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "006/151",
+      "name": "Charizard ex",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "007/151",
+      "name": "Squirtle",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "007/151",
+      "name": "Squirtle",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "007/151",
+      "name": "Squirtle",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "008/151",
+      "name": "Wartortle",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "008/151",
+      "name": "Wartortle",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "008/151",
+      "name": "Wartortle",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "009/151",
+      "name": "Blastoise ex",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "010/151",
+      "name": "Caterpie",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "010/151",
+      "name": "Caterpie",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "010/151",
+      "name": "Caterpie",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "011/151",
+      "name": "Metapod",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "011/151",
+      "name": "Metapod",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "011/151",
+      "name": "Metapod",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "012/151",
+      "name": "Butterfree",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "012/151",
+      "name": "Butterfree",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "012/151",
+      "name": "Butterfree",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "013/151",
+      "name": "Weedle",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "013/151",
+      "name": "Weedle",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "013/151",
+      "name": "Weedle",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "014/151",
+      "name": "Kakuna",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "014/151",
+      "name": "Kakuna",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "014/151",
+      "name": "Kakuna",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "015/151",
+      "name": "Beedrill",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "015/151",
+      "name": "Beedrill",
+      "versionId": 2,
+      "versionLabel": "Reverse",
+      "kind": "reverse"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "015/151",
+      "name": "Beedrill",
+      "versionId": 10,
+      "versionLabel": "Reverse Masterball",
+      "kind": "reverse_masterball"
+    },
+    {
+      "set": "151C",
+      "setName": "Collect 151",
+      "num": "016/151",
+      "name": "Pidgey",
+      "versionId": 1,
+      "versionLabel": "Standard",
+      "kind": "standard"
+    }
+  ],
+  "samplesMatched": [
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "101",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-101",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "102",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-102",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "103",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-103",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "104",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-104",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "105",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-105",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "106",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-106",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "107",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-107",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "108",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-108",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "109",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-109",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "110",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-110",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "111",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-111",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "112",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-112",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "113",
+      "name": "Eevee-V",
+      "syntheticTcgdexCardId": "CBB2C-113",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "114",
+      "name": "Eevee-VMAX",
+      "syntheticTcgdexCardId": "CBB2C-114",
+      "catalogueVia": null
+    },
+    {
+      "pokecardexSetId": "CBB2C",
+      "tcgdexZhCnSetId": "CBB2C",
+      "num": "115",
+      "name": "Eevee",
+      "syntheticTcgdexCardId": "CBB2C-115",
+      "catalogueVia": null
+    }
+  ],
+  "cardRowsPath": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\pokecardex_tcgdex_card_crosswalk.jsonl",
+  "noteOnTcgdexCardsApi": "TCGdex zh-cn set endpoints currently return cardCount but empty cards[]. Card IDs are therefore synthesized as {setId}-{normalizedCollector} for provenance linking; visual/OCR validation remains required.",
+  "setMapPath": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\pokecardex_tcgdex_set_crosswalk.json"
+}
