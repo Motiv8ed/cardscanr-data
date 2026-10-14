@@ -1,6 +1,6 @@
 # Chinese metadata integration readiness
 
-Generated: 2026-10-14T07:18:45Z
+Generated: 2026-10-14T09:29:33Z
 
 - zh-Hans before: **877**
 - zh-Hans after (worktree): **14923** (Δ **14046**)
