@@ -20,8 +20,6 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import finalize_pokecardex_zh_hans_reconcile as fin  # noqa: E402
-import pokecardex_zh_hans_acquire as acq  # noqa: E402
 REPORT = ROOT / "reports" / "global_image_acquisition" / "pokecardex"
 LIVE_CARDS = Path(r"D:\CardScanR_Data\cardscanr-data\data\global\catalogue\cards.jsonl")
 OUT_DIR = ROOT / "data" / "global" / "catalogue"
