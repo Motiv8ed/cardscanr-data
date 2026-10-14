@@ -1,0 +1,134 @@
+{
+  "generatedAtUtc": "2026-10-14T04:31:30Z",
+  "phase": "korean_expansion_investigation",
+  "bytesDownloaded": 0,
+  "subscriptionsPurchased": 0,
+  "catalogueKoPrintings": 239,
+  "catalogueKoWithImageProvenance": 0,
+  "catalogueKoProviderSetCodes": 3,
+  "catalogueKoTopSets": [
+    [
+      "SV4K",
+      95
+    ],
+    [
+      "SV4M",
+      95
+    ],
+    [
+      "SV5K",
+      49
+    ]
+  ],
+  "tcgdexKoSets": 95,
+  "tcgdexKoSetsWithOfficialCount": 95,
+  "tcgdexKoApproxOfficialCards": 7875,
+  "expectedMetadataGapVsTcgdexOfficial": 7636,
+  "expectedCoverage": {
+    "ifTcgdexMetadataIngested": {
+      "approxPrintings": 7875,
+      "vsCurrentCatalogue": 239,
+      "approxAdditiveMetadata": 7636,
+      "imagesProductionCleared": 0,
+      "note": "TCGdex official cardCount is a proxy, not a proof of downloadable artwork. Image hosts must be classified before any staging."
+    }
+  },
+  "sources": [
+    {
+      "source": "TCGdex API (ko)",
+      "type": "public_http_api",
+      "access": "metadata_list_ok_rate_limited",
+      "imageRights": "third_party_hosts_require_per_url_review_mit_metadata_neq_pokemon_ip",
+      "sets": 95,
+      "approxOfficialCards": 7875,
+      "acquireAllowedNow": "metadata_probe_only",
+      "priority": 1,
+      "notes": "Primary technical candidate for KO metadata expansion; gate any image staging."
+    },
+    {
+      "source": "CardScanR live catalogue (ko)",
+      "type": "internal",
+      "access": "already_in_repo",
+      "imageRights": "n/a",
+      "printings": 239,
+      "withImageProvenance": 0,
+      "acquireAllowedNow": "n/a",
+      "priority": 0,
+      "notes": "Baseline; currently image-poor."
+    },
+    {
+      "source": "Pokémon TCG API (pokemontcg.io)",
+      "type": "public_api",
+      "access": "terms_apply",
+      "imageRights": "typically_publisher_assets_review_required",
+      "acquireAllowedNow": "no_bulk_mirror",
+      "priority": 2,
+      "notes": "Monitor KO completeness; do not bulk-mirror."
+    },
+    {
+      "source": "Official Pokémon Korea / TPCi pages",
+      "type": "official_web",
+      "access": "public_pages",
+      "imageRights": "highest_legitimacy_when_press_assets_offered",
+      "acquireAllowedNow": "promo_only_if_explicitly_offered",
+      "priority": 3,
+      "notes": "Prefer for promos; not a full-set pipeline."
+    },
+    {
+      "source": "Collector contributions",
+      "type": "user_upload",
+      "access": "requires_contribution_licence",
+      "imageRights": "contributor_grant_plus_pokemon_ip_still_pending_for_production",
+      "acquireAllowedNow": "design_intake_only",
+      "priority": 4,
+      "notes": "Useful for rare KO gaps with signed attestation."
+    },
+    {
+      "source": "PokéCardex",
+      "type": "fan_catalogue",
+      "access": "written_permission_cn_only",
+      "imageRights": "no_ko_region",
+      "acquireAllowedNow": "out_of_scope_for_ko",
+      "priority": 99,
+      "notes": "No KO zone; CN permission does not extend here."
+    },
+    {
+      "source": "Marketplace / scan-blog scrape",
+      "type": "unauthorised_scrape",
+      "access": "rejected",
+      "imageRights": "high_legal_risk",
+      "acquireAllowedNow": "no",
+      "priority": 100,
+      "notes": "Rejected."
+    }
+  ],
+  "recommendedNextSteps": [
+    "Inventory TCGdex ko card image URL hosts (metadata-only sample per set) and classify rights.",
+    "Draft KO metadata ingest using cardscanr_global_catalogue contracts (provider=tcgdex, language=ko).",
+    "Keep productionPromotionAllowed=false for any future KO image staging.",
+    "Design collector contribution attestation path for rare gaps.",
+    "Do not purchase subscriptions or scrape marketplaces."
+  ],
+  "sampleTcgdexSetIds": [
+    "SM1S",
+    "SM1M",
+    "SM1+",
+    "SM2L",
+    "SM2K",
+    "SM3H",
+    "SM3N",
+    "SM3+",
+    "SM4S",
+    "SM4A",
+    "SM4+",
+    "SM5S",
+    "SM5M",
+    "SM5+",
+    "SM6",
+    "SM6a",
+    "SM6b",
+    "SM7",
+    "SM7b",
+    "SM7a"
+  ]
+}

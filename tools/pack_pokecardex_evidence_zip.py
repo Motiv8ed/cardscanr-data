@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Pack PokéCardex/global-acq evidence ZIP (reports + sample contact sheets; no full image dump)."""
+"""Pack PokéCardex/global-acq evidence ZIP into the user's Downloads folder."""
 
 from __future__ import annotations
 
 import argparse
+import os
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORT = ROOT / "reports" / "global_image_acquisition"
-DEFAULT_OUT = Path(r"D:\CardScanR_Archive\Downloads")
+DEFAULT_OUT = Path(os.environ.get("USERPROFILE", r"C:\Users\andyg")) / "Downloads"
 
 
 def utc_stamp() -> str:
@@ -27,19 +28,27 @@ def main() -> int:
         "pokecardex/*.json",
         "pokecardex/*.md",
         "pokecardex/contact_sheets/*",
+        "pokecardex/catalogue_review/*",
         "korean_image_sources_investigation.md",
         "korean_tcgdex_probe.json",
+        "korean_acquisition_opportunity.json",
+        "KOREAN_ACQUISITION_OPPORTUNITY.md",
         "before_coverage.json",
         "staging_acquire_summary.json",
     ]
-    # Prefer slim summaries; skip huge card crosswalk jsonl in ZIP unless small
     skip_names = {
         "zh_hans_cards.jsonl",
         "pokecardex_tcgdex_card_crosswalk.jsonl",
+        "pokecardex_zh_hans_printings_review.jsonl",  # large; summary + manifest in zip
+        "zh_hans_image_manifest.jsonl",
+        "zh_hans_variant_links.jsonl",
         "tcgdex_sets_en.json",
         "tcgdex_sets_ja.json",
         "tcgdex_sets_ko.json",
+        "_validate_stdout.txt",
+        "watch_finish_status.json",
     }
+    # Include slim jsonl samples? Prefer summaries. Also add RIGHTS pointer.
     written = 0
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for pattern in include_globs:
@@ -51,7 +60,6 @@ def main() -> int:
                 arc = path.relative_to(REPORT).as_posix()
                 zf.write(path, arcname=f"global_image_acquisition/{arc}")
                 written += 1
-        # Tiny provenance pointer (not the private email body)
         zf.writestr(
             "global_image_acquisition/RIGHTS_POINTER.txt",
             (
@@ -59,11 +67,21 @@ def main() -> int:
                 "D:\\CardScanR_Archive\\rights_evidence\\pokecardex\\"
                 "POKECARDEX_WRITTEN_PERMISSION_2026-10-13.md\n"
                 "Chinese images remain staged only; productionPromotionAllowed=false.\n"
-                "TCGdex staging milestone preserved separately under "
+                "TCGdex staging milestone preserved under "
                 "D:\\CardScanR_Archive\\image_staging\\global_acq_20261013 (10,049 display.webp).\n"
+                "Full review jsonl (not in this ZIP): "
+                "reports/global_image_acquisition/pokecardex/catalogue_review/"
+                "pokecardex_zh_hans_printings_review.jsonl\n"
             ),
         )
+        # Also copy a second archive under CardScanR_Archive/Downloads for operator continuity
+        alt = Path(r"D:\CardScanR_Archive\Downloads")
+        alt.mkdir(parents=True, exist_ok=True)
+    # Write primary then copy
     print(f"wrote {out} files={written}")
+    alt_out = Path(r"D:\CardScanR_Archive\Downloads") / out.name
+    alt_out.write_bytes(out.read_bytes())
+    print(f"copied {alt_out}")
     return 0
 
 

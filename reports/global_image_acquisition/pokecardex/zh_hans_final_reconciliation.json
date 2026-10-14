@@ -1,0 +1,683 @@
+{
+  "generatedAtUtc": "2026-10-14T04:31:00Z",
+  "phase": "final_reconciliation",
+  "denominators": {
+    "standardMetadataRows": 8931,
+    "nonStandardMetadataRows": 6108,
+    "metadataRowsTotal": 15039,
+    "stagedDisplayWebp": 8932,
+    "standardRowsWithDisplayOnDisk": 8922,
+    "progressPermanent404Deduped": 9,
+    "progressOkDeduped": 8931,
+    "progressSkipExistingDeduped": 0,
+    "preservedTcgdexStaging": 10049,
+    "catalogueZhHans": 877,
+    "productionCleared": 0
+  },
+  "arithmeticCheck": {
+    "standard": 8931,
+    "onDisk": 8922,
+    "permanent404": 9,
+    "missingUnexpected": 0,
+    "sumOnDiskPlus404PlusMissing": 8931,
+    "balanced": true,
+    "extraDisplayFilesVsStandardPaths": 12,
+    "interpretation": "8931 standard rows = 8922 on-disk + 9 true CDN 404s + 0 unexpected missing. Staged webp total 8932 exceeds standard on-disk paths by 10 (orphans/extras/nonstd leftovers); valid assets are preserved — extras are inventoried, not deleted."
+  },
+  "gaps404": [
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|119|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "119/103",
+      "englishCardName": "Kommo-o",
+      "sort": 119,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": null
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|128|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "128/169",
+      "englishCardName": "Mewtwo ex",
+      "sort": 128,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": null
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|129|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "129/169",
+      "englishCardName": "Mew ex",
+      "sort": 129,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": null
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|131|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "131/169",
+      "englishCardName": "Gengar ex",
+      "sort": 131,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": null
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|157|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "157/169",
+      "englishCardName": "Greninja BREAK",
+      "sort": 157,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": null
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|s174|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "R/RGB",
+      "englishCardName": "Mew",
+      "sort": 174,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": [
+        "https://pokecardex-scans.b-cdn.net/sets_chn/30THC/174.jpg?class=md"
+      ]
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|s175|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "G/RGB",
+      "englishCardName": "Mew",
+      "sort": 175,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": [
+        "https://pokecardex-scans.b-cdn.net/sets_chn/30THC/175.jpg?class=md"
+      ]
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|30THC|s176|v1",
+      "set": "30THC",
+      "setName": "30th Celebration",
+      "printedCollectorNumber": "B/RGB",
+      "englishCardName": "Mew",
+      "sort": 176,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": [
+        "https://pokecardex-scans.b-cdn.net/sets_chn/30THC/176.jpg?class=md"
+      ]
+    },
+    {
+      "stagingKey": "pokecardex|zh-Hans|SVP|421|v1",
+      "set": "SVP",
+      "setName": "Scarlet & Violet Promotional",
+      "printedCollectorNumber": "421/SV-P",
+      "englishCardName": "Gengar ex",
+      "sort": 421,
+      "progressReason": "404:HTTP Error 404: Not Found",
+      "triedUrls": [
+        "https://pokecardex-scans.b-cdn.net/sets_chn/SVP/421.jpg?class=md"
+      ]
+    }
+  ],
+  "gapsMissingUnexpected": [],
+  "orphanDisplayFiles": [
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\dar_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\fig_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\fir_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\gra_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\lig_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\met_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\psy_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\30THC\\wat_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\NRGY\\__v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SMP\\__v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SPP\\s-p_v1\\display.webp",
+    "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SVPU\\sv-p_v1\\display.webp"
+  ],
+  "orphanDisplayFileCount": 12,
+  "nearDuplicateArtPairs": [
+    {
+      "set": "CBB1C",
+      "hamming": 8,
+      "a": {
+        "collector": "1801",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1801_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1801|v1"
+      },
+      "b": {
+        "collector": "1804",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1804_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1804|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB1C",
+      "hamming": 6,
+      "a": {
+        "collector": "1802",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1802_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1802|v1"
+      },
+      "b": {
+        "collector": "1805",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1805_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1805|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB1C",
+      "hamming": 6,
+      "a": {
+        "collector": "1803",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1803_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1803|v1"
+      },
+      "b": {
+        "collector": "1806",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\1806_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|1806|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB1C",
+      "hamming": 8,
+      "a": {
+        "collector": "701",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\701_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|701|v1"
+      },
+      "b": {
+        "collector": "702",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB1C\\702_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB1C|702|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB2C",
+      "hamming": 5,
+      "a": {
+        "collector": "1102",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB2C\\1102_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB2C|1102|v1"
+      },
+      "b": {
+        "collector": "1105",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB2C\\1105_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB2C|1105|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB2C",
+      "hamming": 4,
+      "a": {
+        "collector": "1103",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB2C\\1103_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB2C|1103|v1"
+      },
+      "b": {
+        "collector": "1106",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB2C\\1106_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB2C|1106|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB3C",
+      "hamming": 7,
+      "a": {
+        "collector": "1402",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB3C\\1402_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB3C|1402|v1"
+      },
+      "b": {
+        "collector": "1405",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB3C\\1405_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB3C|1405|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB4C",
+      "hamming": 4,
+      "a": {
+        "collector": "101",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\101_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|101|v1"
+      },
+      "b": {
+        "collector": "102",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\102_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|102|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB4C",
+      "hamming": 8,
+      "a": {
+        "collector": "1201",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\1201_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|1201|v1"
+      },
+      "b": {
+        "collector": "1202",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\1202_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|1202|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB4C",
+      "hamming": 7,
+      "a": {
+        "collector": "1701",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\1701_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|1701|v1"
+      },
+      "b": {
+        "collector": "1702",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\1702_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|1702|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB4C",
+      "hamming": 7,
+      "a": {
+        "collector": "2001",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\2001_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|2001|v1"
+      },
+      "b": {
+        "collector": "2002",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\2002_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|2002|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB4C",
+      "hamming": 8,
+      "a": {
+        "collector": "601",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\601_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|601|v1"
+      },
+      "b": {
+        "collector": "602",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB4C\\602_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB4C|602|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB5C",
+      "hamming": 8,
+      "a": {
+        "collector": "1901",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB5C\\1901_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB5C|1901|v1"
+      },
+      "b": {
+        "collector": "1902",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB5C\\1902_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB5C|1902|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "CBB6C",
+      "hamming": 6,
+      "a": {
+        "collector": "1001",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB6C\\1001_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB6C|1001|v1"
+      },
+      "b": {
+        "collector": "1002",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\CBB6C\\1002_v1",
+        "stagingKey": "pokecardex|zh-Hans|CBB6C|1002|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    },
+    {
+      "set": "SPP",
+      "hamming": 0,
+      "a": {
+        "collector": "38",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SPP\\38_v1",
+        "stagingKey": "pokecardex|zh-Hans|SPP|38|v1"
+      },
+      "b": {
+        "collector": "76",
+        "path": "D:\\CardScanR_Archive\\image_staging\\pokecardex_zh_hans_20261014\\zh-Hans\\SPP\\76_v1",
+        "stagingKey": "pokecardex|zh-Hans|SPP|76|v1"
+      },
+      "reviewStatus": "needs_human_review",
+      "note": "Near-identical art crop across different collectors in the same set. May be true alt-art siblings, energy lookalikes, or mis-labelled staging."
+    }
+  ],
+  "nearDuplicateArtPairCount": 15,
+  "setCrosswalk": {
+    "pokecardexSets": 59,
+    "byClassification": {
+      "en_card_name_parallel_candidate": 2,
+      "en_bridge_parallel_candidate": 2,
+      "chinese_exclusive_or_uncertain_set": 10,
+      "mapped_tcgdex_zh_cn": 40,
+      "utility_energy": 1,
+      "promo_or_special_unmapped": 4
+    },
+    "methods": {
+      "en_card_name_density": 2,
+      "en_name_bridge_only": 1,
+      "manual_alias_30th_promo": 1,
+      "unmatched": 15,
+      "exact_set_id": 31,
+      "half_set_transform": 9
+    }
+  },
+  "standardCardClassification": {
+    "parallel_printing_candidate": 516,
+    "chinese_exclusive_candidate": 938,
+    "known_cn_via_tcgdex_set_absent_from_catalogue": 6750,
+    "utility_energy": 42,
+    "promo_unmapped_uncertain": 685
+  },
+  "catalogueZhHansSoftHits": 0,
+  "chineseExclusiveStandardCandidates": 938,
+  "parallelPrintingStandardCandidates": 516,
+  "knownCnViaTcgdexAbsentFromCatalogue": 6750,
+  "exclusiveSamples": [
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0101/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0102/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0103/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0104/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0105/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0106/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0107/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0108/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0109/09",
+      "name": "Sprigatito"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0201/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0202/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0203/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0204/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0205/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0206/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0207/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0208/08",
+      "name": "Floragato"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0301/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0302/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0303/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0304/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0305/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0306/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0307/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0308/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0309/09",
+      "name": "Fuecoco"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0401/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0402/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0403/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0404/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0405/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0406/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0407/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0408/08",
+      "name": "Crocalor"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0501/09",
+      "name": "Quaxly"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0502/09",
+      "name": "Quaxly"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0503/09",
+      "name": "Quaxly"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0504/09",
+      "name": "Quaxly"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0505/09",
+      "name": "Quaxly"
+    },
+    {
+      "set": "CBB1C",
+      "setName": "Gem Pack Volume 1",
+      "num": "0506/09",
+      "name": "Quaxly"
+    }
+  ],
+  "variants": {
+    "nonStandardRows": 6108,
+    "linkedToStandardBase": 6108,
+    "unlinked": 0,
+    "versionKindCounts": {
+      "reverse": 2936,
+      "reverse_masterball": 1823,
+      "special_alternate": 1340,
+      "rare_promo_style": 8,
+      "holo_or_special": 1
+    }
+  },
+  "rights": {
+    "metadata": "approved_written_permission_commercial_metadata_2026-10-13",
+    "images": "staging_only_pokemon_ip_pending",
+    "attributionRequired": "Data courtesy of PokéCardex (https://pokecardex.com)",
+    "productionPromotionAllowed": false
+  },
+  "artifactPaths": {
+    "imageManifest": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_image_manifest.jsonl",
+    "variantLinks": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_variant_links.jsonl",
+    "setClassifications": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_set_classifications.json",
+    "nearDupReview": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_near_duplicate_review.json",
+    "summary": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\zh_hans_final_reconciliation.json"
+  }
+}

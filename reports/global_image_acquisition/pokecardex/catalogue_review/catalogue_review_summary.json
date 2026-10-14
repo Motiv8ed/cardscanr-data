@@ -1,0 +1,31 @@
+{
+  "generatedAtUtc": "2026-10-14T04:32:08Z",
+  "purpose": "review_only_metadata_integration_package",
+  "notMergedToLiveCatalogue": true,
+  "language": "zh-Hans",
+  "provider": "pokecardex",
+  "rowsEmitted": 15039,
+  "standardUnspecifiedVariantRows": 8931,
+  "variantRows": 6108,
+  "byCardVariant": {
+    "unspecified": 8931,
+    "reverse_holo": 2936,
+    "reverse_masterball": 1823,
+    "special_alternate": 1340,
+    "rare_promo": 8,
+    "holo": 1
+  },
+  "skipped": {
+    "disambiguation_retry": 98,
+    "disambiguated_collector": 98
+  },
+  "attributionRequired": "Data courtesy of PokéCardex (https://pokecardex.com)",
+  "artworkPolicy": "placeholders_only_staging_refs_not_cleared_for_production",
+  "integrationNotes": [
+    "Use existing search/collection/binder language=zh-Hans paths.",
+    "canonicalPrintingId / canonicalBaseId / canonicalSetId from cardscanr_global_catalogue.contracts.",
+    "Do not copy stagingImageRef into public CDN or app image fields until Pokémon IP review.",
+    "Attribution must remain visible (website already credited; app ideally too)."
+  ],
+  "outputPath": "D:\\CardScanR_Data_worktrees\\global-image-acq-20261013\\reports\\global_image_acquisition\\pokecardex\\catalogue_review\\pokecardex_zh_hans_printings_review.jsonl"
+}
