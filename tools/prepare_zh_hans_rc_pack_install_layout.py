@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Prepare RC zh-cn pack in the app's normal installed-pack layout (QA only).
+"""Prepare RC Chinese pack in a QA-only pack identity (never production zh-cn).
 
 Layout mirrors CataloguePackManager:
-  <root>/zh-cn/zh-cn.sqlite
-  <root>/zh-cn/installed_pack.json
-  <root>/zh-cn/zh-cn.sqlite.gz   (download artefact; not required for local open)
+  <root>/zh-cn-qa/zh-cn-qa.sqlite
+  <root>/zh-cn-qa/installed_pack.json
 
-Does not touch production pack dirs or CDN.
+Pack id is intentionally **zh-cn-qa** so sideload cannot overwrite the
+production 41,185-record zh-cn / build98 pack directory.
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import shutil
@@ -36,6 +37,7 @@ OUT = (
     / "release_candidate"
     / "pack_install_layout"
 )
+PACK_ID = "zh-cn-qa"
 
 
 def utc_now() -> str:
@@ -70,21 +72,30 @@ def gzip_copy(source: Path, destination: Path) -> int:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pack-id", default=PACK_ID)
+    args = parser.parse_args()
+    pack_id = str(args.pack_id).strip() or PACK_ID
+    if pack_id == "zh-cn":
+        raise SystemExit(
+            "refusing pack id zh-cn — use zh-cn-qa so production build98 is never overwritten"
+        )
+
     if not SRC.exists():
         raise SystemExit(f"missing RC sqlite: {SRC}")
-    pack_dir = OUT / "zh-cn"
+    pack_dir = OUT / pack_id
     pack_dir.mkdir(parents=True, exist_ok=True)
-    sqlite_path = pack_dir / "zh-cn.sqlite"
-    gz_path = pack_dir / "zh-cn.sqlite.gz"
+    sqlite_path = pack_dir / f"{pack_id}.sqlite"
+    gz_path = pack_dir / f"{pack_id}.sqlite.gz"
     shutil.copy2(SRC, sqlite_path)
     gzip_bytes = gzip_copy(sqlite_path, gz_path)
     raw_sha = sha256_file(sqlite_path)
     gz_sha = sha256_file(gz_path)
     raw_bytes = sqlite_path.stat().st_size
     meta = {
-        "packId": "zh-cn",
+        "packId": pack_id,
         "kind": "language",
-        "description": "Simplified Chinese RC metadata pack (QA only)",
+        "description": "Simplified Chinese RC metadata pack (QA-only identity)",
         "languages": ["zh-cn"],
         "schemaVersion": "2.2.0",
         "sha256": raw_sha,
@@ -102,6 +113,7 @@ def main() -> int:
         "productionPromotionAllowed": False,
         "artworkPolicy": "placeholders_only",
         "attributionRequired": "Data courtesy of PokéCardex (https://pokecardex.com)",
+        "neverOverwriteProductionPackId": "zh-cn",
         "generatedAtUtc": utc_now(),
     }
     (pack_dir / "installed_pack.json").write_text(
@@ -110,6 +122,7 @@ def main() -> int:
     summary = {
         "generatedAtUtc": utc_now(),
         "layoutRoot": str(OUT),
+        "packId": pack_id,
         "sqlitePath": str(sqlite_path),
         "gzipPath": str(gz_path),
         "installedPackJson": str(pack_dir / "installed_pack.json"),
@@ -118,7 +131,7 @@ def main() -> int:
         "sha256": raw_sha,
         "gzipSha256": gz_sha,
         "recordCount": 14923,
-        "note": "QA install layout only — not for production CataloguePackManager roots",
+        "note": "QA-only pack identity zh-cn-qa — never install as zh-cn",
     }
     (OUT / "layout_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
