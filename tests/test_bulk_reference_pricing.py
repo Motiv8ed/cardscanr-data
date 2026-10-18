@@ -16,6 +16,7 @@ from cardscanr_market_engine.bulk.verification_router import route_verification
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.models import MarketPriceKey
 from cardscanr_market_engine.price_movement_guard import evaluate_price_movement
+from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 
 NOW = datetime(2026, 8, 27, 0, 0, tzinfo=timezone.utc)
@@ -191,7 +192,21 @@ class VerificationRouterTests(unittest.TestCase):
         self.assertEqual(route.reason, "stable_low_value_reference")
 
 
+def _page_slice(rows: list, params: dict | None) -> list:
+    query = params or {}
+    offset = int(query.get("offset", 0) or 0)
+    if "limit" in query and str(query.get("limit", "")).strip() != "":
+        limit = int(query["limit"])
+        return rows[offset : offset + max(0, limit)]
+    return rows[offset:]
+
+
 class FakeBulkClient:
+    supabase_url = "https://xxxxxxxxxxxxxxxxxxxx.supabase.co"
+    _budget_base_url = SupabaseMarketEngineClient._budget_base_url
+    _table_get_paged = SupabaseMarketEngineClient._table_get_paged
+    _table_get_in_chunks = SupabaseMarketEngineClient._table_get_in_chunks
+
     def __init__(self) -> None:
         self.snapshots: list[dict] = []
         self.cache: dict[str, dict] = {}
@@ -199,7 +214,8 @@ class FakeBulkClient:
 
     def _table_get(self, table: str, params: dict | None = None):
         if table == "market_price_keys":
-            return [k.raw for k in getattr(self, "keys", [])]
+            rows = [k.raw for k in getattr(self, "keys", [])]
+            return _page_slice(rows, params)
         if table == "market_price_cache":
             ids = []
             filt = (params or {}).get("price_key_id", "")
@@ -222,6 +238,10 @@ class FakeBulkClient:
 
     def record_provider_sync_run(self, **kwargs):
         return kwargs
+
+
+def sample_engine_config() -> MarketEngineConfig:
+    return BulkRunnerSimulationTests()._engine_config()
 
 
 class BulkRunnerSimulationTests(unittest.TestCase):

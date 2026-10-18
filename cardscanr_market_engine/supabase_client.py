@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 import re
 from typing import Any
@@ -15,6 +16,134 @@ from .job_lease import (
 
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F-]{1,64}$")
 MAX_ERROR_BODY_CHARS = 4000
+# Hosted PostgREST caps a response at 1000 rows (db-max-rows) and rejects GET
+# URLs somewhere between ~24 KB and ~28 KB with HTTP 400. Stay under 8 KB and
+# at most 150 ids per `in.(...)` filter (150 UUIDs encode to ~6.2 KB).
+POSTGREST_MAX_ROWS = 1000
+MAX_GET_URL_LENGTH = 8000
+MAX_IN_FILTER_CHUNK = 150
+# Same length as https://<20-char-ref>.supabase.co. Used only to budget URL
+# size when a caller has not set supabase_url.
+DEFAULT_POSTGREST_BUDGET_ORIGIN = "https://xxxxxxxxxxxxxxxxxxxx.supabase.co"
+
+
+def prepared_get_url(base_url: str, table: str, params: dict[str, Any]) -> str:
+    prepared = requests.Request(
+        "GET",
+        f"{base_url.rstrip('/')}/rest/v1/{table}",
+        params=params,
+    ).prepare()
+    url = prepared.url
+    if not url:
+        raise RuntimeError(f"failed to prepare PostgREST URL for {table}")
+    return url
+
+
+def in_filter_params(base_params: dict[str, Any], column: str, ids: list[str]) -> dict[str, Any]:
+    params = dict(base_params)
+    params[column] = "in.(" + ",".join(ids) + ")"
+    params["limit"] = str(len(ids))
+    return params
+
+
+def _id_url_weight(value: str) -> int:
+    return len(requests.utils.quote(str(value), safe="-_.~"))
+
+
+def chunk_ids_for_in_filter(
+    ids: list[str],
+    *,
+    table: str,
+    base_params: dict[str, Any],
+    column: str,
+    base_url: str,
+    max_url_length: int = MAX_GET_URL_LENGTH,
+    max_chunk: int = MAX_IN_FILTER_CHUNK,
+) -> list[list[str]]:
+    """Split ids so each `column=in.(...)` GET stays under max_url_length."""
+    if not ids:
+        return []
+    cap = max(1, min(int(max_chunk), POSTGREST_MAX_ROWS, len(ids)))
+    longest = max(ids, key=_id_url_weight)
+
+    def _fits(count: int) -> bool:
+        probe = [longest] * count
+        url = prepared_get_url(base_url, table, in_filter_params(base_params, column, probe))
+        return len(url) < int(max_url_length)
+
+    if not _fits(1):
+        width = 1
+    else:
+        low = 1
+        high = cap
+        width = 1
+        while low <= high:
+            mid = (low + high) // 2
+            if _fits(mid):
+                width = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+    return [ids[index : index + width] for index in range(0, len(ids), width)]
+
+
+def fetch_rows_in_chunks(
+    fetch_page: Callable[[dict[str, Any]], list[dict[str, Any]]],
+    *,
+    table: str,
+    base_params: dict[str, Any],
+    column: str,
+    ids: list[str],
+    base_url: str,
+    max_url_length: int = MAX_GET_URL_LENGTH,
+    max_chunk: int = MAX_IN_FILTER_CHUNK,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for chunk in chunk_ids_for_in_filter(
+        ids,
+        table=table,
+        base_params=base_params,
+        column=column,
+        base_url=base_url,
+        max_url_length=max_url_length,
+        max_chunk=max_chunk,
+    ):
+        page = fetch_page(in_filter_params(base_params, column, chunk))
+        if not isinstance(page, list):
+            raise TypeError(f"PostgREST {table} chunk must be a list")
+        rows.extend(page)
+    return rows
+
+
+def iter_paged_rows(
+    fetch_page: Callable[[dict[str, Any]], list[dict[str, Any]]],
+    *,
+    base_params: dict[str, Any],
+    max_rows: int,
+    page_size: int = POSTGREST_MAX_ROWS,
+) -> list[dict[str, Any]]:
+    """Read up to max_rows using limit/offset so a 1000-row cap cannot truncate the scan."""
+    target = max(0, int(max_rows))
+    if target == 0:
+        return []
+    size = max(1, min(int(page_size), POSTGREST_MAX_ROWS, target))
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    while len(rows) < target:
+        request_limit = min(size, target - len(rows))
+        params = dict(base_params)
+        params["limit"] = str(request_limit)
+        params["offset"] = str(offset)
+        page = fetch_page(params)
+        if not isinstance(page, list):
+            raise TypeError("PostgREST page must be a list")
+        if not page:
+            break
+        rows.extend(page)
+        if len(page) < request_limit:
+            break
+        offset += len(page)
+    return rows[:target]
 
 
 def _iso_or_none(value: datetime | None) -> str | None:
@@ -82,6 +211,46 @@ class SupabaseMarketEngineClient:
         )
         response.raise_for_status()
         return list(response.json())
+
+    def _budget_base_url(self) -> str:
+        url = str(getattr(self, "supabase_url", "") or "").strip().rstrip("/")
+        return url or DEFAULT_POSTGREST_BUDGET_ORIGIN
+
+    def _table_get_paged(
+        self,
+        table: str,
+        *,
+        params: dict[str, Any],
+        max_rows: int,
+        page_size: int = POSTGREST_MAX_ROWS,
+    ) -> list[dict[str, Any]]:
+        return iter_paged_rows(
+            lambda page_params: self._table_get(table, params=page_params),
+            base_params=params,
+            max_rows=max_rows,
+            page_size=page_size,
+        )
+
+    def _table_get_in_chunks(
+        self,
+        table: str,
+        *,
+        params: dict[str, Any],
+        column: str,
+        ids: list[str],
+        max_url_length: int = MAX_GET_URL_LENGTH,
+        max_chunk: int = MAX_IN_FILTER_CHUNK,
+    ) -> list[dict[str, Any]]:
+        return fetch_rows_in_chunks(
+            lambda page_params: self._table_get(table, params=page_params),
+            table=table,
+            base_params=params,
+            column=column,
+            ids=list(ids),
+            base_url=self._budget_base_url(),
+            max_url_length=max_url_length,
+            max_chunk=max_chunk,
+        )
 
     def _table_post(
         self,

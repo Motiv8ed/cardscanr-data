@@ -344,21 +344,25 @@ class BulkReferenceRefreshRunner:
         return result
 
     def list_keys(self) -> list[MarketPriceKey]:
-        rows = self.client._table_get(
+        # Page at the PostgREST max-rows cap. A single limit=5000 still returns
+        # only 1000 rows, which used to drop the rest of the key set.
+        rows = self.client._table_get_paged(
             "market_price_keys",
             params={
                 "select": "*",
-                "order": "last_seen_at.desc.nullslast,updated_at.desc",
-                "limit": str(self.refresh_config.max_keys),
+                # id tie-break keeps offset pages stable when timestamps tie.
+                "order": "last_seen_at.desc.nullslast,updated_at.desc,id.asc",
             },
+            max_rows=self.refresh_config.max_keys,
         )
         return [MarketPriceKey.from_row(row) for row in rows]
 
     def load_cache_map(self, key_ids: list[str]) -> dict[str, dict[str, Any]]:
         if not key_ids:
             return {}
-        in_filter = "(" + ",".join(key_ids) + ")"
-        rows = self.client._table_get(
+        # One in.(all ids) GET grew past ~24 KB after the AU/US/GB/CA fan-out
+        # and Supabase answered HTTP 400 before per-key handling.
+        rows = self.client._table_get_in_chunks(
             "market_price_cache",
             params={
                 "select": (
@@ -366,9 +370,9 @@ class BulkReferenceRefreshRunner:
                     "reference_price,reference_provider,reference_updated_at,display_price_source,"
                     "verification_required,verification_reason,confidence,last_updated_at"
                 ),
-                "price_key_id": f"in.{in_filter}",
-                "limit": str(len(key_ids)),
             },
+            column="price_key_id",
+            ids=list(key_ids),
         )
         return {str(row["price_key_id"]): row for row in rows if row.get("price_key_id")}
 

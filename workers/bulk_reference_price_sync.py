@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -15,18 +16,30 @@ from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 from cardscanr_market_engine.supabase_env_loader import load_supabase_env
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Bulk/reference pricing sync for shared market_price_cache")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--max-keys", type=int, default=None)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    try:
+        return _run_sync(args)
+    except Exception:
+        # Setup failures (list_keys, load_cache_map, preload) happen outside the
+        # per-key handler. Print the traceback on stderr and return non-zero
+        # so the scheduled task does not look like a silent success.
+        traceback.print_exc(file=sys.stderr)
+        return 1
 
+
+def _run_sync(args: argparse.Namespace) -> int:
     load_supabase_env()
     engine_config = MarketEngineConfig.from_env()
     refresh_config = BulkRefreshConfig.from_env()
 
     # Shared ECB FX refresh with TTL — not per card; keeps international conversion healthy.
     try:
+        # Imported here so a missing FX module is skipped instead of aborting
+        # the price sync before list_keys.
         from cardscanr_market_engine.international.fx_cache import maybe_refresh_ecb_fx_cache
 
         fx_payload = maybe_refresh_ecb_fx_cache()
