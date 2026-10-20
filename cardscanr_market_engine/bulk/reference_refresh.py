@@ -43,6 +43,7 @@ def reference_row_eligible_for_freshness_extension(
     preserve_verified, user-verified, and pending-verification rows are not
     eligible. Those actions already have their own cache writes, and a
     pending or verified row that the policy labels no_change must stay untouched.
+    Failed rows keep their retry clock and must not be extended either.
     """
     if display.action != "no_change" or display.verification_required:
         return False
@@ -50,6 +51,8 @@ def reference_row_eligible_for_freshness_extension(
     if not prior:
         return False
     if bool(prior.get("verification_required")):
+        return False
+    if str(prior.get("refresh_status") or "").strip().lower() == "failed":
         return False
     source = str(prior.get("display_price_source") or "").strip().lower()
     if source in _FRESHNESS_PROTECTED_DISPLAY_SOURCES:
@@ -62,6 +65,26 @@ def reference_row_eligible_for_freshness_extension(
     if decision_source in _FRESHNESS_PROTECTED_DISPLAY_SOURCES:
         return False
     return True
+
+
+def freshness_extension_guard_params(*, expected_last_updated_at: str | None) -> dict[str, Any]:
+    """Write-time PostgREST filters for a freshness PATCH group.
+
+    PostgREST accepts only one top-level ``or`` / ``and`` key, so legacy
+    ``display_price_source`` values (NULL / empty / reference) and the
+    non-failed ``refresh_status`` check are nested under a single ``and``.
+    """
+    return {
+        "and": (
+            "(or(display_price_source.is.null,display_price_source.eq.,"
+            "display_price_source.eq.reference),"
+            "or(refresh_status.is.null,refresh_status.neq.failed))"
+        ),
+        "verification_required": "is.false",
+        "last_updated_at": (
+            "is.null" if expected_last_updated_at is None else f"eq.{expected_last_updated_at}"
+        ),
+    }
 
 
 @dataclass
@@ -85,6 +108,7 @@ class _FreshnessExtension:
     price_key_id: str
     stale_after_iso: str
     checked_at_iso: str
+    expected_last_updated_at: str | None
 
 
 @dataclass(frozen=True)
@@ -340,11 +364,14 @@ class BulkReferenceRefreshRunner:
             reference_price=display.reference_price,
             now=anchor,
         )
+        prior = prior_cache or {}
+        last_updated = prior.get("last_updated_at")
         self._freshness_extensions.append(
             _FreshnessExtension(
                 price_key_id=key.id,
                 stale_after_iso=utc_iso(stale_after),
                 checked_at_iso=utc_iso(anchor),
+                expected_last_updated_at=str(last_updated) if last_updated is not None else None,
             )
         )
 
@@ -357,11 +384,14 @@ class BulkReferenceRefreshRunner:
         if not queued:
             counters.keys_freshness_extended = 0
             return
-        groups: dict[tuple[str, str], list[str]] = {}
+        groups: dict[tuple[str, str, str | None], list[str]] = {}
         for item in queued:
-            groups.setdefault((item.stale_after_iso, item.checked_at_iso), []).append(item.price_key_id)
+            groups.setdefault(
+                (item.stale_after_iso, item.checked_at_iso, item.expected_last_updated_at),
+                [],
+            ).append(item.price_key_id)
         extended = 0
-        for (stale_iso, checked_iso), ids in groups.items():
+        for (stale_iso, checked_iso, expected_last_updated_at), ids in groups.items():
             payload = {
                 "stale_after": stale_iso,
                 "next_refresh_due_at": stale_iso,
@@ -374,11 +404,10 @@ class BulkReferenceRefreshRunner:
                         payload=payload,
                         # Re-check eligibility at write time. The start-of-run
                         # snapshot can be hours old after live TCGdex work;
-                        # verified, pending, or failed rows must stay untouched.
-                        guard_params={
-                            "display_price_source": "eq.reference",
-                            "verification_required": "is.false",
-                        },
+                        # verified, pending, failed, or rewritten rows must stay untouched.
+                        guard_params=freshness_extension_guard_params(
+                            expected_last_updated_at=expected_last_updated_at,
+                        ),
                     )
                 )
             except Exception as exc:
@@ -533,7 +562,8 @@ class BulkReferenceRefreshRunner:
                 "select": (
                     "price_key_id,current_market_price,recommended_price,provider,marketplace,"
                     "reference_price,reference_provider,reference_updated_at,display_price_source,"
-                    "verification_required,verification_reason,confidence,last_updated_at"
+                    "verification_required,verification_reason,confidence,last_updated_at,"
+                    "refresh_status"
                 ),
             },
             column="price_key_id",

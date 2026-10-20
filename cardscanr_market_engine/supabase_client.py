@@ -117,8 +117,24 @@ def fetch_rows_in_chunks(
     return rows
 
 
+def content_range_total(header: str | None) -> int | None:
+    """Parse the total from a PostgREST ``Content-Range`` header (``*/N`` or ``a-b/N``)."""
+    if not header:
+        return None
+    text = str(header).strip()
+    if "/" not in text:
+        return None
+    total = text.rsplit("/", 1)[-1].strip()
+    if total == "*":
+        return None
+    try:
+        return int(total)
+    except ValueError:
+        return None
+
+
 def patch_rows_in_chunks(
-    patch_page: Callable[[dict[str, Any]], list[dict[str, Any]]],
+    patch_page: Callable[[dict[str, Any]], int],
     *,
     table: str,
     column: str,
@@ -132,6 +148,9 @@ def patch_rows_in_chunks(
 
     PostgREST puts the ``in.(...)`` filter in the query string for PATCH as well
     as GET, so the GET URL budget is the right limit for these updates.
+
+    ``patch_page`` must return the number of rows actually updated (for example
+    from ``Prefer: count=exact`` / ``Content-Range``), not the submitted chunk size.
     """
     if not ids:
         return 0
@@ -150,8 +169,7 @@ def patch_rows_in_chunks(
         # PATCH + limit without order is PGRST109 on PostgREST 10-12.
         # The in.(...) filter already bounds the affected IDs.
         params.pop("limit", None)
-        patch_page(params)
-        updated += len(chunk)
+        updated += int(patch_page(params))
     return updated
 
 
@@ -340,6 +358,30 @@ class SupabaseMarketEngineClient:
         if data is None:
             return []
         return [data]
+
+    def _table_patch_affected_count(
+        self,
+        table: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, Any],
+        prefer: str = "return=minimal,count=exact",
+    ) -> int:
+        """PATCH rows and return the exact affected count from Content-Range."""
+        response = self.session.patch(
+            f"{self.supabase_url}/rest/v1/{table}",
+            params=params,
+            json=payload,
+            headers={"Prefer": prefer},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        total = content_range_total(
+            response.headers.get("Content-Range") or response.headers.get("content-range")
+        )
+        if total is None:
+            raise RuntimeError(f"PostgREST PATCH for {table} missing Content-Range count")
+        return total
 
     def claim_jobs(
         self,
@@ -912,12 +954,12 @@ class SupabaseMarketEngineClient:
                 f"{sorted(FRESHNESS_PATCH_COLUMNS)}; refused={refused or ['missing stale_after']}"
             )
 
-        def _patch(params: dict[str, Any]) -> list[dict[str, Any]]:
-            return self._table_patch(
+        def _patch(params: dict[str, Any]) -> int:
+            return self._table_patch_affected_count(
                 "market_price_cache",
                 payload,
                 params=params,
-                prefer="return=minimal",
+                prefer="return=minimal,count=exact",
             )
 
         return patch_rows_in_chunks(

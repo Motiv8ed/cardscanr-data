@@ -6,13 +6,18 @@ import uuid
 from datetime import timedelta
 
 from cardscanr_market_engine.bulk.price_semantics import ReferencePriceObservation
-from cardscanr_market_engine.bulk.reference_refresh import BulkReferenceRefreshRunner, BulkRefreshConfig
+from cardscanr_market_engine.bulk.reference_refresh import (
+    BulkReferenceRefreshRunner,
+    BulkRefreshConfig,
+    freshness_extension_guard_params,
+)
 from cardscanr_market_engine.refresh_policy import RefreshCooldownConfig
 from cardscanr_market_engine.supabase_client import (
     MAX_GET_URL_LENGTH,
     MAX_IN_FILTER_CHUNK,
     SupabaseMarketEngineClient,
     chunk_ids_for_in_filter,
+    content_range_total,
     prepared_get_url,
 )
 from tests.test_bulk_reference_pricing import NOW, FakeBulkClient, _sample_key, sample_engine_config
@@ -48,6 +53,44 @@ def _ids_from_in_filter(value: str) -> list[str]:
     return [] if not body else body.split(",")
 
 
+def _legacy_reference_source(value: object) -> bool:
+    if value is None:
+        return True
+    text = str(value).strip().lower()
+    return text in {"", "reference"}
+
+
+def _refresh_status_allows_extension(value: object) -> bool:
+    if value is None:
+        return True
+    return str(value).strip().lower() != "failed"
+
+
+def _matches_freshness_guard(row: dict, params: dict) -> bool:
+    and_filter = str(params.get("and") or "")
+    if "display_price_source.eq.reference" not in and_filter:
+        return False
+    if "refresh_status.neq.failed" not in and_filter:
+        return False
+    if not _legacy_reference_source(row.get("display_price_source")):
+        return False
+    if not _refresh_status_allows_extension(row.get("refresh_status")):
+        return False
+    if str(params.get("verification_required") or "") == "is.false" and bool(
+        row.get("verification_required")
+    ):
+        return False
+    last_updated_filter = str(params.get("last_updated_at") or "")
+    row_last_updated = row.get("last_updated_at")
+    if last_updated_filter == "is.null":
+        if row_last_updated is not None:
+            return False
+    elif last_updated_filter.startswith("eq."):
+        if str(row_last_updated) != last_updated_filter[3:]:
+            return False
+    return True
+
+
 class FreshnessClient(FakeBulkClient):
     extend_reference_cache_freshness = SupabaseMarketEngineClient.extend_reference_cache_freshness
 
@@ -59,7 +102,14 @@ class FreshnessClient(FakeBulkClient):
         # Concurrent writers can mutate cache rows between snapshot and PATCH.
         self.mutate_before_patch: dict[str, dict] | None = None
 
-    def _table_patch(self, table, payload, *, params, prefer="return=representation"):
+    def _table_patch_affected_count(
+        self,
+        table,
+        payload,
+        *,
+        params,
+        prefer="return=minimal,count=exact",
+    ):
         if self.mutate_before_patch:
             for key_id, overrides in self.mutate_before_patch.items():
                 if key_id in self.cache:
@@ -72,20 +122,16 @@ class FreshnessClient(FakeBulkClient):
                 "prefer": prefer,
             }
         )
-        source_filter = str(params.get("display_price_source") or "")
-        verification_filter = str(params.get("verification_required") or "")
         ids = _ids_from_in_filter(str(params.get("price_key_id") or "in.()"))
+        applied = 0
         for key_id in ids:
             row = self.cache.get(key_id) or {}
-            source = str(row.get("display_price_source") or "").strip().lower()
-            verification_required = bool(row.get("verification_required"))
-            if source_filter == "eq.reference" and source != "reference":
-                continue
-            if verification_filter == "is.false" and verification_required:
+            if not _matches_freshness_guard(row, params):
                 continue
             self.cache[key_id].update(payload)
             self.applied_freshness_ids.append(key_id)
-        return []
+            applied += 1
+        return applied
 
     def upsert_cache(self, payload):
         self.upserts.append(dict(payload))
@@ -175,7 +221,7 @@ class NoChangeFreshnessTests(unittest.TestCase):
                 patch = client.patches[0]
                 expected_until = _iso_offset(ttl_hours)
                 self.assertEqual(patch["table"], "market_price_cache")
-                self.assertEqual(patch["prefer"], "return=minimal")
+                self.assertEqual(patch["prefer"], "return=minimal,count=exact")
                 self.assertEqual(
                     patch["payload"],
                     {
@@ -186,8 +232,15 @@ class NoChangeFreshnessTests(unittest.TestCase):
                 )
                 self.assertEqual(_ids_from_in_filter(patch["params"]["price_key_id"]), [key.id])
                 self.assertNotIn("limit", patch["params"])
-                self.assertEqual(patch["params"]["display_price_source"], "eq.reference")
-                self.assertEqual(patch["params"]["verification_required"], "is.false")
+                self.assertEqual(
+                    patch["params"],
+                    {
+                        "price_key_id": f"in.({key.id})",
+                        **freshness_extension_guard_params(
+                            expected_last_updated_at=PRICE_LAST_CHANGED,
+                        ),
+                    },
+                )
                 self.assertEqual(client.applied_freshness_ids, [key.id])
                 stored = client.cache[key.id]
                 self.assertEqual(stored["current_market_price"], price)
@@ -352,10 +405,15 @@ class BatchedFreshnessTests(unittest.TestCase):
         grouped: dict[str, list[str]] = {}
         for call in client.patches:
             self.assertEqual(call["table"], "market_price_cache")
-            self.assertEqual(call["prefer"], "return=minimal")
+            self.assertEqual(call["prefer"], "return=minimal,count=exact")
             self.assertNotIn("limit", call["params"])
-            self.assertEqual(call["params"]["display_price_source"], "eq.reference")
-            self.assertEqual(call["params"]["verification_required"], "is.false")
+            self.assertEqual(
+                {
+                    key: call["params"][key]
+                    for key in ("and", "verification_required", "last_updated_at")
+                },
+                freshness_extension_guard_params(expected_last_updated_at=PRICE_LAST_CHANGED),
+            )
             url = prepared_get_url(client.supabase_url, call["table"], call["params"])
             self.assertLess(len(url), 8000)
             self.assertLess(len(url), MAX_GET_URL_LENGTH)
@@ -370,10 +428,9 @@ class BatchedFreshnessTests(unittest.TestCase):
         high_ids = [key.id for key in keys if prices[key.id] == HIGH_PRICE]
         self.assertEqual(grouped[_iso_offset(12)], low_ids)
         self.assertEqual(grouped[_iso_offset(4)], high_ids)
-        guard_params = {
-            "display_price_source": "eq.reference",
-            "verification_required": "is.false",
-        }
+        guard_params = freshness_extension_guard_params(
+            expected_last_updated_at=PRICE_LAST_CHANGED,
+        )
         for stale_iso, ids in ((_iso_offset(12), low_ids), (_iso_offset(4), high_ids)):
             expected = chunk_ids_for_in_filter(
                 ids,
@@ -437,6 +494,7 @@ class ConcurrentFreshnessGuardTests(unittest.TestCase):
         report = runner.run()
 
         self.assertEqual(report["keysUnchanged"], 1)
+        self.assertEqual(report["keysFreshnessExtended"], 0)
         self.assertEqual(report["errors"], 0)
         self.assertEqual(len(client.patches), 1)
         self.assertNotIn("limit", client.patches[0]["params"])
@@ -460,6 +518,18 @@ class ConcurrentFreshnessGuardTests(unittest.TestCase):
                 "next_refresh_due_at": "2026-08-27T00:45:00Z",
                 "refresh_status": "failed",
             },
+            {
+                # Failed-only: display_price_source and verification_required stay
+                # eligible; the refresh_status guard must reject the PATCH alone.
+                "refresh_status": "failed",
+                "next_refresh_due_at": "2026-08-27T00:15:00Z",
+            },
+            {
+                # Concurrent full reference upsert rewrote last_updated_at.
+                "last_updated_at": "2026-08-27T00:05:00Z",
+                "stale_after": "2026-08-27T12:05:00Z",
+                "next_refresh_due_at": "2026-08-27T12:05:00Z",
+            },
         )
         for overrides in cases:
             with self.subTest(overrides=overrides):
@@ -474,6 +544,7 @@ class ConcurrentFreshnessGuardTests(unittest.TestCase):
                 report = runner.run()
 
                 self.assertEqual(report["keysUnchanged"], 1)
+                self.assertEqual(report["keysFreshnessExtended"], 0)
                 self.assertEqual(report["errors"], 0)
                 self.assertEqual(len(client.patches), 1)
                 self.assertNotIn("limit", client.patches[0]["params"])
@@ -481,7 +552,49 @@ class ConcurrentFreshnessGuardTests(unittest.TestCase):
                 stored = client.cache[key.id]
                 for field, value in overrides.items():
                     self.assertEqual(stored[field], value)
-                self.assertNotIn("stale_after", stored)
+                if "stale_after" not in overrides:
+                    self.assertNotIn("stale_after", stored)
+
+    def test_failed_row_at_snapshot_is_not_queued(self) -> None:
+        client = FreshnessClient()
+        key = _sample_key(id=str(uuid.uuid4()))
+        client.keys = [key]
+        client.cache[key.id] = _reference_prior(
+            key.id,
+            LOW_PRICE,
+            refresh_status="failed",
+            next_refresh_due_at="2026-08-27T00:15:00Z",
+        )
+        runner = _runner(client, dry_run=False)
+        _install_prices(runner, {key.id: LOW_PRICE})
+
+        report = runner.run()
+
+        self.assertEqual(report["keysUnchanged"], 1)
+        self.assertEqual(report["keysFreshnessExtended"], 0)
+        self.assertEqual(client.patches, [])
+        self.assertEqual(client.cache[key.id]["next_refresh_due_at"], "2026-08-27T00:15:00Z")
+
+    def test_legacy_null_display_price_source_is_extended(self) -> None:
+        client = FreshnessClient()
+        key = _sample_key(id=str(uuid.uuid4()))
+        client.keys = [key]
+        client.cache[key.id] = _reference_prior(key.id, LOW_PRICE, display_price_source=None)
+        runner = _runner(client, dry_run=False)
+        _install_prices(runner, {key.id: LOW_PRICE})
+
+        report = runner.run()
+
+        self.assertEqual(report["keysFreshnessExtended"], 1)
+        self.assertEqual(client.applied_freshness_ids, [key.id])
+        self.assertNotIn("limit", client.patches[0]["params"])
+
+    def test_content_range_total_parses_exact_count(self) -> None:
+        self.assertEqual(content_range_total("*/0"), 0)
+        self.assertEqual(content_range_total("*/12"), 12)
+        self.assertEqual(content_range_total("0-2/3"), 3)
+        self.assertIsNone(content_range_total("*/**"))
+        self.assertIsNone(content_range_total(None))
 
 
 class ApplyReferenceRegressionTests(unittest.TestCase):
