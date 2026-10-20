@@ -355,7 +355,17 @@ class BulkReferenceRefreshRunner:
             },
             max_rows=self.refresh_config.max_keys,
         )
-        return [MarketPriceKey.from_row(row) for row in rows]
+        # Mutable sort columns can shift rows across page boundaries while a
+        # concurrent writer updates last_seen_at/updated_at. Keep first id.
+        seen: set[str] = set()
+        unique: list[MarketPriceKey] = []
+        for row in rows:
+            key = MarketPriceKey.from_row(row)
+            if key.id in seen:
+                continue
+            seen.add(key.id)
+            unique.append(key)
+        return unique
 
     def load_cache_map(self, key_ids: list[str]) -> dict[str, dict[str, Any]]:
         if not key_ids:

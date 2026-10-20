@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 import uuid
 from contextlib import redirect_stderr
@@ -11,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cardscanr_market_engine.bulk.reference_refresh import BulkReferenceRefreshRunner, BulkRefreshConfig
+from cardscanr_market_engine.bulk.sync_lock import release_bulk_sync_lock
 from cardscanr_market_engine.supabase_client import (
     DEFAULT_POSTGREST_BUDGET_ORIGIN,
     MAX_GET_URL_LENGTH,
@@ -87,8 +91,9 @@ class PagingKeysClient:
     _table_get_paged = SupabaseMarketEngineClient._table_get_paged
     _table_get_in_chunks = SupabaseMarketEngineClient._table_get_in_chunks
 
-    def __init__(self, rows: list[dict]) -> None:
-        self.rows = rows
+    def __init__(self, rows: list[dict], *, max_rows_cap: int = 1000) -> None:
+        self.rows = list(rows)
+        self.max_rows_cap = int(max_rows_cap)
         self.calls: list[dict] = []
 
     def _table_get(self, table: str, *, params: dict):
@@ -96,8 +101,8 @@ class PagingKeysClient:
             raise AssertionError(table)
         self.calls.append(dict(params))
         offset = int(params.get("offset", 0))
-        # Reproduce the hosted db-max-rows cap even if the caller asks for more.
-        limit = min(int(params["limit"]), 1000)
+        # Reproduce a project Max Rows cap even if the caller asks for more.
+        limit = min(int(params["limit"]), self.max_rows_cap)
         return self.rows[offset : offset + limit]
 
 
@@ -168,6 +173,29 @@ class ListKeysPagingTests(unittest.TestCase):
         self.assertEqual(len(keys), 1200)
         self.assertEqual(int(client.calls[-1]["offset"]), 1000)
         self.assertEqual(int(client.calls[-1]["limit"]), 200)
+
+    def test_list_keys_continues_when_project_max_rows_below_page_size(self) -> None:
+        rows = self._rows(1518)
+        client = PagingKeysClient(rows, max_rows_cap=500)
+        keys = _runner(client, max_keys=5000).list_keys()
+
+        self.assertEqual([key.id for key in keys], [row["id"] for row in rows])
+        self.assertGreaterEqual(len(client.calls), 4)
+        self.assertTrue(all(int(call["limit"]) <= 1000 for call in client.calls))
+        self.assertEqual(int(client.calls[0]["limit"]), 1000)
+        # First response is capped to 500 (< request_limit); paging must continue.
+        self.assertEqual(int(client.calls[1]["offset"]), 500)
+        self.assertEqual(client.calls[-1]["offset"], str(1518))
+        self.assertEqual(client.calls[-1]["limit"], "1000")
+
+    def test_list_keys_deduplicates_ids_after_mutable_sort_shift(self) -> None:
+        rows = self._rows(3)
+        # Simulate a row shifting into a later page after its timestamps move.
+        client = PagingKeysClient(rows + [dict(rows[0])], max_rows_cap=2)
+        keys = _runner(client, max_keys=5000).list_keys()
+        ids = [key.id for key in keys]
+        self.assertEqual(ids, [rows[0]["id"], rows[1]["id"], rows[2]["id"]])
+        self.assertEqual(len(ids), len(set(ids)))
 
 
 class FatalSyncExitTests(unittest.TestCase):
@@ -349,6 +377,8 @@ class WrapperScriptTests(unittest.TestCase):
         self.assertIn("StandardOutputEncoding", shared)
         self.assertIn("StandardErrorEncoding", shared)
         self.assertIn("$proc.ExitCode", shared)
+        self.assertIn("ReadLineAsync", shared)
+        self.assertIn("AllowEmptyString", shared)
         for name in (
             "scripts/ensure_live_bulk_reference_pricing_runtime.ps1",
             "scripts/ensure_ecb_fx_refresh_runtime.ps1",
@@ -362,5 +392,106 @@ class WrapperScriptTests(unittest.TestCase):
             self.assertIn("raise SystemExit(3)", text)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class WindowsPowerShell51HelperTests(unittest.TestCase):
+    """Exercise the shared helper under real Windows PowerShell 5.1 (powershell.exe)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.powershell = "powershell.exe"
+        probe = subprocess.run(
+            [cls.powershell, "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if probe.returncode != 0:
+            raise unittest.SkipTest("powershell.exe unavailable")
+        major = (probe.stdout or "").strip().splitlines()[-1].strip()
+        if major != "5":
+            raise unittest.SkipTest(f"expected Windows PowerShell 5.x, got {major!r}")
+
+    def test_format_process_argument_preserves_empty_and_trailing_backslash(self) -> None:
+        helper = (ROOT / "scripts" / "runtime_python_logging.ps1").resolve()
+        script = f"""
+$ErrorActionPreference = 'Stop'
+. '{helper.as_posix()}'
+function Assert-Arg([string]$In, [string]$Expect) {{
+  $got = Format-ProcessArgument $In
+  if ($got -cne $Expect) {{
+    throw "Format-ProcessArgument mismatch in=[$In] got=[$got] expect=[$Expect]"
+  }}
+}}
+Assert-Arg '' '""'
+Assert-Arg 'plain' 'plain'
+Assert-Arg 'has space' '"has space"'
+Assert-Arg ('ends with ' + [char]92) ('"ends with ' + [char]92 + [char]92 + '"')
+Assert-Arg ('quote ' + [char]34 + ' here') ('"quote ' + [char]92 + [char]34 + ' here"')
+Write-Output 'ok'
+"""
+        completed = subprocess.run(
+            [self.powershell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+        self.assertIn("ok", completed.stdout)
+
+    def test_invoke_logged_python_drains_incrementally_and_keeps_exit_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            stdout_path = tmp_path / "out.log"
+            stderr_path = tmp_path / "err.log"
+            child = tmp_path / "slow_worker.py"
+            child.write_text(
+                "import sys, time\n"
+                "print('line-one', flush=True)\n"
+                "time.sleep(1.5)\n"
+                "print('line-two', flush=True)\n"
+                "print('err-one', file=sys.stderr, flush=True)\n"
+                "raise SystemExit(7)\n",
+                encoding="utf-8",
+            )
+            helper = (ROOT / "scripts" / "runtime_python_logging.ps1").resolve()
+            runner = tmp_path / "run_logged.ps1"
+            runner.write_text(
+                "\n".join(
+                    [
+                        "$ErrorActionPreference = 'Stop'",
+                        f". '{helper.as_posix()}'",
+                        f"$code = Invoke-LoggedPython -PythonPath '{Path(sys.executable).as_posix()}' "
+                        f"-ArgumentList @('{child.as_posix()}') "
+                        f"-StdoutPath '{stdout_path.as_posix()}' "
+                        f"-StderrPath '{stderr_path.as_posix()}'",
+                        "exit $code",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            proc = subprocess.Popen(
+                [
+                    self.powershell,
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(runner),
+                ],
+                cwd=str(ROOT),
+            )
+            saw_partial = False
+            deadline = time.time() + 10
+            while time.time() < deadline and proc.poll() is None:
+                if stdout_path.exists():
+                    text = stdout_path.read_text(encoding="utf-8", errors="replace")
+                    if "line-one" in text and "line-two" not in text:
+                        saw_partial = True
+                        break
+                time.sleep(0.1)
+            code = proc.wait(timeout=30)
+            self.assertTrue(saw_partial, "stdout was not drained before the child finished")
+            self.assertEqual(code, 7)
+            self.assertIn("line-one", stdout_path.read_text(encoding="utf-8"))
+            self.assertIn("line-two", stdout_path.read_text(encoding="utf-8"))
+            self.assertIn("err-one", stderr_path.read

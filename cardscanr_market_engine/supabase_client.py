@@ -139,8 +139,8 @@ def iter_paged_rows(
         if not page:
             break
         rows.extend(page)
-        if len(page) < request_limit:
-            break
+        # Stop only on an empty page. Project Max Rows may be below page_size,
+        # so a short page is not proof that the scan is finished.
         offset += len(page)
     return rows[:target]
 
