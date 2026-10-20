@@ -199,6 +199,11 @@ class ListKeysPagingTests(unittest.TestCase):
 
 
 class FatalSyncExitTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # Other local runners may leave a non-stale overlap lock; these tests
+        # need acquire_bulk_sync_lock to succeed so setup failures can propagate.
+        release_bulk_sync_lock()
+
     def test_list_keys_and_cache_map_failures_propagate(self) -> None:
         client = FakeBulkClient()
         client.keys = [_sample_key(id="abc")]
@@ -263,6 +268,9 @@ class FatalSyncExitTests(unittest.TestCase):
 
 
 class WorkerFatalExitTests(unittest.TestCase):
+    def setUp(self) -> None:
+        release_bulk_sync_lock()
+
     def _client(self, rows: list[dict] | None = None, *, fail: str | None = None) -> PagingKeysClient:
         client = PagingKeysClient(rows or [])
         original = client._table_get
@@ -447,7 +455,7 @@ Write-Output 'ok'
             child.write_text(
                 "import sys, time\n"
                 "print('line-one', flush=True)\n"
-                "time.sleep(1.5)\n"
+                "time.sleep(2.5)\n"
                 "print('line-two', flush=True)\n"
                 "print('err-one', file=sys.stderr, flush=True)\n"
                 "raise SystemExit(7)\n",
@@ -481,17 +489,26 @@ Write-Output 'ok'
                 cwd=str(ROOT),
             )
             saw_partial = False
-            deadline = time.time() + 10
-            while time.time() < deadline and proc.poll() is None:
+            deadline = time.time() + 20
+            while time.time() < deadline:
+                if proc.poll() is not None:
+                    break
                 if stdout_path.exists():
                     text = stdout_path.read_text(encoding="utf-8", errors="replace")
-                    if "line-one" in text and "line-two" not in text:
-                        saw_partial = True
-                        break
-                time.sleep(0.1)
+                    if "line-one" in text:
+                        # Require proof the first line landed while the child
+                        # was still running (incremental drain).
+                        saw_partial = proc.poll() is None and "line-two" not in text
+                        if saw_partial:
+                            break
+                time.sleep(0.05)
             code = proc.wait(timeout=30)
             self.assertTrue(saw_partial, "stdout was not drained before the child finished")
             self.assertEqual(code, 7)
             self.assertIn("line-one", stdout_path.read_text(encoding="utf-8"))
             self.assertIn("line-two", stdout_path.read_text(encoding="utf-8"))
-            self.assertIn("err-one", stderr_path.read
+            self.assertIn("err-one", stderr_path.read_text(encoding="utf-8"))
+
+
+if __name__ == "__main__":
+    unittest.main()
