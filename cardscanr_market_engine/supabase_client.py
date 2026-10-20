@@ -146,7 +146,11 @@ def patch_rows_in_chunks(
         max_url_length=max_url_length,
         max_chunk=max_chunk,
     ):
-        patch_page(in_filter_params(params_base, column, chunk))
+        params = in_filter_params(params_base, column, chunk)
+        # PATCH + limit without order is PGRST109 on PostgREST 10-12.
+        # The in.(...) filter already bounds the affected IDs.
+        params.pop("limit", None)
+        patch_page(params)
         updated += len(chunk)
     return updated
 
@@ -884,6 +888,7 @@ class SupabaseMarketEngineClient:
         *,
         price_key_ids: list[str],
         payload: dict[str, Any],
+        guard_params: dict[str, Any] | None = None,
         max_url_length: int = MAX_GET_URL_LENGTH,
         max_chunk: int = MAX_IN_FILTER_CHUNK,
     ) -> int:
@@ -893,6 +898,10 @@ class SupabaseMarketEngineClient:
         ``stale_after``, ``next_refresh_due_at``, and ``updated_at``. Ids that
         share that payload are PATCHed with ``price_key_id=in.(...)`` chunks
         whose URLs stay under 8 KB.
+
+        ``guard_params`` are additional PostgREST filters applied at write time
+        so a delayed batch cannot overwrite a row that became verified,
+        pending, or otherwise ineligible after the start-of-run snapshot.
         """
         if not price_key_ids:
             return 0
@@ -917,6 +926,7 @@ class SupabaseMarketEngineClient:
             column="price_key_id",
             ids=list(price_key_ids),
             base_url=self._budget_base_url(),
+            base_params=dict(guard_params or {}),
             max_url_length=max_url_length,
             max_chunk=max_chunk,
         )

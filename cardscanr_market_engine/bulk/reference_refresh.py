@@ -372,6 +372,13 @@ class BulkReferenceRefreshRunner:
                     self.client.extend_reference_cache_freshness(
                         price_key_ids=ids,
                         payload=payload,
+                        # Re-check eligibility at write time. The start-of-run
+                        # snapshot can be hours old after live TCGdex work;
+                        # verified, pending, or failed rows must stay untouched.
+                        guard_params={
+                            "display_price_source": "eq.reference",
+                            "verification_required": "is.false",
+                        },
                     )
                 )
             except Exception as exc:
