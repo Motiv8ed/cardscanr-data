@@ -200,9 +200,22 @@ class ListKeysPagingTests(unittest.TestCase):
 
 class FatalSyncExitTests(unittest.TestCase):
     def setUp(self) -> None:
+        # Isolate from any real worker overlap lock under reports/runtime/.
+        self._lock_dir = tempfile.TemporaryDirectory()
+        self._lock_path = Path(self._lock_dir.name) / "bulk_reference_sync.lock.json"
+        self._lock_patcher = patch(
+            "cardscanr_market_engine.bulk.sync_lock.LOCK_PATH",
+            self._lock_path,
+        )
+        self._lock_patcher.start()
         # Other local runners may leave a non-stale overlap lock; these tests
         # need acquire_bulk_sync_lock to succeed so setup failures can propagate.
         release_bulk_sync_lock()
+
+    def tearDown(self) -> None:
+        release_bulk_sync_lock()
+        self._lock_patcher.stop()
+        self._lock_dir.cleanup()
 
     def test_list_keys_and_cache_map_failures_propagate(self) -> None:
         client = FakeBulkClient()
@@ -269,7 +282,20 @@ class FatalSyncExitTests(unittest.TestCase):
 
 class WorkerFatalExitTests(unittest.TestCase):
     def setUp(self) -> None:
+        # Isolate from any real worker overlap lock under reports/runtime/.
+        self._lock_dir = tempfile.TemporaryDirectory()
+        self._lock_path = Path(self._lock_dir.name) / "bulk_reference_sync.lock.json"
+        self._lock_patcher = patch(
+            "cardscanr_market_engine.bulk.sync_lock.LOCK_PATH",
+            self._lock_path,
+        )
+        self._lock_patcher.start()
         release_bulk_sync_lock()
+
+    def tearDown(self) -> None:
+        release_bulk_sync_lock()
+        self._lock_patcher.stop()
+        self._lock_dir.cleanup()
 
     def _client(self, rows: list[dict] | None = None, *, fail: str | None = None) -> PagingKeysClient:
         client = PagingKeysClient(rows or [])
@@ -406,17 +432,29 @@ class WindowsPowerShell51HelperTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.powershell = "powershell.exe"
-        probe = subprocess.run(
-            [cls.powershell, "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        cls._skip_reason: str | None = None
+        try:
+            probe = subprocess.run(
+                [cls.powershell, "-NoProfile", "-Command", "$PSVersionTable.PSVersion.Major"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+            cls._skip_reason = "powershell.exe unavailable"
+            return
         if probe.returncode != 0:
-            raise unittest.SkipTest("powershell.exe unavailable")
-        major = (probe.stdout or "").strip().splitlines()[-1].strip()
+            cls._skip_reason = "powershell.exe unavailable"
+            return
+        lines = (probe.stdout or "").strip().splitlines()
+        major = lines[-1].strip() if lines else ""
         if major != "5":
-            raise unittest.SkipTest(f"expected Windows PowerShell 5.x, got {major!r}")
+            cls._skip_reason = f"expected Windows PowerShell 5.x, got {major!r}"
+
+    def setUp(self) -> None:
+        if self._skip_reason:
+            self.skipTest(self._skip_reason)
 
     def test_format_process_argument_preserves_empty_and_trailing_backslash(self) -> None:
         helper = (ROOT / "scripts" / "runtime_python_logging.ps1").resolve()
