@@ -549,6 +549,23 @@ class V1ToGlobalJpAliasTests(unittest.TestCase):
             ),
             "pokemon|jp|neo1",
         )
+        # Short ids must not be truncated by rsplit; use language-qualified fallback.
+        self.assertEqual(
+            pack_set_id_from_canonical_base_id(
+                "pokemon|jp|neo1",
+                pack_lang="ja",
+                raw_set_id="neo1",
+            ),
+            "pokemon|ja|neo1",
+        )
+        self.assertEqual(
+            pack_set_id_from_canonical_base_id(
+                "pokemon|jp|neo1|001",
+                pack_lang="ja",
+                raw_set_id="neo1",
+            ),
+            "pokemon|ja|neo1",
+        )
         with _temp_dir() as tmp:
             root = Path(tmp)
             v1 = _write_neo1_en_jp_v1_db(root / "v1.sqlite")

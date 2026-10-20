@@ -42,7 +42,9 @@ def pack_set_id_from_canonical_base_id(
     the base id is too short to split safely.
     """
     base = str(canonical_base_id or "").strip()
-    if base.count("|") >= 2:
+    # Full production ids have four separators. Shorter values must use the
+    # language-qualified fallback so rsplit does not truncate to a shared prefix.
+    if base.count("|") >= 4:
         return base.rsplit("|", 2)[0]
     fallback_set = str(raw_set_id or "").strip() or "unknown"
     return f"pokemon|{pack_lang}|{fallback_set}"
