@@ -24,8 +24,10 @@ DEFAULT_PUBLIC_BASE = "https://assets.cardscanr.com"
 def resolve_public_base_url(config_path: Path | None) -> str:
     """Resolve client-facing pack URL base.
 
-    Falls back to ``DEFAULT_PUBLIC_BASE`` only when no config path is supplied
-    or the path does not exist. An explicitly present but invalid config raises.
+    Falls back to ``DEFAULT_PUBLIC_BASE`` only when no config path is supplied,
+    the path does not exist, or neither asset-base key is present. An
+    explicitly supplied non-HTTPS / non-string value raises (key presence, not
+    truthiness).
     """
     public_base = DEFAULT_PUBLIC_BASE
     if config_path is None or not config_path.exists():
@@ -35,16 +37,26 @@ def resolve_public_base_url(config_path: Path | None) -> str:
     # Cloudflare env may list r2PublicDevUrl first for S3 uploads; packs must
     # still resolve via assets.cardscanr.com when no override is present.
     try:
-        cfg = load_publication_config(config_path)
-        candidate = getattr(cfg, "r2_catalogue_assets_base_url", None) or None
-        if not candidate:
-            raw = json.loads(config_path.read_text(encoding="utf-8"))
-            candidate = raw.get("r2CatalogueAssetsBaseUrl") or raw.get("r2PublicBaseUrl")
-        if isinstance(candidate, str) and candidate.startswith("https://"):
-            return candidate.rstrip("/")
+        # Validate JSON shape via the shared loader, then select asset keys by
+        # presence so empty/null/http values cannot silently fall back.
+        load_publication_config(config_path)
+        raw = json.loads(config_path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("config root must be a JSON object")
+        if "r2CatalogueAssetsBaseUrl" in raw:
+            candidate = raw["r2CatalogueAssetsBaseUrl"]
+        elif "r2PublicBaseUrl" in raw:
+            candidate = raw["r2PublicBaseUrl"]
+        else:
+            return public_base
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         raise ValueError(f"invalid publication config {config_path}: {exc}") from exc
-    return public_base
+    if not isinstance(candidate, str) or not candidate.startswith("https://"):
+        raise ValueError(
+            f"invalid publication config {config_path}: "
+            f"asset base URL must be https, got {candidate!r}"
+        )
+    return candidate.rstrip("/")
 
 
 def require_nonzero_production_language_counts(convert_report: Mapping[str, Any]) -> None:

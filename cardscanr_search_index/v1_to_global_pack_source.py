@@ -26,6 +26,28 @@ _PACK_REGION = {
 }
 
 
+def pack_set_id_from_canonical_base_id(
+    canonical_base_id: str,
+    *,
+    pack_lang: str,
+    raw_set_id: str,
+) -> str:
+    """Derive a language-specific pack ``sets.set_id`` from a v1 base id.
+
+    Production v1 identities look like
+    ``pokemon|{lang}|{set_id}|{collector}|{slug}``. Shared provider codes such
+    as ``neo1`` collide across EN/JP when used as the pack PK, so strip the
+    collector and slug segments (``rsplit("|", 2)``) and keep the language-
+    qualified set prefix. Fall back to an explicit language-qualified id when
+    the base id is too short to split safely.
+    """
+    base = str(canonical_base_id or "").strip()
+    if base.count("|") >= 2:
+        return base.rsplit("|", 2)[0]
+    fallback_set = str(raw_set_id or "").strip() or "unknown"
+    return f"pokemon|{pack_lang}|{fallback_set}"
+
+
 def convert_v1_search_to_global_pack_source(
     *,
     v1_db: Path,
@@ -224,6 +246,11 @@ def convert_v1_search_to_global_pack_source(
             # physical_printing_id across distinct catalogue identities, so use
             # the unique canonical_base_id as the pack printing key.
             physical_printing_id = canonical_base_id
+            pack_set_id = pack_set_id_from_canonical_base_id(
+                canonical_base_id,
+                pack_lang=pack_lang,
+                raw_set_id=set_id,
+            )
             source_physical = str(row["physical_printing_id"] or "").strip()
             if not source_physical:
                 source_physical = (
@@ -255,10 +282,12 @@ def convert_v1_search_to_global_pack_source(
             except json.JSONDecodeError:
                 set_code = None
 
-            # set_id is the packs PK. Production EN/JP codes do not collide.
-            if set_id not in set_rows:
-                set_rows[set_id] = (
-                    set_id,
+            # sets.set_id is the pack PK. Shared EN/JP provider codes (neo1–neo4)
+            # must use language-qualified ids so each language pack keeps its
+            # own set row.
+            if pack_set_id not in set_rows:
+                set_rows[pack_set_id] = (
+                    pack_set_id,
                     pack_lang,
                     region,
                     set_name,
@@ -270,8 +299,8 @@ def convert_v1_search_to_global_pack_source(
                 (
                     physical_printing_id,
                     canonical_base_id,
-                    set_id,
-                    set_id,
+                    pack_set_id,
+                    pack_set_id,
                     pack_lang,
                     region,
                     native_name,

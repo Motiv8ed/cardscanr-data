@@ -17,6 +17,7 @@ from cardscanr_search_index.catalogue_packs import build_all_packs
 from cardscanr_search_index.global_builder import SCHEMA_VERSION
 from cardscanr_search_index.v1_to_global_pack_source import (
     convert_v1_search_to_global_pack_source,
+    pack_set_id_from_canonical_base_id,
 )
 from tools.build_production_en_jp_packs import (
     require_nonzero_production_language_counts,
@@ -300,74 +301,135 @@ def _write_empty_sealed_source(path: Path) -> Path:
     return path
 
 
+def _init_v1_cards_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE cards(
+          canonical_base_id TEXT PRIMARY KEY,
+          language TEXT NOT NULL,
+          set_id TEXT NOT NULL,
+          set_name TEXT,
+          normalized_set_name TEXT,
+          collector_number TEXT,
+          normalized_collector_number TEXT,
+          physical_printing_id TEXT,
+          localized_name TEXT,
+          canonical_english_name TEXT,
+          search_aliases_json TEXT,
+          provider_set_codes_json TEXT,
+          normalized_canonical_name TEXT,
+          normalized_localized_name TEXT,
+          rarity TEXT,
+          release_date TEXT,
+          set_release_date TEXT,
+          thumbnail_url TEXT,
+          large_image_url TEXT,
+          image_source TEXT,
+          image_cached INTEGER,
+          provider_ids_json TEXT
+        )
+        """
+    )
+
+
+def _insert_v1_card(
+    conn: sqlite3.Connection,
+    *,
+    language: str,
+    set_id: str,
+    set_name: str,
+    collector: str,
+    slug: str,
+    localized_name: str,
+    english_name: str,
+) -> None:
+    base_id = f"pokemon|{language}|{set_id}|{collector}|{slug}"
+    conn.execute(
+        """
+        INSERT INTO cards VALUES (
+          ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+        )
+        """,
+        (
+            base_id,
+            language,
+            set_id,
+            set_name,
+            set_name.lower(),
+            collector,
+            collector,
+            None,
+            localized_name,
+            english_name,
+            "[]",
+            "[]",
+            english_name.lower(),
+            localized_name.lower(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            "{}",
+        ),
+    )
+
+
 def _write_min_v1_db(path: Path, *, languages: tuple[str, ...] = ("en", "jp")) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         path.unlink()
     conn = sqlite3.connect(path)
     try:
-        conn.execute(
-            """
-            CREATE TABLE cards(
-              canonical_base_id TEXT PRIMARY KEY,
-              language TEXT NOT NULL,
-              set_id TEXT NOT NULL,
-              set_name TEXT,
-              normalized_set_name TEXT,
-              collector_number TEXT,
-              normalized_collector_number TEXT,
-              physical_printing_id TEXT,
-              localized_name TEXT,
-              canonical_english_name TEXT,
-              search_aliases_json TEXT,
-              provider_set_codes_json TEXT,
-              normalized_canonical_name TEXT,
-              normalized_localized_name TEXT,
-              rarity TEXT,
-              release_date TEXT,
-              set_release_date TEXT,
-              thumbnail_url TEXT,
-              large_image_url TEXT,
-              image_source TEXT,
-              image_cached INTEGER,
-              provider_ids_json TEXT
-            )
-            """
-        )
+        _init_v1_cards_table(conn)
         for lang in languages:
             set_id = f"{lang}-set"
-            base_id = f"pokemon|{lang}|{set_id}|1|card"
-            conn.execute(
-                """
-                INSERT INTO cards VALUES (
-                  ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-                )
-                """,
-                (
-                    base_id,
-                    lang,
-                    set_id,
-                    set_id,
-                    set_id.lower(),
-                    "1",
-                    "1",
-                    None,
-                    "Card",
-                    "Card",
-                    "[]",
-                    "[]",
-                    "card",
-                    "card",
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    0,
-                    "{}",
-                ),
+            _insert_v1_card(
+                conn,
+                language=lang,
+                set_id=set_id,
+                set_name=set_id,
+                collector="1",
+                slug="card",
+                localized_name="Card",
+                english_name="Card",
             )
+        conn.commit()
+    finally:
+        conn.close()
+    return path
+
+
+def _write_neo1_en_jp_v1_db(path: Path) -> Path:
+    """Shared provider code neo1 for EN+JP (production collision case)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    conn = sqlite3.connect(path)
+    try:
+        _init_v1_cards_table(conn)
+        _insert_v1_card(
+            conn,
+            language="en",
+            set_id="neo1",
+            set_name="Neo Genesis",
+            collector="001/111",
+            slug="ampharos",
+            localized_name="Ampharos",
+            english_name="Ampharos",
+        )
+        _insert_v1_card(
+            conn,
+            language="jp",
+            set_id="neo1",
+            set_name="Gold, Silver, to a New World...",
+            collector="001",
+            slug="chikorita",
+            localized_name="Chikorita",
+            english_name="Chikorita",
+        )
         conn.commit()
     finally:
         conn.close()
@@ -469,6 +531,106 @@ class V1ToGlobalJpAliasTests(unittest.TestCase):
                 }
             self.assertEqual(langs, {"en", "ja"})
 
+    def test_neo1_en_jp_keeps_language_specific_set_rows(self) -> None:
+        """Shared provider code neo1 must not let EN win the sets PK."""
+        self.assertEqual(
+            pack_set_id_from_canonical_base_id(
+                "pokemon|en|neo1|001/111|ampharos",
+                pack_lang="en",
+                raw_set_id="neo1",
+            ),
+            "pokemon|en|neo1",
+        )
+        self.assertEqual(
+            pack_set_id_from_canonical_base_id(
+                "pokemon|jp|neo1|001|chikorita",
+                pack_lang="ja",
+                raw_set_id="neo1",
+            ),
+            "pokemon|jp|neo1",
+        )
+        with _temp_dir() as tmp:
+            root = Path(tmp)
+            v1 = _write_neo1_en_jp_v1_db(root / "v1.sqlite")
+            source = root / "global.sqlite"
+            report = convert_v1_search_to_global_pack_source(
+                v1_db=v1,
+                output_db=source,
+                languages=("en", "ja"),
+            )
+            self.assertEqual(report["setCount"], 2)
+            self.assertEqual(report["languageCounts"].get("en"), 1)
+            self.assertEqual(report["languageCounts"].get("ja"), 1)
+
+            with sqlite3.connect(source) as conn:
+                set_rows = {
+                    (row[0], row[1], row[2])
+                    for row in conn.execute(
+                        "SELECT set_id, language, set_name FROM sets"
+                    )
+                }
+                card_set_ids = {
+                    (row[0], row[1])
+                    for row in conn.execute(
+                        "SELECT language, set_id FROM cards"
+                    )
+                }
+            self.assertEqual(
+                set_rows,
+                {
+                    ("pokemon|en|neo1", "en", "Neo Genesis"),
+                    (
+                        "pokemon|jp|neo1",
+                        "ja",
+                        "Gold, Silver, to a New World...",
+                    ),
+                },
+            )
+            self.assertEqual(
+                card_set_ids,
+                {
+                    ("en", "pokemon|en|neo1"),
+                    ("ja", "pokemon|jp|neo1"),
+                },
+            )
+
+            manifest = build_all_packs(
+                source_db=source,
+                output_dir=root / "out",
+                languages=("en", "ja"),
+                include_sealed=True,
+                catalogue_release_id="test-neo1",
+            )
+            pack_ids = {p["packId"] for p in manifest["packs"]}
+            self.assertEqual(pack_ids, {"core", "en", "ja"})
+            # Empty sealed source is omitted; not a false-positive sealed default.
+            self.assertNotIn("sealed-products", pack_ids)
+            self.assertEqual(
+                set(manifest["defaultInstallPackIds"]),
+                {"core", "en"},
+            )
+
+            ja_pack = root / "out" / "sqlite" / "ja.sqlite"
+            with sqlite3.connect(ja_pack) as conn:
+                ja_sets = {
+                    row[0]
+                    for row in conn.execute("SELECT set_id FROM sets")
+                }
+                orphan_cards = conn.execute(
+                    """
+                    SELECT COUNT(*) FROM cards c
+                    LEFT JOIN sets s ON s.set_id = c.set_id
+                    WHERE s.set_id IS NULL
+                    """
+                ).fetchone()[0]
+                ja_set_lang = conn.execute(
+                    "SELECT language FROM sets WHERE set_id = ?",
+                    ("pokemon|jp|neo1",),
+                ).fetchone()
+            self.assertEqual(ja_sets, {"pokemon|jp|neo1"})
+            self.assertEqual(orphan_cards, 0)
+            self.assertEqual(ja_set_lang[0], "ja")
+
 
 class ProductionPackGateTests(unittest.TestCase):
     def test_reject_incomplete_language_counts(self) -> None:
@@ -495,6 +657,21 @@ class ProductionPackGateTests(unittest.TestCase):
             self.assertEqual(resolve_public_base_url(missing), "https://assets.cardscanr.com")
             self.assertEqual(resolve_public_base_url(None), "https://assets.cardscanr.com")
 
+    def test_config_without_asset_keys_falls_back(self) -> None:
+        """Absent asset keys (not invalid values) may use the default host."""
+        with _temp_dir() as tmp:
+            cfg = Path(tmp) / "no-asset-keys.json"
+            cfg.write_text(
+                json.dumps(
+                    {
+                        "r2Bucket": "cardscanr-catalog",
+                        "pagesBaseUrl": "https://example.pages.dev",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(resolve_public_base_url(cfg), "https://assets.cardscanr.com")
+
     def test_invalid_config_raises(self) -> None:
         with _temp_dir() as tmp:
             bad = Path(tmp) / "bad.json"
@@ -502,6 +679,34 @@ class ProductionPackGateTests(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 resolve_public_base_url(bad)
             self.assertIn("invalid publication config", str(ctx.exception))
+
+    def test_explicit_invalid_asset_url_raises_by_key_presence(self) -> None:
+        """Key presence wins over truthiness; empty/null/http must not fall back."""
+        cases = (
+            {"r2CatalogueAssetsBaseUrl": ""},
+            {"r2CatalogueAssetsBaseUrl": None},
+            {"r2CatalogueAssetsBaseUrl": "http://insecure.example"},
+            {"r2CatalogueAssetsBaseUrl": 123},
+            {"r2PublicBaseUrl": ""},
+            {"r2PublicBaseUrl": "http://insecure.example"},
+            # Prefer assets key even when public base is valid HTTPS.
+            {
+                "r2CatalogueAssetsBaseUrl": "http://bad.example",
+                "r2PublicBaseUrl": "https://ok.example",
+            },
+        )
+        with _temp_dir() as tmp:
+            for index, payload in enumerate(cases):
+                cfg = Path(tmp) / f"bad-url-{index}.json"
+                body = {
+                    "r2Bucket": "cardscanr-catalog",
+                    "pagesBaseUrl": "https://example.pages.dev",
+                    **payload,
+                }
+                cfg.write_text(json.dumps(body), encoding="utf-8")
+                with self.assertRaises(ValueError, msg=f"case={payload}") as ctx:
+                    resolve_public_base_url(cfg)
+                self.assertIn("asset base URL must be https", str(ctx.exception))
 
     def test_valid_config_override(self) -> None:
         with _temp_dir() as tmp:
@@ -517,6 +722,32 @@ class ProductionPackGateTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(resolve_public_base_url(cfg), "https://cdn.example.test")
+
+    def test_manifest_classification_is_size_only_not_completeness(self) -> None:
+        """Documented false-positive: PASS means size limits, not catalogue fullness.
+
+        Production tooling rejects empty language counts before build_all_packs.
+        build_all_packs itself still classifies PASS solely from public size
+        limits, so callers must keep the convert-report gate.
+        """
+        with _temp_dir() as tmp:
+            root = Path(tmp)
+            source = _write_empty_sealed_source(root / "source.sqlite")
+            manifest = build_all_packs(
+                source_db=source,
+                output_dir=root / "out",
+                languages=("en",),
+                include_sealed=True,
+                catalogue_release_id="test-pass-size-only",
+            )
+            self.assertEqual(manifest["classification"], "PASS")
+            self.assertEqual(manifest["sizeLimitViolations"], [])
+            # Completeness is enforced by require_nonzero_production_language_counts,
+            # not by classification. Empty convert reports must still raise:
+            with self.assertRaises(ValueError):
+                require_nonzero_production_language_counts(
+                    {"languages": ["en", "ja"], "languageCounts": {"en": 0, "ja": 0}}
+                )
 
 
 if __name__ == "__main__":
