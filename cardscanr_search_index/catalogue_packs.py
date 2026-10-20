@@ -292,11 +292,29 @@ def _finalize_pack(
     )
 
 
-def build_core_pack(source_db: Path, work_dir: Path, output_dir: Path) -> PackBuildResult:
+def build_core_pack(
+    source_db: Path,
+    work_dir: Path,
+    output_dir: Path,
+    *,
+    languages: Sequence[str] | None = None,
+) -> PackBuildResult:
+    """Build the core sets pack.
+
+    When ``languages`` is provided, only sets for those language codes are
+    copied (NULL language rows are excluded). When omitted, all sets are copied.
+    """
     tmp = work_dir / "core.sqlite.tmp"
     dest = _init_pack_db(tmp, source_db)
     try:
-        dest.execute("INSERT INTO sets SELECT * FROM src.sets")
+        if languages is None:
+            dest.execute("INSERT INTO sets SELECT * FROM src.sets")
+        else:
+            placeholders = ",".join("?" for _ in languages)
+            dest.execute(
+                f"INSERT INTO sets SELECT * FROM src.sets WHERE language IN ({placeholders})",
+                tuple(languages),
+            )
         _set_meta(
             dest,
             {
@@ -388,12 +406,46 @@ def build_language_pack(
     )
 
 
-def build_sealed_pack(source_db: Path, work_dir: Path, output_dir: Path) -> PackBuildResult:
+def build_sealed_pack(
+    source_db: Path,
+    work_dir: Path,
+    output_dir: Path,
+    *,
+    languages: Sequence[str] | None = None,
+) -> PackBuildResult:
+    """Build the sealed-products pack.
+
+    When ``languages`` is provided, only products for those language codes are
+    copied and contents are limited to retained products. Rows with NULL
+    language are excluded under a language filter (rights-safe default).
+    """
     tmp = work_dir / "sealed-products.sqlite.tmp"
     dest = _init_pack_db(tmp, source_db)
     try:
-        dest.execute("INSERT INTO sealed_products SELECT * FROM src.sealed_products")
-        dest.execute("INSERT INTO sealed_product_contents SELECT * FROM src.sealed_product_contents")
+        if languages is None:
+            dest.execute("INSERT INTO sealed_products SELECT * FROM src.sealed_products")
+            dest.execute(
+                "INSERT INTO sealed_product_contents SELECT * FROM src.sealed_product_contents"
+            )
+        else:
+            placeholders = ",".join("?" for _ in languages)
+            dest.execute(
+                f"""
+                INSERT INTO sealed_products
+                SELECT * FROM src.sealed_products
+                WHERE language IN ({placeholders})
+                """,
+                tuple(languages),
+            )
+            dest.execute(
+                """
+                INSERT INTO sealed_product_contents
+                SELECT c.* FROM src.sealed_product_contents c
+                WHERE c.product_variant_id IN (
+                  SELECT product_variant_id FROM sealed_products
+                )
+                """
+            )
         fts_count = _rebuild_products_fts(dest)
         product_count = int(dest.execute("SELECT COUNT(*) FROM sealed_products").fetchone()[0])
         content_count = int(dest.execute("SELECT COUNT(*) FROM sealed_product_contents").fetchone()[0])
@@ -429,6 +481,22 @@ def build_sealed_pack(source_db: Path, work_dir: Path, output_dir: Path) -> Pack
         sqlite_path=tmp,
         output_dir=output_dir,
     )
+
+
+def _count_sealed_products(
+    source_db: Path,
+    languages: Sequence[str] | None = None,
+) -> int:
+    with _connect(source_db, read_only=True) as connection:
+        if languages is None:
+            return int(connection.execute("SELECT COUNT(*) FROM sealed_products").fetchone()[0])
+        placeholders = ",".join("?" for _ in languages)
+        return int(
+            connection.execute(
+                f"SELECT COUNT(*) FROM sealed_products WHERE language IN ({placeholders})",
+                tuple(languages),
+            ).fetchone()[0]
+        )
 
 
 def resolve_language_packs(
@@ -475,9 +543,14 @@ def build_all_packs(
     work_dir.mkdir(parents=True, exist_ok=True)
 
     language_packs = resolve_language_packs(languages)
+    allowed_codes: tuple[str, ...] | None = (
+        None
+        if languages is None
+        else tuple(code for _, codes, _ in language_packs for code in codes)
+    )
 
     results: list[PackBuildResult] = [
-        build_core_pack(source_db, work_dir, output_dir),
+        build_core_pack(source_db, work_dir, output_dir, languages=allowed_codes),
     ]
     for pack_id, pack_languages, description in language_packs:
         results.append(
@@ -490,8 +563,11 @@ def build_all_packs(
                 description=description,
             )
         )
-    if include_sealed:
-        results.append(build_sealed_pack(source_db, work_dir, output_dir))
+    # Omit empty sealed-products packs so they never appear as defaults.
+    if include_sealed and _count_sealed_products(source_db, allowed_codes) > 0:
+        results.append(
+            build_sealed_pack(source_db, work_dir, output_dir, languages=allowed_codes)
+        )
     shutil.rmtree(work_dir, ignore_errors=True)
 
     release_id = catalogue_release_id or utc_now().replace(":", "").replace("-", "")
@@ -515,11 +591,14 @@ def build_all_packs(
             entry["compression"] = "gzip"
         packs_payload.append(entry)
 
+    built_ids = {p["packId"] for p in packs_payload}
+    # Preserve DEFAULT_AU_PACKS order, but only advertise packs that were built.
+    default_ids = [pid for pid in DEFAULT_AU_PACKS if pid in built_ids]
     default_bytes = sum(
-        p["compressedDownloadBytes"] for p in packs_payload if p["packId"] in DEFAULT_AU_PACKS
+        p["compressedDownloadBytes"] for p in packs_payload if p["packId"] in default_ids
     )
     all_optional = sum(
-        p["compressedDownloadBytes"] for p in packs_payload if p["packId"] not in DEFAULT_AU_PACKS
+        p["compressedDownloadBytes"] for p in packs_payload if p["packId"] not in default_ids
     )
     violations = [p["packId"] for p in packs_payload if not p["withinPublicSizeLimit"]]
 
@@ -533,7 +612,7 @@ def build_all_packs(
         "sourceDatabaseSha256": sha256_file(source_db),
         "sourceDatabaseBytes": source_db.stat().st_size,
         "maxPublicObjectBytes": MAX_PUBLIC_PACK_BYTES,
-        "defaultInstallPackIds": list(DEFAULT_AU_PACKS),
+        "defaultInstallPackIds": default_ids,
         "defaultInstallCompressedBytes": default_bytes,
         "optionalPackCompressedBytes": all_optional,
         "updatePolicy": "download_verified_immutable_pack_then_atomic_activate",

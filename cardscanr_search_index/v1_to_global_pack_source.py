@@ -37,8 +37,16 @@ def convert_v1_search_to_global_pack_source(
         output_db.unlink()
     output_db.parent.mkdir(parents=True, exist_ok=True)
 
-    wanted_pack_langs = {lang.lower() for lang in languages}
-    # Accept either v1 `jp` or pack `ja` when filtering Japanese.
+    # Normalize caller tokens (v1 `jp` → pack `ja`) before row filtering so
+    # Japanese cards are not dropped after pack_lang remapping.
+    wanted_pack_langs = {
+        _V1_TO_PACK_LANGUAGE.get(lang.strip().lower(), lang.strip().lower())
+        for lang in languages
+        if lang.strip()
+    }
+    if not wanted_pack_langs:
+        raise ValueError("languages must select at least one pack language")
+    # Accept either v1 `jp` or pack `ja` when filtering Japanese source rows.
     v1_lang_filter: set[str] = set()
     for lang in wanted_pack_langs:
         if lang == "ja":

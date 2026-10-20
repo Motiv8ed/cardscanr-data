@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -17,8 +18,57 @@ from cardscanr_search_index.v1_to_global_pack_source import (
     convert_v1_search_to_global_pack_source,
 )
 
+DEFAULT_PUBLIC_BASE = "https://assets.cardscanr.com"
 
-def main() -> int:
+
+def resolve_public_base_url(config_path: Path | None) -> str:
+    """Resolve client-facing pack URL base.
+
+    Falls back to ``DEFAULT_PUBLIC_BASE`` only when no config path is supplied
+    or the path does not exist. An explicitly present but invalid config raises.
+    """
+    public_base = DEFAULT_PUBLIC_BASE
+    if config_path is None or not config_path.exists():
+        return public_base
+
+    # Prefer the custom assets domain for client-facing pack URLs. The local
+    # Cloudflare env may list r2PublicDevUrl first for S3 uploads; packs must
+    # still resolve via assets.cardscanr.com when no override is present.
+    try:
+        cfg = load_publication_config(config_path)
+        candidate = getattr(cfg, "r2_catalogue_assets_base_url", None) or None
+        if not candidate:
+            raw = json.loads(config_path.read_text(encoding="utf-8"))
+            candidate = raw.get("r2CatalogueAssetsBaseUrl") or raw.get("r2PublicBaseUrl")
+        if isinstance(candidate, str) and candidate.startswith("https://"):
+            return candidate.rstrip("/")
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid publication config {config_path}: {exc}") from exc
+    return public_base
+
+
+def require_nonzero_production_language_counts(convert_report: Mapping[str, Any]) -> None:
+    """Reject incomplete EN/JP conversion before writing a public manifest."""
+    counts = convert_report.get("languageCounts") or {}
+    if not isinstance(counts, Mapping):
+        raise ValueError("convert report missing languageCounts mapping")
+    selected = convert_report.get("languages") or []
+    if not selected:
+        raise ValueError("convert report selected zero languages")
+    missing = [
+        str(lang)
+        for lang in selected
+        if int(counts.get(lang) or 0) <= 0
+    ]
+    if missing:
+        raise ValueError(
+            "incomplete production source: expected nonzero card counts for "
+            f"{sorted(selected)}, missing/zero for {sorted(missing)} "
+            f"(counts={dict(counts)})"
+        )
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--v1-database",
@@ -32,8 +82,16 @@ def main() -> int:
     )
     parser.add_argument("--languages", default="en,ja")
     parser.add_argument("--catalogue-release-id", default="")
-    parser.add_argument("--config", type=Path, default=ROOT / "cloudflare_env.local.json")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=ROOT / "cloudflare_env.local.json",
+        help=(
+            "Publication config JSON. When the file is missing, falls back to "
+            f"{DEFAULT_PUBLIC_BASE}. When present but invalid, the build fails."
+        ),
+    )
+    args = parser.parse_args(argv)
 
     languages = [part.strip() for part in args.languages.split(",") if part.strip()]
     work = args.output_dir / "_source"
@@ -44,30 +102,17 @@ def main() -> int:
         output_db=source_db,
         languages=tuple(languages),
     )
+    require_nonzero_production_language_counts(convert_report)
     (args.output_dir / "v1_to_global_convert_report.json").write_text(
         json.dumps(convert_report, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    # Prefer the custom assets domain for client-facing pack URLs. The local
-    # Cloudflare env may list r2PublicDevUrl first for S3 uploads; packs must
-    # still resolve via assets.cardscanr.com.
-    public_base = "https://assets.cardscanr.com"
-    if args.config.exists():
-        try:
-            cfg = load_publication_config(args.config)
-            candidate = getattr(cfg, "r2_catalogue_assets_base_url", None) or None
-            if not candidate:
-                raw = json.loads(args.config.read_text(encoding="utf-8"))
-                candidate = raw.get("r2CatalogueAssetsBaseUrl") or raw.get(
-                    "r2PublicBaseUrl"
-                )
-            if isinstance(candidate, str) and candidate.startswith("https://"):
-                public_base = candidate.rstrip("/")
-        except Exception:  # noqa: BLE001
-            pass
+    public_base = resolve_public_base_url(args.config)
 
     release_id = args.catalogue_release_id or "production-packs-en-jp-20260926"
+    # include_sealed=True: build_all_packs omits sealed-products when the
+    # converted source has zero sealed rows (v1 converter currently inserts none).
     manifest = build_all_packs(
         source_db=source_db,
         output_dir=args.output_dir,
