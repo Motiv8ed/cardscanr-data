@@ -72,18 +72,17 @@ def chunk_ids_for_in_filter(
         return len(url) < int(max_url_length)
 
     if not _fits(1):
-        width = 1
-    else:
-        low = 1
-        high = cap
-        width = 1
-        while low <= high:
-            mid = (low + high) // 2
-            if _fits(mid):
-                width = mid
-                low = mid + 1
-            else:
-                high = mid - 1
+        raise ValueError("one ID exceeds the PostgREST GET URL budget")
+    low = 1
+    high = cap
+    width = 1
+    while low <= high:
+        mid = (low + high) // 2
+        if _fits(mid):
+            width = mid
+            low = mid + 1
+        else:
+            high = mid - 1
     return [ids[index : index + width] for index in range(0, len(ids), width)]
 
 

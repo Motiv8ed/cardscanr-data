@@ -112,10 +112,30 @@ def evaluate_owned_verified_local_execution(
             details={**extras, "bandReason": reason_suffix},
         )
 
-    # FRESH_SKIP — only verified-local still within success window.
+    # Not scheduler-due. Fresh verified-local is the only true FRESH_SKIP.
+    # Reference-only rows with a future next_refresh_due_at after a local infra
+    # failure (for example CDP_CONNECT_FAILURE) land here as intentional backoff.
+    if verified_local and view.ebay_success_freshness_at is not None:
+        return OwnedVerifiedLocalExecutionDecision(
+            should_execute=False,
+            reason_code="SKIP_ALREADY_FRESH_VERIFIED_LOCAL",
+            source_class=source_class,
+            verified_local=verified_local,
+            reference_only=reference_only,
+            successful_verified_at=success_at,
+            next_eligible_at=next_eligible,
+            scheduler_band=band,
+            scheduler_due=False,
+            would_skip_fresh=True,
+            pricing_intent=pricing_intent,
+            details={**extras, "bandReason": reason_suffix},
+        )
+    reason_code = "SKIP_NOT_DUE"
+    if "backoff" in str(reason_suffix or "").lower():
+        reason_code = "SKIP_BACKOFF_NOT_DUE"
     return OwnedVerifiedLocalExecutionDecision(
         should_execute=False,
-        reason_code="SKIP_ALREADY_FRESH_VERIFIED_LOCAL",
+        reason_code=reason_code,
         source_class=source_class,
         verified_local=verified_local,
         reference_only=reference_only,
@@ -123,7 +143,7 @@ def evaluate_owned_verified_local_execution(
         next_eligible_at=next_eligible,
         scheduler_band=band,
         scheduler_due=False,
-        would_skip_fresh=True,
+        would_skip_fresh=False,
         pricing_intent=pricing_intent,
         details={**extras, "bandReason": reason_suffix},
     )

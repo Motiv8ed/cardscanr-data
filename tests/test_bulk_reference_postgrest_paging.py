@@ -16,6 +16,7 @@ from cardscanr_market_engine.supabase_client import (
     MAX_GET_URL_LENGTH,
     MAX_IN_FILTER_CHUNK,
     SupabaseMarketEngineClient,
+    chunk_ids_for_in_filter,
     prepared_get_url,
 )
 from tests.test_bulk_reference_pricing import NOW, FakeBulkClient, _sample_key, sample_engine_config
@@ -123,6 +124,18 @@ class CacheMapChunkTests(unittest.TestCase):
         client = RecordingCacheClient()
         self.assertEqual(_runner(client).load_cache_map([]), {})
         self.assertEqual(client.calls, [])
+
+    def test_one_id_over_url_budget_raises(self) -> None:
+        huge = "a" * 9000
+        with self.assertRaisesRegex(ValueError, "one ID exceeds the PostgREST GET URL budget"):
+            chunk_ids_for_in_filter(
+                [huge],
+                table="market_price_cache",
+                base_params={"select": "price_key_id"},
+                column="price_key_id",
+                base_url=DEFAULT_POSTGREST_BUDGET_ORIGIN,
+                max_url_length=8000,
+            )
 
 
 class ListKeysPagingTests(unittest.TestCase):
@@ -329,15 +342,19 @@ class WorkerFatalExitTests(unittest.TestCase):
 
 class WrapperScriptTests(unittest.TestCase):
     def test_wrappers_capture_stderr_and_keep_exit_code(self) -> None:
+        shared = (ROOT / "scripts/runtime_python_logging.ps1").read_text(encoding="utf-8")
+        self.assertIn("function Invoke-LoggedPython", shared)
+        self.assertIn("RedirectStandardError = $true", shared)
+        self.assertIn("RedirectStandardOutput = $true", shared)
+        self.assertIn("StandardOutputEncoding", shared)
+        self.assertIn("StandardErrorEncoding", shared)
+        self.assertIn("$proc.ExitCode", shared)
         for name in (
             "scripts/ensure_live_bulk_reference_pricing_runtime.ps1",
             "scripts/ensure_ecb_fx_refresh_runtime.ps1",
         ):
             text = (ROOT / name).read_text(encoding="utf-8")
-            self.assertIn("function Invoke-LoggedPython", text)
-            self.assertIn("RedirectStandardError = $true", text)
-            self.assertIn("RedirectStandardOutput = $true", text)
-            self.assertIn("$proc.ExitCode", text)
+            self.assertIn('runtime_python_logging.ps1"', text)
             self.assertIn('"simulate-stderr"', text)
             self.assertIn("Invoke-LoggedPython -PythonPath $pythonPath", text)
             self.assertNotIn("& $pythonPath @argList 1>> $stdout 2>> $stderr", text)
