@@ -67,23 +67,25 @@ def reference_row_eligible_for_freshness_extension(
     return True
 
 
-def freshness_extension_guard_params(*, expected_last_updated_at: str | None) -> dict[str, Any]:
+def freshness_extension_guard_params(*, snapshot_anchor_iso: str) -> dict[str, Any]:
     """Write-time PostgREST filters for a freshness PATCH group.
 
     PostgREST accepts only one top-level ``or`` / ``and`` key, so legacy
-    ``display_price_source`` values (NULL / empty / reference) and the
-    non-failed ``refresh_status`` check are nested under a single ``and``.
+    ``display_price_source`` values (NULL / empty / reference), the
+    non-failed ``refresh_status`` check, and the snapshot ``last_updated_at``
+    ceiling are nested under a single ``and``.
+
+    Rows whose ``last_updated_at`` moved after the run anchor (concurrent
+    reference upsert or other writer) must not match the PATCH.
     """
     return {
         "and": (
             "(or(display_price_source.is.null,display_price_source.eq.,"
             "display_price_source.eq.reference),"
-            "or(refresh_status.is.null,refresh_status.neq.failed))"
+            "or(refresh_status.is.null,refresh_status.neq.failed),"
+            f"or(last_updated_at.is.null,last_updated_at.lte.{snapshot_anchor_iso}))"
         ),
         "verification_required": "is.false",
-        "last_updated_at": (
-            "is.null" if expected_last_updated_at is None else f"eq.{expected_last_updated_at}"
-        ),
     }
 
 
@@ -108,7 +110,6 @@ class _FreshnessExtension:
     price_key_id: str
     stale_after_iso: str
     checked_at_iso: str
-    expected_last_updated_at: str | None
 
 
 @dataclass(frozen=True)
@@ -364,14 +365,11 @@ class BulkReferenceRefreshRunner:
             reference_price=display.reference_price,
             now=anchor,
         )
-        prior = prior_cache or {}
-        last_updated = prior.get("last_updated_at")
         self._freshness_extensions.append(
             _FreshnessExtension(
                 price_key_id=key.id,
                 stale_after_iso=utc_iso(stale_after),
                 checked_at_iso=utc_iso(anchor),
-                expected_last_updated_at=str(last_updated) if last_updated is not None else None,
             )
         )
 
@@ -384,14 +382,14 @@ class BulkReferenceRefreshRunner:
         if not queued:
             counters.keys_freshness_extended = 0
             return
-        groups: dict[tuple[str, str, str | None], list[str]] = {}
+        groups: dict[tuple[str, str], list[str]] = {}
         for item in queued:
             groups.setdefault(
-                (item.stale_after_iso, item.checked_at_iso, item.expected_last_updated_at),
+                (item.stale_after_iso, item.checked_at_iso),
                 [],
             ).append(item.price_key_id)
         extended = 0
-        for (stale_iso, checked_iso, expected_last_updated_at), ids in groups.items():
+        for (stale_iso, checked_iso), ids in groups.items():
             payload = {
                 "stale_after": stale_iso,
                 "next_refresh_due_at": stale_iso,
@@ -406,7 +404,7 @@ class BulkReferenceRefreshRunner:
                         # snapshot can be hours old after live TCGdex work;
                         # verified, pending, failed, or rewritten rows must stay untouched.
                         guard_params=freshness_extension_guard_params(
-                            expected_last_updated_at=expected_last_updated_at,
+                            snapshot_anchor_iso=checked_iso,
                         ),
                     )
                 )

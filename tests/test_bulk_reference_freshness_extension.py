@@ -1,9 +1,10 @@
 """Freshness extension for unchanged reference prices (CT-20261018-002)."""
 from __future__ import annotations
 
+import re
 import unittest
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from cardscanr_market_engine.bulk.price_semantics import ReferencePriceObservation
 from cardscanr_market_engine.bulk.reference_refresh import (
@@ -25,6 +26,8 @@ from tests.test_bulk_reference_pricing import NOW, FakeBulkClient, _sample_key, 
 LOW_PRICE = 0.31
 HIGH_PRICE = 150.0
 PRICE_LAST_CHANGED = "2026-08-26T00:00:00Z"
+RUN_SNAPSHOT_ANCHOR = "2026-08-27T00:00:00Z"
+_LAST_UPDATED_LTE_PATTERN = re.compile(r"last_updated_at\.lte\.([^)]+)")
 
 
 def _iso_offset(hours: int) -> str:
@@ -66,11 +69,31 @@ def _refresh_status_allows_extension(value: object) -> bool:
     return str(value).strip().lower() != "failed"
 
 
+def _parse_guard_timestamp(value: object) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    return datetime.fromisoformat(text)
+
+
+def _snapshot_anchor_from_guard(and_filter: str) -> datetime | None:
+    match = _LAST_UPDATED_LTE_PATTERN.search(and_filter)
+    if not match:
+        return None
+    return _parse_guard_timestamp(match.group(1))
+
+
 def _matches_freshness_guard(row: dict, params: dict) -> bool:
     and_filter = str(params.get("and") or "")
     if "display_price_source.eq.reference" not in and_filter:
         return False
     if "refresh_status.neq.failed" not in and_filter:
+        return False
+    if "last_updated_at.is.null" not in and_filter:
         return False
     if not _legacy_reference_source(row.get("display_price_source")):
         return False
@@ -80,15 +103,13 @@ def _matches_freshness_guard(row: dict, params: dict) -> bool:
         row.get("verification_required")
     ):
         return False
-    last_updated_filter = str(params.get("last_updated_at") or "")
-    row_last_updated = row.get("last_updated_at")
-    if last_updated_filter == "is.null":
-        if row_last_updated is not None:
-            return False
-    elif last_updated_filter.startswith("eq."):
-        if str(row_last_updated) != last_updated_filter[3:]:
-            return False
-    return True
+    anchor = _snapshot_anchor_from_guard(and_filter)
+    if anchor is None:
+        return False
+    row_last_updated = _parse_guard_timestamp(row.get("last_updated_at"))
+    if row_last_updated is None:
+        return True
+    return row_last_updated <= anchor
 
 
 class FreshnessClient(FakeBulkClient):
@@ -237,7 +258,7 @@ class NoChangeFreshnessTests(unittest.TestCase):
                     {
                         "price_key_id": f"in.({key.id})",
                         **freshness_extension_guard_params(
-                            expected_last_updated_at=PRICE_LAST_CHANGED,
+                            snapshot_anchor_iso=RUN_SNAPSHOT_ANCHOR,
                         ),
                     },
                 )
@@ -384,7 +405,15 @@ class BatchedFreshnessTests(unittest.TestCase):
             )
             keys.append(key)
             prices[key_id] = price
-            client.cache[key_id] = _reference_prior(key_id, price)
+            pre_anchor = (
+                NOW - timedelta(hours=1)
+            ).replace(microsecond=index % 1_000_000, tzinfo=timezone.utc)
+            pre_anchor_iso = pre_anchor.isoformat().replace("+00:00", "Z")
+            client.cache[key_id] = _reference_prior(
+                key_id,
+                price,
+                last_updated_at=pre_anchor_iso,
+            )
         client.keys = keys
         runner = _runner(client, dry_run=False)
         _install_prices(runner, prices)
@@ -410,9 +439,9 @@ class BatchedFreshnessTests(unittest.TestCase):
             self.assertEqual(
                 {
                     key: call["params"][key]
-                    for key in ("and", "verification_required", "last_updated_at")
+                    for key in ("and", "verification_required")
                 },
-                freshness_extension_guard_params(expected_last_updated_at=PRICE_LAST_CHANGED),
+                freshness_extension_guard_params(snapshot_anchor_iso=RUN_SNAPSHOT_ANCHOR),
             )
             url = prepared_get_url(client.supabase_url, call["table"], call["params"])
             self.assertLess(len(url), 8000)
@@ -429,7 +458,7 @@ class BatchedFreshnessTests(unittest.TestCase):
         self.assertEqual(grouped[_iso_offset(12)], low_ids)
         self.assertEqual(grouped[_iso_offset(4)], high_ids)
         guard_params = freshness_extension_guard_params(
-            expected_last_updated_at=PRICE_LAST_CHANGED,
+            snapshot_anchor_iso=RUN_SNAPSHOT_ANCHOR,
         )
         for stale_iso, ids in ((_iso_offset(12), low_ids), (_iso_offset(4), high_ids)):
             expected = chunk_ids_for_in_filter(
@@ -445,7 +474,9 @@ class BatchedFreshnessTests(unittest.TestCase):
                 [_ids_from_in_filter(str(call["params"]["price_key_id"])) for call in actual],
                 expected,
             )
-        self.assertEqual(client.cache[keys[0].id]["last_updated_at"], PRICE_LAST_CHANGED)
+        first_pre_anchor = client.cache[keys[0].id]["last_updated_at"]
+        self.assertNotEqual(first_pre_anchor, PRICE_LAST_CHANGED)
+        self.assertEqual(client.cache[keys[0].id]["last_updated_at"], first_pre_anchor)
         self.assertEqual(client.cache[keys[0].id]["current_market_price"], LOW_PRICE)
 
     def test_dry_run_reports_keys_whose_freshness_would_be_extended(self) -> None:
