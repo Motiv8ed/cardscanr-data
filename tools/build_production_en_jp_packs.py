@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import secrets
+import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,7 +23,7 @@ from cardscanr_search_index.v1_to_global_pack_source import (
 )
 
 DEFAULT_PUBLIC_BASE = "https://assets.cardscanr.com"
-# Explicit ids only. Generated ids keep the ISO basic timestamp (T/Z).
+# Lowercase UTC stamp so a generated id matches this explicit-id pattern.
 _EXPLICIT_RELEASE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,80}$")
 _GENERATED_RELEASE_PREFIX = "production-packs-en-jp"
 _MANIFEST_FILENAMES = (
@@ -163,9 +164,11 @@ def generate_release_id(
         moment = moment.replace(tzinfo=timezone.utc)
     else:
         moment = moment.astimezone(timezone.utc)
-    stamp = moment.strftime("%Y%m%dT%H%M%SZ")
+    stamp = moment.strftime("%Y%m%dt%H%M%Sz")
     suffix = _content_hash_prefix(content_hash)
-    return f"{_GENERATED_RELEASE_PREFIX}-{stamp}-{suffix}"
+    return validate_explicit_release_id(
+        f"{_GENERATED_RELEASE_PREFIX}-{stamp}-{suffix}"
+    )
 
 
 def _manifest_release_id(path: Path) -> str | None:
@@ -182,10 +185,25 @@ def _manifest_release_id(path: Path) -> str | None:
     return stripped or None
 
 
+def persist_release_manifest(output_dir: Path, release_id: str) -> Path | None:
+    """Keep a per-release copy after the root manifest is written.
+
+    The next build overwrites ``catalogue.packs.manifest.json``. The copy under
+    ``output_dir/<release_id>/`` is what a later reuse check still finds.
+    """
+    source = output_dir / "catalogue.packs.manifest.json"
+    if not source.is_file():
+        return None
+    destination = output_dir / release_id / "catalogue.packs.manifest.json"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, destination)
+    return destination
+
+
 def existing_release_manifest(output_dir: Path, release_id: str) -> Path | None:
     """Return a local manifest already bound to release_id, if one exists.
 
-    Checks pack manifests in the output directory only. Does not query R2 or
+    Checks the root manifests and the per-release copy. Does not query R2 or
     any other remote store.
     """
     if not output_dir.is_dir():
@@ -288,6 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         languages=languages,
         include_sealed=True,
     )
+    persist_release_manifest(args.output_dir, release_id)
     # Strip local filesystem paths from the public-facing copy used for activation.
     public_manifest = json.loads(json.dumps(manifest))
     for pack in public_manifest.get("packs", []):

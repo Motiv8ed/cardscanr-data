@@ -22,13 +22,15 @@ if str(ROOT) not in sys.path:
 from tools.build_production_en_jp_packs import (
     ReleaseIdError,
     build_parser,
+    generate_release_id,
     main,
     resolve_catalogue_release_id,
+    validate_explicit_release_id,
 )
 
 # Example of an explicit id. The builder must not fall back to this string.
 _LEGACY_FIXED = "production-packs-en-jp-20260926"
-_GENERATED = re.compile(r"^production-packs-en-jp-\d{8}T\d{6}Z-[0-9a-f]{8}$")
+_GENERATED = re.compile(r"^production-packs-en-jp-\d{8}t\d{6}z-[0-9a-f]{8}$")
 
 
 def _write_manifest(directory: Path, release_id: str, *, name: str) -> Path:
@@ -87,7 +89,7 @@ class ReleaseIdTests(unittest.TestCase):
         self.assertIn(f"generated catalogue release id: {second}", logged)
         self.assertEqual(
             stamped,
-            "production-packs-en-jp-20261021T010500Z-abcdef01",
+            "production-packs-en-jp-20261021t010500z-abcdef01",
         )
         self.assertEqual(from_input_hash, stamped)
         self.assertRegex(unhashed, _GENERATED)
@@ -158,6 +160,102 @@ class ReleaseIdTests(unittest.TestCase):
         )
         self.assertEqual(public["catalogueReleaseId"], release_id)
         return release_id
+
+    def test_generated_release_id_passes_explicit_validation(self) -> None:
+        generated = generate_release_id(
+            content_hash="ABCDEF0123456789",
+            now=datetime(2026, 10, 21, 1, 5, 0, tzinfo=timezone.utc),
+        )
+        self.assertEqual(validate_explicit_release_id(generated), generated)
+        live = generate_release_id()
+        self.assertEqual(validate_explicit_release_id(live), live)
+
+    def test_release_id_refused_after_later_build_overwrites_root_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            self.assertEqual(self._run_explicit(out, "release-id-x"), 0)
+            self.assertEqual(self._run_explicit(out, "release-id-y"), 0)
+            root = json.loads(
+                (out / "catalogue.packs.manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(root["catalogueReleaseId"], "release-id-y")
+            durable = json.loads(
+                (out / "release-id-x" / "catalogue.packs.manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(durable["catalogueReleaseId"], "release-id-x")
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                code = main(
+                    [
+                        "--catalogue-release-id",
+                        "release-id-x",
+                        "--output-dir",
+                        str(out),
+                        "--v1-database",
+                        str(out / "absent.sqlite"),
+                        "--config",
+                        str(out / "missing.json"),
+                    ]
+                )
+            self.assertEqual(code, 1)
+            self.assertIn("already exists", stderr.getvalue())
+            self.assertIn(str(out / "release-id-x" / "catalogue.packs.manifest.json"), stderr.getvalue())
+            self.assertFalse((out / "absent.sqlite").exists())
+
+    def _run_explicit(self, out: Path, release_id: str) -> int:
+        def fake_convert(**kwargs: Any) -> dict[str, Any]:
+            output_db = kwargs["output_db"]
+            if not isinstance(output_db, Path):
+                raise AssertionError("output_db must be a path")
+            output_db.parent.mkdir(parents=True, exist_ok=True)
+            output_db.write_bytes(b"source-bytes")
+            return {"languages": ["en", "ja"], "languageCounts": {"en": 1, "ja": 1}}
+
+        def fake_build(**kwargs: Any) -> dict[str, Any]:
+            built_id = kwargs["catalogue_release_id"]
+            output_dir = kwargs["output_dir"]
+            if not isinstance(built_id, str) or not isinstance(output_dir, Path):
+                raise AssertionError("build_all_packs arguments")
+            manifest = {
+                "classification": "PASS",
+                "catalogueReleaseId": built_id,
+                "packs": [],
+            }
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / "catalogue.packs.manifest.json").write_text(
+                json.dumps(manifest) + "\n",
+                encoding="utf-8",
+            )
+            return manifest
+
+        database = out / "v1.sqlite"
+        database.write_bytes(b"v1-input")
+        with (
+            patch(
+                "tools.build_production_en_jp_packs.convert_v1_search_to_global_pack_source",
+                fake_convert,
+            ),
+            patch(
+                "tools.build_production_en_jp_packs.build_all_packs",
+                fake_build,
+            ),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            return main(
+                [
+                    "--catalogue-release-id",
+                    release_id,
+                    "--output-dir",
+                    str(out),
+                    "--v1-database",
+                    str(database),
+                    "--config",
+                    str(out / "missing.json"),
+                ]
+            )
 
     def test_explicit_release_id_is_used_verbatim(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
