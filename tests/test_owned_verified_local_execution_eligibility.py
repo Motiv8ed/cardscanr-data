@@ -100,7 +100,11 @@ class ExecutionEligibilityUnitTests(unittest.TestCase):
         self.assertIsNone(d.successful_verified_at)
         self.assertTrue(d.should_execute)
 
-    def test_local_infra_failure_reference_still_executes(self) -> None:
+    def test_local_infra_failure_with_future_due_is_backoff_not_fresh_skip(self) -> None:
+        # Exact cause of the former failure: classify_owned_daily_band returns
+        # due=False with p0_needs_verified_local_backoff when reference_only +
+        # refresh_status=failed + next_refresh_due_at still in the future.
+        # evaluate must not pretend that is SKIP_ALREADY_FRESH_VERIFIED_LOCAL.
         d = evaluate_owned_verified_local_execution(
             _ref_row(
                 refresh_status="failed",
@@ -108,7 +112,25 @@ class ExecutionEligibilityUnitTests(unittest.TestCase):
             ),
             now=NOW,
         )
+        self.assertFalse(d.should_execute)
+        self.assertFalse(d.scheduler_due)
+        self.assertFalse(d.would_skip_fresh)
+        self.assertEqual(d.scheduler_band, "P0_NEEDS_VERIFIED_LOCAL")
+        self.assertEqual(d.reason_code, "SKIP_BACKOFF_NOT_DUE")
+        self.assertEqual(d.details.get("bandReason"), "p0_needs_verified_local_backoff")
+
+    def test_local_infra_failure_after_backoff_expires_executes(self) -> None:
+        d = evaluate_owned_verified_local_execution(
+            _ref_row(
+                refresh_status="failed",
+                last_error_message="POST_SOLD_CAPTURE_FAILURE: CDP_CONNECT_FAILURE",
+                next_refresh_due_at="2026-10-02T11:00:00+00:00",
+                stale_after="2026-10-02T11:00:00+00:00",
+            ),
+            now=NOW,
+        )
         self.assertTrue(d.should_execute)
+        self.assertTrue(d.scheduler_due)
         self.assertEqual(d.scheduler_band, "P0_NEEDS_VERIFIED_LOCAL")
 
     def test_scheduler_due_and_execution_agree(self) -> None:

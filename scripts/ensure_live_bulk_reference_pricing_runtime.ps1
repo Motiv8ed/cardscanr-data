@@ -1,7 +1,7 @@
 # Ensure recurring bulk/reference pricing sync runtime on Windows.
 [CmdletBinding()]
 param(
-    [ValidateSet("start", "status", "stop", "run-once")]
+    [ValidateSet("start", "status", "stop", "run-once", "simulate-stderr")]
     [string]$Action = "start",
     [switch]$DryRun
 )
@@ -10,9 +10,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
-$envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
-if (Test-Path $envLoader) {
-    . $envLoader
+# simulate-stderr is a local exit-code check and must not load supabase_env.local.json.
+if ($Action -ne "simulate-stderr") {
+    $envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
+    if (Test-Path $envLoader) {
+        . $envLoader
+    }
 }
 
 $stateDir = Join-Path $repoRoot "reports\runtime"
@@ -33,6 +36,14 @@ function Write-StateFile {
     param([Parameter(Mandatory = $true)]$Payload)
     ($Payload | ConvertTo-Json -Depth 6) | Set-Content -Path $statePath -Encoding utf8
 }
+
+. (Join-Path $PSScriptRoot "runtime_python_logging.ps1")
+
+# Shared logging helpers: scripts/runtime_python_logging.ps1
+# Verify under powershell.exe 5.1:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ensure_live_bulk_reference_pricing_runtime.ps1 -Action simulate-stderr
+# Expected: exit code 3, temp err.log contains "Traceback: simulated".
+
 
 switch ($Action) {
     "status" {
@@ -56,8 +67,24 @@ switch ($Action) {
         if ($DryRun) { $argList += "--dry-run" }
         $stdout = Join-Path $stateDir "bulk_reference_sync.out.log"
         $stderr = Join-Path $stateDir "bulk_reference_sync.err.log"
-        & $pythonPath @argList 1>> $stdout 2>> $stderr
-        exit $LASTEXITCODE
+        $code = Invoke-LoggedPython -PythonPath $pythonPath -ArgumentList $argList -StdoutPath $stdout -StderrPath $stderr
+        exit $code
+    }
+    "simulate-stderr" {
+        $simDir = Join-Path ([System.IO.Path]::GetTempPath()) "cardscanr-bulk-wrapper-stderr-sim"
+        New-Item -ItemType Directory -Force -Path $simDir | Out-Null
+        $stdout = Join-Path $simDir "out.log"
+        $stderr = Join-Path $simDir "err.log"
+        Remove-Item -Force -LiteralPath $stdout, $stderr -ErrorAction SilentlyContinue
+        $code = Invoke-LoggedPython -PythonPath $pythonPath -ArgumentList @(
+            "-c",
+            "import sys; print('stdout line', flush=True); sys.stderr.write('Traceback: simulated\n'); raise SystemExit(3)"
+        ) -StdoutPath $stdout -StderrPath $stderr
+        Write-Host "[bulk-runtime] simulate-stderr exit=$code stdout=$stdout stderr=$stderr"
+        if (Test-Path -LiteralPath $stderr) {
+            Write-Host (Get-Content -Raw -LiteralPath $stderr)
+        }
+        exit $code
     }
     default {
         $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue

@@ -1,7 +1,7 @@
 # Ensure daily ECB FX refresh for CardScanR international pricing.
 [CmdletBinding()]
 param(
-    [ValidateSet("start", "status", "stop", "run-once")]
+    [ValidateSet("start", "status", "stop", "run-once", "simulate-stderr")]
     [string]$Action = "start",
     [switch]$Force
 )
@@ -10,9 +10,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
-$envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
-if (Test-Path $envLoader) {
-    . $envLoader
+# simulate-stderr is a local exit-code check and must not load supabase_env.local.json.
+if ($Action -ne "simulate-stderr") {
+    $envLoader = Join-Path $repoRoot "scripts\load_supabase_env.ps1"
+    if (Test-Path $envLoader) {
+        . $envLoader
+    }
 }
 
 $stateDir = Join-Path $repoRoot "reports\runtime"
@@ -22,6 +25,14 @@ $pythonPath = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $pythonPath) {
     throw "python not found on PATH"
 }
+
+. (Join-Path $PSScriptRoot "runtime_python_logging.ps1")
+
+# Shared logging helpers: scripts/runtime_python_logging.ps1
+# Verify under powershell.exe 5.1:
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\ensure_ecb_fx_refresh_runtime.ps1 -Action simulate-stderr
+# Expected: exit code 3, temp err.log contains "Traceback: simulated".
+
 
 switch ($Action) {
     "status" {
@@ -42,8 +53,24 @@ switch ($Action) {
         if ($Force) { $argList += "--force" }
         $stdout = Join-Path $stateDir "ecb_fx_refresh.out.log"
         $stderr = Join-Path $stateDir "ecb_fx_refresh.err.log"
-        & $pythonPath @argList 1>> $stdout 2>> $stderr
-        exit $LASTEXITCODE
+        $code = Invoke-LoggedPython -PythonPath $pythonPath -ArgumentList $argList -StdoutPath $stdout -StderrPath $stderr
+        exit $code
+    }
+    "simulate-stderr" {
+        $simDir = Join-Path ([System.IO.Path]::GetTempPath()) "cardscanr-fx-wrapper-stderr-sim"
+        New-Item -ItemType Directory -Force -Path $simDir | Out-Null
+        $stdout = Join-Path $simDir "out.log"
+        $stderr = Join-Path $simDir "err.log"
+        Remove-Item -Force -LiteralPath $stdout, $stderr -ErrorAction SilentlyContinue
+        $code = Invoke-LoggedPython -PythonPath $pythonPath -ArgumentList @(
+            "-c",
+            "import sys; print('stdout line', flush=True); sys.stderr.write('Traceback: simulated\n'); raise SystemExit(3)"
+        ) -StdoutPath $stdout -StderrPath $stderr
+        Write-Host "[ecb-fx] simulate-stderr exit=$code stdout=$stdout stderr=$stderr"
+        if (Test-Path -LiteralPath $stderr) {
+            Write-Host (Get-Content -Raw -LiteralPath $stderr)
+        }
+        exit $code
     }
     default {
         $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
