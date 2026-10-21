@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import secrets
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -12,13 +15,24 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from cardscanr_search_index.catalogue_packs import build_all_packs
+from cardscanr_search_index.catalogue_packs import build_all_packs, sha256_file
 from cardscanr_search_index.publication import load_publication_config
 from cardscanr_search_index.v1_to_global_pack_source import (
     convert_v1_search_to_global_pack_source,
 )
 
 DEFAULT_PUBLIC_BASE = "https://assets.cardscanr.com"
+# Explicit ids only. Generated ids keep the ISO basic timestamp (T/Z).
+_EXPLICIT_RELEASE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,80}$")
+_GENERATED_RELEASE_PREFIX = "production-packs-en-jp"
+_MANIFEST_FILENAMES = (
+    "catalogue.packs.manifest.json",
+    "catalogue.packs.manifest.public.json",
+)
+
+
+class ReleaseIdError(ValueError):
+    """Explicit release id is invalid, or that id already has a local manifest."""
 
 
 def resolve_public_base_url(config_path: Path | None) -> str:
@@ -80,7 +94,7 @@ def require_nonzero_production_language_counts(convert_report: Mapping[str, Any]
         )
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--v1-database",
@@ -93,7 +107,22 @@ def main(argv: list[str] | None = None) -> int:
         default=ROOT / "artifacts/local/packs_en_jp_production",
     )
     parser.add_argument("--languages", default="en,ja")
-    parser.add_argument("--catalogue-release-id", default="")
+    parser.add_argument(
+        "--catalogue-release-id",
+        default="",
+        help=(
+            "Immutable catalogue release id. When omitted or blank, a unique id "
+            "is generated. Explicit ids must match [a-z0-9][a-z0-9._-]{2,80}."
+        ),
+    )
+    parser.add_argument(
+        "--allow-existing-release-id",
+        action="store_true",
+        help=(
+            "Allow a release id that already has a manifest in --output-dir. "
+            "Off by default. Checks local manifests only."
+        ),
+    )
     parser.add_argument(
         "--config",
         type=Path,
@@ -103,7 +132,121 @@ def main(argv: list[str] | None = None) -> int:
             f"{DEFAULT_PUBLIC_BASE}. When present but invalid, the build fails."
         ),
     )
-    args = parser.parse_args(argv)
+    return parser
+
+
+def validate_explicit_release_id(raw: str) -> str:
+    release_id = raw.strip()
+    if not _EXPLICIT_RELEASE_ID_RE.fullmatch(release_id):
+        raise ReleaseIdError(
+            "invalid --catalogue-release-id "
+            f"{raw!r}: expected [a-z0-9][a-z0-9._-]{{2,80}} after trimming whitespace"
+        )
+    return release_id
+
+
+def _content_hash_prefix(content_hash: str | None) -> str:
+    if content_hash:
+        digest = content_hash.strip().lower()
+        if re.fullmatch(r"[0-9a-f]{8,}", digest):
+            return digest[:8]
+    return secrets.token_hex(4)
+
+
+def generate_release_id(
+    *,
+    content_hash: str | None = None,
+    now: datetime | None = None,
+) -> str:
+    moment = now or datetime.now(timezone.utc)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    else:
+        moment = moment.astimezone(timezone.utc)
+    stamp = moment.strftime("%Y%m%dT%H%M%SZ")
+    suffix = _content_hash_prefix(content_hash)
+    return f"{_GENERATED_RELEASE_PREFIX}-{stamp}-{suffix}"
+
+
+def _manifest_release_id(path: Path) -> str | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    value = payload.get("catalogueReleaseId")
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def existing_release_manifest(output_dir: Path, release_id: str) -> Path | None:
+    """Return a local manifest already bound to release_id, if one exists.
+
+    Checks pack manifests in the output directory only. Does not query R2 or
+    any other remote store.
+    """
+    if not output_dir.is_dir():
+        return None
+    candidates = [output_dir / name for name in _MANIFEST_FILENAMES]
+    release_dir = output_dir / release_id
+    candidates.extend(release_dir / name for name in _MANIFEST_FILENAMES)
+    for path in candidates:
+        if path.is_file() and _manifest_release_id(path) == release_id:
+            return path
+    return None
+
+
+def resolve_catalogue_release_id(
+    explicit: str,
+    *,
+    output_dir: Path,
+    allow_existing: bool = False,
+    content_hash: str | None = None,
+    now: datetime | None = None,
+) -> str:
+    """Use an explicit release id, or generate one when it is omitted.
+
+    Generated ids are logged to stderr and then follow the same manifest path
+    as an explicit id. Reuse of a local manifest is refused unless
+    allow_existing is set.
+    """
+    if explicit.strip():
+        release_id = validate_explicit_release_id(explicit)
+        generated = False
+    else:
+        release_id = generate_release_id(content_hash=content_hash, now=now)
+        generated = True
+    existing = existing_release_manifest(output_dir, release_id)
+    if existing is not None and not allow_existing:
+        raise ReleaseIdError(
+            f"release id {release_id!r} already exists at {existing}. "
+            "Refusing to reuse an immutable release id. "
+            "Pass --allow-existing-release-id to reuse it locally, "
+            "or pass a different --catalogue-release-id."
+        )
+    if generated:
+        print(f"generated catalogue release id: {release_id}", file=sys.stderr)
+    return release_id
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+
+    # Reject a bad or already-used explicit id before any build output is written.
+    release_id: str | None = None
+    if args.catalogue_release_id.strip():
+        try:
+            release_id = resolve_catalogue_release_id(
+                args.catalogue_release_id,
+                output_dir=args.output_dir,
+                allow_existing=args.allow_existing_release_id,
+            )
+        except ReleaseIdError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
 
     languages = [part.strip() for part in args.languages.split(",") if part.strip()]
     work = args.output_dir / "_source"
@@ -122,7 +265,19 @@ def main(argv: list[str] | None = None) -> int:
 
     public_base = resolve_public_base_url(args.config)
 
-    release_id = args.catalogue_release_id or "production-packs-en-jp-20260926"
+    if release_id is None:
+        content_hash = sha256_file(source_db) if source_db.is_file() else None
+        try:
+            release_id = resolve_catalogue_release_id(
+                "",
+                output_dir=args.output_dir,
+                allow_existing=args.allow_existing_release_id,
+                content_hash=content_hash,
+            )
+        except ReleaseIdError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+
     # include_sealed=True: build_all_packs omits sealed-products when the
     # converted source has zero sealed rows (v1 converter currently inserts none).
     manifest = build_all_packs(
