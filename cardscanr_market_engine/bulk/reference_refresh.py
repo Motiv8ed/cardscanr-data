@@ -11,11 +11,12 @@ from typing import Any, Callable
 from ..config import MarketEngineConfig
 from ..currency_conversion import resolve_currency_conversion
 from ..models import MarketPriceKey
+from ..price_source_precedence import VERIFIED_DISPLAY_SOURCES
 from ..refresh_policy import RefreshCooldownConfig, calculate_refresh_policy
 from ..supabase_client import SupabaseMarketEngineClient
 from .coverage_diagnostic import CoverageProbeResult, aggregate_coverage, classify_key
 from .display_price_policy import DisplayPriceDecision, decide_display_price
-from .price_semantics import ReferencePriceObservation
+from .price_semantics import ReferencePriceObservation, is_verified_provider
 from .set_id_aliases import is_synthetic_set_code, resolve_static_set_id, resolve_tcgdex_set_id
 from .static_price_index import lookup_static_reference
 from .sync_lock import acquire_bulk_sync_lock, release_bulk_sync_lock
@@ -27,12 +28,74 @@ def utc_iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+# Verified and pending rows keep their existing writers. "market" is included
+# via VERIFIED_DISPLAY_SOURCES (user-verified / eBay selected estimate).
+_FRESHNESS_PROTECTED_DISPLAY_SOURCES = frozenset(VERIFIED_DISPLAY_SOURCES | {"pending_verification"})
+
+
+def reference_row_eligible_for_freshness_extension(
+    *,
+    prior_cache: dict[str, Any] | None,
+    display: DisplayPriceDecision,
+) -> bool:
+    """True when a no_change reference confirmation may extend cache freshness.
+
+    preserve_verified, user-verified, and pending-verification rows are not
+    eligible. Those actions already have their own cache writes, and a
+    pending or verified row that the policy labels no_change must stay untouched.
+    Failed rows keep their retry clock and must not be extended either.
+    """
+    if display.action != "no_change" or display.verification_required:
+        return False
+    prior = prior_cache or {}
+    if not prior:
+        return False
+    if bool(prior.get("verification_required")):
+        return False
+    if str(prior.get("refresh_status") or "").strip().lower() == "failed":
+        return False
+    source = str(prior.get("display_price_source") or "").strip().lower()
+    if source in _FRESHNESS_PROTECTED_DISPLAY_SOURCES:
+        return False
+    if is_verified_provider(str(prior.get("provider") or "")):
+        return False
+    if is_verified_provider(display.provider):
+        return False
+    decision_source = str(display.display_source or "").strip().lower()
+    if decision_source in _FRESHNESS_PROTECTED_DISPLAY_SOURCES:
+        return False
+    return True
+
+
+def freshness_extension_guard_params(*, snapshot_anchor_iso: str) -> dict[str, Any]:
+    """Write-time PostgREST filters for a freshness PATCH group.
+
+    PostgREST accepts only one top-level ``or`` / ``and`` key, so legacy
+    ``display_price_source`` values (NULL / empty / reference), the
+    non-failed ``refresh_status`` check, and the snapshot ``last_updated_at``
+    ceiling are nested under a single ``and``.
+
+    Rows whose ``last_updated_at`` moved after the run anchor (concurrent
+    reference upsert or other writer) must not match the PATCH.
+    """
+    return {
+        "and": (
+            "(or(display_price_source.is.null,display_price_source.eq.,"
+            "display_price_source.eq.reference),"
+            "or(refresh_status.is.null,refresh_status.neq.failed),"
+            f"or(last_updated_at.is.null,last_updated_at.lte.{snapshot_anchor_iso}))"
+        ),
+        "verification_required": "is.false",
+    }
+
+
 @dataclass
 class BulkRefreshCounters:
     keys_scanned: int = 0
     keys_matched: int = 0
     keys_updated: int = 0
     keys_unchanged: int = 0
+    keys_freshness_extended: int = 0
     keys_quarantined: int = 0
     keys_unresolved: int = 0
     keys_ambiguous: int = 0
@@ -40,6 +103,13 @@ class BulkRefreshCounters:
     errors: int = 0
     error_details: list[dict[str, Any]] = field(default_factory=list)
     provider_hits: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class _FreshnessExtension:
+    price_key_id: str
+    stale_after_iso: str
+    checked_at_iso: str
 
 
 @dataclass(frozen=True)
@@ -87,6 +157,9 @@ class BulkReferenceRefreshRunner:
         self.logger = logger or (lambda msg: None)
         self.cooldown_config = RefreshCooldownConfig.from_env()
         self.tcgdex_cache = TcgdexRunCache()
+        self._freshness_extensions: list[_FreshnessExtension] = []
+        # One timestamp for the whole run so unchanged keys share a PATCH body.
+        self._freshness_anchor: datetime | None = None
 
     def _lookup_reference(self, key: MarketPriceKey) -> ReferencePriceObservation | None:
         obs = lookup_static_reference(
@@ -201,21 +274,12 @@ class BulkReferenceRefreshRunner:
                 "last_error_message": None,
             }
 
-        policy = calculate_refresh_policy(
-            cache_row={
-                "current_market_price": display.display_price,
-                "recommended_price": display.reference_price,
-                "last_updated_at": utc_iso(now),
-            },
-            price_key_row={
-                "popularity_score": key.raw.get("popularity_score"),
-                "inventory_count": key.raw.get("inventory_count"),
-            },
-            active_job=None,
+        stale_after = self._reference_stale_after(
+            key=key,
+            display_price=display.display_price,
+            reference_price=display.reference_price,
             now=now,
-            config=self.cooldown_config,
         )
-        stale_after = policy.cooldown_until or (now + timedelta(hours=self.refresh_config.reference_fresh_hours))
         return {
             "price_key_id": key.id,
             "current_market_price": display.display_price,
@@ -243,6 +307,118 @@ class BulkReferenceRefreshRunner:
             "verification_required": display.verification_required,
             "verification_reason": display.verification_reason,
         }
+
+    def _reference_stale_after(
+        self,
+        *,
+        key: MarketPriceKey,
+        display_price: float | None,
+        reference_price: float | None,
+        now: datetime,
+    ) -> datetime:
+        """Same TTL a successful reference write would stamp, anchored at ``now``.
+
+        ``calculate_refresh_policy`` measures cooldown from ``last_updated_at``.
+        Passing ``now`` yields ``now + row cooldown`` (12h for a low-value common
+        card, shorter for high-value or popular rows) instead of a date in the
+        past based on when the price last changed.
+        """
+        policy = calculate_refresh_policy(
+            cache_row={
+                "current_market_price": display_price,
+                "recommended_price": reference_price,
+                "last_updated_at": utc_iso(now),
+            },
+            price_key_row={
+                "popularity_score": key.raw.get("popularity_score"),
+                "inventory_count": key.raw.get("inventory_count"),
+            },
+            active_job=None,
+            now=now,
+            config=self.cooldown_config,
+        )
+        return policy.cooldown_until or (now + timedelta(hours=self.refresh_config.reference_fresh_hours))
+
+    def _queue_freshness_extension(
+        self,
+        *,
+        key: MarketPriceKey,
+        display: DisplayPriceDecision,
+        prior_cache: dict[str, Any] | None,
+        now: datetime,
+    ) -> None:
+        if not reference_row_eligible_for_freshness_extension(prior_cache=prior_cache, display=display):
+            return
+        # last_updated_at is the price-last-changed clock. The website binder
+        # shows "Updated <max(last_updated_at)>", and owned eBay success age
+        # reads only that column. A reconfirmation must not move it.
+        # There is no last_checked_at column. updated_at is the existing
+        # last-write/last-checked stamp (also set by
+        # trg_market_price_cache_set_updated_at). stale_after and
+        # next_refresh_due_at move together: the scheduler's due clock is
+        # next_refresh_due_at when that column is set, so extending only
+        # stale_after would leave the row due.
+        anchor = self._freshness_anchor or now
+        stale_after = self._reference_stale_after(
+            key=key,
+            display_price=display.display_price,
+            reference_price=display.reference_price,
+            now=anchor,
+        )
+        self._freshness_extensions.append(
+            _FreshnessExtension(
+                price_key_id=key.id,
+                stale_after_iso=utc_iso(stale_after),
+                checked_at_iso=utc_iso(anchor),
+            )
+        )
+
+    def _flush_freshness_extensions(self, counters: BulkRefreshCounters) -> None:
+        queued = self._freshness_extensions
+        self._freshness_extensions = []
+        if self.refresh_config.dry_run:
+            counters.keys_freshness_extended = len(queued)
+            return
+        if not queued:
+            counters.keys_freshness_extended = 0
+            return
+        groups: dict[tuple[str, str], list[str]] = {}
+        for item in queued:
+            groups.setdefault(
+                (item.stale_after_iso, item.checked_at_iso),
+                [],
+            ).append(item.price_key_id)
+        extended = 0
+        for (stale_iso, checked_iso), ids in groups.items():
+            payload = {
+                "stale_after": stale_iso,
+                "next_refresh_due_at": stale_iso,
+                "updated_at": checked_iso,
+            }
+            try:
+                extended += int(
+                    self.client.extend_reference_cache_freshness(
+                        price_key_ids=ids,
+                        payload=payload,
+                        # Re-check eligibility at write time. The start-of-run
+                        # snapshot can be hours old after live TCGdex work;
+                        # verified, pending, failed, or rewritten rows must stay untouched.
+                        guard_params=freshness_extension_guard_params(
+                            snapshot_anchor_iso=checked_iso,
+                        ),
+                    )
+                )
+            except Exception as exc:
+                counters.errors += 1
+                counters.error_details.append(
+                    {
+                        "stage": "extend_freshness",
+                        "count": len(ids),
+                        "error": str(exc),
+                    }
+                )
+                self.logger(f"[bulk-reference] freshness extension failed count={len(ids)}: {exc}")
+        counters.keys_freshness_extended = extended
 
     def process_key(
         self,
@@ -306,6 +482,12 @@ class BulkReferenceRefreshRunner:
             counters.keys_quarantined += 1
         elif display.action == "no_change":
             counters.keys_unchanged += 1
+            self._queue_freshness_extension(
+                key=key,
+                display=display,
+                prior_cache=prior_cache,
+                now=now,
+            )
             return result
         elif display.action in {"apply_reference", "preserve_verified"}:
             counters.keys_updated += 1
@@ -378,7 +560,8 @@ class BulkReferenceRefreshRunner:
                 "select": (
                     "price_key_id,current_market_price,recommended_price,provider,marketplace,"
                     "reference_price,reference_provider,reference_updated_at,display_price_source,"
-                    "verification_required,verification_reason,confidence,last_updated_at"
+                    "verification_required,verification_reason,confidence,last_updated_at,"
+                    "refresh_status"
                 ),
             },
             column="price_key_id",
@@ -408,6 +591,8 @@ class BulkReferenceRefreshRunner:
         cache_map = self.load_cache_map([key.id for key in keys])
         verification_budget = [self.refresh_config.verification_budget_per_run]
         samples: list[dict[str, Any]] = []
+        self._freshness_extensions = []
+        self._freshness_anchor = now
 
         coverage_rows: list[CoverageProbeResult] = []
 
@@ -458,6 +643,11 @@ class BulkReferenceRefreshRunner:
                 counters.error_details.append(detail)
                 self.logger(f"[bulk-reference] key={key.id} error={exc}")
 
+        try:
+            self._flush_freshness_extensions(counters)
+        finally:
+            self._freshness_anchor = None
+
         elapsed_ms = int((time.monotonic() - started) * 1000)
         keys_per_hour = 0.0
         if elapsed_ms > 0:
@@ -473,6 +663,7 @@ class BulkReferenceRefreshRunner:
             "keysMatched": counters.keys_matched,
             "keysUpdated": counters.keys_updated,
             "keysUnchanged": counters.keys_unchanged,
+            "keysFreshnessExtended": counters.keys_freshness_extended,
             "keysQuarantined": counters.keys_quarantined,
             "keysUnresolved": counters.keys_unresolved,
             "keysAmbiguous": counters.keys_ambiguous,

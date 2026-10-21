@@ -22,6 +22,9 @@ MAX_ERROR_BODY_CHARS = 4000
 POSTGREST_MAX_ROWS = 1000
 MAX_GET_URL_LENGTH = 8000
 MAX_IN_FILTER_CHUNK = 150
+# Columns a reconfirmed reference row may touch. Price, currency, provider,
+# and last_updated_at (price last changed) are intentionally absent.
+FRESHNESS_PATCH_COLUMNS = frozenset({"stale_after", "next_refresh_due_at", "updated_at"})
 # Same length as https://<20-char-ref>.supabase.co. Used only to budget URL
 # size when a caller has not set supabase_url.
 DEFAULT_POSTGREST_BUDGET_ORIGIN = "https://xxxxxxxxxxxxxxxxxxxx.supabase.co"
@@ -112,6 +115,62 @@ def fetch_rows_in_chunks(
             raise TypeError(f"PostgREST {table} chunk must be a list")
         rows.extend(page)
     return rows
+
+
+def content_range_total(header: str | None) -> int | None:
+    """Parse the total from a PostgREST ``Content-Range`` header (``*/N`` or ``a-b/N``)."""
+    if not header:
+        return None
+    text = str(header).strip()
+    if "/" not in text:
+        return None
+    total = text.rsplit("/", 1)[-1].strip()
+    if total == "*":
+        return None
+    try:
+        return int(total)
+    except ValueError:
+        return None
+
+
+def patch_rows_in_chunks(
+    patch_page: Callable[[dict[str, Any]], int],
+    *,
+    table: str,
+    column: str,
+    ids: list[str],
+    base_url: str,
+    base_params: dict[str, Any] | None = None,
+    max_url_length: int = MAX_GET_URL_LENGTH,
+    max_chunk: int = MAX_IN_FILTER_CHUNK,
+) -> int:
+    """PATCH one payload across ids so each request URL stays under max_url_length.
+
+    PostgREST puts the ``in.(...)`` filter in the query string for PATCH as well
+    as GET, so the GET URL budget is the right limit for these updates.
+
+    ``patch_page`` must return the number of rows actually updated (for example
+    from ``Prefer: count=exact`` / ``Content-Range``), not the submitted chunk size.
+    """
+    if not ids:
+        return 0
+    params_base = dict(base_params or {})
+    updated = 0
+    for chunk in chunk_ids_for_in_filter(
+        list(ids),
+        table=table,
+        base_params=params_base,
+        column=column,
+        base_url=base_url,
+        max_url_length=max_url_length,
+        max_chunk=max_chunk,
+    ):
+        params = in_filter_params(params_base, column, chunk)
+        # PATCH + limit without order is PGRST109 on PostgREST 10-12.
+        # The in.(...) filter already bounds the affected IDs.
+        params.pop("limit", None)
+        updated += int(patch_page(params))
+    return updated
 
 
 def iter_paged_rows(
@@ -275,19 +334,54 @@ class SupabaseMarketEngineClient:
             return data
         return [data]
 
-    def _table_patch(self, table: str, payload: dict[str, Any], *, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def _table_patch(
+        self,
+        table: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, Any],
+        prefer: str = "return=representation",
+    ) -> list[dict[str, Any]]:
         response = self.session.patch(
             f"{self.supabase_url}/rest/v1/{table}",
             params=params,
             json=payload,
-            headers={"Prefer": "return=representation"},
+            headers={"Prefer": prefer},
             timeout=self.timeout_seconds,
         )
         response.raise_for_status()
+        if response.status_code == 204 or not response.content:
+            return []
         data = response.json()
         if isinstance(data, list):
             return data
+        if data is None:
+            return []
         return [data]
+
+    def _table_patch_affected_count(
+        self,
+        table: str,
+        payload: dict[str, Any],
+        *,
+        params: dict[str, Any],
+        prefer: str = "return=minimal,count=exact",
+    ) -> int:
+        """PATCH rows and return the exact affected count from Content-Range."""
+        response = self.session.patch(
+            f"{self.supabase_url}/rest/v1/{table}",
+            params=params,
+            json=payload,
+            headers={"Prefer": prefer},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        total = content_range_total(
+            response.headers.get("Content-Range") or response.headers.get("content-range")
+        )
+        if total is None:
+            raise RuntimeError(f"PostgREST PATCH for {table} missing Content-Range count")
+        return total
 
     def claim_jobs(
         self,
@@ -830,6 +924,54 @@ class SupabaseMarketEngineClient:
             prefer="resolution=merge-duplicates,return=representation",
             on_conflict="price_key_id",
         )[0]
+
+    def extend_reference_cache_freshness(
+        self,
+        *,
+        price_key_ids: list[str],
+        payload: dict[str, Any],
+        guard_params: dict[str, Any] | None = None,
+        max_url_length: int = MAX_GET_URL_LENGTH,
+        max_chunk: int = MAX_IN_FILTER_CHUNK,
+    ) -> int:
+        """Extend freshness for many cache rows without rewriting price columns.
+
+        ``payload`` must include ``stale_after`` and may only include
+        ``stale_after``, ``next_refresh_due_at``, and ``updated_at``. Ids that
+        share that payload are PATCHed with ``price_key_id=in.(...)`` chunks
+        whose URLs stay under 8 KB.
+
+        ``guard_params`` are additional PostgREST filters applied at write time
+        so a delayed batch cannot overwrite a row that became verified,
+        pending, or otherwise ineligible after the start-of-run snapshot.
+        """
+        if not price_key_ids:
+            return 0
+        refused = sorted(set(payload) - FRESHNESS_PATCH_COLUMNS)
+        if refused or "stale_after" not in payload:
+            raise ValueError(
+                "reference freshness patch must set stale_after and may only set "
+                f"{sorted(FRESHNESS_PATCH_COLUMNS)}; refused={refused or ['missing stale_after']}"
+            )
+
+        def _patch(params: dict[str, Any]) -> int:
+            return self._table_patch_affected_count(
+                "market_price_cache",
+                payload,
+                params=params,
+                prefer="return=minimal,count=exact",
+            )
+
+        return patch_rows_in_chunks(
+            _patch,
+            table="market_price_cache",
+            column="price_key_id",
+            ids=list(price_key_ids),
+            base_url=self._budget_base_url(),
+            base_params=dict(guard_params or {}),
+            max_url_length=max_url_length,
+            max_chunk=max_chunk,
+        )
 
     def complete_job(
         self,
