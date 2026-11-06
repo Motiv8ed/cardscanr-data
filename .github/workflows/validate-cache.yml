@@ -30,6 +30,13 @@ jobs:
       - name: Validate cache
         run: CARDSCANR_VALIDATE_QUIET=1 python tools/validate_cache.py
 
+      - name: Bulk reference snapshot regression tests
+        run: |
+          python -m unittest \
+            tests.test_bulk_reference_snapshot_dedupe \
+            tests.test_bulk_reference_pricing \
+            tests.test_bulk_reference_freshness_extension
+
       - name: EN/JA image independence catalogue CDN regression
         run: python -m pytest tests/test_en_jp_image_independence_regression.py -q --tb=line
 
