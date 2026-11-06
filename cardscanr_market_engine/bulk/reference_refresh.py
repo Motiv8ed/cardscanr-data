@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -31,6 +32,69 @@ def utc_iso(value: datetime) -> str:
 # Verified and pending rows keep their existing writers. "market" is included
 # via VERIFIED_DISPLAY_SOURCES (user-verified / eBay selected estimate).
 _FRESHNESS_PROTECTED_DISPLAY_SOURCES = frozenset(VERIFIED_DISPLAY_SOURCES | {"pending_verification"})
+
+
+def _same_price(first: Any, second: Any) -> bool:
+    """Compare PostgREST numeric strings and local floats without rounding changes away."""
+    if first is None or second is None:
+        return first is None and second is None
+    try:
+        return Decimal(str(first)) == Decimal(str(second))
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+
+
+def should_record_reference_snapshot(
+    *,
+    prior_cache: dict[str, Any] | None,
+    observation: ReferencePriceObservation,
+    display: DisplayPriceDecision,
+    now: datetime,
+) -> bool:
+    """Keep material changes and one UTC-day checkpoint, not every hourly recheck.
+
+    Only the non-selected-reference paths can use this optimisation. Selected
+    reference prices already have the existing no_change/freshness-extension
+    policy, and eBay/verified price snapshots are entirely outside this runner.
+
+    Reference low/high and source diagnostics are not stored in cache. A daily
+    checkpoint preserves periodic evidence of those fields even when the
+    selected and reference prices do not move.
+    """
+    if display.action not in {"preserve_verified", "pending_verification", "reject_reference"}:
+        return True
+    prior = prior_cache or {}
+    checked_at = prior.get("reference_updated_at")
+    if not checked_at or now.tzinfo is None:
+        return True
+    try:
+        previous = datetime.fromisoformat(str(checked_at).replace("Z", "+00:00"))
+        if previous.tzinfo is None:
+            return True
+        if previous.astimezone(timezone.utc).date() != now.astimezone(timezone.utc).date():
+            return True
+    except (TypeError, ValueError, OverflowError):
+        return True
+
+    if str(prior.get("reference_provider") or "") != observation.provider:
+        return True
+    if not _same_price(prior.get("reference_price"), display.reference_price):
+        return True
+    if not _same_price(prior.get("current_market_price"), display.display_price):
+        return True
+    if str(prior.get("provider") or "") != str(display.provider or ""):
+        return True
+    if str(prior.get("marketplace") or "") != str(display.marketplace or ""):
+        return True
+    if str(prior.get("display_price_source") or "") != display.display_source:
+        return True
+    if str(prior.get("confidence") or "") != display.confidence:
+        return True
+    if bool(prior.get("verification_required")) != display.verification_required:
+        return True
+    if str(prior.get("verification_reason") or "") != str(display.verification_reason or ""):
+        return True
+    return False
 
 
 def reference_row_eligible_for_freshness_extension(
@@ -95,6 +159,7 @@ class BulkRefreshCounters:
     keys_matched: int = 0
     keys_updated: int = 0
     keys_unchanged: int = 0
+    snapshots_skipped_unchanged: int = 0
     keys_freshness_extended: int = 0
     keys_quarantined: int = 0
     keys_unresolved: int = 0
@@ -496,9 +561,21 @@ class BulkReferenceRefreshRunner:
             return result
 
         snapshot_id = str(uuid.uuid4())
-        snapshot_payload = self._build_snapshot_payload(key=key, observation=observation, display=display, now=now)
-        snapshot_payload["id"] = snapshot_id
-        self.client.insert_snapshot(snapshot_payload)
+        if should_record_reference_snapshot(
+            prior_cache=prior_cache,
+            observation=observation,
+            display=display,
+            now=now,
+        ):
+            snapshot_payload = self._build_snapshot_payload(
+                key=key, observation=observation, display=display, now=now,
+            )
+            snapshot_payload["id"] = snapshot_id
+            self.client.insert_snapshot(snapshot_payload)
+        else:
+            # The selected eBay snapshot ID is untouched by these cache updates.
+            # Still refresh secondary reference timestamps and verification state.
+            counters.snapshots_skipped_unchanged += 1
         cache_payload = self._build_cache_payload(
             key=key,
             observation=observation,
@@ -663,6 +740,7 @@ class BulkReferenceRefreshRunner:
             "keysMatched": counters.keys_matched,
             "keysUpdated": counters.keys_updated,
             "keysUnchanged": counters.keys_unchanged,
+            "snapshotsSkippedUnchanged": counters.snapshots_skipped_unchanged,
             "keysFreshnessExtended": counters.keys_freshness_extended,
             "keysQuarantined": counters.keys_quarantined,
             "keysUnresolved": counters.keys_unresolved,
