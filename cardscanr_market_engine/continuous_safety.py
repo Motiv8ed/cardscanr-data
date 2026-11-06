@@ -170,6 +170,14 @@ class ContinuousSafetyBudget:
         self.consecutive_transient = 0
         self.last_hard_stop = None
 
+    def record_success_resets_transient_streak_only(self) -> None:
+        """After a genuine healthy marketplace outcome, drop the consecutive-transient streak only.
+
+        HARD_STOP from the transient budget remains latched via ``last_hard_stop`` until
+        :meth:`record_healthy` (owner/tooling). Jobs must not silently clear that latch.
+        """
+        self.consecutive_transient = 0
+
     def record_transient(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
         # Already HARD_STOPPED: do not manufacture additional equivalent history.

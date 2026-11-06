@@ -377,7 +377,7 @@ def run_worker_loop(
                         break
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
                     if continuous:
-                        budget.record_healthy()
+                        budget.record_success_resets_transient_streak_only()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
                     consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"

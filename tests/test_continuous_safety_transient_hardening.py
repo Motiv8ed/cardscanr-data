@@ -95,6 +95,21 @@ class TransientLedgerConsistencyTests(unittest.TestCase):
         self.assertIsNone(budget.last_hard_stop)
         self.assertIsNone(budget.transient_hard_stop(now + timedelta(minutes=3)))
 
+    def test_success_cycle_does_not_clear_latched_hard_stop(self) -> None:
+        """Simulates post-latch job rows: healthy outcomes must not re-arm the budget."""
+        now = datetime(2026, 10, 7, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        for i in range(3):
+            budget.record_transient(now + timedelta(minutes=i))
+        self.assertEqual(budget.last_hard_stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+        budget.record_success_resets_transient_streak_only()
+        self.assertEqual(budget.consecutive_transient, 0)
+        self.assertEqual(
+            budget.transient_hard_stop(now + timedelta(minutes=10)),
+            "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+        )
+        self.assertEqual(budget.last_hard_stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+
     def test_attempts_while_already_stopped_do_not_add_history(self) -> None:
         now = datetime(2026, 10, 7, 6, 0, tzinfo=timezone.utc)
         budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
