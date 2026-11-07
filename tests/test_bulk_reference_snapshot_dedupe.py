@@ -25,6 +25,18 @@ class MergeCacheClient(FakeBulkClient):
         return self.cache[payload["price_key_id"]]
 
 
+class ProjectingCacheClient(MergeCacheClient):
+    """Emulate PostgREST column projection so load_cache_map omissions surface."""
+
+    def _table_get(self, table, params=None):
+        rows = super()._table_get(table, params)
+        select = str((params or {}).get("select") or "")
+        if table != "market_price_cache" or not select or select == "*":
+            return rows
+        columns = [column.strip() for column in select.split(",") if column.strip()]
+        return [{column: row.get(column) for column in columns} for row in rows]
+
+
 def _reference(*, price=5.84, provider="static_reference"):
     return ReferencePriceObservation(
         provider=provider,
@@ -173,6 +185,127 @@ class ReferenceSnapshotDedupeTests(unittest.TestCase):
         self.assertEqual(len(self.client.snapshots), 1)
         self.assertEqual(self.counters.snapshots_skipped_unchanged, 0)
         self.assertIn("latest_snapshot_id", self.client.cache[self.key.id])
+
+    def test_invalid_prior_timestamp_records_snapshot(self):
+        self.client.cache[self.key.id] = _verified_cache(
+            self.key.id, prior_checked="not-a-timestamp",
+        )
+        self.process()
+        self.assertEqual(len(self.client.snapshots), 1)
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 0)
+
+    def test_offset_timezone_same_utc_day_skips(self):
+        # 2026-11-06T10:30:00+10:00 == 2026-11-06T00:30:00Z: same UTC day.
+        self.client.cache[self.key.id] = _verified_cache(
+            self.key.id, prior_checked="2026-11-06T10:30:00+10:00",
+        )
+        self.clock[0] = START + timedelta(hours=5)
+        self.process()
+        self.assertEqual(self.client.snapshots, [])
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 1)
+
+    def test_offset_timezone_previous_utc_day_records(self):
+        # 2026-11-06T09:30:00+11:00 == 2026-11-05T22:30:00Z: prior UTC day.
+        self.client.cache[self.key.id] = _verified_cache(
+            self.key.id, prior_checked="2026-11-06T09:30:00+11:00",
+        )
+        self.process()
+        self.assertEqual(len(self.client.snapshots), 1)
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 0)
+
+    def test_string_valued_postgrest_numerics_skip(self):
+        row = _verified_cache(self.key.id, prior_checked="2026-11-06T00:00:00Z")
+        row["reference_price"] = "5.84"
+        row["current_market_price"] = "65.14"
+        self.client.cache[self.key.id] = row
+        self.process()
+        self.assertEqual(self.client.snapshots, [])
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 1)
+
+    def test_reject_reference_rechecks_do_not_flood_snapshots(self):
+        from cardscanr_market_engine.bulk.display_price_policy import decide_display_price
+
+        self.observation[0] = ReferencePriceObservation(
+            provider="static_reference",
+            source_market="US",
+            source_currency="AUD",
+            market_price=1.10,
+            low_price=None,
+            high_price=None,
+            confidence="low",
+            mapping_status="exact",
+        )
+        prior = {
+            **_verified_cache(self.key.id, prior_checked="2026-11-06T00:00:00Z", ref_price=1.10),
+            "provider": "static_reference",
+            "marketplace": "REFERENCE",
+            "display_price_source": "reference",
+            "current_market_price": 80.0,
+            "sample_size": 5,
+            "latest_snapshot_id": "reference-original",
+        }
+        decision = decide_display_price(
+            prior_cache=prior,
+            observation=self.observation[0],
+            converted_price=1.10,
+            target_currency="AUD",
+            now=START,
+        )
+        self.assertEqual(decision.action, "reject_reference")
+        prior["verification_required"] = decision.verification_required
+        prior["verification_reason"] = decision.verification_reason
+        self.client.cache[self.key.id] = prior
+        self.process()
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 1)
+        self.assertEqual(self.client.snapshots, [])
+        self.assertEqual(self.client.cache[self.key.id]["latest_snapshot_id"], "reference-original")
+        self.assertEqual(self.client.cache[self.key.id]["current_market_price"], 80.0)
+
+    def test_verification_state_change_records_snapshot_same_day(self):
+        self.client.cache[self.key.id] = {
+            **_verified_cache(self.key.id, prior_checked="2026-11-06T00:00:00Z"),
+            "verification_required": True,
+            "verification_reason": "extreme_move_needs_verification",
+        }
+        outcome = self.process()
+        self.assertEqual(outcome["status"], "preserve_verified")
+        self.assertEqual(len(self.client.snapshots), 1)
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 0)
+        cached = self.client.cache[self.key.id]
+        self.assertFalse(cached["verification_required"])
+        self.assertEqual(cached["latest_snapshot_id"], "ebay-original-snapshot")
+        self.assertEqual(cached["current_market_price"], 65.14)
+
+
+class VerifiedSourcePreservationTests(unittest.TestCase):
+    """End-to-end: an unchanged reference recheck must not downgrade verified provenance."""
+
+    def test_verified_au_source_survives_projection_limited_cache_load(self):
+        client = ProjectingCacheClient()
+        key = _sample_key(id="verified-au-key")
+        client.keys = [key]
+        client.cache[key.id] = _verified_cache(key.id, prior_checked="2026-11-05T23:00:00Z")
+        clock = [START]
+        runner = _runner(client, clock, [_reference()])
+
+        report = runner.run()
+        self.assertEqual(report["errors"], 0)
+        cached = client.cache[key.id]
+        self.assertEqual(cached["display_price_source"], "verified_au")
+        self.assertEqual(cached["provider"], "ebay_browser")
+        self.assertEqual(cached["marketplace"], "EBAY_AU")
+        self.assertEqual(cached["current_market_price"], 65.14)
+        self.assertEqual(cached["last_updated_at"], "2026-11-05T00:00:00Z")
+        self.assertEqual(cached["latest_snapshot_id"], "ebay-original-snapshot")
+        self.assertEqual(len(client.snapshots), 1)  # daily checkpoint only
+
+        clock[0] = START + timedelta(hours=1)
+        followup = runner.run()
+        self.assertEqual(followup["errors"], 0)
+        self.assertEqual(followup["snapshotsSkippedUnchanged"], 1)
+        self.assertEqual(len(client.snapshots), 1)
+        self.assertEqual(client.cache[key.id]["display_price_source"], "verified_au")
+        self.assertEqual(client.cache[key.id]["latest_snapshot_id"], "ebay-original-snapshot")
 
 
 if __name__ == "__main__":

@@ -638,7 +638,7 @@ class BulkReferenceRefreshRunner:
                     "price_key_id,current_market_price,recommended_price,provider,marketplace,"
                     "reference_price,reference_provider,reference_updated_at,display_price_source,"
                     "verification_required,verification_reason,confidence,last_updated_at,"
-                    "refresh_status"
+                    "refresh_status,market_country"
                 ),
             },
             column="price_key_id",
