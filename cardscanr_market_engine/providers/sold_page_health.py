@@ -110,12 +110,16 @@ def _has_sold_results_structure(
     body: str | None,
     title: str | None,
     *,
+    url: str | None = None,
     allow_title_only_without_body: bool = True,
 ) -> bool:
     """Ordinary Sold-results structure; zero listings may still be healthy."""
     body_s = str(body or "").strip()
     b = body_s.lower()
     t = str(title or "").lower()
+    unhealthy = classify_marketplace_page_class(url=url, title=title, body=body)
+    if unhealthy in {EBAY_CHALLENGE_PAGE, EBAY_SORRY_PAGE, EBAY_AUTH_REQUIRED, EBAY_ERROR_PAGE}:
+        return False
     if body_s and _has_solid_sold_body_markers(b):
         return True
     if "results" in b and "filter" in b and len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS:
@@ -230,13 +234,17 @@ def classify_sold_page_health(
     structure_ok = True
     page_class = HEALTHY_SOLD_RESULTS
     body_present = str(body or "").strip()
-    if require_nonempty_body and not body_present:
+    if unhealthy:
+        structure_ok = False
+        page_class = unhealthy
+    elif require_nonempty_body and not body_present:
         structure_ok = False
         reasons.append("authoritative_empty_body")
     elif require_body_structure or body is not None:
         structure_ok = _has_sold_results_structure(
             body,
             title,
+            url=url,
             allow_title_only_without_body=not require_nonempty_body,
         )
         if not structure_ok:

@@ -93,21 +93,15 @@ def _apply_authoritative_body_verification(
     body: str,
     gate: SoldGateState,
 ) -> tuple[bool, SoldGateState, dict[str, Any]]:
-    """Post-clipboard Sold gate: nonempty body, challenge/SORRY precedence, then structure."""
+    """Post-clipboard Sold gate: challenge/SORRY from title/URL first, then nonempty body."""
     extras: dict[str, Any] = {}
-    if not str(body or "").strip():
-        gate = on_sold_terminal(gate, verified=False, timeout=True)
-        extras.update(
-            error="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
-            failureClass="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
-            challenge=False,
-            sorry=False,
-            authRequired=False,
-            SOLD_STATE_VERIFIED=False,
-            x11SoldStateVerified=False,
-        )
-        return False, gate, extras
-    ev = evaluate_sold_verification(url=url, title=title, body=body, authoritative_document=True)
+    body_stripped = str(body or "").strip()
+    ev = evaluate_sold_verification(
+        url=url,
+        title=title,
+        body=body_stripped or body or "",
+        authoritative_document=True,
+    )
     extras["soldReadiness"] = ev.get("health")
     terminal = str(ev.get("terminal") or ev.get("marketplacePageClass") or "")
     if terminal in {EBAY_CHALLENGE_PAGE, "EBAY_CHALLENGE"}:
@@ -129,6 +123,18 @@ def _apply_authoritative_body_verification(
             failureClass=EBAY_SORRY_PAGE,
             challenge=False,
             sorry=True,
+            authRequired=False,
+            SOLD_STATE_VERIFIED=False,
+            x11SoldStateVerified=False,
+        )
+        return False, gate, extras
+    if not body_stripped:
+        gate = on_sold_terminal(gate, verified=False, timeout=True)
+        extras.update(
+            error="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+            failureClass="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+            challenge=False,
+            sorry=False,
             authRequired=False,
             SOLD_STATE_VERIFIED=False,
             x11SoldStateVerified=False,

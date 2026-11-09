@@ -57,7 +57,12 @@ from cardscanr_market_engine.providers.post_sold_capture import (
     capture_verified_sold_page,
     verify_captured_sold_state,
 )
-from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification
+from cardscanr_market_engine.providers.linux_x11_gui_fsm import SoldGateState
+from cardscanr_market_engine.providers.sold_page_health import (
+    EBAY_CHALLENGE_PAGE,
+    EBAY_SORRY_PAGE,
+    evaluate_sold_verification,
+)
 
 SOLD_URL = (
     "https://www.ebay.com.au/sch/i.html?"
@@ -553,6 +558,62 @@ class GuiSoldIntegrationTests(unittest.TestCase):
         self.assertFalse(out["ok"])
         self.assertTrue(out["challenge"])
         self.assertEqual(out.get("error"), "EBAY_CHALLENGE")
+
+
+CHALLENGE_URL = "https://www.ebay.com.au/splashui/challenge?ap=1&ru=https%3A%2F%2Fwww.ebay.com.au"
+SORRY_TITLE = "Sorry, something went wrong on our end | eBay"
+
+
+class EmptyBodySecurityPrecedenceTests(unittest.TestCase):
+    """Empty/whitespace clipboard must not mask title/URL challenge or SORRY."""
+
+    CASES = (
+        ("captcha_title", "eBay security CAPTCHA", SOLD_URL),
+        ("verify_yourself_title", "Verify yourself", SOLD_URL),
+        ("sorry_title", SORRY_TITLE, SOLD_URL),
+        ("challenge_url", TITLE_OK, CHALLENGE_URL),
+    )
+
+    def _apply(self, *, title: str, url: str, body: str) -> dict[str, object]:
+        from linux_x11_ebay_sold import _apply_authoritative_body_verification
+
+        _gate = SoldGateState()
+        _verified, _gate, fields = _apply_authoritative_body_verification(
+            url=url,
+            title=title,
+            body=body,
+            gate=_gate,
+        )
+        fields["verified"] = _verified
+        return fields
+
+    def test_provisional_poll_classifies_security_before_empty_body(self) -> None:
+        for _name, title, url in self.CASES:
+            for body in ("", "  \n\t "):
+                ev = evaluate_sold_verification(url=url, title=title, body=body, authoritative_document=False)
+                terminal = str(ev.get("terminal") or "")
+                self.assertIn(
+                    terminal,
+                    {EBAY_CHALLENGE_PAGE, EBAY_SORRY_PAGE},
+                    msg=f"{_name} body={body!r}",
+                )
+
+    def test_authoritative_empty_body_challenge_not_incomplete(self) -> None:
+        for _name, title, url in self.CASES:
+            for body in ("", "  \n\t "):
+                fields = self._apply(title=title, url=url, body=body)
+                if _name in {"captcha_title", "verify_yourself_title", "challenge_url"}:
+                    self.assertTrue(fields.get("challenge"), msg=f"{_name} body={body!r}")
+                    self.assertEqual(fields.get("error"), "EBAY_CHALLENGE", msg=f"{_name} body={body!r}")
+                    self.assertEqual(fields.get("failureClass"), "EBAY_CHALLENGE", msg=f"{_name} body={body!r}")
+                else:
+                    self.assertTrue(fields.get("sorry"), msg=f"{_name} body={body!r}")
+                    self.assertEqual(fields.get("failureClass"), EBAY_SORRY_PAGE, msg=f"{_name} body={body!r}")
+                self.assertNotEqual(
+                    fields.get("failureClass"),
+                    "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+                    msg=f"{_name} body={body!r}",
+                )
 
 
 class ContinuousSafetyLatchTests(unittest.TestCase):
