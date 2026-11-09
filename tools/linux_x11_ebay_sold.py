@@ -61,6 +61,7 @@ from cardscanr_market_engine.providers.sold_control_identity import (  # noqa: E
     content_origin_from_viewport_metrics,
     prove_sold_control_identity,
 )
+from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification  # noqa: E402
 from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: E402
     DEFAULT_SOLD_TIMEOUT_POLICY,
     PHASE_SOLD_CONTROL_DISCOVERY,
@@ -74,6 +75,11 @@ from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: 
     classify_sold_observation,
     url_has_lh_sold,
 )
+
+
+def _verify_sold_with_body(*, url: str, title: str, body: str) -> dict[str, Any]:
+    """Require readable document + result structure; URL/LH_Sold alone is insufficient."""
+    return evaluate_sold_verification(url=url, title=title, body=body)
 
 
 def find_orange_highlight_left_rail(im: Image.Image, g: dict) -> tuple[int, int, int] | None:
@@ -361,20 +367,27 @@ def gui_sold(*, tag: str) -> dict:
 
     if "LH_Sold=1" in url0:
         body = copy_body()
-        gate = on_sold_terminal(gate, verified=True)
+        ev = _verify_sold_with_body(url=url0, title=t0, body=body)
+        verified = bool(ev.get("verified"))
+        gate = on_sold_terminal(gate, verified=verified)
         out = {
-            "ok": True,
+            "ok": verified,
             "alreadySold": True,
             "soldClickSuccess": False,
-            "SOLD_STATE_VERIFIED": True,
+            "SOLD_STATE_VERIFIED": verified,
             "url": url0,
             "title": t0,
             "aboutBlank": False,
             "phase": gate.phase.value,
             "bodyChars": len(body),
+            "soldReadiness": ev.get("health"),
+            "x11SoldStateVerified": bool(ev.get("x11SoldStateVerified")),
             "timeline": timeline,
             "events": gate.events,
         }
+        if not verified:
+            out["error"] = "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+            out["failureClass"] = "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
 
@@ -537,7 +550,19 @@ def gui_sold(*, tag: str) -> dict:
     if pending["verified"]:
         body = copy_body()
         (ART / f"linux_sold_{tag}_body.txt").write_text(body, encoding="utf-8", errors="replace")
-        stage_marks["T10_html_data_captured"] = time.time()
+        ev = _verify_sold_with_body(
+            url=str(pending.get("url") or ""),
+            title=str(pending.get("title") or ""),
+            body=body,
+        )
+        if not ev.get("verified"):
+            pending["verified"] = False
+            pending["x11SoldStateVerified"] = False
+            pending["terminal"] = "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+            pending["failureStage"] = PHASE_SOLD_STATE_VERIFICATION
+            gate = on_sold_terminal(gate, verified=False, timeout=True)
+        else:
+            stage_marks["T10_html_data_captured"] = time.time()
 
     # Diagnostic-only screenshot; must not replace original Sold failure.
     diagnostic_shot = None

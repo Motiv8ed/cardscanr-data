@@ -28,6 +28,9 @@ EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity
 
 PHASE_PAGE_HEALTH_VERIFICATION = "PAGE_HEALTH_VERIFICATION"
 
+# Minimum readable body before URL/title-only Sold verification (incident: ~209 chars garbage).
+MIN_READABLE_SOLD_DOCUMENT_CHARS = 200
+
 # Capture / selection failure classes (do not collapse into CDP_TARGET_NOT_FOUND).
 CDP_TARGET_ATTACH_FAILURE = "CDP_TARGET_ATTACH_FAILURE"
 
@@ -77,23 +80,20 @@ def url_has_lh_sold(url: str | None) -> bool:
     return "lh_sold=1" in str(url or "").lower()
 
 
-def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
-    """Ordinary Sold-results structure; zero listings may still be healthy."""
-    b = str(body or "").lower()
-    t = str(title or "").lower()
-    if "sold items" in b or "sold listings" in b:
+def _has_solid_sold_body_markers(body_l: str) -> bool:
+    if "sold items" in body_l or "sold listings" in body_l:
         return True
-    if "sold " in b:  # sold dates / sold labels
+    sold_date_lines = sum(
+        1
+        for line in body_l.splitlines()
+        if line.strip().startswith("sold ")
+        and not line.strip().startswith("sold items")
+        and not line.strip().startswith("sold listings")
+    )
+    if sold_date_lines >= 1:
         return True
-    # Title often includes query + "for sale | eBay" or similar on healthy results.
-    if "ebay" in t and "error page" not in t and "sorry" not in t[:80] and "captcha" not in t:
-        # Without body, URL+title on /sch/ with LH_Sold is enough for health (X11 path).
-        return True
-    if "results" in b or "filter" in b:
-        return True
-    # Explicit zero-results wording still healthy.
     if any(
-        m in b
+        m in body_l
         for m in (
             "no exact matches",
             "0 results",
@@ -103,6 +103,26 @@ def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
         )
     ):
         return True
+    return False
+
+
+def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
+    """Ordinary Sold-results structure; zero listings may still be healthy."""
+    body_s = str(body or "").strip()
+    b = body_s.lower()
+    t = str(title or "").lower()
+    if body_s and _has_solid_sold_body_markers(b):
+        return True
+    if "results" in b and "filter" in b and len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS:
+        return True
+    if len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS and ("/itm/" in b or "au $" in b or "buy it now" in b):
+        return True
+    if not body_s:
+        # Poll before body copy: URL+title on /sch/ with LH_Sold may be provisionally healthy.
+        if "ebay" in t and "error page" not in t and "sorry" not in t[:80] and "captcha" not in t:
+            return True
+        return False
+    # Partial/unreadable body must not verify on title alone (CDP_DOCUMENT_NOT_READY class).
     return False
 
 

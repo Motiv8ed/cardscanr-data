@@ -3273,6 +3273,10 @@ class EbayBrowserSoldCompsProvider:
 
         def _post_sold_parse() -> ProviderResult:
             from .post_sold_capture import (
+                CDP_CAPTURE_METHOD_FAILURE,
+                CDP_DOCUMENT_NOT_READY,
+                CDP_INTEGRITY_FAILURE,
+                CDP_MAIN_FRAME_NOT_READY,
                 PARSE_COMPLETE,
                 PARSE_FAILED,
                 PARSE_PENDING,
@@ -3340,7 +3344,6 @@ class EbayBrowserSoldCompsProvider:
             stage_timings.fields["postSoldCapturePhase"] = capture.capture_phase
             stage_timings.fields["postSoldCdpAttached"] = bool(capture.target_id)
             stage_timings.fields["soldStateAfterParseAttach"] = capture.sold_state
-            stage_timings.fields["x11SoldStateVerified"] = True
             stage_timings.fields["captureProcess"] = (probe_capture.get("diagnostics") or {}).get("captureProcess")
 
             if not capture.success:
@@ -3385,6 +3388,15 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
+                sold_state_after = capture.sold_state if isinstance(capture.sold_state, dict) else {}
+                incomplete_evidence = fail_cls in {
+                    CDP_DOCUMENT_NOT_READY,
+                    CDP_MAIN_FRAME_NOT_READY,
+                    CDP_INTEGRITY_FAILURE,
+                    CDP_CAPTURE_METHOD_FAILURE,
+                } or not bool(sold_state_after.get("SOLD_STATE_VERIFIED"))
+                x11_verified = bool(capture.x11_sold_state_verified) and not incomplete_evidence
+                stage_timings.fields["x11SoldStateVerified"] = x11_verified
                 raise ProviderTemporaryError(
                     f"POST_SOLD_CAPTURE_FAILURE: local CDP capture failed after X11 SOLD_STATE_VERIFIED "
                     f"({capture.failure_class or 'unknown'})",
@@ -3393,8 +3405,9 @@ class EbayBrowserSoldCompsProvider:
                         "reason": "post_sold_capture_failed",
                         "ownedDailyOutcome": "POST_SOLD_CAPTURE_FAILURE",
                         "terminal": "POST_SOLD_CAPTURE_FAILURE",
-                        "x11SoldStateVerified": True,
-                        "SOLD_STATE_VERIFIED": True,
+                        "x11SoldStateVerified": x11_verified,
+                        "SOLD_STATE_VERIFIED": x11_verified and bool(sold_state_after.get("SOLD_STATE_VERIFIED")),
+                        "incompleteSoldEvidence": incomplete_evidence,
                         "postSoldCapturePhase": POST_SOLD_CAPTURE_FAILED,
                         "failureClass": capture.failure_class,
                         "failureDetail": capture.failure_detail,
@@ -3408,6 +3421,7 @@ class EbayBrowserSoldCompsProvider:
                     },
                 )
 
+            stage_timings.fields["x11SoldStateVerified"] = True
             stage_timings.fields["postSoldCapturePhase"] = POST_SOLD_CAPTURE_READY
             title = str(capture.target_title or "")
             # Keep visible body text separate from raw HTML for classification.
