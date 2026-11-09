@@ -166,6 +166,59 @@ def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
     }
 
 
+def collect_inter_card_invalidation_reasons(
+    *,
+    owned_outcome: str,
+    result: dict[str, Any],
+    provider_diagnostics: dict[str, Any] | None,
+) -> list[str]:
+    """Collect evidence that the browser tab must not be reused on the next card."""
+    reasons: list[str] = []
+    if owned_outcome == POST_SOLD_CAPTURE_FAILURE:
+        reasons.append("post_sold_capture_failure")
+    phase = str(result.get("postSoldCapturePhase") or "").strip()
+    if phase == POST_SOLD_CAPTURE_FAILED:
+        reasons.append("post_sold_capture_phase_failed")
+    nested: dict[str, Any] = {}
+    desktop_nav: dict[str, Any] = {}
+    if isinstance(provider_diagnostics, dict):
+        nested = provider_diagnostics.get("diagnostics") or provider_diagnostics
+        if not isinstance(nested, dict):
+            nested = {}
+        desktop_candidate = nested.get("desktopNav") or nested.get("linuxNav")
+        if isinstance(desktop_candidate, dict):
+            desktop_nav = desktop_candidate
+    if isinstance(result.get("desktopNav"), dict):
+        desktop_nav = {**desktop_nav, **result["desktopNav"]}
+    failure_class = str(
+        result.get("failureClass")
+        or nested.get("failureClass")
+        or desktop_nav.get("failureClass")
+        or ""
+    ).upper()
+    nav_error = str(
+        desktop_nav.get("error") or nested.get("error") or result.get("error") or ""
+    ).upper()
+    poison_tokens = (
+        "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+        "SEARCH_INPUT_NOT_CONFIRMED",
+        CDP_DOCUMENT_NOT_READY,
+        CDP_INTEGRITY_FAILURE,
+    )
+    if failure_class in poison_tokens:
+        reasons.append(failure_class.lower())
+    for token in poison_tokens:
+        if token in nav_error:
+            reasons.append(token.lower())
+    sold = nested.get("sold") if isinstance(nested.get("sold"), dict) else {}
+    sold_failure = str(sold.get("failureClass") or sold.get("error") or "").upper()
+    if sold_failure in poison_tokens:
+        reasons.append(sold_failure.lower())
+    if result.get("incompleteSoldEvidence") or nested.get("incompleteSoldEvidence"):
+        reasons.append("incomplete_sold_evidence")
+    return sorted(set(reasons))
+
+
 def maybe_invalidate_inter_card_after_failure(
     *,
     logger,
@@ -174,28 +227,11 @@ def maybe_invalidate_inter_card_after_failure(
     provider_diagnostics: dict[str, Any] | None,
 ) -> None:
     """After capture/navigation failure, do not hand the next card a poisoned INTER_CARD tab."""
-    reasons: list[str] = []
-    if owned_outcome == POST_SOLD_CAPTURE_FAILURE:
-        reasons.append("post_sold_capture_failure")
-    phase = str(result.get("postSoldCapturePhase") or "").strip()
-    if phase == POST_SOLD_CAPTURE_FAILED:
-        reasons.append("post_sold_capture_phase_failed")
-    nested: dict[str, Any] = {}
-    if isinstance(provider_diagnostics, dict):
-        nested = provider_diagnostics.get("diagnostics") or provider_diagnostics
-        if not isinstance(nested, dict):
-            nested = {}
-    failure_class = str(
-        result.get("failureClass") or nested.get("failureClass") or ""
-    ).upper()
-    if failure_class in {
-        CDP_DOCUMENT_NOT_READY,
-        CDP_INTEGRITY_FAILURE,
-        "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
-    }:
-        reasons.append(failure_class.lower())
-    if result.get("incompleteSoldEvidence") or nested.get("incompleteSoldEvidence"):
-        reasons.append("incomplete_sold_evidence")
+    reasons = collect_inter_card_invalidation_reasons(
+        owned_outcome=owned_outcome,
+        result=result,
+        provider_diagnostics=provider_diagnostics,
+    )
     if not reasons:
         return
     try:

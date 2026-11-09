@@ -106,7 +106,12 @@ def _has_solid_sold_body_markers(body_l: str) -> bool:
     return False
 
 
-def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
+def _has_sold_results_structure(
+    body: str | None,
+    title: str | None,
+    *,
+    allow_title_only_without_body: bool = True,
+) -> bool:
     """Ordinary Sold-results structure; zero listings may still be healthy."""
     body_s = str(body or "").strip()
     b = body_s.lower()
@@ -118,6 +123,8 @@ def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
     if len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS and ("/itm/" in b or "au $" in b or "buy it now" in b):
         return True
     if not body_s:
+        if not allow_title_only_without_body:
+            return False
         # Poll before body copy: URL+title on /sch/ with LH_Sold may be provisionally healthy.
         if "ebay" in t and "error page" not in t and "sorry" not in t[:80] and "captcha" not in t:
             return True
@@ -196,6 +203,7 @@ def classify_sold_page_health(
     http_status: int | None = None,
     expected_origin: str = "ebay.com.au",
     require_body_structure: bool = False,
+    require_nonempty_body: bool = False,
 ) -> dict[str, Any]:
     """Bounded positive health check for a post-Sold rendered page (read-only evidence)."""
     unhealthy = classify_marketplace_page_class(
@@ -221,8 +229,16 @@ def classify_sold_page_health(
 
     structure_ok = True
     page_class = HEALTHY_SOLD_RESULTS
-    if require_body_structure or (body is not None and str(body).strip()):
-        structure_ok = _has_sold_results_structure(body, title)
+    body_present = str(body or "").strip()
+    if require_nonempty_body and not body_present:
+        structure_ok = False
+        reasons.append("authoritative_empty_body")
+    elif require_body_structure or body is not None:
+        structure_ok = _has_sold_results_structure(
+            body,
+            title,
+            allow_title_only_without_body=not require_nonempty_body,
+        )
         if not structure_ok:
             reasons.append("sold_results_structure_missing")
         elif body is not None and not any(
@@ -281,6 +297,7 @@ def evaluate_sold_verification(
     http_status: int | None = None,
     expected_origin: str = "ebay.com.au",
     require_body_structure: bool = False,
+    authoritative_document: bool = False,
 ) -> dict[str, Any]:
     """Compose filter-state + page-health into x11SoldStateVerified semantics."""
     u0 = str(url or "").strip().lower()
@@ -304,7 +321,8 @@ def evaluate_sold_verification(
         body=body,
         http_status=http_status,
         expected_origin=expected_origin,
-        require_body_structure=require_body_structure,
+        require_body_structure=require_body_structure or authoritative_document,
+        require_nonempty_body=authoritative_document,
     )
     unhealthy = health.get("unhealthyClass")
 

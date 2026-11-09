@@ -3167,9 +3167,13 @@ class EbayBrowserSoldCompsProvider:
                 "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
                 diagnostics={
                     "providerOutcome": "challenge_detected",
+                    "ownedDailyOutcome": "CHALLENGE_REQUIRED",
+                    "failureClass": "EBAY_CHALLENGE",
                     "navMode": nav_mode_label,
                     "desktopNav": stage_timings.fields.get("desktopNav"),
                     "stageTimings": stage_timings.snapshot(),
+                    "markFresh": False,
+                    "lastGoodRetained": True,
                 },
             )
         if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE":
@@ -3223,11 +3227,83 @@ class EbayBrowserSoldCompsProvider:
                 },
             )
         if not nav.search_success or not nav.sold_click_success or not nav.sold_state_verified:
+            sold_blob = (
+                nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else {}
+            )
+            nav_error = str(nav.error or sold_blob.get("error") or "")
+            failure_class = str(
+                sold_blob.get("failureClass") or sold_blob.get("error") or nav_error or ""
+            )
+            desktop_nav = stage_timings.fields.get("desktopNav")
+            if isinstance(desktop_nav, dict):
+                desktop_nav = {
+                    **desktop_nav,
+                    "error": nav_error or desktop_nav.get("error"),
+                    "failureClass": failure_class or desktop_nav.get("failureClass"),
+                    "challenge": bool(nav.challenge or sold_blob.get("challenge")),
+                    "sorry": bool(nav.sorry or sold_blob.get("sorry")),
+                    "SOLD_STATE_VERIFIED": bool(nav.sold_state_verified),
+                }
+                stage_timings.fields["desktopNav"] = desktop_nav
+            if nav.challenge or failure_class == "EBAY_CHALLENGE" or nav_error == "EBAY_CHALLENGE":
+                raise ProviderBlockedError(
+                    "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
+                    diagnostics={
+                        "providerOutcome": "challenge_detected",
+                        "ownedDailyOutcome": "CHALLENGE_REQUIRED",
+                        "failureClass": "EBAY_CHALLENGE",
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                    },
+                )
+            if (
+                nav.sorry
+                or nav_error == "TEMPORARY_EBAY_SERVER_FAILURE"
+                or failure_class == "EBAY_SORRY"
+            ):
+                raise ProviderTemporaryError(
+                    "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page during desktop navigation",
+                    diagnostics={
+                        "reason": "ebay_sorry_error_page",
+                        "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                        "failureClass": failure_class or "EBAY_SORRY",
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                        "tripsSorryBreaker": True,
+                    },
+                )
+            incomplete = (
+                nav_error == "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+                or failure_class == "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+            )
+            if incomplete:
+                raise ProviderTemporaryError(
+                    f"INCOMPLETE_SOLD_DOCUMENT_EVIDENCE: unreadable sold results ({nav_error})",
+                    diagnostics={
+                        "reason": "incomplete_sold_document_evidence",
+                        "ownedDailyOutcome": "POST_SOLD_CAPTURE_FAILURE",
+                        "failureClass": "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+                        "incompleteSoldEvidence": True,
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                        "tripsSorryBreaker": False,
+                    },
+                )
             raise ProviderTemporaryError(
                 f"Desktop sold navigation failed: {nav.error or 'unknown'}",
                 diagnostics={
                     "navMode": nav_mode_label,
-                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "desktopNav": desktop_nav,
+                    "failureClass": failure_class or nav_error or None,
                     "stageTimings": stage_timings.snapshot(),
                 },
             )
