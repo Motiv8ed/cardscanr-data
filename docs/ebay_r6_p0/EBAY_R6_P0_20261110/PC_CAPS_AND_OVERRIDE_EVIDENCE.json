@@ -1,0 +1,156 @@
+{
+  "authority": "t589u follow-up; READ ONLY; identity check passed before inspection",
+  "prepared_at_AEST": "2026-11-10T16:30:14.311278+10:00",
+  "deployed_root": "D:\\CardScanR_Data\\cardscanr-data",
+  "current_task_launch_source_assignments": [
+    {
+      "name": "MARKET_WORKER_ALLOWED_MARKETS",
+      "literal_value": "AU",
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 112
+    },
+    {
+      "name": "MARKET_WORKER_CONCURRENCY",
+      "literal_value": 1,
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 114
+    },
+    {
+      "name": "MARKET_WORKER_MAX_JOBS_PER_RUN",
+      "literal_value": 1,
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 115
+    },
+    {
+      "name": "EBAY_BROWSER_MAX_CONCURRENCY",
+      "literal_value": 1,
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 118
+    },
+    {
+      "name": "MAX_LIVE_SUBMISSIONS_PER_HOUR",
+      "literal_value": 20,
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 126
+    },
+    {
+      "name": "MAX_LIVE_SUBMISSIONS_PER_DAY",
+      "literal_value": 60,
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 127
+    },
+    {
+      "name": "OWNED_DAILY_FULL_ENABLE",
+      "literal_value": "CONDITIONAL_ON_PERSISTENT_FLAG",
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 134
+    },
+    {
+      "name": "MARKET_SCHEDULER_ALLOWED_MARKETS",
+      "literal_value": "AU",
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 193
+    },
+    {
+      "name": "OWNED_DAILY_FULL_ENABLE",
+      "literal_value": "CONDITIONAL_ON_PERSISTENT_FLAG",
+      "file": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+      "line": 204
+    }
+  ],
+  "persisted_runtime_config_allowlisted_values": {
+    "EBAY_BROWSER_MAX_CONCURRENCY": "1",
+    "OWNED_DAILY_FULL_ENABLE": "false"
+  },
+  "persistent_flag": {
+    "path": "reports/runtime/owned_daily_full_enable.flag",
+    "value": false,
+    "sha256": "75dbba8fd110adbe0bda707bcbfe667247f5a2d590c5380781abcde1ac20062d"
+  },
+  "env_override_file_inventory": [
+    {
+      "file": "supabase_env.local.json",
+      "variable_names": [
+        "SUPABASE_URL",
+        "SUPABASE_SECRET_KEY"
+      ],
+      "recorded_values": {},
+      "cap_overrides_found": false
+    },
+    {
+      "file": ".env",
+      "present": false
+    },
+    {
+      "file": ".env.local",
+      "present": false
+    },
+    {
+      "file": "reports/runtime/live_ebay_runtime_config.json",
+      "variable_names": [
+        "EBAY_BROWSER_PROFILE_NAME",
+        "EBAY_BROWSER_HEADLESS",
+        "OWNED_DAILY_MAX_ENQUEUE",
+        "OWNED_DAILY_FULL_ENABLE_AUTHORITY",
+        "notes",
+        "EBAY_BROWSER_USER_DATA_DIR",
+        "EBAY_BROWSER_MODE",
+        "EBAY_BROWSER_MAX_CONCURRENCY",
+        "OWNED_DAILY_FULL_ENABLE",
+        "EBAY_BROWSER_REUSE_CONTEXT",
+        "generatedAtUtc"
+      ],
+      "recorded_values": {
+        "EBAY_BROWSER_MAX_CONCURRENCY": "1",
+        "OWNED_DAILY_FULL_ENABLE": "false"
+      }
+    }
+  ],
+  "inspector_allowlisted_environment": {
+    "Machine": {},
+    "User": {},
+    "Process": {}
+  },
+  "inspector_environment_warning": "This is NOT the existing worker/scheduler process environment. No process-memory or credentials access attempted.",
+  "layer_defaults": [
+    {
+      "name": "EBAY_BROWSER_MAX_REQUESTS_PER_HOUR",
+      "default": 20,
+      "file": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+      "line": 1594
+    },
+    {
+      "name": "EBAY_BROWSER_MAX_REQUESTS_PER_DAY",
+      "default": 100,
+      "file": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+      "line": 1595
+    },
+    {
+      "name": "MARKET_PROVIDER_MAX_REQUESTS_PER_DAY",
+      "default": 200,
+      "file": "cardscanr_market_engine/config.py",
+      "line": 213
+    },
+    {
+      "name": "MAX_LIVE_SUBMISSIONS_PER_DAY",
+      "default": 200,
+      "file": "cardscanr_market_engine/continuous_safety.py",
+      "line": 42
+    }
+  ],
+  "helper_hazard": {
+    "present": true,
+    "file": "cardscanr_market_engine/owned_daily_enablement.py",
+    "function": "apply_continuous_au_env",
+    "line": 69,
+    "assigned_daily_value": 200,
+    "mode_sets_full_enable": true,
+    "matched_existing_box_source": true,
+    "persistent_flag_currently_false": true,
+    "actual_dirty_worker_entrypoint_guard_verified": false,
+    "reachability_verdict": "LATENT_HAZARD_PRESENT; helper can overwrite60 if invoked. Normal flag-guarded path would be off, but actual dirty entrypoint/full call graph not verified after read refusal; do not claim globally unreachable."
+  },
+  "current_effective_live_worker_values": "UNVERIFIED: no current worker-environment/resolved-object receipt; no process memory or worker execution used",
+  "all_layers_60_20_1_proven": false,
+  "full_override_chain_status": "PARTIAL: task/VBS and matched common wrappers known; allowlisted assignments observed in dirty ensure launcher; exact full dirty-launcher order and dirty-worker guard blocked by structured Read access policy."
+}

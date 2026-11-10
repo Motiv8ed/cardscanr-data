@@ -1,0 +1,42 @@
+{
+  "junction": "D:\\cardscanr-data",
+  "target": "D:\\CardScanR_Data\\cardscanr-data",
+  "head": "93eba7296bd41ca1a417e67c2c67d70f1e3f8d8a",
+  "parent": "44171e92a755587d02a1e59fab7ca553374f7eb0",
+  "commit_time_AEST": "2026-10-18 18:04:46",
+  "subject": "fix(pricing): extend cache freshness when reference prices are unchanged",
+  "tracked_dirty_count": 17,
+  "tracked_modified_paths": [
+    ".gitattributes",
+    "cardscanr_market_engine/browser_lifecycle_policy.py",
+    "cardscanr_market_engine/job_runner.py",
+    "cardscanr_market_engine/local_browser_runtime.py",
+    "cardscanr_market_engine/owned_daily_outcomes.py",
+    "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "cardscanr_market_engine/providers/linux_x11_ebay_nav.py",
+    "cardscanr_market_engine/providers/linux_x11_gui_fsm.py",
+    "scripts/ensure_ecb_fx_refresh_runtime.ps1",
+    "scripts/ensure_live_bulk_reference_pricing_runtime.ps1",
+    "scripts/ensure_live_ebay_pricing_runtime.ps1",
+    "tools/cardscanr_chrome_ctl.sh",
+    "tools/cardscanr_ensure_xvfb.sh",
+    "tools/ebay_availability_recovery_probe.py",
+    "tools/linux_x11_ebay_search.py",
+    "workers/market_price_scheduler.py",
+    "workers/market_price_worker.py"
+  ],
+  "untracked_inventory": "NOT enumerated; key missing/present files separately recorded; no clean-worktree claim",
+  "task": {
+    "name": "CardScanR-LiveEbayPricingRuntime",
+    "state": "Ready",
+    "enabled": true,
+    "definition_sha256": "0ec116f8bbcf2bb41880e24762b4149c83af55a9539033c74b050ce68cbc7a59",
+    "execute": "wscript.exe",
+    "working_directory": "D:\\CardScanR_Data\\cardscanr-data",
+    "script": "D:\\CardScanR_Data\\cardscanr-data\\scripts\\ensure_live_ebay_pricing_runtime_hidden.vbs",
+    "last_run_AEST": "2026-11-10 16:15:51",
+    "last_result": 0,
+    "changes_made": false
+  },
+  "baseline_comparison": "Dirty deployed working tree is an operational reference, not a better reproducible/accepted development baseline than inspected d1f525eb. No runnable release qualification performed."
+}

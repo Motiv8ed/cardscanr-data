@@ -1,0 +1,30 @@
+# (a) Candidate and preservation-port map
+
+## VERIFIED static local candidate, NOT approved
+
+**`d1f525eb2330b980a6c8d9534d33b97b6404ddef`**, existing checkout `/workspace/qa_pr30_b9b9fd56/base`; same commit object is present in `/workspace/qa_pr31_9895cffa`. Commit subject: Merge pull request #21 from Motiv8ed/tools/en-jp-production-packs-20260926. Commit time: **25 October2026 15:10:46 AEST**. Parents: `88b30343b6b03ac1e463fc4d215c040f63a82942` and `dd6e4c1306dbbef903973622f0c5b6d97da9d4fd`.
+
+It is the main merge-base used in prior matched QA, not a demonstrated production deployment. Local object history contains five cumulative commits from it to R5; immediate R5 parent is704d1b44. PR30 final failed head62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97 is a separate sibling of PR31 at that parent; its exact source-line column is separately included, not conflated with R4. Full pins, converted AEST times, tree-presence/content hashes and 11-file cumulative diff inventory are in JSON/TXT companions. Git origin/credential configuration was not read. Provenance is local Git objects and earlier evidence, not a fresh remote GitHub assertion.
+
+Historical matched QA at this baseline was1428 pass/47 fail/41 skip/1 collection error. Those are historical receipts, NOT tests executed in P0. Security and empty-body weaknesses are known. **Recommendation: suitable for OWNER CONSIDERATION as an isolated offline development base, conditional on explicit validated preservation ports and full new QA; not suitable as-is for production or rollback. No baseline is automatically selected.** Prefer an actually verified production artifact if later found; do not delay every offline design step by falsely claiming one already exists.
+
+## Relation to deployed code — metadata VERIFIED, bundle/ancestry UNVERIFIED
+
+Corrected t589u desktop inspection verifies D:\cardscanr-data junction to D:\CardScanR_Data\cardscanr-data, full HEAD93eba7296bd41ca1a417e67c2c67d70f1e3f8d8a and17 tracked modifications. See B and PC_TO_BOX_SOURCE_MATCHES.json. Several deployed preservation modules match d1 exactly; key worker/provider/launcher/tool dirty hashes do not match inspected pins. Actual production ancestry to d1 and complete dirty bundle remain unverified. Deployed tree is NOT currently a better reproducible baseline. Structured Read refusal outside allowed local-exec root halted remaining PC inspection; machine is reachable and correctly identified. No candidate=production claim; no approved runnable rollback.
+
+## Preserve behaviour, not defective implementation
+
+`PRESERVATION_PORT_MAP.csv` is the exact ten-row file:line map at baseline, R4 parent, final PR30 and PR31 pins. For absent baseline behaviour it explicitly says ABSENT rather than inventing a line. Important anchors:
+
+1. **Poisoned invalidation:** baseline job_runner.py:1150 classifies capture failure but lacks invalidate_inter_card_handoff. R4/R5 job_runner.py:222–244,1446 and navigation_runtime_context.py:226–254 implement explicit reset. Port the mechanism and error propagation, not broad old classifier unions.
+2. **Fresh surface:** baseline/R4/R5 providers/linux_x11_ebay_nav.py:214–226,273 already provide bounded COLD_START cleanup/--home. Failure-triggered mode selection is the missing baseline link. R5 incident tests:1015–1034 require recovery rather than INTER_CARD reuse. Physical Windows/WSL behaviour is NOT verified by those mocks.
+3. **Current job:** baseline post_sold_capture.py:29 onward and worker:163–172 contain unique path/correlation metadata; R4/R5 resolver starts:31. Preserve atomic uniqueness, never shared last-capture authority; add lease/document/hash validation rather than trusting emitted booleans.
+4. **Authoritative body:** baseline sold_page_health.py:80–107 permits title-only health; evaluate_sold_verification starts:255. R4/R5 adds require_nonempty_body tied to authoritative_document (R5:310,403). Keep strict readiness/current-body semantics; never port old title/length-only success as pricing authority.
+5. **SORRY:** baseline sold_page_health.py:129–169,340 onward; R5:456 onward; continuous_worker_policy.py:88–101 unchanged. Preserve distinct cooldown/transient handling as current visible/title facts. Do NOT copy R5 raw-source legacy union at194–220.
+6. **Last good:** baseline job_runner.py:1000,1247,1332; R4/R5:1084,1331,1416. Retain price/source/evidence/price freshness on non-PASS; a flag does not prove every sink path safe.
+7. **AU-only:** strict final marketplace guard in provider:367 onward exists at all inspected pins. Repository live launcher allows four markets, so actual AU-only is an operational override, NOT proved by unchanged source. Preserve guard and require effective AU/AUD configuration later.
+8. **Limits:** continuous_safety.py:41–47 (20/hour,200/day), provider baseline:1594–1595 versus R4:1323–1324/R5:1334–1335 (20/hour,100/day), config.py:212–213 (2/minute,200/day). Intended60/day is NOT these defaults. Preserve stricter limits and actual-attempt accounting, not accidental undercount/overwrites; see E.
+9. **owned_daily OFF:** owned_daily_enablement.py:40–45 persistent-flag-first/default-false logic exists unchanged; runtime flag can override environment. apply_continuous_au_env at48–84 explicitly sets true/200; do NOT invoke it. Current persistent OFF flag/runtime mirror verified at t589u; live process enforcement remains unverified.
+10. **HARD_STOP:** continuous_safety.py:149–189 and continuous_worker_policy.py:20–28 exist unchanged. Retain3-consecutive/5-hourly transients and security stop; record_healthy clears latch at168–171, so non-PASS/bookkeeping cannot call it. No state clear authorized.
+
+Paths without a prefix above are under cardscanr_market_engine (providers where stated). CSV gives full exact paths/lines for automated use. Source-object hashes cover each referenced file at baseline/R4/R5. A preservation port is a small explicit reviewed change on the future isolated branch, not permission to cherry-pick the entire failed stack.

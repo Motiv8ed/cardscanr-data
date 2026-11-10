@@ -1,0 +1,104 @@
+{
+  "controls": [
+    {
+      "id": "D-01",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_62f3c0aa.test_final_adversarial::test_healthy_optional_prompt_remains_ordinary[ ]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-02",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_62f3c0aa.test_final_adversarial::test_healthy_optional_prompt_remains_ordinary[\\n]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-03",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_62f3c0aa.test_final_adversarial::test_healthy_optional_prompt_remains_ordinary[\\r\\n]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-04",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_62f3c0aa.test_final_adversarial::test_healthy_optional_prompt_remains_ordinary[\\t]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-05",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_62f3c0aa.test_final_adversarial::test_healthy_optional_prompt_remains_ordinary[\\xa0]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-06",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_704d1b44.test_refactor_adversarial::test_nonblocking_saved_search_prompt_does_not_auth_wall[\\n]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-07",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_704d1b44.test_refactor_adversarial::test_nonblocking_saved_search_prompt_does_not_auth_wall[\\r\\n]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-08",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_704d1b44.test_refactor_adversarial::test_nonblocking_saved_search_prompt_does_not_auth_wall[\\t]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    },
+    {
+      "id": "D-09",
+      "historical_case_id": "CardScanR.05_QA.20261110_data_pr30_704d1b44.test_refactor_adversarial::test_nonblocking_saved_search_prompt_does_not_auth_wall[\\xa0]",
+      "old_assertion": "state['outcome']=='success'",
+      "receipt_path": "/workspace/CardScanR/05_QA/20261110_data_pr31_9895cffa/prior-188.xml",
+      "receipt_sha256": "401271e2829376265ccfcd60b76a8c9e06fa810f71100101d5702bb934a38aff",
+      "disposition": "RETAINED_UNWAIVED_POLICY_SCOPE_MISMATCH",
+      "observed_at_r5": "authentication_required",
+      "rationale": "Synthetic optional saved-search copy contains Please sign in. R5 treats that as mandatory auth and only exempts Sign in to continue plus four listed suffixes. The old assertion is broader than the candidate allowlist, but was not demonstrated semantically incorrect; raw failure retained, not waived.",
+      "explicit_r6_disposition": "NO_WAIVER; map individually at P1; benign optional only with bounded nonblocking region + complete current document"
+    }
+  ],
+  "count": 9
+}

@@ -1,0 +1,81 @@
+{
+  "processes": [
+    {
+      "pid": 17600,
+      "parentPid": 31688,
+      "executable": "C:\\Python314\\python.exe",
+      "component": "worker",
+      "createdAEST": "2026-11-06 10:09:05",
+      "safeArguments": [
+        "--max-jobs 1",
+        "--poll-seconds 5"
+      ]
+    },
+    {
+      "pid": 31296,
+      "parentPid": 31688,
+      "executable": "C:\\Python314\\python.exe",
+      "component": "scheduler",
+      "createdAEST": "2026-11-06 10:09:05",
+      "safeArguments": [
+        "--poll-seconds 60"
+      ]
+    }
+  ],
+  "pidFiles": [
+    {
+      "file": "live_ebay_worker.pid.json",
+      "pid": 17600,
+      "status": "already_running",
+      "checkedAtAEST": "2026-11-10T16:15:51.911639+10:00",
+      "startedAtAEST": null
+    },
+    {
+      "file": "live_ebay_scheduler.pid.json",
+      "pid": 31296,
+      "status": "already_running",
+      "checkedAtAEST": "2026-11-10T16:15:52.107665+10:00",
+      "startedAtAEST": null
+    }
+  ],
+  "backups": [
+    {
+      "path": "D:\\CardScanR_Data\\cardscanr-data\\scripts\\ensure_live_ebay_pricing_runtime.ps1.bak-r3-20261106",
+      "bytes": 12530,
+      "sha256": "ab00f217ad94875dfc5b240b3ed65bd31f6d7c5e5db444c424e0e085e2532035"
+    },
+    {
+      "path": "D:\\CardScanR_Data\\cardscanr-data\\reports\\runtime\\continuous_au_safety_ledger.json.bak-r3-20261106_095956",
+      "bytes": 516,
+      "sha256": "295b494b3dccadae933d7de547df9d19768076c66af83ce6ab7ab364f982cece"
+    },
+    {
+      "path": "D:\\CardScanR_Data\\cardscanr-data\\reports\\runtime\\continuous_au_worker_status.json.bak-r3-20261106_095956",
+      "bytes": 670,
+      "sha256": "57308124afab3c15f36acbb180590d62ec1a9780be1843492646654b1241a376"
+    }
+  ],
+  "deployCopies": [
+    {
+      "path": "D:\\CardScanR_Data\\cardscanr-data",
+      "workerPresent": true
+    }
+  ],
+  "archiveNames": [
+    {
+      "Name": "cardscanr_data_snapshot_20260617_184918.zip",
+      "Length": 738636
+    }
+  ],
+  "ledger": {
+    "consecutiveTransient": 3,
+    "lastHardStop": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+    "submissionRecordCount": 8,
+    "transientRecordCount": 4,
+    "updatedAtAEST": "2026-11-06T10:34:45.819699+10:00"
+  },
+  "runningWslDistributions": [
+    "Ubuntu"
+  ],
+  "scopeNote": "Existing Windows process identities, safe arguments, backup hashes and ledger counters only. No stop/start/modification. WSL distro listing only, no Linux shell/tool execution."
+}

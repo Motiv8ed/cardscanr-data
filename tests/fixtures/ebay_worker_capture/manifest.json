@@ -1,0 +1,17 @@
+{
+  "protocol_version": "R6-P0-v1",
+  "baseline_sha": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+  "historical_case_count": 249,
+  "corpus_id_count": 873,
+  "fresh_independent_case_target": 96,
+  "handoff_tests_total": 21,
+  "handoff_fixture_blockers": [
+    "reports/artifacts/inter_card_provider_handoff_closure/fixtures/tropius_prior.json",
+    "reports/artifacts/inter_card_provider_handoff_closure/fixtures/ninetales_cdp_targets.json",
+    "reports/artifacts/inter_card_provider_handoff_closure/fixtures/tropius_sold_page.html"
+  ],
+  "historical_manifest": "docs/ebay_r6_p0/EBAY_R6_P0_20261110/HISTORICAL_CASE_MANIFEST.json",
+  "corpus_manifest": "docs/ebay_r6_p0/EBAY_R6_P0_20261110/CLASSIFIER_CORPUS_MANIFEST.json",
+  "outcome_table": "docs/ebay_r6_p0/EBAY_R6_P0_20261110/MIXED_SIGNAL_OUTCOME_TABLE.csv",
+  "disputed_controls": "docs/ebay_worker_disputed_controls.json"
+}

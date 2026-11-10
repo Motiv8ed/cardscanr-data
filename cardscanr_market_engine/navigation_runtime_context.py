@@ -223,6 +223,32 @@ def clear_context_from_environ() -> None:
         os.environ.pop(key, None)
 
 
+def invalidate_inter_card_handoff(
+    *,
+    reason: str | None = None,
+    persist: bool = True,
+) -> NavigationRuntimeContext:
+    """Drop INTER_CARD prior after capture/navigation failure so the next card recovers via COLD_START."""
+    ctx = NavigationRuntimeContext(runtime_mode=RUNTIME_COLD_START, expected_prior=None)
+    persist_path = bind_persisted_nav_context_path() if persist else None
+    clear_context_from_environ()
+    os.environ[RUNTIME_MODE_ENV] = RUNTIME_COLD_START
+    if persist:
+        path = persist_path or bind_persisted_nav_context_path()
+        payload = ctx.to_dict()
+        if reason:
+            payload["invalidatedReason"] = str(reason)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        prior_path = path.with_name(path.stem + ".prior.json")
+        prior_path.write_text("{}\n", encoding="utf-8")
+        os.environ[NAV_CONTEXT_PATH_ENV] = _windows_to_wsl(path)
+        os.environ[EXPECTED_PRIOR_PATH_ENV] = _windows_to_wsl(prior_path)
+    else:
+        apply_context_to_environ(ctx)
+    return ctx
+
+
 def _load_json_env(raw: str) -> dict[str, Any]:
     try:
         data = json.loads(raw)

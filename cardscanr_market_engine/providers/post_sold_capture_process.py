@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .capture_adapters import hydrate_capture_payload_strict
 from .post_sold_capture import (
     CAPTURE_ARTIFACT_WRITE_FAILURE,
     CAPTURE_ENCODING_FAILURE,
@@ -359,6 +360,22 @@ def _hydrate_capture_payload(payload: dict[str, Any]) -> dict[str, Any]:
     out = dict(payload)
     if str(out.get("status") or "") != "SUCCESS":
         return out
+    strict_job = str(out.get("job_id") or out.get("jobId") or os.environ.get("CARDSCANR_JOB_ID") or "").strip()
+    strict_attempt = str(
+        out.get("attempt_id") or out.get("attemptId") or os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID") or ""
+    ).strip()
+    if strict_job and strict_attempt:
+        strict_root = ROOT / "reports" / "artifacts" / "post_sold_captures"
+        strict = hydrate_capture_payload_strict(
+            out,
+            expected_job_id=strict_job,
+            expected_attempt_id=strict_attempt,
+            artifact_root=strict_root,
+        )
+        if str(strict.get("status") or "") == "CAPTURE_PROVENANCE_FAILURE":
+            out = strict
+            out["status"] = CAPTURE_INTEGRITY_FAILURE
+            return out
     html_path = out.get("html_path") or out.get("htmlPath")
     body_path = out.get("body_path") or out.get("bodyPath")
     if _is_shared_diagnostic_capture_path(html_path) or _is_shared_diagnostic_capture_path(body_path):
