@@ -137,6 +137,45 @@ def _has_sold_results_structure(
     return False
 
 
+def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> bool:
+    """Legacy active-challenge title/URL/body semantics (unioned with canonical provider)."""
+    t = (title or "").lower()
+    u = (url or "").lower()
+    b = (body or "").lower()
+    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+        return True
+    if "verification challenge" in f"{t}\n{b}":
+        return True
+    if "captcha" in t or "captcha" in u:
+        return True
+    if "captcha" in b:
+        passive_only = "recaptcha" in b and "iframe" in b and "verify yourself" not in b
+        if not passive_only:
+            return True
+    return False
+
+
+def _is_classic_sorry_blob(title: str | None, url: str | None, body: str | None) -> bool:
+    """Legacy classic SORRY semantics (unioned with canonical provider)."""
+    t = (title or "").strip().lower()
+    u = (url or "").strip().lower()
+    b = (body or "").strip().lower()
+    blob = f"{t}\n{b}"
+    if _is_challenge_blob(title, url, body):
+        return False
+    if ("error page" in t and "ebay" in t) or "/error" in u:
+        return False
+    if "sorry" in blob and (
+        "something went wrong" in blob or "looks like" in blob or "on our end" in blob
+    ):
+        return True
+    if "something went wrong on our end" in blob:
+        return True
+    if t.startswith("sorry") and "ebay" in t:
+        return True
+    return False
+
+
 def _canonical_security_unhealthy_class(
     *,
     url: str | None,
@@ -176,8 +215,12 @@ def classify_marketplace_page_class(
     security = _canonical_security_unhealthy_class(url=url, title=title, body=body)
     if security:
         return security
+    if _is_challenge_blob(title, url, body):
+        return EBAY_CHALLENGE_PAGE
     if is_ebay_error_page(title=title, url=url, body=body):
         return EBAY_ERROR_PAGE
+    if _is_classic_sorry_blob(title, url, body):
+        return EBAY_SORRY_PAGE
     return None
 
 
