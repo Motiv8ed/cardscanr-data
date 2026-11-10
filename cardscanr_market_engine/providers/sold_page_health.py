@@ -137,45 +137,28 @@ def _has_sold_results_structure(
     return False
 
 
-def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> bool:
-    """Active challenge only — passive recaptcha iframe alone is non-blocking."""
-    t = (title or "").lower()
-    u = (url or "").lower()
-    b = (body or "").lower()
-    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
-        return True
-    if "verification challenge" in f"{t}\n{b}":
-        return True
-    # Title/URL captcha — active.
-    if "captcha" in t or "captcha" in u:
-        return True
-    # Body: captcha wording without only being a passive google recaptcha iframe.
-    if "captcha" in b:
-        passive_only = "recaptcha" in b and "iframe" in b and "verify yourself" not in b
-        if not passive_only:
-            return True
-    return False
+def _canonical_security_unhealthy_class(
+    *,
+    url: str | None,
+    title: str | None,
+    body: str | None,
+) -> str | None:
+    """Map provider canonical page-state classification to Sold health page classes."""
+    from .marketplace_browser_page_state import classify_browser_page_state
 
-
-def _is_classic_sorry_blob(title: str | None, url: str | None, body: str | None) -> bool:
-    """Classic SORRY only — Error Page title/URL excluded."""
-    t = (title or "").strip().lower()
-    u = (url or "").strip().lower()
-    b = (body or "").strip().lower()
-    blob = f"{t}\n{b}"
-    if _is_challenge_blob(title, url, body):
-        return False
-    if ("error page" in t and "ebay" in t) or "/error" in u:
-        return False
-    if "sorry" in blob and (
-        "something went wrong" in blob or "looks like" in blob or "on our end" in blob
-    ):
-        return True
-    if "something went wrong on our end" in blob:
-        return True
-    if t.startswith("sorry") and "ebay" in t:
-        return True
-    return False
+    state = classify_browser_page_state(
+        title=str(title or ""),
+        body_text=str(body or ""),
+        url=str(url or ""),
+    )
+    outcome = str(state.get("outcome") or "")
+    if outcome in {"challenge_detected", "ambiguous_security_state", "access_blocked"}:
+        return EBAY_CHALLENGE_PAGE
+    if outcome == "authentication_required":
+        return EBAY_AUTH_REQUIRED
+    if outcome == "provider_unavailable" and state.get("reason") == "ebay_sorry_error_page":
+        return EBAY_SORRY_PAGE
+    return None
 
 
 def classify_marketplace_page_class(
@@ -190,12 +173,11 @@ def classify_marketplace_page_class(
         return EBAY_ACCESS_DENIED_403
     if is_ebay_authentication_url(url):
         return EBAY_AUTH_REQUIRED
-    if _is_challenge_blob(title, url, body):
-        return EBAY_CHALLENGE_PAGE
+    security = _canonical_security_unhealthy_class(url=url, title=title, body=body)
+    if security:
+        return security
     if is_ebay_error_page(title=title, url=url, body=body):
         return EBAY_ERROR_PAGE
-    if _is_classic_sorry_blob(title, url, body):
-        return EBAY_SORRY_PAGE
     return None
 
 

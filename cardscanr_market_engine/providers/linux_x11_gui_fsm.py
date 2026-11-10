@@ -339,22 +339,10 @@ def is_ebay_challenge_page(
     url: str | None = None,
     body: str | None = None,
 ) -> bool:
-    """Active marketplace challenge — passive recaptcha iframe alone is non-blocking."""
-    t = (title or "").lower()
-    u = (url or "").lower()
-    b = (body or "").lower()
-    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
-        return True
-    if "verification challenge" in f"{t}\n{b}":
-        return True
-    if "captcha" in t or "captcha" in u:
-        return True
-    if "captcha" in b:
-        # Passive google recaptcha iframe on an otherwise normal page is not an active challenge.
-        if "recaptcha" in b and "iframe" in b and "verify yourself" not in b and "security measure" not in b:
-            return False
-        return True
-    return False
+    """Active marketplace challenge via canonical provider page-state classification."""
+    from .sold_page_health import EBAY_CHALLENGE_PAGE, classify_marketplace_page_class
+
+    return classify_marketplace_page_class(url=url, title=title, body=body) == EBAY_CHALLENGE_PAGE
 
 
 def is_ebay_sorry_page(
@@ -362,33 +350,10 @@ def is_ebay_sorry_page(
     url: str | None = None,
     body: str | None = None,
 ) -> bool:
-    """Classic eBay SORRY interstitial — not marketplace Error Page | eBay.
+    """Classic eBay SORRY via canonical provider page-state classification."""
+    from .sold_page_health import EBAY_SORRY_PAGE, classify_marketplace_page_class
 
-    Error Page title/URL is classified separately (sold_page_health.is_ebay_error_page)
-    so capture/Sold health can report MARKETPLACE_ERROR_PAGE instead of collapsing into
-    CDP_TARGET_NOT_FOUND or treating every error page as CAPTCHA.
-    """
-    t = (title or "").strip().lower()
-    u = (url or "").strip().lower()
-    b = (body or "").strip().lower()
-    blob = f"{t}\n{b}"
-    if is_ebay_challenge_page(title=title, url=url, body=body):
-        return False
-    # Distinct class: Error Page | eBay (and /error) — not classic SORRY.
-    if ("error page" in t and "ebay" in t) or "/error" in u:
-        return False
-    if "sorry" in blob and (
-        "something went wrong" in blob
-        or "looks like" in blob
-        or "on our end" in blob
-    ):
-        return True
-    if "something went wrong on our end" in blob:
-        return True
-    # Legacy: title-only sorry markers without Error Page wording.
-    if t.startswith("sorry") and "ebay" in t:
-        return True
-    return False
+    return classify_marketplace_page_class(url=url, title=title, body=body) == EBAY_SORRY_PAGE
 
 
 def is_ebay_live_search_url(url: str | None) -> bool:

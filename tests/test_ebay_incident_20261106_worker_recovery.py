@@ -61,6 +61,7 @@ from cardscanr_market_engine.providers.linux_x11_gui_fsm import SoldGateState
 from cardscanr_market_engine.providers.sold_page_health import (
     EBAY_CHALLENGE_PAGE,
     EBAY_SORRY_PAGE,
+    classify_marketplace_page_class,
     evaluate_sold_verification,
 )
 
@@ -548,7 +549,10 @@ class GuiSoldIntegrationTests(unittest.TestCase):
     @mock.patch("linux_x11_ebay_sold.chrome_owner_count", return_value=1)
     @mock.patch("linux_x11_ebay_sold.omnibox_url", return_value=SOLD_URL)
     @mock.patch("linux_x11_ebay_sold.title", return_value=TITLE_OK)
-    @mock.patch("linux_x11_ebay_sold.copy_body", return_value="captcha verification challenge")
+    @mock.patch(
+        "linux_x11_ebay_sold.copy_body",
+        return_value="Please verify yourself — security challenge",
+    )
     def test_already_sold_challenge_body_surfaces_challenge(self, *_m: object) -> None:
         import linux_x11_ebay_sold
         from linux_x11_ebay_sold import gui_sold
@@ -560,18 +564,26 @@ class GuiSoldIntegrationTests(unittest.TestCase):
         self.assertEqual(out.get("error"), "EBAY_CHALLENGE")
 
 
-CHALLENGE_URL = "https://www.ebay.com.au/splashui/challenge?ap=1&ru=https%3A%2F%2Fwww.ebay.com.au"
-SORRY_TITLE = "Sorry, something went wrong on our end | eBay"
+def _mixed_case_marker(marker: str) -> str:
+    out: list[str] = []
+    upper = True
+    for ch in marker:
+        if ch.isalpha():
+            out.append(ch.upper() if upper else ch.lower())
+            upper = not upper
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
-class EmptyBodySecurityPrecedenceTests(unittest.TestCase):
-    """Empty/whitespace clipboard must not mask title/URL challenge or SORRY."""
+class CanonicalProviderSecuritySignalMatrixTests(unittest.TestCase):
+    """Every canonical provider security signal must hard-stop Sold paths (never healthy)."""
 
-    CASES = (
-        ("captcha_title", "eBay security CAPTCHA", SOLD_URL),
-        ("verify_yourself_title", "Verify yourself", SOLD_URL),
-        ("sorry_title", SORRY_TITLE, SOLD_URL),
-        ("challenge_url", TITLE_OK, CHALLENGE_URL),
+    BODY_MODES: tuple[tuple[str, str | None], ...] = (
+        ("empty", ""),
+        ("whitespace", "   \n\t  "),
+        ("partial", None),
+        ("title_only_provisional", ""),
     )
 
     def _apply(self, *, title: str, url: str, body: str) -> dict[str, object]:
@@ -587,32 +599,129 @@ class EmptyBodySecurityPrecedenceTests(unittest.TestCase):
         fields["verified"] = _verified
         return fields
 
-    def test_provisional_poll_classifies_security_before_empty_body(self) -> None:
-        for _name, title, url in self.CASES:
-            for body in ("", "  \n\t "):
-                ev = evaluate_sold_verification(url=url, title=title, body=body, authoritative_document=False)
-                terminal = str(ev.get("terminal") or "")
-                self.assertIn(
-                    terminal,
-                    {EBAY_CHALLENGE_PAGE, EBAY_SORRY_PAGE},
-                    msg=f"{_name} body={body!r}",
+    def _assert_security_hard_stop(
+        self,
+        *,
+        expected_class: str,
+        title: str,
+        url: str,
+        body: str,
+        mode: str,
+        marker: str,
+    ) -> None:
+        page_class = evaluate_sold_verification(
+            url=url,
+            title=title,
+            body=body,
+            authoritative_document=False,
+        )
+        auth_class = evaluate_sold_verification(
+            url=url,
+            title=title,
+            body=body,
+            authoritative_document=True,
+        )
+        apply_fields = self._apply(title=title, url=url, body=body)
+        with self.subTest(marker=marker, mode=mode, expected=expected_class):
+            self.assertEqual(
+                classify_marketplace_page_class(url=url, title=title, body=body),
+                expected_class,
+            )
+            self.assertFalse(page_class.get("verified"))
+            self.assertFalse(auth_class.get("verified"))
+            self.assertFalse(apply_fields.get("verified"))
+            self.assertNotEqual(apply_fields.get("failureClass"), "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE")
+            if expected_class == EBAY_CHALLENGE_PAGE:
+                self.assertEqual(apply_fields.get("failureClass"), "EBAY_CHALLENGE")
+                self.assertTrue(apply_fields.get("challenge"))
+            if expected_class == EBAY_SORRY_PAGE:
+                self.assertEqual(apply_fields.get("failureClass"), EBAY_SORRY_PAGE)
+                self.assertTrue(apply_fields.get("sorry"))
+
+    def test_active_visible_text_markers_matrix(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS,
+        )
+
+        for marker in ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS:
+            title = f"{_mixed_case_marker(marker)} | eBay"
+            for mode, body_template in self.BODY_MODES:
+                body = body_template
+                if mode == "partial":
+                    body = f"prefix {_mixed_case_marker(marker)} suffix"
+                assert body is not None
+                self._assert_security_hard_stop(
+                    expected_class=EBAY_CHALLENGE_PAGE,
+                    title=title,
+                    url=SOLD_URL,
+                    body=body,
+                    mode=mode,
+                    marker=marker,
                 )
 
-    def test_authoritative_empty_body_challenge_not_incomplete(self) -> None:
-        for _name, title, url in self.CASES:
-            for body in ("", "  \n\t "):
-                fields = self._apply(title=title, url=url, body=body)
-                if _name in {"captcha_title", "verify_yourself_title", "challenge_url"}:
-                    self.assertTrue(fields.get("challenge"), msg=f"{_name} body={body!r}")
-                    self.assertEqual(fields.get("error"), "EBAY_CHALLENGE", msg=f"{_name} body={body!r}")
-                    self.assertEqual(fields.get("failureClass"), "EBAY_CHALLENGE", msg=f"{_name} body={body!r}")
-                else:
-                    self.assertTrue(fields.get("sorry"), msg=f"{_name} body={body!r}")
-                    self.assertEqual(fields.get("failureClass"), EBAY_SORRY_PAGE, msg=f"{_name} body={body!r}")
-                self.assertNotEqual(
-                    fields.get("failureClass"),
-                    "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
-                    msg=f"{_name} body={body!r}",
+    def test_active_url_markers_matrix(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            ACTIVE_CHALLENGE_URL_MARKERS,
+        )
+
+        for marker in ACTIVE_CHALLENGE_URL_MARKERS:
+            if marker.startswith("/"):
+                url = f"https://www.ebay.com.au{marker}capture?LH_Sold=1"
+            else:
+                url = f"https://{marker}sch?LH_Sold=1"
+            title = TITLE_OK
+            for mode, body_template in self.BODY_MODES:
+                body = body_template if body_template is not None else f"partial {marker}"
+                if mode == "partial":
+                    body = f"noise {_mixed_case_marker(marker)} tail"
+                self._assert_security_hard_stop(
+                    expected_class=EBAY_CHALLENGE_PAGE,
+                    title=title,
+                    url=url,
+                    body=body,
+                    mode=mode,
+                    marker=marker,
+                )
+
+    def test_access_block_and_sorry_markers_matrix(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            ACCESS_BLOCK_TEXT_MARKERS,
+            SORRY_ERROR_TEXT_MARKERS,
+        )
+
+        for marker in ACCESS_BLOCK_TEXT_MARKERS:
+            title = f"{_mixed_case_marker(marker)} | eBay"
+            for mode, body_template in self.BODY_MODES:
+                body = body_template
+                if mode == "partial":
+                    body = f"lead {_mixed_case_marker(marker)} trail"
+                assert body is not None
+                self._assert_security_hard_stop(
+                    expected_class=EBAY_CHALLENGE_PAGE,
+                    title=title,
+                    url=SOLD_URL,
+                    body=body,
+                    mode=mode,
+                    marker=marker,
+                )
+
+        for marker in SORRY_ERROR_TEXT_MARKERS:
+            if "\n" in marker:
+                title = " ".join(_mixed_case_marker(part) for part in marker.splitlines())
+            else:
+                title = f"{_mixed_case_marker(marker)} | eBay"
+            for mode, body_template in self.BODY_MODES:
+                body = body_template
+                if mode == "partial":
+                    body = f"{_mixed_case_marker(' '.join(marker.split()))} extra"
+                assert body is not None
+                self._assert_security_hard_stop(
+                    expected_class=EBAY_SORRY_PAGE,
+                    title=title,
+                    url=SOLD_URL,
+                    body=body,
+                    mode=mode,
+                    marker=marker,
                 )
 
 
