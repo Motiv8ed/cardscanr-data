@@ -58,7 +58,9 @@ from cardscanr_market_engine.providers.post_sold_capture import (
     verify_captured_sold_state,
 )
 from cardscanr_market_engine.providers.linux_x11_gui_fsm import SoldGateState
+from cardscanr_market_engine.providers.errors import ProviderAuthenticationRequiredError
 from cardscanr_market_engine.providers.sold_page_health import (
+    EBAY_AUTH_REQUIRED,
     EBAY_CHALLENGE_PAGE,
     EBAY_SORRY_PAGE,
     classify_marketplace_page_class,
@@ -723,6 +725,231 @@ class CanonicalProviderSecuritySignalMatrixTests(unittest.TestCase):
                     mode=mode,
                     marker=marker,
                 )
+
+
+HEALTHY_SOLD_BODY = """
+Sold listings
+12 results for Dragonite 5 wizards black star promos Pokemon
+Sold 6 Nov 2026
+Dragonite Promo AU $20.00
+""".strip()
+
+HEALTHY_SOLD_HTML_PASSIVE_RECAPTCHA = """<!DOCTYPE html>
+<html><body>Sold listings results
+<a href="https://www.ebay.com.au/itm/123">Dragonite</a>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+</body></html>"""
+
+AUTH_WALL_BODY = """
+Session expired. Log in to continue.
+Email or username
+Password
+Sign in
+You must sign in before accessing these results.
+""".strip()
+
+AUTH_WALL_BODY_WITH_RETAINED_SOLD = f"""{AUTH_WALL_BODY}
+{HEALTHY_SOLD_BODY}
+"""
+
+
+class ProtectedLegacySecurityRegressionTests(unittest.TestCase):
+    """Cases covered at base/a7c7b986 that must remain hard-stops after canonical union."""
+
+    CASES = (
+        ("captcha_pipe_title", "CAPTCHA | eBay", SOLD_URL, "", EBAY_CHALLENGE_PAGE),
+        ("captcha_title_mixed", "CaPtChA | eBay", SOLD_URL, "   ", EBAY_CHALLENGE_PAGE),
+        ("verify_yourself_title", "Verify yourself", SOLD_URL, "", EBAY_CHALLENGE_PAGE),
+        ("verification_challenge_body", TITLE_OK, SOLD_URL, "verification challenge", EBAY_CHALLENGE_PAGE),
+        (
+            "splashui_challenge_url",
+            TITLE_OK,
+            "https://www.ebay.com.au/splashui/challenge?ap=1",
+            "",
+            EBAY_CHALLENGE_PAGE,
+        ),
+        ("sorry_pipe_title", "Sorry | eBay", SOLD_URL, "", EBAY_SORRY_PAGE),
+        (
+            "sorry_classic_title",
+            "Sorry, something went wrong on our end | eBay",
+            SOLD_URL,
+            "",
+            EBAY_SORRY_PAGE,
+        ),
+        ("sorry_body_marker", TITLE_OK, SOLD_URL, "something went wrong on our end", EBAY_SORRY_PAGE),
+        ("captcha_in_body_active", TITLE_OK, SOLD_URL, "complete the captcha now", EBAY_CHALLENGE_PAGE),
+    )
+
+    def test_union_policy_preserves_legacy_hard_stops(self) -> None:
+        for name, title, url, body, expected in self.CASES:
+            with self.subTest(case=name):
+                self.assertEqual(
+                    classify_marketplace_page_class(url=url, title=title, body=body),
+                    expected,
+                )
+                ev = evaluate_sold_verification(url=url, title=title, body=body, authoritative_document=False)
+                self.assertFalse(ev.get("verified"))
+                self.assertNotEqual(ev.get("terminal"), "SOLD_STATE_VERIFIED")
+
+
+class SecurityClassificationNoFalsePositiveTests(unittest.TestCase):
+    def test_healthy_sold_page_not_security_classified(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+
+        url = SOLD_URL
+        title = TITLE_OK
+        state = classify_browser_page_state(
+            title=title,
+            body_text=HEALTHY_SOLD_BODY,
+            url=url,
+            selector_counts={"canonical_itm_href_count": 5},
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state["outcome"], "success")
+        self.assertIsNone(classify_marketplace_page_class(url=url, title=title, body=HEALTHY_SOLD_BODY))
+        ev = evaluate_sold_verification(url=url, title=title, body=HEALTHY_SOLD_BODY, authoritative_document=True)
+        self.assertTrue(ev.get("verified"))
+
+    def test_optional_sign_in_banner_does_not_hard_stop_sold_results(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+
+        body = HEALTHY_SOLD_BODY + "\nSign in to continue for faster checkout"
+        state = classify_browser_page_state(
+            title=TITLE_OK,
+            body_text=body,
+            url=SOLD_URL,
+            selector_counts={"canonical_itm_href_count": 8},
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state["outcome"], "success")
+        self.assertIsNone(
+            classify_marketplace_page_class(url=SOLD_URL, title=TITLE_OK, body=body),
+        )
+
+    def test_passive_footer_recaptcha_not_active_challenge(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+
+        state = classify_browser_page_state(
+            title=TITLE_OK,
+            body_text=HEALTHY_SOLD_HTML_PASSIVE_RECAPTCHA,
+            url=SOLD_URL,
+            selector_counts={"canonical_itm_href_count": 6},
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state["outcome"], "success")
+        self.assertIsNone(
+            classify_marketplace_page_class(
+                url=SOLD_URL,
+                title=TITLE_OK,
+                body=HEALTHY_SOLD_BODY,
+            )
+        )
+
+    def test_union_passive_recaptcha_script_in_html_body_not_challenge(self) -> None:
+        self.assertIsNone(
+            classify_marketplace_page_class(
+                url=SOLD_URL,
+                title=TITLE_OK,
+                body=HEALTHY_SOLD_HTML_PASSIVE_RECAPTCHA,
+            )
+        )
+        passive_css = f"""<!DOCTYPE html><html><head><style>.captcha {{ display:none }}</style></head>
+<body>{HEALTHY_SOLD_BODY}</body></html>"""
+        self.assertIsNone(
+            classify_marketplace_page_class(url=SOLD_URL, title=TITLE_OK, body=passive_css),
+        )
+
+    def test_post_capture_html_only_fallback_uses_helper_not_raw_html(self) -> None:
+        from cardscanr_market_engine.providers.ebay_browser_provider import (
+            _looks_like_html_document,
+            resolve_post_capture_visible_body_text,
+        )
+
+        html = "<!DOCTYPE html><html><body><span>Sold items</span></body></html>"
+        self.assertTrue(_looks_like_html_document(html))
+        self.assertEqual(
+            resolve_post_capture_visible_body_text(body_text="", html_or_text_fallback=html),
+            "",
+        )
+        self.assertEqual(
+            resolve_post_capture_visible_body_text(body_text="Sold items", html_or_text_fallback=html),
+            "Sold items",
+        )
+        plain = "Sold items\nAU $12"
+        self.assertFalse(_looks_like_html_document(plain))
+        self.assertEqual(
+            resolve_post_capture_visible_body_text(body_text="", html_or_text_fallback=plain),
+            plain,
+        )
+
+
+class GenuineAuthenticationWallRegressionTests(unittest.TestCase):
+    """Auth overlays must hard-stop even when Sold URL / retained listing evidence is present."""
+
+    def test_auth_wall_title_and_body_classified_authentication_required(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+        from cardscanr_market_engine.providers.sold_page_health import EBAY_AUTH_REQUIRED
+
+        title = "Sign in to continue | eBay"
+        for body in (AUTH_WALL_BODY, AUTH_WALL_BODY_WITH_RETAINED_SOLD):
+            with self.subTest(body_variant=body[:40]):
+                state = classify_browser_page_state(
+                    title=title,
+                    body_text=body,
+                    url=SOLD_URL,
+                    selector_counts={"canonical_itm_href_count": 5},
+                    x11_sold_state_verified=True,
+                )
+                self.assertEqual(state["outcome"], "authentication_required")
+                self.assertEqual(
+                    classify_marketplace_page_class(url=SOLD_URL, title=title, body=body),
+                    EBAY_AUTH_REQUIRED,
+                )
+                ev = evaluate_sold_verification(
+                    url=SOLD_URL,
+                    title=title,
+                    body=body,
+                    authoritative_document=True,
+                )
+                self.assertFalse(ev.get("verified"))
+                self.assertEqual(ev.get("terminal"), EBAY_AUTH_REQUIRED)
+
+    def test_whitespace_collapsed_auth_wall_compact_form(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+
+        body = "Session\n\nexpired.\nLog   in\tto\tcontinue."
+        state = classify_browser_page_state(
+            title="Sign in to continue | eBay",
+            body_text=body,
+            url=SOLD_URL,
+            selector_counts={"canonical_itm_href_count": 3},
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state["outcome"], "authentication_required")
+
+    def test_auth_wall_not_waived_by_process_capture_or_x11_flags(self) -> None:
+        from cardscanr_market_engine.providers.marketplace_browser_page_state import (
+            classify_browser_page_state,
+        )
+
+        state = classify_browser_page_state(
+            title="Sign in to continue | eBay",
+            body_text=AUTH_WALL_BODY_WITH_RETAINED_SOLD,
+            url=SOLD_URL,
+            selector_counts={"process_capture": 1, "canonical_itm_href_count": 5},
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state["outcome"], "authentication_required")
 
 
 class ContinuousSafetyLatchTests(unittest.TestCase):

@@ -137,6 +137,90 @@ def _has_sold_results_structure(
     return False
 
 
+def _legacy_body_indicates_active_challenge(
+    *,
+    title: str | None,
+    url: str | None,
+    body: str | None,
+) -> bool:
+    """Representation-aware body challenge check for legacy union (passive reCAPTCHA must not match)."""
+    from .marketplace_browser_page_state import (
+        _looks_like_html_document,
+        _strip_html_to_approx_visible_text,
+        classify_browser_page_state,
+    )
+
+    body_s = str(body or "")
+    if not body_s.strip():
+        return False
+    html_doc: str | None = None
+    visible = body_s
+    if _looks_like_html_document(body_s):
+        html_doc = body_s
+        visible = _strip_html_to_approx_visible_text(body_s)
+    state = classify_browser_page_state(
+        title=str(title or ""),
+        body_text=visible,
+        html_document=html_doc,
+        url=str(url or ""),
+    )
+    if state["outcome"] in {"challenge_detected", "ambiguous_security_state", "access_blocked"}:
+        return True
+    b = visible.lower()
+    if "verification challenge" in b:
+        return True
+    if "captcha" in b:
+        passive_only = (
+            "recaptcha" in b
+            and "verify yourself" not in b
+            and "complete the captcha" not in b
+            and "captcha now" not in b
+        )
+        if not passive_only:
+            return True
+    if state["outcome"] == "success":
+        return False
+    return False
+
+
+def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> bool:
+    """Legacy active-challenge title/URL/body semantics (unioned with canonical provider)."""
+    t = (title or "").lower()
+    u = (url or "").lower()
+    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+        return True
+    if "/challenge?" in u or "/challenge/" in u:
+        return True
+    if "verification challenge" in f"{t}\n{body or ''}".lower():
+        return True
+    if "captcha" in t or "captcha" in u:
+        return True
+    if body:
+        return _legacy_body_indicates_active_challenge(title=title, url=url, body=body)
+    return False
+
+
+def _is_classic_sorry_blob(title: str | None, url: str | None, body: str | None) -> bool:
+    """Legacy classic SORRY semantics (unioned with canonical provider)."""
+    t = (title or "").strip().lower()
+    u = (url or "").strip().lower()
+    b = (body or "").strip().lower()
+    blob = f"{t}\n{b}"
+    if _is_challenge_blob(title, url, body):
+        return False
+    if ("error page" in t and "ebay" in t) or "/error" in u:
+        return False
+    if "sorry" in blob and (
+        "something went wrong" in blob or "looks like" in blob or "on our end" in blob
+    ):
+        return True
+    if "something went wrong on our end" in blob:
+        return True
+    if t.startswith("sorry") and "ebay" in t:
+        return True
+    return False
+
+
 def _canonical_security_unhealthy_class(
     *,
     url: str | None,
@@ -176,8 +260,12 @@ def classify_marketplace_page_class(
     security = _canonical_security_unhealthy_class(url=url, title=title, body=body)
     if security:
         return security
+    if _is_challenge_blob(title, url, body):
+        return EBAY_CHALLENGE_PAGE
     if is_ebay_error_page(title=title, url=url, body=body):
         return EBAY_ERROR_PAGE
+    if _is_classic_sorry_blob(title, url, body):
+        return EBAY_SORRY_PAGE
     return None
 
 

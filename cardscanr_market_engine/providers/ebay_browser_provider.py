@@ -51,9 +51,20 @@ from .marketplace_browser_page_state import (
     PASSIVE_CHALLENGE_RESOURCE_RES,
     RESULT_TEXT_MARKERS,
     SORRY_ERROR_TEXT_MARKERS,
+    _looks_like_html_document,
     classify_browser_page_state,
     contains_block_marker,
 )
+
+
+def resolve_post_capture_visible_body_text(*, body_text: str, html_or_text_fallback: str) -> str:
+    """Keep visible body separate from HTML when capture payload has HTML-only fallback."""
+    visible_body = str(body_text or "")
+    if visible_body:
+        return visible_body
+    fallback = str(html_or_text_fallback or "")
+    return "" if _looks_like_html_document(fallback) else fallback
+
 
 PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE = re.compile(
     r"""<iframe[^>]+src=["'][^"']*recaptcha[^"']*["'][^>]*>""",
@@ -3233,16 +3244,11 @@ class EbayBrowserSoldCompsProvider:
             # ONLY use HTML/body from the CURRENT successful capture payload.
             # Never fall back to global post_sold_capture_last/last_capture.html —
             # that file may belong to a prior job and must not be parsed as current evidence.
-            visible_body = str((proc_result.payload or {}).get("body_text") or "")
             html_doc = str((proc_result.payload or {}).get("html") or "")
-            if not visible_body:
-                # Current-capture body only (from this process result), never disk last_capture.
-                fallback = str(capture.html_or_text or "")
-                visible_body = (
-                    ""
-                    if _looks_like_html_document(fallback)
-                    else fallback
-                )
+            visible_body = resolve_post_capture_visible_body_text(
+                body_text=str((proc_result.payload or {}).get("body_text") or ""),
+                html_or_text_fallback=str(capture.html_or_text or ""),
+            )
             body_text = visible_body
             if html_doc and "/itm/" in html_doc:
                 capture.html_or_text = html_doc

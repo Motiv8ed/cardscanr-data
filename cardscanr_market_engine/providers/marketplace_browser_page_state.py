@@ -30,6 +30,19 @@ ACTIVE_CHALLENGE_URL_MARKERS = (
 CHALLENGE_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS
 ACCESS_BLOCK_TEXT_MARKERS = ("access denied", "unusual traffic", "temporarily blocked", "blocked from using")
 AUTH_TEXT_MARKERS = ("sign in to continue", "please sign in", "session expired", "log in to continue")
+MANDATORY_AUTH_VISIBLE_MARKERS = (
+    "session expired",
+    "log in to continue",
+    "please sign in",
+    "you must sign in",
+    "you must sign in before",
+)
+OPTIONAL_SIGN_IN_BANNER_SUFFIXES = (
+    "for faster checkout",
+    "for the best experience",
+    "to see saved items",
+    "to sync your watchlist",
+)
 CONSENT_TEXT_MARKERS = ("accept all", "cookie consent", "privacy preferences")
 MAINTENANCE_TEXT_MARKERS = ("technical difficulties", "temporarily unavailable", "site maintenance")
 SORRY_ERROR_TEXT_MARKERS = ("something went wrong on our end", "sorry\nsomething went wrong")
@@ -112,6 +125,43 @@ def _passive_challenge_resources(html_or_source: str) -> list[str]:
     return out
 
 
+def _genuine_authentication_wall(
+    *,
+    title: str,
+    visible_haystack: str,
+    visible_haystack_compact: str,
+    matched_compact,
+) -> str | None:
+    """Auth overlays that must hard-stop even when Sold URL / prior evidence is present."""
+    title_l = str(title or "").strip().lower()
+    if "sign in to continue" in title_l and "ebay" in title_l:
+        return "signin_title"
+    if "sign in or register" in title_l:
+        return "signin_title"
+    if re.search(r"\bpassword\b", visible_haystack) and re.search(
+        r"\b(email|username|user name)\b",
+        visible_haystack,
+    ):
+        return "auth_form"
+    if marker := matched_compact(MANDATORY_AUTH_VISIBLE_MARKERS):
+        return marker
+    if "sign in to continue" in visible_haystack_compact:
+        if any(suffix in visible_haystack_compact for suffix in OPTIONAL_SIGN_IN_BANNER_SUFFIXES):
+            return None
+        return "sign in to continue"
+    if marker := matched_compact(AUTH_TEXT_MARKERS):
+        return marker
+    return None
+
+
+def _optional_sign_in_banner_only(*, visible_haystack_compact: str, strong_listing_evidence: bool) -> bool:
+    if not strong_listing_evidence:
+        return False
+    if "sign in to continue" not in visible_haystack_compact:
+        return False
+    return any(suffix in visible_haystack_compact for suffix in OPTIONAL_SIGN_IN_BANNER_SUFFIXES)
+
+
 def _active_challenge_url(url: str) -> str | None:
     blob = str(url or "").lower()
     if not blob:
@@ -187,7 +237,10 @@ def classify_browser_page_state(
     visible_haystack = f"{title}\n{visible_text}".lower()
     visible_haystack_compact = " ".join(visible_haystack.split())
 
-    def matched_visible(markers: tuple[str, ...]) -> str | None:
+    def matched_visible_strict(markers: tuple[str, ...]) -> str | None:
+        return next((marker for marker in markers if marker.lower() in visible_haystack), None)
+
+    def matched_visible_compact(markers: tuple[str, ...]) -> str | None:
         for marker in markers:
             needle = marker.lower()
             if needle in visible_haystack:
@@ -201,9 +254,9 @@ def classify_browser_page_state(
     # Bare captcha token in visible text alone is not enough; require active phrases/URL/UI.
     url_marker = _active_challenge_url(url)
     ui_active, ui_reason = _challenge_ui_active(challenge_ui)
-    active_text_marker = matched_visible(ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS)
+    active_text_marker = matched_visible_compact(ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS)
 
-    ordinary_markers = matched_visible(RESULT_TEXT_MARKERS)
+    ordinary_markers = matched_visible_strict(RESULT_TEXT_MARKERS)
     url_l = str(url or "").lower()
     ordinary_url = ("/sch/" in url_l or "/itm/" in url_l) and "ebay." in url_l
     sold_url = "lh_sold=1" in url_l
@@ -252,17 +305,35 @@ def classify_browser_page_state(
             **base_diag,
         }
 
-    # SORRY / maintenance / auth / access — evaluate on visible text (and title), not CSS.
-    if marker := matched_visible(ACCESS_BLOCK_TEXT_MARKERS):
+    # SORRY / maintenance / access — evaluate on visible text (and title), not CSS.
+    if marker := matched_visible_strict(ACCESS_BLOCK_TEXT_MARKERS):
         return {"outcome": "access_blocked", "reason": marker, "retryable": True, **base_diag}
-    if marker := matched_visible(AUTH_TEXT_MARKERS):
-        return {"outcome": "authentication_required", "reason": marker, "retryable": False, **base_diag}
-    if marker := matched_visible(MAINTENANCE_TEXT_MARKERS):
+    if marker := matched_visible_strict(MAINTENANCE_TEXT_MARKERS):
         return {"outcome": "provider_unavailable", "reason": marker, "retryable": True, **base_diag}
-    if marker := matched_visible(SORRY_ERROR_TEXT_MARKERS) or (
+    if marker := matched_visible_compact(SORRY_ERROR_TEXT_MARKERS) or (
         "error page" in visible_haystack and "something went wrong" in visible_haystack
     ):
         return {"outcome": "provider_unavailable", "reason": "ebay_sorry_error_page", "retryable": True, **base_diag}
+
+    # Genuine auth overlays must stop before active-challenge / body-readiness success paths.
+    optional_sign_in_banner = _optional_sign_in_banner_only(
+        visible_haystack_compact=visible_haystack_compact,
+        strong_listing_evidence=strong_listing_evidence,
+    )
+    if not optional_sign_in_banner:
+        if auth_reason := _genuine_authentication_wall(
+            title=title,
+            visible_haystack=visible_haystack,
+            visible_haystack_compact=visible_haystack_compact,
+            matched_compact=matched_visible_compact,
+        ):
+            return {
+                "outcome": "authentication_required",
+                "reason": auth_reason,
+                "retryable": False,
+                "securityClass": "EBAY_AUTH_REQUIRED",
+                **base_diag,
+            }
 
     # Active challenge vs ordinary results / ambiguity.
     if active_reasons and strong_listing_evidence and not (url_marker or ui_active):
@@ -284,9 +355,9 @@ def classify_browser_page_state(
             **base_diag,
         }
 
-    if result_count <= 0 and (marker := matched_visible(CONSENT_TEXT_MARKERS)):
+    if result_count <= 0 and (marker := matched_visible_strict(CONSENT_TEXT_MARKERS)):
         return {"outcome": "provider_unavailable", "reason": f"interstitial:{marker}", "retryable": True, **base_diag}
-    if marker := matched_visible(NO_RESULTS_TEXT_MARKERS):
+    if marker := matched_visible_strict(NO_RESULTS_TEXT_MARKERS):
         return {"outcome": "no_results", "reason": marker, "retryable": False, **base_diag}
     if strong_listing_evidence or ordinary_markers:
         return {
