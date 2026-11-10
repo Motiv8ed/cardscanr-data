@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
+from .sold_page_health import MIN_READABLE_SOLD_DOCUMENT_CHARS, _has_solid_sold_body_markers
+
 _ARTIFACT_ROOT = Path(__file__).resolve().parents[2] / "reports" / "artifacts"
 _AUTHORITATIVE_CAPTURE_ROOT = _ARTIFACT_ROOT / "post_sold_captures"
 
@@ -459,7 +461,9 @@ def verify_captured_sold_state(
     url_l = str(url or "").lower()
     title_l = str(title or "").lower()
     body = str(body_text or "")
-    body_l = body.lower()
+    body_strip = body.strip()
+    body_l = body_strip.lower()
+    body_len = len(body_strip)
     sold_url = "lh_sold=1" in url_l
     complete_url = "lh_complete=1" in url_l
     sold_date_lines = sum(
@@ -471,7 +475,20 @@ def verify_captured_sold_state(
     )
     sold_listings_label = "sold listings" in body_l or "sold items" in body_l
     result_level_sold = sold_date_lines >= 1
-    verified = bool(sold_url and (result_level_sold or (sold_listings_label and complete_url)))
+    if not body_strip:
+        verified = False
+    elif not sold_url:
+        verified = False
+    elif _has_solid_sold_body_markers(body_l):
+        verified = True
+    elif result_level_sold or (sold_listings_label and complete_url):
+        verified = True
+    elif body_len >= MIN_READABLE_SOLD_DOCUMENT_CHARS and (
+        "/itm/" in body_l or "au $" in body_l or "results" in body_l
+    ):
+        verified = True
+    else:
+        verified = False
     return {
         "SOLD_STATE_VERIFIED": verified,
         "soldUrlParam": sold_url,

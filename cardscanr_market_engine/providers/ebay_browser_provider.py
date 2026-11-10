@@ -40,45 +40,32 @@ from ..navigation_runtime_context import (
 )
 
 
-# ACTIVE challenge: user-facing verification copy (never bare "captcha" alone).
-ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS = (
-    "verify you are human",
-    "verify yourself",
-    "are you a robot",
-    "security challenge",
-    "robot check",
-    "confirm you are human",
-    "please verify yourself",
-    "to continue, please verify",
-    "press and hold",
-    "security measure",
+from .marketplace_browser_page_state import (
+    ACCESS_BLOCK_TEXT_MARKERS,
+    ACTIVE_CHALLENGE_URL_MARKERS,
+    ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS,
+    CHALLENGE_TEXT_MARKERS,
+    CONSENT_TEXT_MARKERS,
+    MAINTENANCE_TEXT_MARKERS,
+    NO_RESULTS_TEXT_MARKERS,
+    PASSIVE_CHALLENGE_RESOURCE_RES,
+    RESULT_TEXT_MARKERS,
+    SORRY_ERROR_TEXT_MARKERS,
+    _looks_like_html_document,
+    classify_browser_page_state,
+    contains_block_marker,
 )
-# ACTIVE challenge: known eBay security/challenge navigation surfaces.
-ACTIVE_CHALLENGE_URL_MARKERS = (
-    "/splashui/",
-    "captcha.ebay.",
-    "/challenge?",
-    "/challenge/",
-)
-# Backward-compatible alias used by older tests/helpers (active visible text only).
-CHALLENGE_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS
-ACCESS_BLOCK_TEXT_MARKERS = ("access denied", "unusual traffic", "temporarily blocked", "blocked from using")
-AUTH_TEXT_MARKERS = ("sign in to continue", "please sign in", "session expired", "log in to continue")
-CONSENT_TEXT_MARKERS = ("accept all", "cookie consent", "privacy preferences")
-MAINTENANCE_TEXT_MARKERS = ("technical difficulties", "temporarily unavailable", "site maintenance")
-SORRY_ERROR_TEXT_MARKERS = ("something went wrong on our end", "sorry\nsomething went wrong")
-NO_RESULTS_TEXT_MARKERS = ("0 results", "no exact matches found", "no results for", "we looked everywhere")
-RESULT_TEXT_MARKERS = ("sold items", "completed items", "results for", "shop by category", "sold listings")
-BLOCK_TEXT_MARKERS = ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS + ACCESS_BLOCK_TEXT_MARKERS
-# Passiveive CAPTCHA/challenge capability in page source — diagnostic only.
-PASSIVE_CHALLENGE_RESOURCE_RES = (
-    re.compile(r"google\.com/recaptcha", re.I),
-    re.compile(r"gstatic\.com/recaptcha", re.I),
-    re.compile(r"recaptcha/api", re.I),
-    re.compile(r"\.ifh-captcha\b", re.I),
-    re.compile(r"\bifh-captcha\b", re.I),
-    re.compile(r"""['"][^'"]*captcha[^'"]*\.(?:js|css)""", re.I),
-)
+
+
+def resolve_post_capture_visible_body_text(*, body_text: str, html_or_text_fallback: str) -> str:
+    """Keep visible body separate from HTML when capture payload has HTML-only fallback."""
+    visible_body = str(body_text or "")
+    if visible_body:
+        return visible_body
+    fallback = str(html_or_text_fallback or "")
+    return "" if _looks_like_html_document(fallback) else fallback
+
+
 PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE = re.compile(
     r"""<iframe[^>]+src=["'][^"']*recaptcha[^"']*["'][^>]*>""",
     re.I,
@@ -446,253 +433,6 @@ def normalize_ebay_listing_url(href: str, *, provider_domain: str) -> dict[str, 
     )
     return metadata
 
-
-def _looks_like_html_document(text: str) -> bool:
-    sample = str(text or "")[:4000].lower()
-    if not sample.strip():
-        return False
-    if "<html" in sample or sample.lstrip().startswith("<!doctype"):
-        return True
-    # Dense markup with scripts/styles is HTML source, not visible body text.
-    tag_hits = sample.count("<") + sample.count(">")
-    return tag_hits >= 40 and ("<script" in sample or "<style" in sample or "<iframe" in sample)
-
-
-def _strip_html_to_approx_visible_text(html: str) -> str:
-    """Best-effort visible text from HTML for classification (not a full browser render)."""
-    text = str(html or "")
-    text = re.sub(r"(?is)<script[^>]*>.*?</script>", " ", text)
-    text = re.sub(r"(?is)<style[^>]*>.*?</style>", " ", text)
-    text = re.sub(r"(?is)<noscript[^>]*>.*?</noscript>", " ", text)
-    text = re.sub(r"(?is)<!--.*?-->", " ", text)
-    text = re.sub(r"(?is)<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
-def _passive_challenge_resources(html_or_source: str) -> list[str]:
-    source = str(html_or_source or "")
-    if not source:
-        return []
-    found: list[str] = []
-    for pattern in PASSIVE_CHALLENGE_RESOURCE_RES:
-        if pattern.search(source):
-            found.append(pattern.pattern)
-    if PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE.search(source):
-        # Prefer classifying zero-size/hidden recaptcha iframes as passive.
-        for match in PASSIVE_HIDDEN_RECAPTCHA_IFRAME_RE.finditer(source):
-            tag = match.group(0).lower()
-            hidden = (
-                "display: none" in tag
-                or "display:none" in tag
-                or "visibility: hidden" in tag
-                or "visibility:hidden" in tag
-                or 'width="0"' in tag
-                or "width='0'" in tag
-                or 'height="0"' in tag
-                or "height='0'" in tag
-            )
-            found.append("hidden_recaptcha_iframe" if hidden else "recaptcha_iframe")
-            break
-    # Bare "captcha" in CSS class / framework markup is passive when not visible copy.
-    if re.search(r"\bcaptcha\b", source, flags=re.I) and "captcha_token_in_source" not in found:
-        found.append("captcha_token_in_source")
-    # Deduplicate while preserving order.
-    seen: set[str] = set()
-    out: list[str] = []
-    for item in found:
-        if item in seen:
-            continue
-        seen.add(item)
-        out.append(item)
-    return out
-
-
-def _active_challenge_url(url: str) -> str | None:
-    blob = str(url or "").lower()
-    if not blob:
-        return None
-    for marker in ACTIVE_CHALLENGE_URL_MARKERS:
-        if marker in blob:
-            return marker
-    return None
-
-
-def _challenge_ui_active(challenge_ui: dict[str, Any] | None) -> tuple[bool, str | None]:
-    if not isinstance(challenge_ui, dict):
-        return False, None
-    if challenge_ui.get("visibleChallengeText") is True:
-        return True, "visible_challenge_text"
-    try:
-        if int(challenge_ui.get("visibleCaptchaFrameCount") or 0) > 0:
-            return True, "visible_captcha_iframe"
-    except (TypeError, ValueError):
-        pass
-    if challenge_ui.get("visibleChallengeWidget") is True:
-        return True, "visible_challenge_widget"
-    return False, None
-
-
-def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
-    """True only for active/user-facing block or challenge copy — not passive captcha resources."""
-    visible = body_text
-    html_source = ""
-    if _looks_like_html_document(body_text):
-        html_source = body_text
-        visible = _strip_html_to_approx_visible_text(body_text)
-    haystack = f"{title}\n{visible}".lower()
-    if any(marker in haystack for marker in BLOCK_TEXT_MARKERS):
-        return True
-    # Passiveive captcha resources in HTML must not count as a block by themselves.
-    _ = html_source
-    return False
-
-
-def classify_browser_page_state(
-    *,
-    title: str = "",
-    body_text: str = "",
-    html_document: str | None = None,
-    url: str = "",
-    selector_counts: dict[str, int] | None = None,
-    challenge_ui: dict[str, Any] | None = None,
-    x11_sold_state_verified: bool | None = None,
-) -> dict[str, Any]:
-    """Classify page state with ACTIVE vs PASSIVE challenge awareness.
-
-    Representation-aware:
-    - visible body text / titles drive ACTIVE challenge detection
-    - raw HTML captcha/recaptcha resources are PASSIVE diagnostics unless a
-      visible challenge widget/text/URL proves an active challenge
-    - strong ordinary Sold/listing evidence + only passive resources => success
-    - genuinely conflicting active+ordinary evidence => ambiguous_security_state
-    """
-    selectors = selector_counts or {}
-    result_count = sum(int(value or 0) for value in selectors.values())
-    html_source = str(html_document or "")
-    visible_text = str(body_text or "")
-    if html_source and not _looks_like_html_document(visible_text):
-        # Explicit split: body_text is visible, html_document is source.
-        pass
-    elif _looks_like_html_document(visible_text):
-        html_source = html_source or visible_text
-        visible_text = _strip_html_to_approx_visible_text(visible_text)
-    elif not visible_text and html_source:
-        visible_text = _strip_html_to_approx_visible_text(html_source)
-
-    visible_haystack = f"{title}\n{visible_text}".lower()
-    matched_visible = lambda markers: next((marker for marker in markers if marker in visible_haystack), None)
-
-    passive_resources = _passive_challenge_resources(html_source or (body_text if _looks_like_html_document(body_text) else ""))
-    # Bare captcha token in visible text alone is not enough; require active phrases/URL/UI.
-    url_marker = _active_challenge_url(url)
-    ui_active, ui_reason = _challenge_ui_active(challenge_ui)
-    active_text_marker = matched_visible(ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS)
-
-    ordinary_markers = matched_visible(RESULT_TEXT_MARKERS)
-    url_l = str(url or "").lower()
-    ordinary_url = ("/sch/" in url_l or "/itm/" in url_l) and "ebay." in url_l
-    sold_url = "lh_sold=1" in url_l
-    strong_listing_evidence = (
-        result_count > 0
-        or bool(ordinary_markers)
-        or (sold_url and ordinary_url)
-        or bool(x11_sold_state_verified)
-        or int(selectors.get("canonical_itm_href_count") or 0) > 0
-    )
-
-    active_reasons: list[str] = []
-    if url_marker:
-        active_reasons.append(f"url:{url_marker}")
-    if active_text_marker:
-        active_reasons.append(f"visible_text:{active_text_marker}")
-    if ui_active and ui_reason:
-        active_reasons.append(f"challenge_ui:{ui_reason}")
-
-    base_diag = {
-        "classificationModel": "active_vs_passive_challenge_v1",
-        "passiveChallengeResources": passive_resources,
-        "activeChallengeEvidence": active_reasons,
-        "ordinaryResultsEvidence": {
-            "resultSelectorCount": result_count,
-            "resultTextMarker": ordinary_markers,
-            "soldUrl": sold_url,
-            "ordinaryEbayUrl": ordinary_url,
-            "x11SoldStateVerified": x11_sold_state_verified,
-            "canonicalItmHrefCount": int(selectors.get("canonical_itm_href_count") or 0),
-        },
-        "representation": {
-            "usedHtmlDocument": bool(html_source),
-            "visibleTextChars": len(visible_text),
-            "htmlChars": len(html_source),
-        },
-    }
-
-    # Auth wall is not CAPTCHA. Classify before active-challenge URL markers.
-    if is_ebay_authentication_url(url):
-        return {
-            "outcome": "authentication_required",
-            "reason": "signin.ebay",
-            "retryable": False,
-            "securityClass": "EBAY_AUTH_REQUIRED",
-            **base_diag,
-        }
-
-    # SORRY / maintenance / auth / access — evaluate on visible text (and title), not CSS.
-    if marker := matched_visible(ACCESS_BLOCK_TEXT_MARKERS):
-        return {"outcome": "access_blocked", "reason": marker, "retryable": True, **base_diag}
-    if marker := matched_visible(AUTH_TEXT_MARKERS):
-        return {"outcome": "authentication_required", "reason": marker, "retryable": False, **base_diag}
-    if marker := matched_visible(MAINTENANCE_TEXT_MARKERS):
-        return {"outcome": "provider_unavailable", "reason": marker, "retryable": True, **base_diag}
-    if marker := matched_visible(SORRY_ERROR_TEXT_MARKERS) or (
-        "error page" in visible_haystack and "something went wrong" in visible_haystack
-    ):
-        return {"outcome": "provider_unavailable", "reason": "ebay_sorry_error_page", "retryable": True, **base_diag}
-
-    # Active challenge vs ordinary results / ambiguity.
-    if active_reasons and strong_listing_evidence and not (url_marker or ui_active):
-        # Visible challenge phrases with simultaneous strong Sold/listing evidence —
-        # fail closed rather than silently price.
-        return {
-            "outcome": "ambiguous_security_state",
-            "reason": "active_text_with_ordinary_listing_evidence",
-            "retryable": True,
-            "securityClass": "AMBIGUOUS_SECURITY_STATE",
-            **base_diag,
-        }
-    if active_reasons:
-        return {
-            "outcome": "challenge_detected",
-            "reason": active_reasons[0],
-            "retryable": True,
-            "securityClass": "ACTIVE_CHALLENGE",
-            **base_diag,
-        }
-
-    if result_count <= 0 and (marker := matched_visible(CONSENT_TEXT_MARKERS)):
-        return {"outcome": "provider_unavailable", "reason": f"interstitial:{marker}", "retryable": True, **base_diag}
-    if marker := matched_visible(NO_RESULTS_TEXT_MARKERS):
-        return {"outcome": "no_results", "reason": marker, "retryable": False, **base_diag}
-    if strong_listing_evidence or ordinary_markers:
-        return {
-            "outcome": "success",
-            "reason": "results_page",
-            "retryable": False,
-            "securityClass": "ORDINARY_RESULTS",
-            "passiveChallengeResourcesOnly": bool(passive_resources),
-            **base_diag,
-        }
-    # Passiveive captcha resources alone on an otherwise unknown page are not an active challenge.
-    if passive_resources and not active_reasons:
-        return {
-            "outcome": "parsing_failure",
-            "reason": "unknown_page_state_with_passive_challenge_resources",
-            "retryable": True,
-            "securityClass": "PASSIVE_CHALLENGE_RESOURCE",
-            **base_diag,
-        }
-    return {"outcome": "parsing_failure", "reason": "unknown_page_state", "retryable": True, **base_diag}
 
 
 def _ebay_https_origin(url_or_host: str, *, fallback: str = "https://www.ebay.com.au") -> str:
@@ -3167,9 +2907,13 @@ class EbayBrowserSoldCompsProvider:
                 "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
                 diagnostics={
                     "providerOutcome": "challenge_detected",
+                    "ownedDailyOutcome": "CHALLENGE_REQUIRED",
+                    "failureClass": "EBAY_CHALLENGE",
                     "navMode": nav_mode_label,
                     "desktopNav": stage_timings.fields.get("desktopNav"),
                     "stageTimings": stage_timings.snapshot(),
+                    "markFresh": False,
+                    "lastGoodRetained": True,
                 },
             )
         if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE":
@@ -3223,11 +2967,83 @@ class EbayBrowserSoldCompsProvider:
                 },
             )
         if not nav.search_success or not nav.sold_click_success or not nav.sold_state_verified:
+            sold_blob = (
+                nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else {}
+            )
+            nav_error = str(nav.error or sold_blob.get("error") or "")
+            failure_class = str(
+                sold_blob.get("failureClass") or sold_blob.get("error") or nav_error or ""
+            )
+            desktop_nav = stage_timings.fields.get("desktopNav")
+            if isinstance(desktop_nav, dict):
+                desktop_nav = {
+                    **desktop_nav,
+                    "error": nav_error or desktop_nav.get("error"),
+                    "failureClass": failure_class or desktop_nav.get("failureClass"),
+                    "challenge": bool(nav.challenge or sold_blob.get("challenge")),
+                    "sorry": bool(nav.sorry or sold_blob.get("sorry")),
+                    "SOLD_STATE_VERIFIED": bool(nav.sold_state_verified),
+                }
+                stage_timings.fields["desktopNav"] = desktop_nav
+            if nav.challenge or failure_class == "EBAY_CHALLENGE" or nav_error == "EBAY_CHALLENGE":
+                raise ProviderBlockedError(
+                    "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
+                    diagnostics={
+                        "providerOutcome": "challenge_detected",
+                        "ownedDailyOutcome": "CHALLENGE_REQUIRED",
+                        "failureClass": "EBAY_CHALLENGE",
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                    },
+                )
+            if (
+                nav.sorry
+                or nav_error == "TEMPORARY_EBAY_SERVER_FAILURE"
+                or failure_class == "EBAY_SORRY"
+            ):
+                raise ProviderTemporaryError(
+                    "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page during desktop navigation",
+                    diagnostics={
+                        "reason": "ebay_sorry_error_page",
+                        "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                        "failureClass": failure_class or "EBAY_SORRY",
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                        "tripsSorryBreaker": True,
+                    },
+                )
+            incomplete = (
+                nav_error == "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+                or failure_class == "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE"
+            )
+            if incomplete:
+                raise ProviderTemporaryError(
+                    f"INCOMPLETE_SOLD_DOCUMENT_EVIDENCE: unreadable sold results ({nav_error})",
+                    diagnostics={
+                        "reason": "incomplete_sold_document_evidence",
+                        "ownedDailyOutcome": "POST_SOLD_CAPTURE_FAILURE",
+                        "failureClass": "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+                        "incompleteSoldEvidence": True,
+                        "navMode": nav_mode_label,
+                        "desktopNav": desktop_nav,
+                        "stageTimings": stage_timings.snapshot(),
+                        "markFresh": False,
+                        "lastGoodRetained": True,
+                        "tripsSorryBreaker": False,
+                    },
+                )
             raise ProviderTemporaryError(
                 f"Desktop sold navigation failed: {nav.error or 'unknown'}",
                 diagnostics={
                     "navMode": nav_mode_label,
-                    "desktopNav": stage_timings.fields.get("desktopNav"),
+                    "desktopNav": desktop_nav,
+                    "failureClass": failure_class or nav_error or None,
                     "stageTimings": stage_timings.snapshot(),
                 },
             )
@@ -3273,6 +3089,10 @@ class EbayBrowserSoldCompsProvider:
 
         def _post_sold_parse() -> ProviderResult:
             from .post_sold_capture import (
+                CDP_CAPTURE_METHOD_FAILURE,
+                CDP_DOCUMENT_NOT_READY,
+                CDP_INTEGRITY_FAILURE,
+                CDP_MAIN_FRAME_NOT_READY,
                 PARSE_COMPLETE,
                 PARSE_FAILED,
                 PARSE_PENDING,
@@ -3340,7 +3160,6 @@ class EbayBrowserSoldCompsProvider:
             stage_timings.fields["postSoldCapturePhase"] = capture.capture_phase
             stage_timings.fields["postSoldCdpAttached"] = bool(capture.target_id)
             stage_timings.fields["soldStateAfterParseAttach"] = capture.sold_state
-            stage_timings.fields["x11SoldStateVerified"] = True
             stage_timings.fields["captureProcess"] = (probe_capture.get("diagnostics") or {}).get("captureProcess")
 
             if not capture.success:
@@ -3385,6 +3204,15 @@ class EbayBrowserSoldCompsProvider:
                             "stageTimings": stage_timings.snapshot(),
                         },
                     )
+                sold_state_after = capture.sold_state if isinstance(capture.sold_state, dict) else {}
+                incomplete_evidence = fail_cls in {
+                    CDP_DOCUMENT_NOT_READY,
+                    CDP_MAIN_FRAME_NOT_READY,
+                    CDP_INTEGRITY_FAILURE,
+                    CDP_CAPTURE_METHOD_FAILURE,
+                } or not bool(sold_state_after.get("SOLD_STATE_VERIFIED"))
+                x11_verified = bool(capture.x11_sold_state_verified) and not incomplete_evidence
+                stage_timings.fields["x11SoldStateVerified"] = x11_verified
                 raise ProviderTemporaryError(
                     f"POST_SOLD_CAPTURE_FAILURE: local CDP capture failed after X11 SOLD_STATE_VERIFIED "
                     f"({capture.failure_class or 'unknown'})",
@@ -3393,8 +3221,9 @@ class EbayBrowserSoldCompsProvider:
                         "reason": "post_sold_capture_failed",
                         "ownedDailyOutcome": "POST_SOLD_CAPTURE_FAILURE",
                         "terminal": "POST_SOLD_CAPTURE_FAILURE",
-                        "x11SoldStateVerified": True,
-                        "SOLD_STATE_VERIFIED": True,
+                        "x11SoldStateVerified": x11_verified,
+                        "SOLD_STATE_VERIFIED": x11_verified and bool(sold_state_after.get("SOLD_STATE_VERIFIED")),
+                        "incompleteSoldEvidence": incomplete_evidence,
                         "postSoldCapturePhase": POST_SOLD_CAPTURE_FAILED,
                         "failureClass": capture.failure_class,
                         "failureDetail": capture.failure_detail,
@@ -3408,22 +3237,18 @@ class EbayBrowserSoldCompsProvider:
                     },
                 )
 
+            stage_timings.fields["x11SoldStateVerified"] = True
             stage_timings.fields["postSoldCapturePhase"] = POST_SOLD_CAPTURE_READY
             title = str(capture.target_title or "")
             # Keep visible body text separate from raw HTML for classification.
             # ONLY use HTML/body from the CURRENT successful capture payload.
             # Never fall back to global post_sold_capture_last/last_capture.html —
             # that file may belong to a prior job and must not be parsed as current evidence.
-            visible_body = str((proc_result.payload or {}).get("body_text") or "")
             html_doc = str((proc_result.payload or {}).get("html") or "")
-            if not visible_body:
-                # Current-capture body only (from this process result), never disk last_capture.
-                fallback = str(capture.html_or_text or "")
-                visible_body = (
-                    ""
-                    if _looks_like_html_document(fallback)
-                    else fallback
-                )
+            visible_body = resolve_post_capture_visible_body_text(
+                body_text=str((proc_result.payload or {}).get("body_text") or ""),
+                html_or_text_fallback=str(capture.html_or_text or ""),
+            )
             body_text = visible_body
             if html_doc and "/itm/" in html_doc:
                 capture.html_or_text = html_doc

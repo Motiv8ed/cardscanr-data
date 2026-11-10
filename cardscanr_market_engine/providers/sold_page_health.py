@@ -28,6 +28,9 @@ EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity
 
 PHASE_PAGE_HEALTH_VERIFICATION = "PAGE_HEALTH_VERIFICATION"
 
+# Minimum readable body before URL/title-only Sold verification (incident: ~209 chars garbage).
+MIN_READABLE_SOLD_DOCUMENT_CHARS = 200
+
 # Capture / selection failure classes (do not collapse into CDP_TARGET_NOT_FOUND).
 CDP_TARGET_ATTACH_FAILURE = "CDP_TARGET_ATTACH_FAILURE"
 
@@ -77,23 +80,20 @@ def url_has_lh_sold(url: str | None) -> bool:
     return "lh_sold=1" in str(url or "").lower()
 
 
-def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
-    """Ordinary Sold-results structure; zero listings may still be healthy."""
-    b = str(body or "").lower()
-    t = str(title or "").lower()
-    if "sold items" in b or "sold listings" in b:
+def _has_solid_sold_body_markers(body_l: str) -> bool:
+    if "sold items" in body_l or "sold listings" in body_l:
         return True
-    if "sold " in b:  # sold dates / sold labels
+    sold_date_lines = sum(
+        1
+        for line in body_l.splitlines()
+        if line.strip().startswith("sold ")
+        and not line.strip().startswith("sold items")
+        and not line.strip().startswith("sold listings")
+    )
+    if sold_date_lines >= 1:
         return True
-    # Title often includes query + "for sale | eBay" or similar on healthy results.
-    if "ebay" in t and "error page" not in t and "sorry" not in t[:80] and "captcha" not in t:
-        # Without body, URL+title on /sch/ with LH_Sold is enough for health (X11 path).
-        return True
-    if "results" in b or "filter" in b:
-        return True
-    # Explicit zero-results wording still healthy.
     if any(
-        m in b
+        m in body_l
         for m in (
             "no exact matches",
             "0 results",
@@ -106,28 +106,102 @@ def _has_sold_results_structure(body: str | None, title: str | None) -> bool:
     return False
 
 
-def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> bool:
-    """Active challenge only — passive recaptcha iframe alone is non-blocking."""
-    t = (title or "").lower()
-    u = (url or "").lower()
-    b = (body or "").lower()
-    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+def _has_sold_results_structure(
+    body: str | None,
+    title: str | None,
+    *,
+    url: str | None = None,
+    allow_title_only_without_body: bool = True,
+) -> bool:
+    """Ordinary Sold-results structure; zero listings may still be healthy."""
+    body_s = str(body or "").strip()
+    b = body_s.lower()
+    t = str(title or "").lower()
+    unhealthy = classify_marketplace_page_class(url=url, title=title, body=body)
+    if unhealthy in {EBAY_CHALLENGE_PAGE, EBAY_SORRY_PAGE, EBAY_AUTH_REQUIRED, EBAY_ERROR_PAGE}:
+        return False
+    if body_s and _has_solid_sold_body_markers(b):
         return True
-    if "verification challenge" in f"{t}\n{b}":
+    if "results" in b and "filter" in b and len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS:
         return True
-    # Title/URL captcha — active.
-    if "captcha" in t or "captcha" in u:
+    if len(body_s) >= MIN_READABLE_SOLD_DOCUMENT_CHARS and ("/itm/" in b or "au $" in b or "buy it now" in b):
         return True
-    # Body: captcha wording without only being a passive google recaptcha iframe.
+    if not body_s:
+        if not allow_title_only_without_body:
+            return False
+        # Poll before body copy: URL+title on /sch/ with LH_Sold may be provisionally healthy.
+        if "ebay" in t and "error page" not in t and "sorry" not in t[:80] and "captcha" not in t:
+            return True
+        return False
+    # Partial/unreadable body must not verify on title alone (CDP_DOCUMENT_NOT_READY class).
+    return False
+
+
+def _legacy_body_indicates_active_challenge(
+    *,
+    title: str | None,
+    url: str | None,
+    body: str | None,
+) -> bool:
+    """Representation-aware body challenge check for legacy union (passive reCAPTCHA must not match)."""
+    from .marketplace_browser_page_state import (
+        _looks_like_html_document,
+        _strip_html_to_approx_visible_text,
+        classify_browser_page_state,
+    )
+
+    body_s = str(body or "")
+    if not body_s.strip():
+        return False
+    html_doc: str | None = None
+    visible = body_s
+    if _looks_like_html_document(body_s):
+        html_doc = body_s
+        visible = _strip_html_to_approx_visible_text(body_s)
+    state = classify_browser_page_state(
+        title=str(title or ""),
+        body_text=visible,
+        html_document=html_doc,
+        url=str(url or ""),
+    )
+    if state["outcome"] in {"challenge_detected", "ambiguous_security_state", "access_blocked"}:
+        return True
+    b = visible.lower()
+    if "verification challenge" in b:
+        return True
     if "captcha" in b:
-        passive_only = "recaptcha" in b and "iframe" in b and "verify yourself" not in b
+        passive_only = (
+            "recaptcha" in b
+            and "verify yourself" not in b
+            and "complete the captcha" not in b
+            and "captcha now" not in b
+        )
         if not passive_only:
             return True
+    if state["outcome"] == "success":
+        return False
+    return False
+
+
+def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> bool:
+    """Legacy active-challenge title/URL/body semantics (unioned with canonical provider)."""
+    t = (title or "").lower()
+    u = (url or "").lower()
+    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+        return True
+    if "/challenge?" in u or "/challenge/" in u:
+        return True
+    if "verification challenge" in f"{t}\n{body or ''}".lower():
+        return True
+    if "captcha" in t or "captcha" in u:
+        return True
+    if body:
+        return _legacy_body_indicates_active_challenge(title=title, url=url, body=body)
     return False
 
 
 def _is_classic_sorry_blob(title: str | None, url: str | None, body: str | None) -> bool:
-    """Classic SORRY only — Error Page title/URL excluded."""
+    """Legacy classic SORRY semantics (unioned with canonical provider)."""
     t = (title or "").strip().lower()
     u = (url or "").strip().lower()
     b = (body or "").strip().lower()
@@ -147,6 +221,30 @@ def _is_classic_sorry_blob(title: str | None, url: str | None, body: str | None)
     return False
 
 
+def _canonical_security_unhealthy_class(
+    *,
+    url: str | None,
+    title: str | None,
+    body: str | None,
+) -> str | None:
+    """Map provider canonical page-state classification to Sold health page classes."""
+    from .marketplace_browser_page_state import classify_browser_page_state
+
+    state = classify_browser_page_state(
+        title=str(title or ""),
+        body_text=str(body or ""),
+        url=str(url or ""),
+    )
+    outcome = str(state.get("outcome") or "")
+    if outcome in {"challenge_detected", "ambiguous_security_state", "access_blocked"}:
+        return EBAY_CHALLENGE_PAGE
+    if outcome == "authentication_required":
+        return EBAY_AUTH_REQUIRED
+    if outcome == "provider_unavailable" and state.get("reason") == "ebay_sorry_error_page":
+        return EBAY_SORRY_PAGE
+    return None
+
+
 def classify_marketplace_page_class(
     *,
     url: str | None,
@@ -159,6 +257,9 @@ def classify_marketplace_page_class(
         return EBAY_ACCESS_DENIED_403
     if is_ebay_authentication_url(url):
         return EBAY_AUTH_REQUIRED
+    security = _canonical_security_unhealthy_class(url=url, title=title, body=body)
+    if security:
+        return security
     if _is_challenge_blob(title, url, body):
         return EBAY_CHALLENGE_PAGE
     if is_ebay_error_page(title=title, url=url, body=body):
@@ -176,6 +277,7 @@ def classify_sold_page_health(
     http_status: int | None = None,
     expected_origin: str = "ebay.com.au",
     require_body_structure: bool = False,
+    require_nonempty_body: bool = False,
 ) -> dict[str, Any]:
     """Bounded positive health check for a post-Sold rendered page (read-only evidence)."""
     unhealthy = classify_marketplace_page_class(
@@ -201,8 +303,20 @@ def classify_sold_page_health(
 
     structure_ok = True
     page_class = HEALTHY_SOLD_RESULTS
-    if require_body_structure or (body is not None and str(body).strip()):
-        structure_ok = _has_sold_results_structure(body, title)
+    body_present = str(body or "").strip()
+    if unhealthy:
+        structure_ok = False
+        page_class = unhealthy
+    elif require_nonempty_body and not body_present:
+        structure_ok = False
+        reasons.append("authoritative_empty_body")
+    elif require_body_structure or body is not None:
+        structure_ok = _has_sold_results_structure(
+            body,
+            title,
+            url=url,
+            allow_title_only_without_body=not require_nonempty_body,
+        )
         if not structure_ok:
             reasons.append("sold_results_structure_missing")
         elif body is not None and not any(
@@ -261,6 +375,7 @@ def evaluate_sold_verification(
     http_status: int | None = None,
     expected_origin: str = "ebay.com.au",
     require_body_structure: bool = False,
+    authoritative_document: bool = False,
 ) -> dict[str, Any]:
     """Compose filter-state + page-health into x11SoldStateVerified semantics."""
     u0 = str(url or "").strip().lower()
@@ -284,7 +399,8 @@ def evaluate_sold_verification(
         body=body,
         http_status=http_status,
         expected_origin=expected_origin,
-        require_body_structure=require_body_structure,
+        require_body_structure=require_body_structure or authoritative_document,
+        require_nonempty_body=authoritative_document,
     )
     unhealthy = health.get("unhealthyClass")
 

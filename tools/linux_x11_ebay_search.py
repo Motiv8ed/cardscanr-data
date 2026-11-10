@@ -31,6 +31,8 @@ from cardscanr_market_engine.navigation_runtime_context import (  # noqa: E402
     pre_submit_only_requested,
 )
 from cardscanr_market_engine.browser_lifecycle_policy import (  # noqa: E402
+    INTER_CARD_RECOVERY_STRATEGY,
+    INTER_CARD_STRATEGY,
     RUNTIME_COLD_START,
     evaluate_runtime_targets,
     extra_inter_card_ebay_target_ids,
@@ -925,6 +927,7 @@ def gui_search(
         "query": query,
         "tag": tag,
         "goHome": go_home,
+        "strategy": INTER_CARD_STRATEGY if ctx.is_inter_card() else INTER_CARD_RECOVERY_STRATEGY,
         "runtimeMode": ctx.runtime_mode,
         "expectedPriorTargetId": ctx.expected_prior.target_id if ctx.expected_prior is not None else None,
         "chromeOwners": chrome_owner_count(),
