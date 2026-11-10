@@ -61,6 +61,11 @@ from cardscanr_market_engine.providers.sold_control_identity import (  # noqa: E
     content_origin_from_viewport_metrics,
     prove_sold_control_identity,
 )
+from cardscanr_market_engine.providers.sold_page_health import (  # noqa: E402
+    EBAY_CHALLENGE_PAGE,
+    EBAY_SORRY_PAGE,
+    evaluate_sold_verification,
+)
 from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: E402
     DEFAULT_SOLD_TIMEOUT_POLICY,
     PHASE_SOLD_CONTROL_DISCOVERY,
@@ -74,6 +79,88 @@ from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: 
     classify_sold_observation,
     url_has_lh_sold,
 )
+
+
+def _verify_sold_with_body(*, url: str, title: str, body: str) -> dict[str, Any]:
+    """Require readable document + result structure; URL/LH_Sold alone is insufficient."""
+    return evaluate_sold_verification(url=url, title=title, body=body, authoritative_document=True)
+
+
+def _apply_authoritative_body_verification(
+    *,
+    url: str,
+    title: str,
+    body: str,
+    gate: SoldGateState,
+) -> tuple[bool, SoldGateState, dict[str, Any]]:
+    """Post-clipboard Sold gate: challenge/SORRY from title/URL first, then nonempty body."""
+    extras: dict[str, Any] = {}
+    body_stripped = str(body or "").strip()
+    ev = evaluate_sold_verification(
+        url=url,
+        title=title,
+        body=body_stripped or body or "",
+        authoritative_document=True,
+    )
+    extras["soldReadiness"] = ev.get("health")
+    terminal = str(ev.get("terminal") or ev.get("marketplacePageClass") or "")
+    if terminal in {EBAY_CHALLENGE_PAGE, "EBAY_CHALLENGE"}:
+        gate = on_sold_terminal(gate, challenge=True)
+        extras.update(
+            error="EBAY_CHALLENGE",
+            failureClass="EBAY_CHALLENGE",
+            challenge=True,
+            sorry=False,
+            authRequired=False,
+            SOLD_STATE_VERIFIED=False,
+            x11SoldStateVerified=False,
+        )
+        return False, gate, extras
+    if terminal in {EBAY_SORRY_PAGE, "EBAY_SORRY"}:
+        gate = on_sold_terminal(gate, sorry=True)
+        extras.update(
+            error=TEMPORARY_EBAY_SERVER_FAILURE,
+            failureClass=EBAY_SORRY_PAGE,
+            challenge=False,
+            sorry=True,
+            authRequired=False,
+            SOLD_STATE_VERIFIED=False,
+            x11SoldStateVerified=False,
+        )
+        return False, gate, extras
+    if not body_stripped:
+        gate = on_sold_terminal(gate, verified=False, timeout=True)
+        extras.update(
+            error="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+            failureClass="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+            challenge=False,
+            sorry=False,
+            authRequired=False,
+            SOLD_STATE_VERIFIED=False,
+            x11SoldStateVerified=False,
+        )
+        return False, gate, extras
+    if ev.get("verified"):
+        gate = on_sold_terminal(gate, verified=True)
+        extras.update(
+            challenge=False,
+            sorry=False,
+            authRequired=False,
+            SOLD_STATE_VERIFIED=True,
+            x11SoldStateVerified=True,
+        )
+        return True, gate, extras
+    gate = on_sold_terminal(gate, verified=False, timeout=True)
+    extras.update(
+        error="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+        failureClass="INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+        challenge=False,
+        sorry=False,
+        authRequired=False,
+        SOLD_STATE_VERIFIED=False,
+        x11SoldStateVerified=False,
+    )
+    return False, gate, extras
 
 
 def find_orange_highlight_left_rail(im: Image.Image, g: dict) -> tuple[int, int, int] | None:
@@ -361,12 +448,13 @@ def gui_sold(*, tag: str) -> dict:
 
     if "LH_Sold=1" in url0:
         body = copy_body()
-        gate = on_sold_terminal(gate, verified=True)
+        verified, gate, body_fields = _apply_authoritative_body_verification(
+            url=url0, title=t0, body=body, gate=gate
+        )
         out = {
-            "ok": True,
+            "ok": verified,
             "alreadySold": True,
             "soldClickSuccess": False,
-            "SOLD_STATE_VERIFIED": True,
             "url": url0,
             "title": t0,
             "aboutBlank": False,
@@ -374,6 +462,7 @@ def gui_sold(*, tag: str) -> dict:
             "bodyChars": len(body),
             "timeline": timeline,
             "events": gate.events,
+            **body_fields,
         }
         (ART / f"linux_sold_{tag}_state.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
         return out
@@ -534,10 +623,25 @@ def gui_sold(*, tag: str) -> dict:
         stage_marks["T9_sold_state_verified"] = time.time()
 
     body = ""
+    sold_body_fields: dict[str, Any] = {}
     if pending["verified"]:
         body = copy_body()
         (ART / f"linux_sold_{tag}_body.txt").write_text(body, encoding="utf-8", errors="replace")
-        stage_marks["T10_html_data_captured"] = time.time()
+        verified, gate, sold_body_fields = _apply_authoritative_body_verification(
+            url=str(pending.get("url") or ""),
+            title=str(pending.get("title") or ""),
+            body=body,
+            gate=gate,
+        )
+        pending["verified"] = verified
+        pending["x11SoldStateVerified"] = bool(sold_body_fields.get("x11SoldStateVerified"))
+        if not verified:
+            pending["terminal"] = str(
+                sold_body_fields.get("failureClass") or sold_body_fields.get("error") or ""
+            )
+            pending["failureStage"] = PHASE_SOLD_STATE_VERIFICATION
+        else:
+            stage_marks["T10_html_data_captured"] = time.time()
 
     # Diagnostic-only screenshot; must not replace original Sold failure.
     diagnostic_shot = None
@@ -557,10 +661,11 @@ def gui_sold(*, tag: str) -> dict:
         "click": [cx, cy],
         "url": pending.get("url"),
         "title": pending.get("title"),
-        "sorry": gate.phase
+        "sorry": bool(sold_body_fields.get("sorry"))
+        or gate.phase
         in {SoldPhase.EBAY_SORRY, SoldPhase.TEMPORARY_EBAY_SERVER_FAILURE}
         or is_ebay_sorry_page(title=str(pending.get("title") or ""), url=str(pending.get("url") or "")),
-        "challenge": gate.phase == SoldPhase.EBAY_CHALLENGE,
+        "challenge": bool(sold_body_fields.get("challenge")) or gate.phase == SoldPhase.EBAY_CHALLENGE,
         "authRequired": gate.phase == SoldPhase.EBAY_AUTH_REQUIRED
         or pending.get("terminal") == TERMINAL_SOLD_AUTH_REQUIRED,
         "aboutBlank": bool(pending.get("aboutBlank")),
@@ -586,7 +691,14 @@ def gui_sold(*, tag: str) -> dict:
         "phaseTimeoutMs": pending.get("phaseTimeoutMs"),
         "diagnosticScreenshot": "DIAGNOSTIC_ONLY" if diagnostic_shot else None,
     }
-    if out["sorry"]:
+    if sold_body_fields:
+        for key in ("error", "failureClass", "soldReadiness"):
+            if sold_body_fields.get(key) is not None:
+                out[key] = sold_body_fields[key]
+    if out.get("challenge"):
+        out["error"] = "EBAY_CHALLENGE"
+        out["classification"] = "EBAY_CHALLENGE"
+    elif out["sorry"]:
         out["error"] = TEMPORARY_EBAY_SERVER_FAILURE
         out["classification"] = TEMPORARY_EBAY_SERVER_FAILURE
     elif out.get("authRequired"):

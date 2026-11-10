@@ -33,6 +33,7 @@ from .providers.errors import (
 )
 from .navigation_runtime_context import (
     apply_context_to_environ,
+    invalidate_inter_card_handoff,
     load_navigation_runtime_context,
     persist_inter_card_from_healthy_result,
     prepare_context_for_market,
@@ -69,11 +70,17 @@ from .owned_daily_outcomes import (
     EBAY_ACCESS_DENIED_403,
     FINALIZE_TIMEOUT_SAFE,
     NO_PRICE_EVER_FOUND,
+    POST_SOLD_CAPTURE_FAILURE,
     TEMPORARY_BROWSER_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
     classify_completed_ebay_write,
     classify_exception_outcome,
     is_sparse_no_new_evidence_reason,
+)
+from .providers.post_sold_capture import (
+    CDP_DOCUMENT_NOT_READY,
+    CDP_INTEGRITY_FAILURE,
+    POST_SOLD_CAPTURE_FAILED,
 )
 from .pipeline_phase_diagnostics import (
     build_provider_diagnostics_for_result,
@@ -157,6 +164,83 @@ def url_quality_counts(provider_result: ProviderResult) -> dict[str, int]:
         "generic_url_count": int(summary.get("generic_url_count") or 0),
         "missing_url_count": int(summary.get("missing_url_count") or 0),
     }
+
+
+def collect_inter_card_invalidation_reasons(
+    *,
+    owned_outcome: str,
+    result: dict[str, Any],
+    provider_diagnostics: dict[str, Any] | None,
+) -> list[str]:
+    """Collect evidence that the browser tab must not be reused on the next card."""
+    reasons: list[str] = []
+    if owned_outcome == POST_SOLD_CAPTURE_FAILURE:
+        reasons.append("post_sold_capture_failure")
+    phase = str(result.get("postSoldCapturePhase") or "").strip()
+    if phase == POST_SOLD_CAPTURE_FAILED:
+        reasons.append("post_sold_capture_phase_failed")
+    nested: dict[str, Any] = {}
+    desktop_nav: dict[str, Any] = {}
+    if isinstance(provider_diagnostics, dict):
+        nested = provider_diagnostics.get("diagnostics") or provider_diagnostics
+        if not isinstance(nested, dict):
+            nested = {}
+        desktop_candidate = nested.get("desktopNav") or nested.get("linuxNav")
+        if isinstance(desktop_candidate, dict):
+            desktop_nav = desktop_candidate
+    if isinstance(result.get("desktopNav"), dict):
+        desktop_nav = {**desktop_nav, **result["desktopNav"]}
+    failure_class = str(
+        result.get("failureClass")
+        or nested.get("failureClass")
+        or desktop_nav.get("failureClass")
+        or ""
+    ).upper()
+    nav_error = str(
+        desktop_nav.get("error") or nested.get("error") or result.get("error") or ""
+    ).upper()
+    poison_tokens = (
+        "INCOMPLETE_SOLD_DOCUMENT_EVIDENCE",
+        "SEARCH_INPUT_NOT_CONFIRMED",
+        CDP_DOCUMENT_NOT_READY,
+        CDP_INTEGRITY_FAILURE,
+    )
+    if failure_class in poison_tokens:
+        reasons.append(failure_class.lower())
+    for token in poison_tokens:
+        if token in nav_error:
+            reasons.append(token.lower())
+    sold = nested.get("sold") if isinstance(nested.get("sold"), dict) else {}
+    sold_failure = str(sold.get("failureClass") or sold.get("error") or "").upper()
+    if sold_failure in poison_tokens:
+        reasons.append(sold_failure.lower())
+    if result.get("incompleteSoldEvidence") or nested.get("incompleteSoldEvidence"):
+        reasons.append("incomplete_sold_evidence")
+    return sorted(set(reasons))
+
+
+def maybe_invalidate_inter_card_after_failure(
+    *,
+    logger,
+    owned_outcome: str,
+    result: dict[str, Any],
+    provider_diagnostics: dict[str, Any] | None,
+) -> None:
+    """After capture/navigation failure, do not hand the next card a poisoned INTER_CARD tab."""
+    reasons = collect_inter_card_invalidation_reasons(
+        owned_outcome=owned_outcome,
+        result=result,
+        provider_diagnostics=provider_diagnostics,
+    )
+    if not reasons:
+        return
+    try:
+        ctx = invalidate_inter_card_handoff(reason=",".join(reasons))
+        logger(
+            f"[market-engine] inter_card_invalidated reasons={reasons} next_mode={ctx.runtime_mode}"
+        )
+    except Exception as exc:
+        logger(f"[market-engine] inter_card_invalidate_failed: {exc}")
 
 
 def persist_healthy_inter_card_handoff(
@@ -1359,6 +1443,12 @@ class MarketPriceJobRunner:
                     result["errorType"] = type(exc).__name__
             if fail_job_error:
                 result["failJobError"] = fail_job_error
+            maybe_invalidate_inter_card_after_failure(
+                logger=self.logger,
+                owned_outcome=owned_outcome,
+                result=result,
+                provider_diagnostics=provider_diagnostics,
+            )
             if owned_outcome == NO_PRICE_EVER_FOUND and (
                 result.get("x11SoldStateVerified")
                 or isinstance(result.get("currentJobCapture"), dict)

@@ -23,6 +23,7 @@ HEALTHY_PRIOR_VERDICTS = frozenset(
 # Documented production strategy: accept expected prior Sold page at readiness;
 # production search may still call go_ebay_home as search-surface prep (existing).
 INTER_CARD_STRATEGY = "REUSE_SAME_TAB"
+INTER_CARD_RECOVERY_STRATEGY = "RECOVER_SEARCH_SURFACE"
 
 REASON_EXPECTED_PRIOR = "INTER_CARD_EXPECTED_PRIOR_TARGET"
 REASON_UNKNOWN_EBAY = "INTER_CARD_UNKNOWN_EBAY_TARGET"
