@@ -1,0 +1,19 @@
+{
+  "phase": "AFTER five successful sanitized Shell inspection calls",
+  "tool": "Read",
+  "machine_id": "2b76a077-8723-4d8f-a45b-8293febe35e0",
+  "refused_paths": [
+    "D:\\CardScanR_Data\\cardscanr-data\\workers\\market_price_worker.py",
+    "D:\\CardScanR_Data\\cardscanr-data\\scripts\\ensure_live_ebay_pricing_runtime.ps1",
+    "D:\\CardScanR_Data\\cardscanr-data\\scripts\\run_market_price_worker.ps1"
+  ],
+  "reason": "Path is outside the allowed local-exec root and was refused",
+  "parallel_refusals": 4,
+  "response": "Stopped further PC file inspection. No retry via junction/other tool/WSL/copy or alternate credentials. Previously obtained sanitized receipts retained; exact existing box-source hashes compared offline only.",
+  "remaining_blockers": [
+    "Unmatched dirty worker/launcher source and exact call/override order",
+    "Current live process effective caps",
+    "Actual Linux-side selected tools and complete backup/artifact validation"
+  ],
+  "needed_unblock": "Sanctioned local-exec-root permission for the actual worker directory; do not move/copy/symlink material to evade refusal."
+}

@@ -10,8 +10,39 @@ from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
-FIX = ROOT / "reports" / "artifacts" / "inter_card_provider_handoff_closure" / "fixtures"
 PROOF = ROOT / "reports" / "artifacts" / "inter_card_provider_handoff_closure"
+
+HANDOFF_FIXTURE_NAMES = (
+    "tropius_prior.json",
+    "ninetales_cdp_targets.json",
+    "tropius_sold_page.html",
+)
+
+
+def resolve_handoff_fixture_root() -> Path:
+    override = (os.environ.get("EBAY_HANDOFF_FIXTURE_ROOT") or "").strip()
+    if override:
+        return Path(override)
+    return ROOT / "reports" / "artifacts" / "inter_card_provider_handoff_closure" / "fixtures"
+
+
+FIX = resolve_handoff_fixture_root()
+
+
+def handoff_fixtures_present() -> bool:
+    return all((FIX / name).is_file() for name in HANDOFF_FIXTURE_NAMES)
+
+
+def require_handoff_fixtures(test_func):
+    """Skip with explicit blocker when the three authorized originals are absent."""
+
+    def _wrapped(self, *args, **kwargs):
+        if not handoff_fixtures_present():
+            missing = [str(FIX / n) for n in HANDOFF_FIXTURE_NAMES if not (FIX / n).is_file()]
+            self.skipTest(f"HANDOFF_FIXTURE_BLOCKER: missing authorized fixtures: {missing}")
+        return test_func(self, *args, **kwargs)
+
+    return _wrapped
 
 from cardscanr_market_engine.browser_lifecycle_policy import (
     RUNTIME_COLD_START,
@@ -62,7 +93,14 @@ TROPIUS_TARGET = "719B0522A34AD5C8699806844E710735"
 NINETALES_QUERY = "Ninetales 9 chaos rising Pokemon"
 
 
+def _require_fixtures() -> None:
+    if not handoff_fixtures_present():
+        missing = [str(FIX / n) for n in HANDOFF_FIXTURE_NAMES if not (FIX / n).is_file()]
+        raise unittest.SkipTest(f"HANDOFF_FIXTURE_BLOCKER: {missing}")
+
+
 def _prior() -> PriorCardContext:
+    _require_fixtures()
     data = json.loads((FIX / "tropius_prior.json").read_text(encoding="utf-8"))
     prior = PriorCardContext.from_dict(data)
     assert prior is not None
@@ -70,6 +108,7 @@ def _prior() -> PriorCardContext:
 
 
 def _targets() -> list[dict]:
+    _require_fixtures()
     return list(json.loads((FIX / "ninetales_cdp_targets.json").read_text(encoding="utf-8"))["rawTargets"])
 
 
@@ -86,6 +125,7 @@ class _SearchInputParser(HTMLParser):
 
 
 def _inspect_fixture_input() -> dict[str, str]:
+    _require_fixtures()
     parser = _SearchInputParser()
     parser.feed((FIX / "tropius_sold_page.html").read_text(encoding="utf-8"))
     assert parser.input_attrs is not None

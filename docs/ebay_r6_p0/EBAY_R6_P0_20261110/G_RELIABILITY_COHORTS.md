@@ -1,0 +1,32 @@
+# Staged reliability proposal — NO EXECUTION / NO APPROVAL
+
+Andy's D4 accepted: offline correctness is not live reliability. Historical46.2% healthy/46.2% transient does not meet>=85%/<=15%. Pure-model4096 rows/345+ cases cannot replace field evidence, and one card cannot prove a stable rate. Every stage below requires its own future explicit owner permission; no scheduling, queue creation, contacts or tests performed in P0.
+
+## Measurement definitions to freeze before data collection
+
+- **Attempt:** one approved job+attempt_id+request fingerprint, begun only after work/lease/budget gates. Each actual browser search/submission/recovery/probe separately recorded for cap accounting; do not count only successful jobs. Never deduplicate away failed attempts to improve rates. Correlate attempts to package/decision/adapter version, current evidence and sink receipt.
+- **N_started:** all uniquely started nominal AU attempts in preregistered cohort/window, including failed/aborted/timeouts/crashes once started. Gate-rejected not-started jobs reported separately, not healthy successes. Interrupted/censored started attempts remain nonhealthy pending final reconciliation; no exclusion by convenience.
+- **Healthy job H:** UPDATED_FROM_EBAY or UNCHANGED_FROM_EBAY with VERIFIED_SOLD_RESULTS and valid gates, or genuine CHECKED_NO_NEW_EXACT_EVIDENCE backed by complete current VERIFIED_SOLD_RESULTS/VERIFIED_NO_RESULTS and no false freshening. A retained last-good value on failure is NOT a healthy new observation. H/N_started is the proposed operational>=85% metric, matching intent without rewarding fabricated prices.
+- **Transient T:** attempts ending SORRY_COOLDOWN or INCOMPLETE_TRANSIENT, once per attempt. T/N_started<=15%. Report SORRY versus local capture/readiness separately. Other failures/ambiguity/security are separate nonhealthy categories, never hidden inside healthy or dropped.
+- **Security outcomes S:** AUTH_REQUIRED/CHALLENGE_STOP/ACCESS_BLOCKED/AMBIGUOUS_NO_PRICE and unexpected restrictions. Report both genuine safe stops and suspected false stops, labelled by independent evidence. Any one stops that cohort, no auto refresh/retry/sign-in/second card. Zero bypass required: no non-PASS comps/price/market publication or freshness change. Safe stopping is correct security behaviour but does not inflate healthy rate.
+- **Capture health versus price coverage:** separately report complete verified-current document rate, valid-empty rate, eligible-comp/price-publish rate, sample quality, last-good retention and freshness invariants. Do not label absence of eligible sold comps a fabricated zero price or confuse pricing coverage with browser reliability.
+- **Counters:** actual submissions1h/24h, all failed/successful/recovery submissions, competing runner count, peak concurrency, duration/time-to-stop, blocked attempts/leases, decision reasons/unknowns, package/tool hashes. Raw counts+nominators+denominators, no percentage-only claims. Dates to Andy in AEST; rolling usage UTC-safe/monotonic where appropriate.
+- **Sampling:** preregister named AU/AUD card mix, known difficult and ordinary layouts, expected variant/locale, duplicates, start/end window, stop rules and exclusions before launch. Operational denominator excludes intentionally injected adversarial pages; those stay offline correctness corpus. No credential/challenge manipulation or live security probing. No changing the cohort after observing failures.
+
+## Stages (proposal only)
+
+| Stage | Size/window proposed | Entry and exit / separate owner approval |
+|---|---|---|
+| R0 offline | Full approved correctness suite plus inert-platform/package rehearsal | A/B/final independent PASS and verified rollback. No eBay. This establishes correctness/readiness, NOT field rates. |
+| C1 first measurement/canary | ONE named AU card/job/attempt, then stop | Separate exact merge/deploy, transient-latch recovery and one-card execution approvals; cap/owned_daily/state verified. Any non-PASS no price; no second attempt. N=1 labelled exploratory only, cannot claim85% reliability. |
+| C2 small cohort |5 named nominal AU jobs over>=1hour, only after review of C1 | New explicit cohort permission, remaining rolling budgets, no security. At5, target requires5 healthy/0transient arithmetically. One ordinary transient holds review; does not clear/relax existing three-strike latch. No automatic graduation. |
+| C3 initial rate estimate |20 named jobs over>=2hours, <=10/hour (stricter than20) | New permission/review after C2; current exact package unchanged. Raw target>=17healthy,<=3transient, zero security bypass, no security outcomes/false-stop storm. All existing stricter stop/budget controls apply. Uncertainty remains large. |
+| C4 stability cohort |60 additional nominal attempts over>=3days, <=20/day and<=10/hour | New explicit approval after C3; no scheduler/owned_daily auto-enable. Raw target>=51healthy,<=9transient with all stop rules; daily/subgroup results and uncertainty reported. Counts accumulate across earlier stages within rolling caps; no reset/new ledger. |
+
+Daily figures above are scheduling maxima, NOT authorization or guarantee capacity. Existing tighter pacing/budget/profile limits win. Cohort additions are not already queued; total proposed staged samples do not authorize any of them. Any package/adapter/config/policy change invalidates comparability and returns to independent offline QA and fresh owner sequencing decision.
+
+## Statistical and safety interpretation
+
+Report observed fractions with Wilson95% intervals and raw counts; success at the raw85/15 threshold in20 or60 samples does not prove the true future rate meets it. No unsupported statistical assurance, no continuous-processing permission from a single sample. Owner must decide required uncertainty/sample/window before stage launch. Persistent3-consecutive/5-hourly transient HARD_STOP remains intact; cohort-level review stops may be stricter but never relax it. Security, access restrictions, missing caps, wrong market/currency, freshness mutation, unaccounted submission or competing runner -> immediate STOP and owner review; no autonomous retry/cleanup/solver/identity rotation.
+
+Production G7 is HOLD until evidence/approved stage sequence exists. Andy's acceptance of D4 permits proposing this staged sequence, not executing it. Continuous service, task/queue restart and owned_daily enablement remain outside all cohorts and need separate approval.

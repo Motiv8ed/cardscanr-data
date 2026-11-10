@@ -1,0 +1,30 @@
+{
+  "kind": "NORMATIVE_P0_DESIGN_TRUTH_TABLE_NOT_EXECUTED_APPLICATION_TESTS",
+  "dimensions": [
+    "auth_observed",
+    "active_challenge_observed",
+    "sorry_observed",
+    "capture_incomplete",
+    "optional_banner_present",
+    "prior_state_present",
+    "sold_looking_markers",
+    "hidden_script_css_comment_tokens",
+    "binding_valid_current",
+    "access_403_observed",
+    "complete_current_sold_document",
+    "verified_current_zero_results"
+  ],
+  "rows": 4096,
+  "counts": {
+    "AMBIGUOUS_NO_PRICE": 2064,
+    "INCOMPLETE_TRANSIENT": 80,
+    "VERIFIED_NO_RESULTS": 16,
+    "VERIFIED_SOLD_RESULTS": 16,
+    "ACCESS_BLOCKED": 256,
+    "SORRY_COOLDOWN": 128,
+    "CHALLENGE_STOP": 512,
+    "AUTH_REQUIRED": 1024
+  },
+  "protocol_version": "R6-P0-v1",
+  "assumptions": "Binding is identity/integrity only: job/key/attempt/lease/tab/document/time/hashes/AU/AUD. Body readiness/visibility are NOT assumed by binding. Auth/challenge/SORRY flags denote independently observed current trusted support after qualifying field provenance; hidden source strings alone never set them. Missing visibility forces capture_incomplete and forbids complete_current_sold_document/verified_current_zero_results. Prior is context only; Sold-looking markers alone do not prove a completed Sold page. Complete_current_sold_document requires authoritative body, complete current render/security observations, current item references, AU/AUD and no unresolved ambiguity. Both current-results and zero-results true is contradictory. Invalid envelope yields ambiguity with no auto-retry, not a claim of confirmed auth. The optional dimension denotes a verified nonblocking bounded banner; unbounded optional-looking text is not an allow signal and is evaluated under ordinary evidence/ambiguity rules."
+}

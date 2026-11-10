@@ -1,0 +1,61 @@
+{
+  "development_candidate": {
+    "sha": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "parents": [
+      "88b30343b6b03ac1e463fc4d215c040f63a82942",
+      "dd6e4c1306dbbef903973622f0c5b6d97da9d4fd"
+    ],
+    "commit_time_AEST": "2026-10-25T15:10:46+10:00",
+    "subject": "Merge pull request #21 from Motiv8ed/tools/en-jp-production-packs-20260926",
+    "approved_for_development": false,
+    "approved_for_production": false
+  },
+  "pr30_parent": {
+    "sha": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "parents": [
+      "a7c7b9866152aa32ccdeb9e1ca0affd834951bb4"
+    ],
+    "commit_time_AEST": "2026-11-10T10:00:55+10:00",
+    "subject": "Unify Sold security classification on canonical provider page state",
+    "approved_for_development": false,
+    "approved_for_production": false
+  },
+  "pr31_head": {
+    "sha": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "parents": [
+      "704d1b44e93fafd074a83b93288ff52d25e00538"
+    ],
+    "commit_time_AEST": "2026-11-10T13:45:56+10:00",
+    "subject": "fix(ebay-sold): R5 classifier fix-forward from 704d1b44",
+    "approved_for_development": false,
+    "approved_for_production": false
+  },
+  "inspection": {
+    "time_AEST": "2026-11-10T15:50:17.098086+10:00",
+    "authority": "Andy t588u 10 Nov 15:45 AEST; P0 READ-ONLY only",
+    "tests_executed": 0,
+    "repository_writes": 0,
+    "network_ebay_contacts": 0,
+    "supabase_calls": 0,
+    "local_object_relation": "candidate is merge-base ancestor of R5; verified by local git log range/parent graph, not production ancestry",
+    "commits_candidate_to_R5": [
+      "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+      "704d1b44e93fafd074a83b93288ff52d25e00538",
+      "a7c7b9866152aa32ccdeb9e1ca0affd834951bb4",
+      "dd1b04a8f790ec33609e24000852e54046143eef",
+      "b9b9fd5698967084a73c0728e8740ed452196ecb"
+    ],
+    "production_relation": "t589u: full deployed HEAD93eba7296bd41ca1a417e67c2c67d70f1e3f8d8a +17 tracked modifications VERIFIED on correct desktop. Key hashes compared; complete dirty bundle and production ancestry to d1 UNVERIFIED. See B/PC_TO_BOX_SOURCE_MATCHES.json; structured Read access refused and no workaround."
+  },
+  "pr30_final_failed": {
+    "sha": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "parents": [
+      "704d1b44e93fafd074a83b93288ff52d25e00538"
+    ],
+    "commit_time_AEST": "2026-11-10T11:45:05+10:00",
+    "subject": "Union legacy Sold security signals with canonical page-state policy",
+    "approved_for_development": false,
+    "approved_for_production": false,
+    "role": "PR30 final failed sibling of PR31; do not confuse with704 parent"
+  }
+}

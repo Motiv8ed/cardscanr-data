@@ -1,0 +1,293 @@
+{
+  "method": "Compare already-observed deployed SHA256 to existing authorized box Git objects, including explicit LF->CRLF byte transformation. NO further PC reads after access refusal. Not a substitute for dirty deployed-source inspection.",
+  "matches": [
+    {
+      "deployed_path": "workers\\market_price_worker.py",
+      "deployed_sha256": "c4de6d470db28182eac95ed6b19a11d4c4eef8f24116854978926366236e2ee7",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "workers\\market_price_scheduler.py",
+      "deployed_sha256": "f6226eade5df541901426eb0b4d1a1426349f287d2e61874ff7fe71fc60a3129",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\job_runner.py",
+      "deployed_sha256": "d83080e1294d5ffd77a3076f5296050c22d9d77fe5e692d1ee96e2f840e8c4b3",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\ebay_browser_provider.py",
+      "deployed_sha256": "b9f52c00b6908f700098dad08a076c0e36afb93d8c4075743b16724b0b0a8457",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\sold_page_health.py",
+      "deployed_sha256": "a8e6f15ed0f95397470b0dc9c8db200f9450e59cf53af60908a208a1d5785eef",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\post_sold_capture.py",
+      "deployed_sha256": "0c5426fb7ce7cd83e079df8c39bb56617e9a6809b5733e224b21e8774895b875",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\post_sold_capture_worker.py",
+      "deployed_sha256": "e0ea950ee6ce09fab77c9e2ac7d7b5889748c5256134a311226f8513928ec7d4",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\post_sold_capture_process.py",
+      "deployed_sha256": "738b05be0ead6e21e04478422b51a06629dc0ec0f814570ff4474a2ac1e3414d",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\linux_x11_gui_fsm.py",
+      "deployed_sha256": "102a1e7a85bd9bfaa0efacddb71860d621891d7c4ac08d57ec7a1168cf34eab7",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\providers\\linux_x11_ebay_nav.py",
+      "deployed_sha256": "0f75a780fd36c53614e893afcd68c1b0bb6e2faf9037aec82cc779eac41c33b9",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\navigation_runtime_context.py",
+      "deployed_sha256": "7fc8a1aa7865c3cc706ef744ebda795f62c68aaf1f83a679238b603abb4b6e52",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\continuous_safety.py",
+      "deployed_sha256": "deaa88608cc87eea6dd88c2a2087d1edb46e142312813238e9aeee7e071496e2",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\owned_daily_enablement.py",
+      "deployed_sha256": "35e33a6f408aed1e701eb842ef49cbff8ec1140b81e993acc77c7f5f6bf8d7bb",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "cardscanr_market_engine\\config.py",
+      "deployed_sha256": "108d2df54c7a8ca718e6e0598e4c182e9ab667d51320526999b5b3ebbae5720e",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "scripts\\ensure_live_ebay_pricing_runtime_hidden.vbs",
+      "deployed_sha256": "be7e6ef6ccd3a21864f7f3d84986194ce9b93dcaa6d66d3ff78fe7ae2abe5a2c",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "blob_LF_to_CRLF"
+        }
+      ]
+    },
+    {
+      "deployed_path": "scripts\\ensure_live_ebay_pricing_runtime.ps1",
+      "deployed_sha256": "f3ca80ea7e3510c6bf9cad350b2761bd2a11e599586bd68514f9918555b9d49c",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "scripts\\live_ebay_worker_config.ps1",
+      "deployed_sha256": "0adad1a34f74b70628cb4316a98ded50c5dac546f1c7903b2890cfc840fa2901",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "blob_LF_to_CRLF"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "blob_LF_to_CRLF"
+        }
+      ]
+    },
+    {
+      "deployed_path": "scripts\\start_live_ebay_worker.ps1",
+      "deployed_sha256": "7b2440c5380aa36575d45ea49aace405270a398f67e41a24be07a0e4894bbbdc",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "scripts\\run_market_price_worker.ps1",
+      "deployed_sha256": "e04f8089a0d1197a5de1a71b9e46e0f3f00edc79816f2c171f246bb060fcf771",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "704d1b44e93fafd074a83b93288ff52d25e00538",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+          "transform": "exact_blob"
+        },
+        {
+          "pin": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+          "transform": "exact_blob"
+        }
+      ]
+    },
+    {
+      "deployed_path": "tools\\cardscanr_chrome_ctl.sh",
+      "deployed_sha256": "c6ce11cbbb8b2158dd47be3c49fa6ff2009efb3837cba0376a18176614347bdd",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "tools\\cardscanr_ensure_xvfb.sh",
+      "deployed_sha256": "4999efe84b7e9dfd081aaf43266329bf91bc93ff671d6482c5fdacafeccf83bd",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "tools\\linux_x11_ebay_search.py",
+      "deployed_sha256": "5f9d611a0d830b884fa2955509b60c3c740224ab6e58fb5b2bfabb4b1abdaa93",
+      "matches_existing_box_objects": []
+    },
+    {
+      "deployed_path": "tools\\linux_x11_ebay_sold.py",
+      "deployed_sha256": "cc9a5efd994236c6fe5fd8b2f88e0c6a8422408e13145d8e4ffa58ae09d6e88d",
+      "matches_existing_box_objects": [
+        {
+          "pin": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+          "transform": "exact_blob"
+        }
+      ]
+    }
+  ]
+}

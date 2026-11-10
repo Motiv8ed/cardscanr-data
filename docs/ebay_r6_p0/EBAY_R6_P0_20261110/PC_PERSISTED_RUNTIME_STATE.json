@@ -1,0 +1,34 @@
+{
+  "ledger": {
+    "path": "reports/runtime/continuous_au_safety_ledger.json",
+    "sha256": "bddef9b29bc2f5434b092b1577d70f1a2204fed71a119cb7d2e2b99ab0b6071e",
+    "lastHardStop": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+    "updated_at_AEST": "2026-11-06T10:34:45.819699+10:00"
+  },
+  "status": {
+    "path": "reports/runtime/continuous_au_worker_status.json",
+    "sha256": "4d741db875614f0a2771fdd35956ab167035c5bbf39d87a42c49361493125a7b",
+    "workerState": "HARD_STOP",
+    "enabled": false,
+    "consecutiveTransientFailures": 3,
+    "market": "AU",
+    "updated_at_AEST": "2026-11-06T10:34:45.820185+10:00"
+  },
+  "config": {
+    "path": "reports/runtime/live_ebay_runtime_config.json",
+    "sha256": "5cd2c9777580c21f74de37adcf2b59cf40cdba225993c6f0ae13e75931b334d5"
+  },
+  "worker_stop_intent": {
+    "path": "reports/runtime/worker_stop_intent.json",
+    "sha256": "f2db34148e2f267ecfd4b2febbb4c0d66de253daaec7fc6d31785fc819f111b3",
+    "reason": "bounded_single_job_recovery",
+    "requested_at_AEST": "2026-10-18T17:57:17.022525+10:00"
+  },
+  "scheduler_stop_intent": {
+    "path": "reports/runtime/scheduler_stop_intent.json",
+    "sha256": "70e797d1d5331575107bd6d16eb29e202a954dc87e80b2b4746360798756a644",
+    "reason": "final_real_owned_daily_ui_search_gate_complete",
+    "requested_at_AEST": "2026-10-04T16:10:09.216067+10:00"
+  },
+  "warning": "Persistent files are point-in-time observed records, last updated Nov6; running worker/scheduler also observed. Persisted HARD_STOP is not proof processes are absent or every live gate currently enforced. No state/task/process changed."
+}

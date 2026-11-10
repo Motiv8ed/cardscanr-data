@@ -1,0 +1,16 @@
+{
+  "authority": "t589u corrects t588 machine mapping",
+  "authorized_machine_id": "2b76a077-8723-4d8f-a45b-8293febe35e0",
+  "kind": "desktop",
+  "connected": true,
+  "identity": "VERIFIED_WINDOWS_CARDSCANR_WORKER_PC",
+  "previous_wrong_id": "b3c382f1-4dd8-4bd9-909f-63d1c9a3f622",
+  "previous_id_kind": "android",
+  "inspection_scope": "Read-only CardScanR worker deploy/task/config/backups",
+  "successful_remote_shell_inspection_calls": 5,
+  "syntax_error_before_identity": 1,
+  "structured_Read_refusals": 4,
+  "after_refusal": "Stopped further PC file inspection; no alternate path/tool used to bypass it",
+  "access_block": "Path outside allowed local-exec root: D:\\CardScanR_Data\\cardscanr-data",
+  "runtime_effective_environment": "UNVERIFIED; inspector env is NOT worker process env"
+}

@@ -1,0 +1,37 @@
+{
+  "os": "Win32NT",
+  "paths": [
+    {
+      "path": "D:\\CardScanR-worktrees",
+      "exists": true
+    },
+    {
+      "path": "D:\\cardscanr-data",
+      "exists": true
+    },
+    {
+      "path": "D:\\cardscanr-data\\workers\\market_price_worker.py",
+      "exists": true
+    }
+  ],
+  "taskPresent": true,
+  "taskState": "Ready",
+  "actions": {
+    "execute": "wscript.exe",
+    "workingDirectory": "D:\\CardScanR_Data\\cardscanr-data"
+  },
+  "worktreeNames": [
+    "android",
+    "backend",
+    "logs",
+    "website",
+    "website-pr233-signup-scan"
+  ],
+  "machineId": "2b76a077-8723-4d8f-a45b-8293febe35e0",
+  "registeredKind": "desktop",
+  "registeredLabel": "Motiv8ed",
+  "connected": true,
+  "identityVerdict": "VERIFIED_WINDOWS_CARDSCANR_WORKER_PC",
+  "authority": "t589u; read-only identity and P0 b/e",
+  "prepared_at_AEST": "2026-11-10T16:28:39.064435+10:00"
+}

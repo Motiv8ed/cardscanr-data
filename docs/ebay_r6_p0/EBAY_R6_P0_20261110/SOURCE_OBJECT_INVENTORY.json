@@ -1,0 +1,962 @@
+[
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/job_runner.py",
+    "present": true,
+    "sha256": "08dcfc1228b58d0bcfd2ab37b128afe816cec742cb0a85d027d4c475df6c99e6",
+    "bytes": 73304
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/navigation_runtime_context.py",
+    "present": true,
+    "sha256": "7fc8a1aa7865c3cc706ef744ebda795f62c68aaf1f83a679238b603abb4b6e52",
+    "bytes": 15322
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/browser_lifecycle_policy.py",
+    "present": true,
+    "sha256": "08579a4cc153191539cac45f72dba11efffaee8e64b0e71cfebf067448b1dabb",
+    "bytes": 20465
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/models.py",
+    "present": true,
+    "sha256": "633a054aad6882e26bd9d2b212afc1da74ba545ac9c836bd17203cc8695a8d7d",
+    "bytes": 4310
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/cache_writer.py",
+    "present": true,
+    "sha256": "40eb54e06913cb62306aae260a1c64b22aa51bbf60fdc814a80d130f097f1eaa",
+    "bytes": 2364
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/supabase_client.py",
+    "present": true,
+    "sha256": "2d71e489b8ead433046e2f58e4e39cec84dca5e6a67bc66c466275715e22b20e",
+    "bytes": 56099
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "present": true,
+    "sha256": "d785cd7233dad2df64a690e359d4960e2c2e86651ead0ba8bbde3c490682736e",
+    "bytes": 218117
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/marketplace_browser_page_state.py",
+    "present": false,
+    "sha256": null,
+    "bytes": null
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/sold_page_health.py",
+    "present": true,
+    "sha256": "a8e6f15ed0f95397470b0dc9c8db200f9450e59cf53af60908a208a1d5785eef",
+    "bytes": 19066
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/linux_x11_ebay_nav.py",
+    "present": true,
+    "sha256": "0c186a56113d664e0e13367b10c835ab5da468168dca5bfee0dc56e259cdd5c2",
+    "bytes": 16542
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/linux_x11_gui_fsm.py",
+    "present": true,
+    "sha256": "d2d5c3f2d9d4e7cd41ee94a577e86f11f159eebb1681d87284d1af2e1f9a922b",
+    "bytes": 28436
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/post_sold_capture.py",
+    "present": true,
+    "sha256": "0c5426fb7ce7cd83e079df8c39bb56617e9a6809b5733e224b21e8774895b875",
+    "bytes": 36561
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_cdp.py",
+    "present": true,
+    "sha256": "e878fc036f9c69888506e6fe170234cf5d149e57a423d5dcd536526284f4c178",
+    "bytes": 14626
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_process.py",
+    "present": true,
+    "sha256": "738b05be0ead6e21e04478422b51a06629dc0ec0f814570ff4474a2ac1e3414d",
+    "bytes": 18358
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_worker.py",
+    "present": true,
+    "sha256": "e0ea950ee6ce09fab77c9e2ac7d7b5889748c5256134a311226f8513928ec7d4",
+    "bytes": 28090
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/providers/desktop_win32_ebay_nav.py",
+    "present": true,
+    "sha256": "2aad8e4d50dd7391ca9feb806769bbf444a66d2281787a24548dbdbb94daf649",
+    "bytes": 20132
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/continuous_safety.py",
+    "present": true,
+    "sha256": "deaa88608cc87eea6dd88c2a2087d1edb46e142312813238e9aeee7e071496e2",
+    "bytes": 8376
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/continuous_worker_policy.py",
+    "present": true,
+    "sha256": "c8bf4776fb759f44c7fb4b5f89d963b06ff8a2d31c51bee79015101db1c28d2b",
+    "bytes": 3839
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/owned_daily_enablement.py",
+    "present": true,
+    "sha256": "35e33a6f408aed1e701eb842ef49cbff8ec1140b81e993acc77c7f5f6bf8d7bb",
+    "bytes": 4443
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "cardscanr_market_engine/config.py",
+    "present": true,
+    "sha256": "108d2df54c7a8ca718e6e0598e4c182e9ab667d51320526999b5b3ebbae5720e",
+    "bytes": 10382
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "workers/market_price_worker.py",
+    "present": true,
+    "sha256": "09c15404d41143a70da8d71d7121c3e4044f540089740bc3609ea1ad0fb4665f",
+    "bytes": 20095
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "scripts/live_ebay_worker_config.ps1",
+    "present": true,
+    "sha256": "ff99810d46b9db40ba81a9076b34bc4f20ba0e1bd9d5e22f4f5a5dabed55a422",
+    "bytes": 7897
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "scripts/start_live_ebay_worker.ps1",
+    "present": true,
+    "sha256": "7b2440c5380aa36575d45ea49aace405270a398f67e41a24be07a0e4894bbbdc",
+    "bytes": 1874
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+    "present": true,
+    "sha256": "b746633b6625df27614489d772fe49fb5dea0a8b430735ffa8a00b4205894c1a",
+    "bytes": 10802
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "scripts/run_market_price_worker.ps1",
+    "present": true,
+    "sha256": "e04f8089a0d1197a5de1a71b9e46e0f3f00edc79816f2c171f246bb060fcf771",
+    "bytes": 2489
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "tools/linux_x11_ebay_sold.py",
+    "present": true,
+    "sha256": "cc9a5efd994236c6fe5fd8b2f88e0c6a8422408e13145d8e4ffa58ae09d6e88d",
+    "bytes": 27710
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "tools/linux_x11_ebay_search.py",
+    "present": true,
+    "sha256": "f525f1be39ab70ef9eb3ab09cfd413fe3cc658f4e7002b6becc92e9b17455ee9",
+    "bytes": 63234
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "tests/test_inter_card_provider_handoff_closure.py",
+    "present": true,
+    "sha256": "589e2ed1841b615068b14a011481881145596151f4b3c32e2d7c31059f73b54c",
+    "bytes": 27401
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "tests/test_post_sold_offline_pipeline_integration.py",
+    "present": true,
+    "sha256": "bcc96ec5e4277ec77445be91180a4edb08cd768560f4d097c286b2a7532df7b2",
+    "bytes": 15246
+  },
+  {
+    "revision": "d1f525eb2330b980a6c8d9534d33b97b6404ddef",
+    "label": "development_candidate",
+    "path": "tests/test_ebay_incident_20261106_worker_recovery.py",
+    "present": false,
+    "sha256": null,
+    "bytes": null
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/job_runner.py",
+    "present": true,
+    "sha256": "993d22236638fd7206ca2dc68452fc6fb371649a7ec046903ce2b35c0888f795",
+    "bytes": 76694
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/navigation_runtime_context.py",
+    "present": true,
+    "sha256": "ea7637ffc388650ca27f261c60e2b0323fafd25dd9848c14ef77ec5f83330867",
+    "bytes": 16364
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/browser_lifecycle_policy.py",
+    "present": true,
+    "sha256": "9f7181dc6a822f04f338682e0d40043ea695ec1fd573c471b7208b78c749d9fa",
+    "bytes": 20521
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/models.py",
+    "present": true,
+    "sha256": "633a054aad6882e26bd9d2b212afc1da74ba545ac9c836bd17203cc8695a8d7d",
+    "bytes": 4310
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/cache_writer.py",
+    "present": true,
+    "sha256": "40eb54e06913cb62306aae260a1c64b22aa51bbf60fdc814a80d130f097f1eaa",
+    "bytes": 2364
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/supabase_client.py",
+    "present": true,
+    "sha256": "2d71e489b8ead433046e2f58e4e39cec84dca5e6a67bc66c466275715e22b20e",
+    "bytes": 56099
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "present": true,
+    "sha256": "ffab7fffd9234c4001bcb939b56fbba476a116d25acd5f0d5e019a7d06e630e8",
+    "bytes": 210913
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/marketplace_browser_page_state.py",
+    "present": true,
+    "sha256": "2f5ec4701b95ab4ad839f71cfed2608d15d624227d71c85dfdf25836ed9d09d5",
+    "bytes": 13166
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/sold_page_health.py",
+    "present": true,
+    "sha256": "6a83db7437106ddfb0680ed519e37f07dd0ac87dfbc337fe782e083dc7b745cc",
+    "bytes": 19952
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/linux_x11_ebay_nav.py",
+    "present": true,
+    "sha256": "0c186a56113d664e0e13367b10c835ab5da468168dca5bfee0dc56e259cdd5c2",
+    "bytes": 16542
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/linux_x11_gui_fsm.py",
+    "present": true,
+    "sha256": "af88a0f5bf7ea64e5a67ffb30f7a73de4637ba0ff72686f23ddd24780d7795d8",
+    "bytes": 27178
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/post_sold_capture.py",
+    "present": true,
+    "sha256": "ce0a67ac770be3e2b07349e8c34f9db896f0e5d53f71ef1f101bc3e137d87f03",
+    "bytes": 37082
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_cdp.py",
+    "present": true,
+    "sha256": "e878fc036f9c69888506e6fe170234cf5d149e57a423d5dcd536526284f4c178",
+    "bytes": 14626
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_process.py",
+    "present": true,
+    "sha256": "738b05be0ead6e21e04478422b51a06629dc0ec0f814570ff4474a2ac1e3414d",
+    "bytes": 18358
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_worker.py",
+    "present": true,
+    "sha256": "e0ea950ee6ce09fab77c9e2ac7d7b5889748c5256134a311226f8513928ec7d4",
+    "bytes": 28090
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/providers/desktop_win32_ebay_nav.py",
+    "present": true,
+    "sha256": "2aad8e4d50dd7391ca9feb806769bbf444a66d2281787a24548dbdbb94daf649",
+    "bytes": 20132
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/continuous_safety.py",
+    "present": true,
+    "sha256": "deaa88608cc87eea6dd88c2a2087d1edb46e142312813238e9aeee7e071496e2",
+    "bytes": 8376
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/continuous_worker_policy.py",
+    "present": true,
+    "sha256": "c8bf4776fb759f44c7fb4b5f89d963b06ff8a2d31c51bee79015101db1c28d2b",
+    "bytes": 3839
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/owned_daily_enablement.py",
+    "present": true,
+    "sha256": "35e33a6f408aed1e701eb842ef49cbff8ec1140b81e993acc77c7f5f6bf8d7bb",
+    "bytes": 4443
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "cardscanr_market_engine/config.py",
+    "present": true,
+    "sha256": "108d2df54c7a8ca718e6e0598e4c182e9ab667d51320526999b5b3ebbae5720e",
+    "bytes": 10382
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "workers/market_price_worker.py",
+    "present": true,
+    "sha256": "09c15404d41143a70da8d71d7121c3e4044f540089740bc3609ea1ad0fb4665f",
+    "bytes": 20095
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "scripts/live_ebay_worker_config.ps1",
+    "present": true,
+    "sha256": "ff99810d46b9db40ba81a9076b34bc4f20ba0e1bd9d5e22f4f5a5dabed55a422",
+    "bytes": 7897
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "scripts/start_live_ebay_worker.ps1",
+    "present": true,
+    "sha256": "7b2440c5380aa36575d45ea49aace405270a398f67e41a24be07a0e4894bbbdc",
+    "bytes": 1874
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+    "present": true,
+    "sha256": "b746633b6625df27614489d772fe49fb5dea0a8b430735ffa8a00b4205894c1a",
+    "bytes": 10802
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "scripts/run_market_price_worker.ps1",
+    "present": true,
+    "sha256": "e04f8089a0d1197a5de1a71b9e46e0f3f00edc79816f2c171f246bb060fcf771",
+    "bytes": 2489
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "tools/linux_x11_ebay_sold.py",
+    "present": true,
+    "sha256": "eb432802e6228f49585dc90ac1cae124381c6d1edbc40b5f4d58393b2a480df8",
+    "bytes": 31896
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "tools/linux_x11_ebay_search.py",
+    "present": true,
+    "sha256": "82bf2bb170eab4d8b2ae0086fe937185050dd571d92e7be8bf119a1f5da02cef",
+    "bytes": 63391
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "tests/test_inter_card_provider_handoff_closure.py",
+    "present": true,
+    "sha256": "589e2ed1841b615068b14a011481881145596151f4b3c32e2d7c31059f73b54c",
+    "bytes": 27401
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "tests/test_post_sold_offline_pipeline_integration.py",
+    "present": true,
+    "sha256": "bcc96ec5e4277ec77445be91180a4edb08cd768560f4d097c286b2a7532df7b2",
+    "bytes": 15246
+  },
+  {
+    "revision": "704d1b44e93fafd074a83b93288ff52d25e00538",
+    "label": "pr30_parent",
+    "path": "tests/test_ebay_incident_20261106_worker_recovery.py",
+    "present": true,
+    "sha256": "5c3280723d2df0f9be9c1a98d73647b0ad0142a2462a799612d5710002a4395f",
+    "bytes": 32324
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/job_runner.py",
+    "present": true,
+    "sha256": "993d22236638fd7206ca2dc68452fc6fb371649a7ec046903ce2b35c0888f795",
+    "bytes": 76694
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/navigation_runtime_context.py",
+    "present": true,
+    "sha256": "ea7637ffc388650ca27f261c60e2b0323fafd25dd9848c14ef77ec5f83330867",
+    "bytes": 16364
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/browser_lifecycle_policy.py",
+    "present": true,
+    "sha256": "9f7181dc6a822f04f338682e0d40043ea695ec1fd573c471b7208b78c749d9fa",
+    "bytes": 20521
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/models.py",
+    "present": true,
+    "sha256": "633a054aad6882e26bd9d2b212afc1da74ba545ac9c836bd17203cc8695a8d7d",
+    "bytes": 4310
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/cache_writer.py",
+    "present": true,
+    "sha256": "40eb54e06913cb62306aae260a1c64b22aa51bbf60fdc814a80d130f097f1eaa",
+    "bytes": 2364
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/supabase_client.py",
+    "present": true,
+    "sha256": "2d71e489b8ead433046e2f58e4e39cec84dca5e6a67bc66c466275715e22b20e",
+    "bytes": 56099
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "present": true,
+    "sha256": "57f70791e1808cdfbf9c4226a1ca538723f3307be435e917faffced3640607fe",
+    "bytes": 211137
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/marketplace_browser_page_state.py",
+    "present": true,
+    "sha256": "f2b6e3b539e7e5480007bdaaed659e28888de8ad0438e0d3703cb407d4f47bea",
+    "bytes": 15739
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/sold_page_health.py",
+    "present": true,
+    "sha256": "199493deee39f47342ef175f478bf6cd23533ddb75ba027530955fe2502d755d",
+    "bytes": 22917
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/linux_x11_ebay_nav.py",
+    "present": true,
+    "sha256": "0c186a56113d664e0e13367b10c835ab5da468168dca5bfee0dc56e259cdd5c2",
+    "bytes": 16542
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/linux_x11_gui_fsm.py",
+    "present": true,
+    "sha256": "af88a0f5bf7ea64e5a67ffb30f7a73de4637ba0ff72686f23ddd24780d7795d8",
+    "bytes": 27178
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/post_sold_capture.py",
+    "present": true,
+    "sha256": "ce0a67ac770be3e2b07349e8c34f9db896f0e5d53f71ef1f101bc3e137d87f03",
+    "bytes": 37082
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_cdp.py",
+    "present": true,
+    "sha256": "e878fc036f9c69888506e6fe170234cf5d149e57a423d5dcd536526284f4c178",
+    "bytes": 14626
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_process.py",
+    "present": true,
+    "sha256": "738b05be0ead6e21e04478422b51a06629dc0ec0f814570ff4474a2ac1e3414d",
+    "bytes": 18358
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_worker.py",
+    "present": true,
+    "sha256": "e0ea950ee6ce09fab77c9e2ac7d7b5889748c5256134a311226f8513928ec7d4",
+    "bytes": 28090
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/providers/desktop_win32_ebay_nav.py",
+    "present": true,
+    "sha256": "2aad8e4d50dd7391ca9feb806769bbf444a66d2281787a24548dbdbb94daf649",
+    "bytes": 20132
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/continuous_safety.py",
+    "present": true,
+    "sha256": "deaa88608cc87eea6dd88c2a2087d1edb46e142312813238e9aeee7e071496e2",
+    "bytes": 8376
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/continuous_worker_policy.py",
+    "present": true,
+    "sha256": "c8bf4776fb759f44c7fb4b5f89d963b06ff8a2d31c51bee79015101db1c28d2b",
+    "bytes": 3839
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/owned_daily_enablement.py",
+    "present": true,
+    "sha256": "35e33a6f408aed1e701eb842ef49cbff8ec1140b81e993acc77c7f5f6bf8d7bb",
+    "bytes": 4443
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "cardscanr_market_engine/config.py",
+    "present": true,
+    "sha256": "108d2df54c7a8ca718e6e0598e4c182e9ab667d51320526999b5b3ebbae5720e",
+    "bytes": 10382
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "workers/market_price_worker.py",
+    "present": true,
+    "sha256": "09c15404d41143a70da8d71d7121c3e4044f540089740bc3609ea1ad0fb4665f",
+    "bytes": 20095
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "scripts/live_ebay_worker_config.ps1",
+    "present": true,
+    "sha256": "ff99810d46b9db40ba81a9076b34bc4f20ba0e1bd9d5e22f4f5a5dabed55a422",
+    "bytes": 7897
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "scripts/start_live_ebay_worker.ps1",
+    "present": true,
+    "sha256": "7b2440c5380aa36575d45ea49aace405270a398f67e41a24be07a0e4894bbbdc",
+    "bytes": 1874
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+    "present": true,
+    "sha256": "b746633b6625df27614489d772fe49fb5dea0a8b430735ffa8a00b4205894c1a",
+    "bytes": 10802
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "scripts/run_market_price_worker.ps1",
+    "present": true,
+    "sha256": "e04f8089a0d1197a5de1a71b9e46e0f3f00edc79816f2c171f246bb060fcf771",
+    "bytes": 2489
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "tools/linux_x11_ebay_sold.py",
+    "present": true,
+    "sha256": "eb432802e6228f49585dc90ac1cae124381c6d1edbc40b5f4d58393b2a480df8",
+    "bytes": 31896
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "tools/linux_x11_ebay_search.py",
+    "present": true,
+    "sha256": "82bf2bb170eab4d8b2ae0086fe937185050dd571d92e7be8bf119a1f5da02cef",
+    "bytes": 63391
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "tests/test_inter_card_provider_handoff_closure.py",
+    "present": true,
+    "sha256": "589e2ed1841b615068b14a011481881145596151f4b3c32e2d7c31059f73b54c",
+    "bytes": 27401
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "tests/test_post_sold_offline_pipeline_integration.py",
+    "present": true,
+    "sha256": "bcc96ec5e4277ec77445be91180a4edb08cd768560f4d097c286b2a7532df7b2",
+    "bytes": 15246
+  },
+  {
+    "revision": "9895cffaf9bb21f783db3ee9db8d20947ad92c1f",
+    "label": "pr31_head",
+    "path": "tests/test_ebay_incident_20261106_worker_recovery.py",
+    "present": true,
+    "sha256": "6efc70f5d67ffe0ee9176ff89a1b4adcfa6a74c0cb2eaa4e7e793f7161bc6129",
+    "bytes": 41503
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/browser_lifecycle_policy.py",
+    "present": true,
+    "sha256": "9f7181dc6a822f04f338682e0d40043ea695ec1fd573c471b7208b78c749d9fa",
+    "bytes": 20521
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/cache_writer.py",
+    "present": true,
+    "sha256": "40eb54e06913cb62306aae260a1c64b22aa51bbf60fdc814a80d130f097f1eaa",
+    "bytes": 2364
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/config.py",
+    "present": true,
+    "sha256": "108d2df54c7a8ca718e6e0598e4c182e9ab667d51320526999b5b3ebbae5720e",
+    "bytes": 10382
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/continuous_safety.py",
+    "present": true,
+    "sha256": "deaa88608cc87eea6dd88c2a2087d1edb46e142312813238e9aeee7e071496e2",
+    "bytes": 8376
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/continuous_worker_policy.py",
+    "present": true,
+    "sha256": "c8bf4776fb759f44c7fb4b5f89d963b06ff8a2d31c51bee79015101db1c28d2b",
+    "bytes": 3839
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/job_runner.py",
+    "present": true,
+    "sha256": "993d22236638fd7206ca2dc68452fc6fb371649a7ec046903ce2b35c0888f795",
+    "bytes": 76694
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/models.py",
+    "present": true,
+    "sha256": "633a054aad6882e26bd9d2b212afc1da74ba545ac9c836bd17203cc8695a8d7d",
+    "bytes": 4310
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/navigation_runtime_context.py",
+    "present": true,
+    "sha256": "ea7637ffc388650ca27f261c60e2b0323fafd25dd9848c14ef77ec5f83330867",
+    "bytes": 16364
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/owned_daily_enablement.py",
+    "present": true,
+    "sha256": "35e33a6f408aed1e701eb842ef49cbff8ec1140b81e993acc77c7f5f6bf8d7bb",
+    "bytes": 4443
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/desktop_win32_ebay_nav.py",
+    "present": true,
+    "sha256": "2aad8e4d50dd7391ca9feb806769bbf444a66d2281787a24548dbdbb94daf649",
+    "bytes": 20132
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/ebay_browser_provider.py",
+    "present": true,
+    "sha256": "b9809ef978c6e1c5a5059afc4a9dfa4903a6bf110a949f2f6b48c379de34ea89",
+    "bytes": 211136
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/linux_x11_ebay_nav.py",
+    "present": true,
+    "sha256": "0c186a56113d664e0e13367b10c835ab5da468168dca5bfee0dc56e259cdd5c2",
+    "bytes": 16542
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/linux_x11_gui_fsm.py",
+    "present": true,
+    "sha256": "af88a0f5bf7ea64e5a67ffb30f7a73de4637ba0ff72686f23ddd24780d7795d8",
+    "bytes": 27178
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/marketplace_browser_page_state.py",
+    "present": true,
+    "sha256": "72f28870bc4f96a26d36bd770426bf94ede0ef2d3db85a6cf85e9ec91205826c",
+    "bytes": 13569
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/post_sold_capture.py",
+    "present": true,
+    "sha256": "ce0a67ac770be3e2b07349e8c34f9db896f0e5d53f71ef1f101bc3e137d87f03",
+    "bytes": 37082
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_cdp.py",
+    "present": true,
+    "sha256": "e878fc036f9c69888506e6fe170234cf5d149e57a423d5dcd536526284f4c178",
+    "bytes": 14626
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_process.py",
+    "present": true,
+    "sha256": "738b05be0ead6e21e04478422b51a06629dc0ec0f814570ff4474a2ac1e3414d",
+    "bytes": 18358
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/post_sold_capture_worker.py",
+    "present": true,
+    "sha256": "e0ea950ee6ce09fab77c9e2ac7d7b5889748c5256134a311226f8513928ec7d4",
+    "bytes": 28090
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/providers/sold_page_health.py",
+    "present": true,
+    "sha256": "4065f9b8e329ce247e329d5a925409de8a08c5856335af92539731b2da86d2a0",
+    "bytes": 21545
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "cardscanr_market_engine/supabase_client.py",
+    "present": true,
+    "sha256": "2d71e489b8ead433046e2f58e4e39cec84dca5e6a67bc66c466275715e22b20e",
+    "bytes": 56099
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "scripts/ensure_live_ebay_pricing_runtime.ps1",
+    "present": true,
+    "sha256": "b746633b6625df27614489d772fe49fb5dea0a8b430735ffa8a00b4205894c1a",
+    "bytes": 10802
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "scripts/live_ebay_worker_config.ps1",
+    "present": true,
+    "sha256": "ff99810d46b9db40ba81a9076b34bc4f20ba0e1bd9d5e22f4f5a5dabed55a422",
+    "bytes": 7897
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "scripts/run_market_price_worker.ps1",
+    "present": true,
+    "sha256": "e04f8089a0d1197a5de1a71b9e46e0f3f00edc79816f2c171f246bb060fcf771",
+    "bytes": 2489
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "scripts/start_live_ebay_worker.ps1",
+    "present": true,
+    "sha256": "7b2440c5380aa36575d45ea49aace405270a398f67e41a24be07a0e4894bbbdc",
+    "bytes": 1874
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "tests/test_ebay_incident_20261106_worker_recovery.py",
+    "present": true,
+    "sha256": "4193fe71fdf66952e2bc7200823e05161bc161eadbfc1cb95bd86e16e88cd99c",
+    "bytes": 37816
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "tests/test_inter_card_provider_handoff_closure.py",
+    "present": true,
+    "sha256": "589e2ed1841b615068b14a011481881145596151f4b3c32e2d7c31059f73b54c",
+    "bytes": 27401
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "tests/test_post_sold_offline_pipeline_integration.py",
+    "present": true,
+    "sha256": "bcc96ec5e4277ec77445be91180a4edb08cd768560f4d097c286b2a7532df7b2",
+    "bytes": 15246
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "tools/linux_x11_ebay_search.py",
+    "present": true,
+    "sha256": "82bf2bb170eab4d8b2ae0086fe937185050dd571d92e7be8bf119a1f5da02cef",
+    "bytes": 63391
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "tools/linux_x11_ebay_sold.py",
+    "present": true,
+    "sha256": "eb432802e6228f49585dc90ac1cae124381c6d1edbc40b5f4d58393b2a480df8",
+    "bytes": 31896
+  },
+  {
+    "revision": "62f3c0aa53f21fdbf6d3a3d2674e870ca4b09c97",
+    "label": "pr30_final_failed",
+    "path": "workers/market_price_worker.py",
+    "present": true,
+    "sha256": "09c15404d41143a70da8d71d7121c3e4044f540089740bc3609ea1ad0fb4665f",
+    "bytes": 20095
+  }
+]
