@@ -1,0 +1,45 @@
+name: Verify isolated CardScanR social media PNG
+on:
+  push:
+    branches:
+      - cardscanr-social-media-20261112
+    paths:
+      - assets/social/**
+      - .github/workflows/verify-cardscanr-social-media.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anonymous-image-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: GET public PNG without credentials, verify exact bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://raw.githubusercontent.com/Motiv8ed/cardscanr-data/cardscanr-social-media-20261112/assets/social/cardscanr-dd4a935f6997bf7ff0fe.png'
+          expected='dd4a935f6997bf7ff0fec9521a829c17d294ddb6bc7c3d7189c40d31cbbf0b81'
+          code=''
+          for attempt in 1 2 3 4 5; do
+            code=$(curl --silent --show-error --max-time 20 --output /tmp/cardscanr-approved.png --dump-header /tmp/cardscanr-headers.txt --write-out '%{http_code}' "$url") || code='request_failed'
+            [ "$code" = '200' ] && break
+            sleep 5
+          done
+          test "$code" = '200'
+          # No -L, so redirects would fail instead of retrieving a different URL.
+          tr -d '\r' </tmp/cardscanr-headers.txt | grep -iE '^content-type: image/png([[:space:];]|$)'
+          test "$(wc -c </tmp/cardscanr-approved.png)" -eq 463438
+          echo "$expected  /tmp/cardscanr-approved.png" | sha256sum --check --status
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          b = Path('/tmp/cardscanr-approved.png').read_bytes()
+          assert b[:8] == bytes.fromhex('89504e470d0a1a0a')
+          assert b[12:16] == b'IHDR'
+          width, height = struct.unpack('>II', b[16:24])
+          assert (width, height) == (1080, 1350), (width, height)
+          print(f'PASS anonymous HTTPS 200, direct image/png, {len(b)} bytes, SHA-256, {width}x{height}')
+          PY
