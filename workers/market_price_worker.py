@@ -170,6 +170,40 @@ def build_transient_error_summary(
     }
 
 
+def _emit_gated_heartbeat(
+    runner: InternationalMarketPriceJobRunner,
+    config: MarketEngineConfig,
+    *,
+    cycle: int,
+    started_at: str,
+    state: str,
+    reason: str | None,
+    mode: str,
+    logger: Any,
+) -> None:
+    try:
+        if hasattr(runner.client, "upsert_pipeline_heartbeat"):
+            runner.client.upsert_pipeline_heartbeat(
+                component="worker",
+                worker_id=config.worker_id,
+                state=state,
+                meta={
+                    "startedAtUtc": started_at,
+                    "finishedAtUtc": utc_iso(),
+                    "jobCount": 0,
+                    "jobsCompleted": 0,
+                    "jobsFailed": 0,
+                    "provider": config.provider_name,
+                    "cycle": cycle,
+                    "gateReason": reason,
+                    "gateMode": mode,
+                    "awaitingOwnerReview": state == "hard_stop",
+                },
+            )
+    except Exception as heartbeat_exc:  # pragma: no cover - ops telemetry must not stop worker
+        logger(f"[market-engine] heartbeat_warning={heartbeat_exc.__class__.__name__}")
+
+
 def run_worker_loop(
     *,
     args: argparse.Namespace,
@@ -187,6 +221,9 @@ def run_worker_loop(
     if pacing_controller is None and _ebay_pacing_enabled(config):
         pacing_controller = OwnedDailyPacingController()
     budget = ContinuousSafetyBudget.from_env()
+    # t323u R0: enforce hourly/daily budget + transient auto-pause in staged (non-continuous) runs too.
+    enforce_budget = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "false").strip().lower() in {"1", "true", "yes", "on"}
+    min_spacing_seconds = max(0, int(os.getenv("MARKET_WORKER_MIN_JOB_SPACING_SECONDS", "0") or 0))
     last_success = None
     last_transient = None
     healthy_times: list[str] = []
@@ -252,6 +289,16 @@ def run_worker_loop(
                     f"cycle={cycle} status=HARD_STOP reason={hard} market={gate_market} "
                     f"mode={operation_mode} awaiting owner review"
                 )
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="hard_stop",
+                    reason=str(hard),
+                    mode="continuous",
+                    logger=logger,
+                )
                 if args.once:
                     return 2
                 sleep_func(max(poll_seconds, 60))
@@ -260,6 +307,16 @@ def run_worker_loop(
                 logger(
                     "[market-engine] "
                     f"cycle={cycle} status=BUDGET_WAIT reason={budget_reason}"
+                )
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="budget_wait",
+                    reason=str(budget_reason),
+                    mode="continuous",
+                    logger=logger,
                 )
                 if args.once:
                     return 0
@@ -272,9 +329,59 @@ def run_worker_loop(
                     f"until={gate_info.get('cooldownUntil')} "
                     f"nextProbeAt={gate_info.get('nextProbeAt')} no provider"
                 )
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="cooldown",
+                    reason=worker_state,
+                    mode="continuous",
+                    logger=logger,
+                )
                 if args.once:
                     return 0
                 sleep_func(max(poll_seconds, 30))
+                continue
+
+        if enforce_budget and not continuous:
+            staged_hard = budget.transient_hard_stop() or budget.last_hard_stop
+            staged_budget = budget.budget_exhausted()
+            if staged_hard:
+                logger(f"[market-engine] cycle={cycle} status=HARD_STOP reason={staged_hard} mode=staged awaiting owner review")
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="hard_stop",
+                    reason=str(staged_hard),
+                    mode="staged",
+                    logger=logger,
+                )
+                if args.once:
+                    return 2
+                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                    return 2
+                sleep_func(max(poll_seconds, 60))
+                continue
+            if staged_budget:
+                logger(f"[market-engine] cycle={cycle} status=BUDGET_WAIT reason={staged_budget} mode=staged")
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="budget_wait",
+                    reason=str(staged_budget),
+                    mode="staged",
+                    logger=logger,
+                )
+                if args.once:
+                    return 0
+                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                    return 0
+                sleep_func(max(poll_seconds, 60))
                 continue
 
         if pacing_controller is not None and pacing_controller.state.browser_halted:
@@ -285,6 +392,16 @@ def run_worker_loop(
                     f"cycle={cycle} status=browser_halted reason={halt} "
                     "awaiting human eBay session restoration"
                 )
+                _emit_gated_heartbeat(
+                    runner,
+                    config,
+                    cycle=cycle,
+                    started_at=started_at,
+                    state="browser_halted",
+                    reason=str(halt) if halt else None,
+                    mode="continuous" if continuous else "staged",
+                    logger=logger,
+                )
                 if args.once:
                     return 0
                 if args.max_cycles > 0 and cycle >= args.max_cycles:
@@ -294,6 +411,16 @@ def run_worker_loop(
             logger(
                 "[market-engine] "
                 f"cycle={cycle} status=transient_halt reason={halt} waiting control plane"
+            )
+            _emit_gated_heartbeat(
+                runner,
+                config,
+                cycle=cycle,
+                started_at=started_at,
+                state="transient_halt",
+                reason=str(halt) if halt else None,
+                mode="continuous" if continuous else "staged",
+                logger=logger,
             )
             if args.once:
                 return 0
@@ -349,7 +476,7 @@ def run_worker_loop(
                 )
                 if outcome in HARD_STOP_OUTCOMES:
                     break
-                if continuous and (
+                if (continuous or enforce_budget) and (
                     outcome == TEMPORARY_EBAY_SERVER_FAILURE
                     or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES
                 ):
@@ -376,7 +503,7 @@ def run_worker_loop(
                             return 2
                         break
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
-                    if continuous:
+                    if continuous or enforce_budget:
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
@@ -437,7 +564,9 @@ def run_worker_loop(
         if pacing_controller is not None and results:
             delay = pacing_controller.next_delay_seconds(more_jobs_pending=True)
             logger(f"[market-engine] paced_cooldown={delay}s outcome={pacing_controller.state.last_outcome}")
-            sleep_func(delay if delay > 0 else poll_seconds)
+            sleep_func(max(delay if delay > 0 else poll_seconds, min_spacing_seconds))
+        elif results:
+            sleep_func(max(poll_seconds, min_spacing_seconds))
         else:
             sleep_func(poll_seconds)
 

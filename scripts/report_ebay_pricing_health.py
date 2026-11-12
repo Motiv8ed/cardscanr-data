@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.config import REPORTS_DIR, supabase_secret_key_from_env
+from cardscanr_market_engine.owned_daily_enablement import BUDGET_LEDGER_PATH, STATUS_PATH
 from cardscanr_market_engine.marketplace_ops_state import (
     SUPPORTED_LIVE_MARKETS,
     classify_provider_failure,
@@ -65,6 +66,26 @@ def _read_json(path: Path) -> dict | None:
         return payload if isinstance(payload, dict) else None
     except Exception:
         return None
+
+
+def _worker_runtime_gate() -> tuple[str | None, str | None]:
+    """Fail-safe latch / gate state from local runtime status files (no Supabase)."""
+    status = _read_json(STATUS_PATH)
+    ledger = _read_json(BUDGET_LEDGER_PATH)
+    gate_state = None
+    gate_reason = None
+    if status:
+        gate_state = str(status.get("workerState") or "").strip() or None
+        gate_reason = str(status.get("lastHardStopReason") or "").strip() or None
+    if ledger:
+        ledger_stop = str(ledger.get("lastHardStop") or "").strip() or None
+        if ledger_stop:
+            gate_reason = ledger_stop
+            if not gate_state or gate_state != "HARD_STOP":
+                gate_state = "HARD_STOP"
+    if gate_state == "HARD_STOP" and not gate_reason:
+        gate_reason = "UNKNOWN_HARD_STOP"
+    return gate_state, gate_reason
 
 
 def _scheduled_task_enabled() -> bool | None:
@@ -305,6 +326,15 @@ def build_health_report(*, client: SupabaseMarketEngineClient, now: datetime | N
     worker_ok = len(worker_pids) == 1
     scheduler_ok = len(scheduler_pids) == 1 and scheduler_recent
 
+    gate_state, gate_reason = _worker_runtime_gate()
+    worker_note = None
+    if gate_state == "HARD_STOP" and gate_reason:
+        worker_ok = False
+        worker_note = (
+            f"Worker process may still be running but pricing is HARD_STOP latched "
+            f"({gate_reason}); awaiting owner review — not healthy for pricing."
+        )
+
     if not worker_ok or not scheduler_ok or stuck or not healthy_markets:
         overall = "DOWN"
         pricing_working_now = False
@@ -327,6 +357,9 @@ def build_health_report(*, client: SupabaseMarketEngineClient, now: datetime | N
             "healthy": worker_ok,
             "pids": worker_pids,
             "duplicate": len(worker_pids) > 1,
+            "gateState": gate_state,
+            "gateReason": gate_reason,
+            **({"note": worker_note} if worker_note else {}),
             "latestCycle": {
                 "cycle": (worker_latest or {}).get("cycle"),
                 "finishedAtUtc": (worker_latest or {}).get("finishedAtUtc"),
