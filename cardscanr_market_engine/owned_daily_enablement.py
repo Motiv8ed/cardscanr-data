@@ -39,9 +39,14 @@ def write_owned_daily_flag(enabled: bool, *, path: Path | None = None) -> Path:
 
 def owned_daily_full_enable(*, flag_path: Path | None = None) -> bool:
     """Flag file is authoritative when present; else OWNED_DAILY_FULL_ENABLE env."""
-    flagged = read_owned_daily_flag(flag_path)
+    target = flag_path or FLAG_PATH
+    flagged = read_owned_daily_flag(target)
     if flagged is not None:
         return flagged
+    # An invalid/empty-on-disk flag must fail closed, not silently re-enable
+    # an owner-held scheduler via a stale environment variable.
+    if target.is_file():
+        return False
     return os.getenv("OWNED_DAILY_FULL_ENABLE", "false").strip().lower() in TRUE_VALUES
 
 
@@ -66,7 +71,7 @@ def apply_continuous_au_env() -> dict[str, str]:
         "MARKET_WORKER_MAX_JOBS_PER_RUN": "1",
         "CONFIRM_LIVE_EBAY_WORKER": "true",
         "MAX_LIVE_SUBMISSIONS_PER_HOUR": "20",
-        "MAX_LIVE_SUBMISSIONS_PER_DAY": "200",
+        "MAX_LIVE_SUBMISSIONS_PER_DAY": "60",
         "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES": "3",
         "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR": "5",
         "EBAY_TRANSIENT_FAILURE_COOLDOWN_MINUTES": os.getenv(
