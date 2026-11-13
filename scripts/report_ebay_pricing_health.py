@@ -141,6 +141,9 @@ def _runtime_file_evidence(
 def _worker_runtime_gate(
     status: dict | None,
     ledger: dict | None,
+    *,
+    status_evidence: str | None = None,
+    db_heartbeat_fresh: bool = False,
 ) -> tuple[str | None, str | None]:
     """Fail-safe latch / gate state from local runtime status files (no Supabase).
 
@@ -164,13 +167,18 @@ def _worker_runtime_gate(
         gate_state = "HARD_STOP"
         gate_reason = ledger_stop
     elif ledger_present and _normalize_gate_state(gate_state) == "HARD_STOP":
-        # Cleared latch in ledger supersedes stale HARD_STOP on status.
+        # Cleared latch in ledger supersedes HARD_STOP on status only with fresh evidence.
         gate_state = None
         gate_reason = None
+        fresh_runtime = status_evidence == "fresh"
         if status:
             gate_state = str(status.get("workerState") or "").strip() or None
             if _normalize_gate_state(gate_state) == "HARD_STOP":
-                gate_state = "SELECTING"
+                if fresh_runtime or db_heartbeat_fresh:
+                    gate_state = "SELECTING"
+                else:
+                    gate_state = None
+                    gate_reason = "STALE_RUNTIME_AFTER_LATCH_CLEAR"
 
     if _normalize_gate_state(gate_state) == "BUDGET_WAIT" and not gate_reason:
         gate_reason = "BUDGET_WAIT"
@@ -222,6 +230,20 @@ def _fetch_worker_db_heartbeat(
     if configured:
         for row in candidates:
             if str(row.get("worker_id") or "").strip() == configured:
+                return row
+        return None
+
+    distinct_worker_ids = {
+        str(row.get("worker_id") or "").strip()
+        for row in candidates
+        if str(row.get("worker_id") or "").strip()
+    }
+    if len(distinct_worker_ids) > 1:
+        return None
+    if len(distinct_worker_ids) == 1:
+        only_id = next(iter(distinct_worker_ids))
+        for row in candidates:
+            if str(row.get("worker_id") or "").strip() == only_id:
                 return row
         return None
     return candidates[0]
@@ -470,7 +492,29 @@ def build_health_report(*, client: SupabaseMarketEngineClient, now: datetime | N
     worker_ok = len(worker_pids) == 1
     scheduler_ok = len(scheduler_pids) == 1 and scheduler_recent
 
-    gate_state, gate_reason = _worker_runtime_gate(status_payload, ledger_payload)
+    db_heartbeat_row = _fetch_worker_db_heartbeat(client)
+    db_hb_state = str((db_heartbeat_row or {}).get("state") or "").strip() or None
+    db_hb_at = parse_utc((db_heartbeat_row or {}).get("last_heartbeat_at"))
+    db_hb_age_min = None
+    db_hb_stale = False
+    db_hb_fresh = False
+    if db_hb_at is not None:
+        db_hb_age_min = round((current - db_hb_at).total_seconds() / 60.0, 1)
+        if db_hb_age_min < -RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES:
+            db_hb_stale = True
+        elif db_hb_age_min > DB_HEARTBEAT_STALE_MINUTES:
+            db_hb_stale = True
+        else:
+            db_hb_fresh = True
+    elif len(worker_pids) >= 1:
+        db_hb_stale = True
+
+    gate_state, gate_reason = _worker_runtime_gate(
+        status_payload,
+        ledger_payload,
+        status_evidence=status_evidence,
+        db_heartbeat_fresh=db_hb_fresh,
+    )
     worker_note = None
     if len(worker_pids) >= 1:
         if status_evidence != "fresh":
@@ -489,17 +533,6 @@ def build_health_report(*, client: SupabaseMarketEngineClient, now: datetime | N
                 + (f" (age {ledger_age_min}m)" if ledger_age_min is not None else "")
                 + "; not healthy for pricing."
             )
-
-    db_heartbeat_row = _fetch_worker_db_heartbeat(client)
-    db_hb_state = str((db_heartbeat_row or {}).get("state") or "").strip() or None
-    db_hb_at = parse_utc((db_heartbeat_row or {}).get("last_heartbeat_at"))
-    db_hb_age_min = None
-    db_hb_stale = False
-    if db_hb_at is not None:
-        db_hb_age_min = round((current - db_hb_at).total_seconds() / 60.0, 1)
-        db_hb_stale = db_hb_age_min > DB_HEARTBEAT_STALE_MINUTES
-    elif len(worker_pids) >= 1:
-        db_hb_stale = True
 
     if len(worker_pids) >= 1:
         if db_hb_stale:
