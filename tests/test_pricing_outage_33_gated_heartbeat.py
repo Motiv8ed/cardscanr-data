@@ -137,10 +137,21 @@ def health_report_runtime_mocks(health, *, status: Path, ledger: Path, seed: boo
 
 
 @contextlib.contextmanager
-def isolated_worker_loop(*, budget: ContinuousSafetyBudget | None = None):
+def isolated_worker_loop(
+    *,
+    budget: ContinuousSafetyBudget | None = None,
+    operation_mode: str = "CONTINUOUS",
+):
     """Hermetic patches so worker-loop tests never touch repo reports/runtime."""
     injected = budget if budget is not None else _clean_budget()
     with contextlib.ExitStack() as stack:
+        stack.enter_context(
+            mock.patch.dict(
+                "os.environ",
+                {"CARDSCANR_OPERATION_MODE": operation_mode},
+                clear=False,
+            )
+        )
         stack.enter_context(
             mock.patch.object(worker.ContinuousSafetyBudget, "from_env", return_value=injected)
         )
@@ -359,16 +370,14 @@ class ContinuousGatedHeartbeatTests(unittest.TestCase):
             "nextProbeAt": None,
             "activeChallenges": 1,
         }
-        env = {"CARDSCANR_OPERATION_MODE": "PROBE"}
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config = fake_config(root)
             client = FakeHeartbeatClient()
             runner = FakeRunner(client=client)
-            with mock.patch.dict("os.environ", env, clear=False):
-                with mock.patch.object(worker, "owned_daily_full_enable", return_value=False):
-                    with mock.patch.object(worker, "classify_continuous_gate", return_value=gate):
-                        with isolated_worker_loop():
+            with mock.patch.object(worker, "owned_daily_full_enable", return_value=False):
+                with mock.patch.object(worker, "classify_continuous_gate", return_value=gate):
+                    with isolated_worker_loop(operation_mode="PROBE"):
                             code = worker.run_worker_loop(
                                 args=fake_args(once=True),
                                 config=config,  # type: ignore[arg-type]
