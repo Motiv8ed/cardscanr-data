@@ -40,6 +40,9 @@ SCHEDULER_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_SCHEDULER_STALE_MINUTES",
 NO_SUCCESS_HOURS = float(os.getenv("MARKET_HEALTH_NO_SUCCESS_HOURS", "18"))
 RECENT_WINDOW_HOURS = float(os.getenv("MARKET_HEALTH_RECENT_WINDOW_HOURS", "24"))
 RUNTIME_EVIDENCE_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_RUNTIME_STALE_MINUTES", "10"))
+RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES = float(
+    os.getenv("MARKET_HEALTH_RUNTIME_FUTURE_TOLERANCE_MINUTES", "2")
+)
 DB_HEARTBEAT_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_DB_HEARTBEAT_STALE_MINUTES", "10"))
 
 # Worker local status / ledger gates that mean the process is alive but not claiming pricing jobs.
@@ -128,6 +131,8 @@ def _runtime_file_evidence(
     if updated is None:
         return "stale", None
     age_minutes = (now - updated).total_seconds() / 60.0
+    if age_minutes < -RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES:
+        return "stale", round(age_minutes, 1)
     if age_minutes > RUNTIME_EVIDENCE_STALE_MINUTES:
         return "stale", round(age_minutes, 1)
     return "fresh", round(age_minutes, 1)
@@ -177,22 +182,49 @@ def _worker_runtime_gate(
     return gate_state, gate_reason
 
 
-def _fetch_worker_db_heartbeat(client: SupabaseMarketEngineClient) -> dict | None:
+def _heartbeat_sort_key(row: dict) -> datetime:
+    parsed = parse_utc(row.get("last_heartbeat_at"))
+    if parsed is not None:
+        return parsed
+    return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _fetch_worker_db_heartbeat(
+    client: SupabaseMarketEngineClient,
+    *,
+    worker_id: str | None = None,
+) -> dict | None:
+    """Return the worker pipeline heartbeat row, deterministically when possible."""
+    configured = str(worker_id if worker_id is not None else os.getenv("MARKET_WORKER_ID", "")).strip()
+    params: dict[str, str] = {
+        "select": "component,worker_id,state,last_heartbeat_at,meta",
+        "component": "eq.worker",
+        "order": "last_heartbeat_at.desc",
+        "limit": "50",
+    }
+    if configured:
+        params["worker_id"] = f"eq.{configured}"
+
     try:
         rows = client._table_get(  # noqa: SLF001
             "market_price_pipeline_heartbeats",
-            params={
-                "select": "component,state,last_heartbeat_at,meta",
-                "component": "eq.worker",
-                "limit": "1",
-            },
+            params=params,
         )
     except Exception:
         return None
     if not isinstance(rows, list) or not rows:
         return None
-    row = rows[0]
-    return row if isinstance(row, dict) else None
+
+    candidates = [row for row in rows if isinstance(row, dict)]
+    if not candidates:
+        return None
+    candidates.sort(key=_heartbeat_sort_key, reverse=True)
+    if configured:
+        for row in candidates:
+            if str(row.get("worker_id") or "").strip() == configured:
+                return row
+        return None
+    return candidates[0]
 
 
 def _scheduled_task_enabled() -> bool | None:

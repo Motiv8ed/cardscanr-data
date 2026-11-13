@@ -291,6 +291,9 @@ def run_worker_loop(
                         "activeChallenges": gate_info.get("activeChallenges") or 0,
                     }
                 )
+                # Keep ledger updatedAtUtc fresh on every cycle so health checks do
+                # not mark an idle but healthy worker unhealthy while status is live.
+                budget.persist()
             if hard:
                 logger(
                     "[market-engine] "

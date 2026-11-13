@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -486,6 +487,254 @@ class GatedHeartbeatResilienceTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(runner.calls, 0)
             self.assertEqual(client.heartbeats[0]["state"], "transient_halt")
+
+
+class HealthReportRuntimeEvidenceTests(unittest.TestCase):
+    def test_future_timestamp_beyond_tolerance_is_stale(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        now = datetime(2026, 11, 13, 12, 0, 0, tzinfo=timezone.utc)
+        future = (now + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+        payload = {"updatedAtUtc": future}
+        label, age = health._runtime_file_evidence(
+            payload,
+            path=Path("/unused/status.json"),
+            now=now,
+        )
+        self.assertEqual(label, "stale")
+        self.assertIsNotNone(age)
+        self.assertLess(age, -2)
+
+    def test_future_timestamp_within_tolerance_is_fresh(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        now = datetime(2026, 11, 13, 12, 0, 0, tzinfo=timezone.utc)
+        future = (now + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
+        payload = {"updatedAtUtc": future}
+        label, _age = health._runtime_file_evidence(
+            payload,
+            path=Path("/unused/status.json"),
+            now=now,
+        )
+        self.assertEqual(label, "fresh")
+
+
+class HealthReportDbHeartbeatSelectionTests(unittest.TestCase):
+    def test_selects_latest_row_when_worker_id_unconfigured(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        older_healthy = {
+            "component": "worker",
+            "worker_id": "worker-a",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T10:00:00Z",
+            "meta": {},
+        }
+        newer_failing = {
+            "component": "worker",
+            "worker_id": "worker-b",
+            "state": "hard_stop",
+            "last_heartbeat_at": "2026-11-13T10:10:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def __init__(self, rows: list[dict]) -> None:
+                self.rows = rows
+                self.last_params: dict | None = None
+
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                self.last_params = params
+                return list(self.rows)
+
+        client = Client([older_healthy, newer_failing])
+        with mock.patch.dict(os.environ, {"MARKET_WORKER_ID": ""}, clear=False):
+            picked = health._fetch_worker_db_heartbeat(client)  # type: ignore[arg-type]
+        self.assertIsNotNone(picked)
+        assert picked is not None
+        self.assertEqual(picked["state"], "hard_stop")
+        self.assertEqual(picked["worker_id"], "worker-b")
+        self.assertIn("order", client.last_params or {})
+
+    def test_worker_id_filter_prefers_matching_row_over_newer_other_worker(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        older_target = {
+            "component": "worker",
+            "worker_id": "worker-target",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T10:00:00Z",
+            "meta": {},
+        }
+        newer_other = {
+            "component": "worker",
+            "worker_id": "worker-other",
+            "state": "hard_stop",
+            "last_heartbeat_at": "2026-11-13T10:20:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                if params.get("worker_id") == "eq.worker-target":
+                    return [older_target]
+                return [older_target, newer_other]
+
+        picked = health._fetch_worker_db_heartbeat(Client(), worker_id="worker-target")  # type: ignore[arg-type]
+        self.assertIsNotNone(picked)
+        assert picked is not None
+        self.assertEqual(picked["worker_id"], "worker-target")
+        self.assertEqual(picked["state"], "idle")
+
+    def test_newer_matching_row_wins_over_older_matching_row(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        rows = [
+            {
+                "component": "worker",
+                "worker_id": "worker-target",
+                "state": "idle",
+                "last_heartbeat_at": "2026-11-13T10:00:00Z",
+                "meta": {},
+            },
+            {
+                "component": "worker",
+                "worker_id": "worker-target",
+                "state": "hard_stop",
+                "last_heartbeat_at": "2026-11-13T10:30:00Z",
+                "meta": {},
+            },
+        ]
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                return rows
+
+        picked = health._fetch_worker_db_heartbeat(Client(), worker_id="worker-target")  # type: ignore[arg-type]
+        self.assertEqual(picked["state"], "hard_stop")
+
+
+class ContinuousLedgerRefreshTests(unittest.TestCase):
+    def test_continuous_idle_cycle_persists_ledger_timestamp(self) -> None:
+        gate = {
+            "workerState": "SELECTING",
+            "hardStop": None,
+            "cooldownUntil": None,
+            "nextProbeAt": None,
+            "activeChallenges": 0,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = fake_config(root)
+            client = FakeHeartbeatClient()
+            runner = FakeRunner(client=client, outcomes=[[]])
+            ledger_path = root / "continuous_au_safety_ledger.json"
+            status_path = root / "continuous_au_worker_status.json"
+            stale = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat().replace("+00:00", "Z")
+            ledger_path.write_text(
+                json.dumps(
+                    {
+                        "submissions": [],
+                        "transients": [],
+                        "consecutiveTransient": 0,
+                        "lastHardStop": None,
+                        "updatedAtUtc": stale,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with mock.patch(
+                "cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH",
+                ledger_path,
+            ):
+                with mock.patch(
+                    "cardscanr_market_engine.continuous_au_status.STATUS_PATH",
+                    status_path,
+                ):
+                    with mock.patch.object(worker, "owned_daily_full_enable", return_value=True):
+                        with mock.patch.object(worker, "classify_continuous_gate", return_value=gate):
+                            with mock.patch.object(worker, "write_owned_daily_flag"):
+                                with mock.patch.object(worker, "append_daily_metrics"):
+                                    with mock.patch.object(worker, "write_json"):
+                                        with mock.patch.object(worker, "append_jsonl"):
+                                            budget = _clean_budget()
+                                            with mock.patch.object(
+                                                worker.ContinuousSafetyBudget, "from_env", return_value=budget
+                                            ):
+                                                worker.run_worker_loop(
+                                                    args=fake_args(once=True),
+                                                    config=config,  # type: ignore[arg-type]
+                                                    runner=runner,  # type: ignore[arg-type]
+                                                    poll_seconds=5,
+                                                    max_jobs=1,
+                                                    sleep_func=lambda _s: None,
+                                                    logger=lambda *_a, **_k: None,
+                                                )
+            data = json.loads(ledger_path.read_text(encoding="utf-8"))
+            refreshed = parse_maybe_utc(data.get("updatedAtUtc"))
+            self.assertIsNotNone(refreshed)
+            assert refreshed is not None
+            age_min = (datetime.now(timezone.utc) - refreshed).total_seconds() / 60.0
+            self.assertLess(age_min, 2.0)
+
+
+def parse_maybe_utc(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+class HealthReportIdleLedgerTests(unittest.TestCase):
+    def test_healthy_idle_over_ten_minutes_with_refreshed_ledger(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        class MinimalClient:
+            def _table_get(self, *_args, **_kwargs):  # noqa: SLF001
+                return []
+
+        t0 = datetime(2026, 11, 13, 10, 0, 0, tzinfo=timezone.utc)
+        now = t0 + timedelta(minutes=15)
+        fresh_ts = (t0 + timedelta(minutes=14)).isoformat().replace("+00:00", "Z")
+        stale_ts = (t0 - timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.json"
+            ledger_fresh = Path(tmp) / "ledger_fresh.json"
+            ledger_stale = Path(tmp) / "ledger_stale.json"
+            status.write_text(json.dumps({"workerState": "SELECTING", "updatedAtUtc": fresh_ts}), encoding="utf-8")
+            ledger_fresh.write_text(json.dumps({"lastHardStop": None, "updatedAtUtc": fresh_ts}), encoding="utf-8")
+            ledger_stale.write_text(json.dumps({"lastHardStop": None, "updatedAtUtc": stale_ts}), encoding="utf-8")
+
+            db_hb = {
+                "component": "worker",
+                "state": "idle",
+                "last_heartbeat_at": fresh_ts,
+                "meta": {},
+            }
+            with mock.patch.object(health, "STATUS_PATH", status):
+                with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger_fresh):
+                    with mock.patch.object(health, "_fetch_worker_db_heartbeat", return_value=db_hb):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[424242]):
+                            ok = health.build_health_report(
+                                client=MinimalClient(),  # type: ignore[arg-type]
+                                now=now,
+                            )
+            self.assertTrue(ok["worker"]["healthy"])
+
+            with mock.patch.object(health, "STATUS_PATH", status):
+                with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger_stale):
+                    with mock.patch.object(health, "_fetch_worker_db_heartbeat", return_value=db_hb):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[424242]):
+                            bad = health.build_health_report(
+                                client=MinimalClient(),  # type: ignore[arg-type]
+                                now=now,
+                            )
+            self.assertFalse(bad["worker"]["healthy"])
+            self.assertEqual(bad["worker"]["runtimeEvidence"]["ledger"], "stale")
 
 
 class HealthReportGateTests(unittest.TestCase):
