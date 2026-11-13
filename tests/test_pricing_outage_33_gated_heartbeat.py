@@ -639,6 +639,141 @@ class HealthReportDbHeartbeatSelectionTests(unittest.TestCase):
         picked = health._fetch_worker_db_heartbeat(Client(), worker_id="worker-target")  # type: ignore[arg-type]
         self.assertEqual(picked["state"], "hard_stop")
 
+    def test_unconfigured_one_nonblank_and_blank_worker_id_fails_closed(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        identified = {
+            "component": "worker",
+            "worker_id": "worker-a",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:00:00Z",
+            "meta": {},
+        }
+        blank = {
+            "component": "worker",
+            "worker_id": "",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:05:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                return [identified, blank]
+
+        with mock.patch.dict(os.environ, {"MARKET_WORKER_ID": ""}, clear=False):
+            picked = health._fetch_worker_db_heartbeat(Client())  # type: ignore[arg-type]
+        self.assertIsNone(picked)
+
+    def test_unconfigured_one_nonblank_and_null_worker_id_fails_closed(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        identified = {
+            "component": "worker",
+            "worker_id": "worker-a",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:00:00Z",
+            "meta": {},
+        }
+        null_row = {
+            "component": "worker",
+            "worker_id": None,
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:05:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                return [identified, null_row]
+
+        with mock.patch.dict(os.environ, {"MARKET_WORKER_ID": ""}, clear=False):
+            picked = health._fetch_worker_db_heartbeat(Client())  # type: ignore[arg-type]
+        self.assertIsNone(picked)
+
+    def test_unconfigured_whitespace_only_worker_id_treated_as_blank(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        identified = {
+            "component": "worker",
+            "worker_id": "worker-a",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:00:00Z",
+            "meta": {},
+        }
+        whitespace = {
+            "component": "worker",
+            "worker_id": "   ",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T12:05:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                return [identified, whitespace]
+
+        with mock.patch.dict(os.environ, {"MARKET_WORKER_ID": ""}, clear=False):
+            picked = health._fetch_worker_db_heartbeat(Client())  # type: ignore[arg-type]
+        self.assertIsNone(picked)
+
+    def test_configured_worker_id_ignores_blank_rows(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        target = {
+            "component": "worker",
+            "worker_id": "worker-target",
+            "state": "idle",
+            "last_heartbeat_at": "2026-11-13T10:00:00Z",
+            "meta": {},
+        }
+        blank_newer = {
+            "component": "worker",
+            "worker_id": "",
+            "state": "hard_stop",
+            "last_heartbeat_at": "2026-11-13T10:30:00Z",
+            "meta": {},
+        }
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                if params.get("worker_id") == "eq.worker-target":
+                    return [target]
+                return [target, blank_newer]
+
+        picked = health._fetch_worker_db_heartbeat(Client(), worker_id="worker-target")  # type: ignore[arg-type]
+        self.assertIsNotNone(picked)
+        assert picked is not None
+        self.assertEqual(picked["worker_id"], "worker-target")
+
+    def test_unconfigured_all_blank_worker_ids_fails_closed(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        rows = [
+            {
+                "component": "worker",
+                "worker_id": "",
+                "state": "idle",
+                "last_heartbeat_at": "2026-11-13T10:00:00Z",
+                "meta": {},
+            },
+            {
+                "component": "worker",
+                "worker_id": None,
+                "state": "idle",
+                "last_heartbeat_at": "2026-11-13T10:30:00Z",
+                "meta": {},
+            },
+        ]
+
+        class Client:
+            def _table_get(self, _table: str, *, params: dict) -> list[dict]:  # noqa: SLF001
+                return rows
+
+        with mock.patch.dict(os.environ, {"MARKET_WORKER_ID": ""}, clear=False):
+            picked = health._fetch_worker_db_heartbeat(Client())  # type: ignore[arg-type]
+        self.assertIsNone(picked)
+
     def test_unconfigured_multi_worker_health_not_healthy_despite_newest_idle(self) -> None:
         from scripts import report_ebay_pricing_health as health
 
@@ -1025,6 +1160,52 @@ class HealthReportGateTests(unittest.TestCase):
         self.assertNotEqual(report["worker"]["gateState"], "SELECTING")
         self.assertFalse(report["worker"]["healthy"])
         self.assertEqual(report["worker"]["gateReason"], "STALE_RUNTIME_AFTER_LATCH_CLEAR")
+
+    def test_stale_hard_stop_promoted_to_selecting_with_fresh_db_still_not_healthy(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        class MinimalClient:
+            def _table_get(self, *_args, **_kwargs):  # noqa: SLF001
+                return []
+
+        stale = (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat().replace("+00:00", "Z")
+        fresh = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.json"
+            ledger = Path(tmp) / "ledger.json"
+            status.write_text(
+                json.dumps(
+                    {
+                        "workerState": "HARD_STOP",
+                        "lastHardStopReason": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+                        "updatedAtUtc": stale,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger.write_text(json.dumps({"lastHardStop": None, "updatedAtUtc": fresh}), encoding="utf-8")
+            fresh_db_hb = {
+                "component": "worker",
+                "state": "idle",
+                "last_heartbeat_at": fresh,
+                "meta": {},
+            }
+            with mock.patch.object(health, "STATUS_PATH", status):
+                with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger):
+                    with mock.patch.object(
+                        health,
+                        "_fetch_worker_db_heartbeat",
+                        return_value=fresh_db_hb,
+                    ):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[77777]):
+                            report = health.build_health_report(
+                                client=MinimalClient(),  # type: ignore[arg-type]
+                                now=now,
+                            )
+        self.assertEqual(report["worker"]["gateState"], "SELECTING")
+        self.assertFalse(report["worker"]["healthy"])
+        self.assertEqual(report["worker"]["runtimeEvidence"]["status"], "stale")
 
     def test_stale_runtime_files_with_live_pid_not_healthy(self) -> None:
         from scripts import report_ebay_pricing_health as health

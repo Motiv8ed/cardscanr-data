@@ -197,6 +197,10 @@ def _heartbeat_sort_key(row: dict) -> datetime:
     return datetime.min.replace(tzinfo=timezone.utc)
 
 
+def _heartbeat_row_worker_id(row: dict) -> str:
+    return str(row.get("worker_id") or "").strip()
+
+
 def _fetch_worker_db_heartbeat(
     client: SupabaseMarketEngineClient,
     *,
@@ -229,24 +233,25 @@ def _fetch_worker_db_heartbeat(
     candidates.sort(key=_heartbeat_sort_key, reverse=True)
     if configured:
         for row in candidates:
-            if str(row.get("worker_id") or "").strip() == configured:
+            if _heartbeat_row_worker_id(row) == configured:
                 return row
         return None
 
     distinct_worker_ids = {
-        str(row.get("worker_id") or "").strip()
-        for row in candidates
-        if str(row.get("worker_id") or "").strip()
+        _heartbeat_row_worker_id(row) for row in candidates if _heartbeat_row_worker_id(row)
     }
+    has_blank_worker_id = any(not _heartbeat_row_worker_id(row) for row in candidates)
     if len(distinct_worker_ids) > 1:
+        return None
+    if has_blank_worker_id:
         return None
     if len(distinct_worker_ids) == 1:
         only_id = next(iter(distinct_worker_ids))
         for row in candidates:
-            if str(row.get("worker_id") or "").strip() == only_id:
+            if _heartbeat_row_worker_id(row) == only_id:
                 return row
         return None
-    return candidates[0]
+    return None
 
 
 def _scheduled_task_enabled() -> bool | None:
