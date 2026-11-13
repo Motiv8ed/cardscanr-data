@@ -7,6 +7,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -16,7 +17,9 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.owned_daily_enablement import BUDGET_LEDGER_PATH, STATUS_PATH
+from cardscanr_market_engine.owned_daily_outcomes import TEMPORARY_EBAY_SERVER_FAILURE
 from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingController
+from cardscanr_market_engine.scheduler import utc_iso
 import workers.market_price_worker as worker
 
 
@@ -77,6 +80,60 @@ def _staged_latched_budget() -> ContinuousSafetyBudget:
     budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
     budget.last_hard_stop = "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES"
     return budget
+
+
+def _write_fresh_runtime_pair(
+    *,
+    status_path: Path,
+    ledger_path: Path,
+    worker_state: str = "SELECTING",
+    last_hard_stop: str | None = None,
+    ledger_hard_stop: str | None = None,
+) -> None:
+    now = utc_iso()
+    status_path.write_text(
+        json.dumps(
+            {
+                "workerState": worker_state,
+                "lastHardStopReason": last_hard_stop,
+                "updatedAtUtc": now,
+            }
+        ),
+        encoding="utf-8",
+    )
+    ledger_path.write_text(
+        json.dumps(
+            {
+                "lastHardStop": ledger_hard_stop,
+                "updatedAtUtc": now,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _fresh_db_worker_heartbeat() -> dict:
+    return {
+        "component": "worker",
+        "state": "processing",
+        "last_heartbeat_at": utc_iso(),
+        "meta": {},
+    }
+
+
+@contextlib.contextmanager
+def health_report_runtime_mocks(health, *, status: Path, ledger: Path, seed: bool = True):
+    """Fresh local runtime + DB heartbeat so health tests isolate the gate under test."""
+    if seed:
+        _write_fresh_runtime_pair(status_path=status, ledger_path=ledger)
+    with mock.patch.object(health, "STATUS_PATH", status):
+        with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger):
+            with mock.patch.object(
+                health,
+                "_fetch_worker_db_heartbeat",
+                return_value=_fresh_db_worker_heartbeat(),
+            ):
+                yield
 
 
 @contextlib.contextmanager
@@ -262,6 +319,68 @@ class ContinuousGatedHeartbeatTests(unittest.TestCase):
             self.assertEqual(client.heartbeats[0]["state"], "cooldown")
             self.assertIsNone(injected.last_hard_stop)
 
+    def test_continuous_budget_wait_emits_heartbeat_without_run_once(self) -> None:
+        gate = {
+            "workerState": "SELECTING",
+            "hardStop": None,
+            "cooldownUntil": None,
+            "nextProbeAt": None,
+            "activeChallenges": 0,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = fake_config(root)
+            client = FakeHeartbeatClient()
+            runner = FakeRunner(client=client)
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=1)
+            budget.record_submission()
+            with mock.patch.object(worker, "owned_daily_full_enable", return_value=True):
+                with mock.patch.object(worker, "classify_continuous_gate", return_value=gate):
+                    with isolated_worker_loop(budget=budget):
+                        code = worker.run_worker_loop(
+                            args=fake_args(once=True),
+                            config=config,  # type: ignore[arg-type]
+                            runner=runner,  # type: ignore[arg-type]
+                            poll_seconds=5,
+                            max_jobs=1,
+                            sleep_func=lambda _s: None,
+                            logger=lambda *_a, **_k: None,
+                        )
+            self.assertEqual(code, 0)
+            self.assertEqual(runner.calls, 0)
+            self.assertEqual(client.heartbeats[0]["state"], "budget_wait")
+            self.assertEqual(client.heartbeats[0]["meta"]["gateMode"], "continuous")
+
+    def test_probe_hard_stop_preserves_gate_mode_in_heartbeat(self) -> None:
+        gate = {
+            "workerState": "HARD_STOP",
+            "hardStop": "ACTIVE_CHALLENGE",
+            "cooldownUntil": None,
+            "nextProbeAt": None,
+            "activeChallenges": 1,
+        }
+        env = {"CARDSCANR_OPERATION_MODE": "PROBE"}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = fake_config(root)
+            client = FakeHeartbeatClient()
+            runner = FakeRunner(client=client)
+            with mock.patch.dict("os.environ", env, clear=False):
+                with mock.patch.object(worker, "owned_daily_full_enable", return_value=False):
+                    with mock.patch.object(worker, "classify_continuous_gate", return_value=gate):
+                        with isolated_worker_loop():
+                            code = worker.run_worker_loop(
+                                args=fake_args(once=True),
+                                config=config,  # type: ignore[arg-type]
+                                runner=runner,  # type: ignore[arg-type]
+                                poll_seconds=5,
+                                max_jobs=1,
+                                sleep_func=lambda _s: None,
+                                logger=lambda *_a, **_k: None,
+                            )
+            self.assertEqual(code, 2)
+            self.assertEqual(client.heartbeats[0]["meta"]["gateMode"], "PROBE")
+
 
 class GatedHeartbeatResilienceTests(unittest.TestCase):
     def test_heartbeat_exception_does_not_crash_staged_hard_stop_loop(self) -> None:
@@ -334,6 +453,31 @@ class GatedHeartbeatResilienceTests(unittest.TestCase):
             self.assertEqual(runner.calls, 0)
             self.assertEqual(client.heartbeats[0]["state"], "browser_halted")
 
+    def test_transient_halt_branch_emits_gated_heartbeat(self) -> None:
+        pacing = OwnedDailyPacingController()
+        pacing.state.browser_halted = True
+        pacing.state.halt_reason = TEMPORARY_EBAY_SERVER_FAILURE
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = fake_config(root)
+            client = FakeHeartbeatClient()
+            runner = FakeRunner(client=client)
+            with mock.patch.object(worker, "owned_daily_full_enable", return_value=False):
+                with isolated_worker_loop():
+                    code = worker.run_worker_loop(
+                        args=fake_args(once=True),
+                        config=config,  # type: ignore[arg-type]
+                        runner=runner,  # type: ignore[arg-type]
+                        poll_seconds=5,
+                        max_jobs=1,
+                        sleep_func=lambda _s: None,
+                        logger=lambda *_a, **_k: None,
+                        pacing=pacing,
+                    )
+            self.assertEqual(code, 0)
+            self.assertEqual(runner.calls, 0)
+            self.assertEqual(client.heartbeats[0]["state"], "transient_halt")
+
 
 class HealthReportGateTests(unittest.TestCase):
     def test_latch_present_marks_worker_unhealthy(self) -> None:
@@ -347,25 +491,25 @@ class HealthReportGateTests(unittest.TestCase):
             runtime = Path(tmp)
             status = runtime / "continuous_au_worker_status.json"
             ledger = runtime / "continuous_au_safety_ledger.json"
-            status.write_text(
-                json.dumps(
-                    {
-                        "workerState": "HARD_STOP",
-                        "lastHardStopReason": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            ledger.write_text(
-                json.dumps({"lastHardStop": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES"}),
-                encoding="utf-8",
+            _write_fresh_runtime_pair(
+                status_path=status,
+                ledger_path=ledger,
+                worker_state="HARD_STOP",
+                last_hard_stop="MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+                ledger_hard_stop="MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
             )
             with mock.patch.object(health, "STATUS_PATH", status):
                 with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger):
-                    with mock.patch.object(health, "_count_python_workers", return_value=[11111]):
-                        report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
+                    with mock.patch.object(
+                        health,
+                        "_fetch_worker_db_heartbeat",
+                        return_value=_fresh_db_worker_heartbeat(),
+                    ):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[11111]):
+                            report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
             worker_row = report["worker"]
             self.assertFalse(worker_row["healthy"])
+            self.assertFalse(report["pricingWorkingNow"])
             self.assertEqual(worker_row["gateState"], "HARD_STOP")
             self.assertEqual(
                 worker_row["gateReason"],
@@ -373,7 +517,100 @@ class HealthReportGateTests(unittest.TestCase):
             )
             self.assertIn("awaiting owner review", worker_row["note"])
 
-    def test_missing_runtime_files_do_not_crash_health_report(self) -> None:
+    def test_budget_wait_and_cooldown_mark_worker_unhealthy(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        class MinimalClient:
+            def _table_get(self, *_args, **_kwargs):  # noqa: SLF001
+                return []
+
+        for worker_state, reason_field in (
+            ("BUDGET_WAIT", "HOURLY_SUBMISSION_CEILING"),
+            ("COOLDOWN", "2099-01-01T00:00:00Z"),
+        ):
+            with self.subTest(worker_state=worker_state):
+                with tempfile.TemporaryDirectory() as tmp:
+                    status = Path(tmp) / "status.json"
+                    ledger = Path(tmp) / "ledger.json"
+                    extra = {"cooldownUntil": reason_field} if worker_state == "COOLDOWN" else {}
+                    now = utc_iso()
+                    status.write_text(
+                        json.dumps({"workerState": worker_state, "updatedAtUtc": now, **extra}),
+                        encoding="utf-8",
+                    )
+                    ledger.write_text(json.dumps({"lastHardStop": None, "updatedAtUtc": now}), encoding="utf-8")
+                    with health_report_runtime_mocks(health, status=status, ledger=ledger, seed=False):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[33333]):
+                            report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
+                    self.assertFalse(report["worker"]["healthy"])
+                    self.assertFalse(report["pricingWorkingNow"])
+                    self.assertEqual(report["worker"]["gateState"], worker_state)
+
+    def test_hard_stop_cleared_in_ledger_not_reported(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        class MinimalClient:
+            def _table_get(self, *_args, **_kwargs):  # noqa: SLF001
+                return []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.json"
+            ledger = Path(tmp) / "ledger.json"
+            now = utc_iso()
+            status.write_text(
+                json.dumps(
+                    {
+                        "workerState": "HARD_STOP",
+                        "lastHardStopReason": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+                        "updatedAtUtc": now,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger.write_text(
+                json.dumps({"lastHardStop": None, "updatedAtUtc": now}),
+                encoding="utf-8",
+            )
+            with mock.patch.object(health, "STATUS_PATH", status):
+                with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger):
+                    with mock.patch.object(
+                        health,
+                        "_fetch_worker_db_heartbeat",
+                        return_value=_fresh_db_worker_heartbeat(),
+                    ):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[44444]):
+                            report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
+            self.assertNotEqual(report["worker"]["gateState"], "HARD_STOP")
+
+    def test_stale_runtime_files_with_live_pid_not_healthy(self) -> None:
+        from scripts import report_ebay_pricing_health as health
+
+        class MinimalClient:
+            def _table_get(self, *_args, **_kwargs):  # noqa: SLF001
+                return []
+
+        stale = (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat().replace("+00:00", "Z")
+        with tempfile.TemporaryDirectory() as tmp:
+            status = Path(tmp) / "status.json"
+            ledger = Path(tmp) / "ledger.json"
+            status.write_text(
+                json.dumps({"workerState": "SELECTING", "updatedAtUtc": stale}),
+                encoding="utf-8",
+            )
+            ledger.write_text(json.dumps({"updatedAtUtc": stale}), encoding="utf-8")
+            with mock.patch.object(health, "STATUS_PATH", status):
+                with mock.patch.object(health, "BUDGET_LEDGER_PATH", ledger):
+                    with mock.patch.object(
+                        health,
+                        "_fetch_worker_db_heartbeat",
+                        return_value=_fresh_db_worker_heartbeat(),
+                    ):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[55555]):
+                            report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
+            self.assertFalse(report["worker"]["healthy"])
+            self.assertEqual(report["worker"]["runtimeEvidence"]["status"], "stale")
+
+    def test_missing_runtime_files_with_live_pid_not_healthy(self) -> None:
         from scripts import report_ebay_pricing_health as health
 
         class MinimalClient:
@@ -385,10 +622,16 @@ class HealthReportGateTests(unittest.TestCase):
             missing_ledger = Path(tmp) / "missing_ledger.json"
             with mock.patch.object(health, "STATUS_PATH", missing_status):
                 with mock.patch.object(health, "BUDGET_LEDGER_PATH", missing_ledger):
-                    with mock.patch.object(health, "_count_python_workers", return_value=[22222]):
-                        report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
-            self.assertIsNone(report["worker"]["gateState"])
-            self.assertIsNone(report["worker"]["gateReason"])
+                    with mock.patch.object(
+                        health,
+                        "_fetch_worker_db_heartbeat",
+                        return_value=_fresh_db_worker_heartbeat(),
+                    ):
+                        with mock.patch.object(health, "_count_python_workers", return_value=[22222]):
+                            report = health.build_health_report(client=MinimalClient())  # type: ignore[arg-type]
+            self.assertFalse(report["worker"]["healthy"])
+            self.assertEqual(report["worker"]["runtimeEvidence"]["status"], "missing")
+            self.assertEqual(report["worker"]["runtimeEvidence"]["ledger"], "missing")
 
 
 if __name__ == "__main__":

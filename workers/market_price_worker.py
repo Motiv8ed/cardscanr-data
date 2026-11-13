@@ -170,6 +170,14 @@ def build_transient_error_summary(
     }
 
 
+def _heartbeat_gate_mode(*, continuous: bool, operation_mode: str) -> str:
+    """Preserve PROBE/CANARY in heartbeat metadata; otherwise continuous vs staged."""
+    mode = str(operation_mode or "").strip().upper()
+    if mode in {"PROBE", "CANARY"}:
+        return mode
+    return "continuous" if continuous else "staged"
+
+
 def _emit_gated_heartbeat(
     runner: InternationalMarketPriceJobRunner,
     config: MarketEngineConfig,
@@ -296,7 +304,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="hard_stop",
                     reason=str(hard),
-                    mode="continuous",
+                    mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -315,7 +323,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="budget_wait",
                     reason=str(budget_reason),
-                    mode="continuous",
+                    mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -336,7 +344,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="cooldown",
                     reason=worker_state,
-                    mode="continuous",
+                    mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -356,7 +364,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="hard_stop",
                     reason=str(staged_hard),
-                    mode="staged",
+                    mode=_heartbeat_gate_mode(continuous=False, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -374,7 +382,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="budget_wait",
                     reason=str(staged_budget),
-                    mode="staged",
+                    mode=_heartbeat_gate_mode(continuous=False, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -399,7 +407,7 @@ def run_worker_loop(
                     started_at=started_at,
                     state="browser_halted",
                     reason=str(halt) if halt else None,
-                    mode="continuous" if continuous else "staged",
+                    mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
                 if args.once:
@@ -419,7 +427,7 @@ def run_worker_loop(
                 started_at=started_at,
                 state="transient_halt",
                 reason=str(halt) if halt else None,
-                mode="continuous" if continuous else "staged",
+                mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                 logger=logger,
             )
             if args.once:
