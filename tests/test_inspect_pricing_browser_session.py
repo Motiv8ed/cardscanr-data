@@ -23,6 +23,11 @@ class CdpHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         self.__class__.requested_paths.append(self.path)
         port = self.server.server_port
+        if self.response_kind == "redirect":
+            self.send_response(302)
+            self.send_header("Location", "https://example.com/never-fetch")
+            self.end_headers()
+            return
         if self.response_kind == "invalid_json":
             body = b"{not JSON"
         elif self.response_kind == "remote_debugger":
@@ -69,6 +74,13 @@ class BrowserPreflightTests(unittest.TestCase):
         self.assertEqual(CdpHandler.requested_paths, ["/json/version"])
         self.assertNotIn("secret-id", json.dumps(result))
         self.assertNotIn("does-not-belong", json.dumps(result))
+
+    def test_redirect_is_rejected_before_leaving_loopback(self) -> None:
+        CdpHandler.response_kind = "redirect"
+        result = mod.inspect_browser_cdp(port=self.server.server_port)
+        self.assertEqual(result["status"], "CDP_UNREACHABLE")
+        self.assertEqual(result["errorClass"], "HTTPError")
+        self.assertEqual(CdpHandler.requested_paths, ["/json/version"])
 
     def test_rejects_non_chrome(self) -> None:
         CdpHandler.response_kind = "not_chrome"
