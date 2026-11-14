@@ -24,6 +24,15 @@ WORKER_GATE_STATES_BLOCKING = frozenset(
     }
 )
 
+# Local runtime states that may justify skipping worker restart in ensure-runtime checks.
+WORKER_GATE_STATES_HEALTHY = frozenset(
+    {
+        "SELECTING",
+        "PRICING",
+        "WAITING",
+    }
+)
+
 
 def normalize_gate_state(value: str | None) -> str | None:
     text = str(value or "").strip()
@@ -35,6 +44,25 @@ def normalize_gate_state(value: str | None) -> str | None:
 def worker_gate_blocks_pricing(gate_state: str | None) -> bool:
     normalized = normalize_gate_state(gate_state)
     return normalized in WORKER_GATE_STATES_BLOCKING if normalized else False
+
+
+def worker_gate_allows_ensure_healthy(gate_state: str | None) -> bool:
+    """True only for an explicit non-blocking runtime state (fail-closed otherwise)."""
+    normalized = normalize_gate_state(gate_state)
+    if not normalized or normalized in WORKER_GATE_STATES_BLOCKING:
+        return False
+    return normalized in WORKER_GATE_STATES_HEALTHY
+
+
+def runtime_gate_payloads_complete(status: dict | None, ledger: dict | None) -> tuple[bool, str | None]:
+    """Require workerState and lastHardStop keys when both runtime dicts were parsed."""
+    if status is None or ledger is None:
+        return False, "runtime JSON unreadable"
+    if "workerState" not in status:
+        return False, "workerState key missing in continuous_au_worker_status"
+    if "lastHardStop" not in ledger:
+        return False, "lastHardStop key missing in continuous_au_safety_ledger"
+    return True, None
 
 
 def runtime_file_evidence(

@@ -11,6 +11,8 @@ from cardscanr_market_engine.owned_daily_enablement import BUDGET_LEDGER_PATH, S
 from cardscanr_market_engine.pricing_worker_runtime_gate import (
     normalize_gate_state,
     runtime_file_evidence,
+    runtime_gate_payloads_complete,
+    worker_gate_allows_ensure_healthy,
     worker_gate_blocks_pricing,
     worker_runtime_gate,
 )
@@ -116,6 +118,23 @@ def classify_live_ebay_worker_component_health(
             ),
         )
 
+    payloads_ok, payload_note = runtime_gate_payloads_complete(status_payload, ledger_payload)
+    if not payloads_ok:
+        return LiveEbayWorkerComponentHealth(
+            component="worker",
+            process_present=True,
+            process_id=process_id,
+            status="unknown_fail_closed",
+            gate_state=None,
+            gate_reason=None,
+            status_evidence=status_evidence,
+            ledger_evidence=ledger_evidence,
+            note=(
+                payload_note
+                or "Worker runtime status/ledger incomplete; fail-closed."
+            ),
+        )
+
     gate_state, gate_reason = worker_runtime_gate(
         status_payload,
         ledger_payload,
@@ -134,6 +153,24 @@ def classify_live_ebay_worker_component_health(
             ledger_evidence=ledger_evidence,
             note=(
                 f"Worker process present but gate blocks pricing ({gate_state}"
+                f"{': ' + gate_reason if gate_reason else ''})."
+            ),
+        )
+
+    if not worker_gate_allows_ensure_healthy(gate_state) or gate_reason == "STALE_RUNTIME_AFTER_LATCH_CLEAR":
+        label = _gated_status_label(gate_state)
+        return LiveEbayWorkerComponentHealth(
+            component="worker",
+            process_present=True,
+            process_id=process_id,
+            status=label,
+            gate_state=gate_state,
+            gate_reason=gate_reason,
+            status_evidence=status_evidence,
+            ledger_evidence=ledger_evidence,
+            note=(
+                f"Worker process present but runtime gate is not explicitly healthy "
+                f"({gate_state or 'unknown'}"
                 f"{': ' + gate_reason if gate_reason else ''})."
             ),
         )
