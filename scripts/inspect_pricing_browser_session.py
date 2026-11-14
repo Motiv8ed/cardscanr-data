@@ -16,10 +16,17 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 BRIDGE_AND_RECORDER_PORTS = frozenset({9230, 9231})
 MAX_BODY_BYTES = 65536
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never follow a local CDP response to another host or scheme."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _debug_socket_is_local(url: object, port: int) -> bool:
@@ -68,7 +75,7 @@ def inspect_browser_cdp(
 
     url = f"http://127.0.0.1:{port}/json/version"
     # Never use a proxy, even if the owner's environment has HTTP_PROXY set.
-    opener = build_opener(ProxyHandler({}))
+    opener = build_opener(ProxyHandler({}), _RejectRedirects())
     request = Request(url, headers={"Accept": "application/json"})
     try:
         with opener.open(request, timeout=timeout_seconds) as response:
