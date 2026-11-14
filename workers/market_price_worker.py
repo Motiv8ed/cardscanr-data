@@ -230,9 +230,9 @@ def run_worker_loop(
     if pacing_controller is None and _ebay_pacing_enabled(config):
         pacing_controller = OwnedDailyPacingController()
     ensure_continuous_au_safety_env()
-    from cardscanr_market_engine.navigation_runtime_context import ensure_nav_handoff_writer_run_id
+    from cardscanr_market_engine.navigation_runtime_context import mint_nav_handoff_writer_run_id
 
-    ensure_nav_handoff_writer_run_id()
+    mint_nav_handoff_writer_run_id()
     budget = ContinuousSafetyBudget.from_env()
     # t323u R0: enforce hourly/daily budget + transient auto-pause in staged (non-continuous) runs too.
     enforce_budget = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "false").strip().lower() in {"1", "true", "yes", "on"}

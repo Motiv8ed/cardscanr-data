@@ -34,6 +34,7 @@ DEFAULT_CONTEXT_PATH = Path(__file__).resolve().parents[1] / "reports" / "runtim
 
 NAV_HANDOFF_WRITER_RUN_ENV = "CARDSCANR_NAV_HANDOFF_WRITER_RUN_ID"
 NAV_HANDOFF_MAX_AGE_SECONDS = 30 * 60
+NAV_HANDOFF_FUTURE_TOLERANCE_SECONDS = 120
 
 INTER_CARD_CONTEXT_NOT_PROPAGATED = "INTER_CARD_CONTEXT_NOT_PROPAGATED"
 INTER_CARD_EXPECTED_TARGET_REJECTED = "INTER_CARD_EXPECTED_TARGET_REJECTED"
@@ -70,6 +71,7 @@ class NavigationRuntimeContext:
     current_currency: str | None = None
     marketplace_home: str | None = None
     prior_handoff_stale: bool = False
+    handoff_source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         prior = self.expected_prior.to_dict() if self.expected_prior is not None else None
@@ -236,7 +238,6 @@ def _utc_now_iso() -> str:
 
 
 def nav_handoff_write_metadata() -> dict[str, Any]:
-    ensure_nav_handoff_writer_run_id()
     return {
         "recordedAtUtc": _utc_now_iso(),
         "writerRunId": str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip(),
@@ -244,35 +245,31 @@ def nav_handoff_write_metadata() -> dict[str, Any]:
     }
 
 
-def ensure_nav_handoff_writer_run_id() -> str:
-    existing = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
-    if existing:
-        return existing
-    if DEFAULT_CONTEXT_PATH.is_file():
-        try:
-            data = json.loads(DEFAULT_CONTEXT_PATH.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                writer_run = str(data.get("writerRunId") or "").strip()
-                recorded = data.get("recordedAtUtc")
-                if writer_run and recorded and not nav_handoff_payload_is_stale(
-                    data, now=datetime.now(timezone.utc)
-                ):
-                    os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = writer_run
-                    return writer_run
-        except (OSError, json.JSONDecodeError):
-            pass
+def mint_nav_handoff_writer_run_id() -> str:
+    """Worker entrypoint: fresh run identity per process; descendants inherit via env."""
     run_id = f"{os.getpid()}-{uuid.uuid4().hex[:12]}"
     os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
     return run_id
+
+
+def ensure_nav_handoff_writer_run_id() -> str:
+    """Subprocess/tools: env only — never adopt a persisted file writerRunId."""
+    return str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
 
 
 def nav_handoff_payload_is_stale(
     payload: dict[str, Any],
     *,
     now: datetime | None = None,
+    require_env_writer_run: bool = True,
 ) -> bool:
+    if not isinstance(payload, dict):
+        return True
     recorded = payload.get("recordedAtUtc")
     if not recorded:
+        return True
+    file_run = str(payload.get("writerRunId") or "").strip()
+    if not file_run:
         return True
     now = now or datetime.now(timezone.utc)
     try:
@@ -281,11 +278,17 @@ def nav_handoff_payload_is_stale(
             ts = ts.replace(tzinfo=timezone.utc)
     except ValueError:
         return True
-    if (now - ts).total_seconds() > NAV_HANDOFF_MAX_AGE_SECONDS:
+    age_seconds = (now - ts).total_seconds()
+    if age_seconds > NAV_HANDOFF_MAX_AGE_SECONDS:
         return True
-    file_run = str(payload.get("writerRunId") or "").strip()
+    if age_seconds < -NAV_HANDOFF_FUTURE_TOLERANCE_SECONDS:
+        return True
+    if not require_env_writer_run:
+        return False
     env_run = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
-    if file_run and env_run and file_run != env_run:
+    if env_run and file_run != env_run:
+        return True
+    if not env_run:
         return True
     return False
 
@@ -313,6 +316,18 @@ def _load_json_env(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _env_nav_context_handoff_fields() -> dict[str, Any]:
+    raw = (os.environ.get(NAV_CONTEXT_ENV) or "").strip()
+    if not raw:
+        return {}
+    env_data = _load_json_env(raw)
+    out: dict[str, Any] = {}
+    for key in ("recordedAtUtc", "writerRunId", "writerPid"):
+        if key in env_data:
+            out[key] = env_data[key]
+    return out
 
 
 def load_navigation_runtime_context() -> NavigationRuntimeContext:
@@ -343,8 +358,11 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
             break
         data.setdefault("_priorFile", loaded)
         break
+    env_handoff = _env_nav_context_handoff_fields()
+    nav_env_applied = False
     if (os.environ.get(NAV_CONTEXT_ENV) or "").strip():
         data.update(_load_json_env(os.environ[NAV_CONTEXT_ENV]))
+        nav_env_applied = True
     prior_raw = (os.environ.get(EXPECTED_PRIOR_JSON_ENV) or "").strip()
     prior_dict: dict[str, Any] | None
     if prior_raw:
@@ -394,8 +412,19 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
         ).strip()
         or None,
     )
-    ensure_nav_handoff_writer_run_id()
-    handoff_basis = file_payload if file_payload is not None else data
+    if env_handoff:
+        handoff_source = "env"
+        handoff_basis = {**dict(file_payload or {}), **data}
+    elif file_payload and (file_payload.get("recordedAtUtc") or file_payload.get("writerRunId")):
+        handoff_source = "file"
+        handoff_basis = dict(file_payload)
+    elif data.get("recordedAtUtc") or data.get("writerRunId"):
+        handoff_source = "file" if not nav_env_applied else "env"
+        handoff_basis = dict(data)
+    else:
+        handoff_source = "none"
+        handoff_basis = dict(data)
+    ctx.handoff_source = handoff_source
     if nav_handoff_payload_is_stale(handoff_basis):
         ctx.prior_handoff_stale = True
         if ctx.expected_prior is not None:

@@ -14,19 +14,26 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.browser_lifecycle_policy import (
     REASON_COLD_UNEXPECTED,
+    REASON_NOT_CORRELATED,
+    REASON_PRIOR_NOT_TERMINAL,
+    REASON_UNKNOWN_EBAY,
     RUNTIME_INTER_CARD,
     PriorCardContext,
+    ebay_au_sch_sold_query_contract_ok,
     evaluate_runtime_targets,
     url_matches_job_query,
 )
+from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob
 from cardscanr_market_engine.navigation_runtime_context import (
+    NAV_CONTEXT_ENV,
     NAV_CONTEXT_PATH_ENV,
     NAV_HANDOFF_WRITER_RUN_ENV,
     clear_context_from_environ,
     load_navigation_runtime_context,
+    mint_nav_handoff_writer_run_id,
     nav_handoff_payload_is_stale,
 )
 from cardscanr_market_engine.providers.errors import ProviderTemporaryError
@@ -132,6 +139,43 @@ class StaleInterCardTargetPolicyTests(unittest.TestCase):
         self.assertFalse(r.ok)
         self.assertIn("INTER_CARD_MULTIPLE_TOP_LEVEL_EBAY_TARGETS", r.reason_codes)
 
+    def test_fresh_healthy_prior_matching_tab_without_stale_handoff_rejected(self) -> None:
+        prior = _stale_charizard_prior()
+        targets = json.loads((FIX / "drifloon_continuation_targets.json").read_text(encoding="utf-8"))[
+            "rawTargets"
+        ]
+        r = evaluate_runtime_targets(
+            targets,
+            mode=RUNTIME_INTER_CARD,
+            prior=prior,
+            current_query=DRIFLOON_QUERY,
+            prior_handoff_stale=False,
+        )
+        self.assertFalse(r.ok)
+        self.assertIn(REASON_UNKNOWN_EBAY, r.reason_codes)
+        self.assertIn(REASON_NOT_CORRELATED, r.reason_codes)
+
+    def test_fresh_unhealthy_prior_with_sold_tab_rejected(self) -> None:
+        prior = PriorCardContext(
+            job_id="j1",
+            target_id="OLD",
+            final_url="https://www.ebay.com.au/sch/i.html?_nkw=Old+Card&LH_Sold=1",
+            query="Old Card",
+            x11_sold_state_verified=False,
+            card_verdict="FAIL",
+        )
+        url = "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1"
+        targets = [{"id": "NEW_TAB", "type": "page", "url": url, "title": "Drifloon"}]
+        r = evaluate_runtime_targets(
+            targets,
+            mode=RUNTIME_INTER_CARD,
+            prior=prior,
+            current_query=DRIFLOON_QUERY,
+            prior_handoff_stale=False,
+        )
+        self.assertFalse(r.ok)
+        self.assertIn(REASON_PRIOR_NOT_TERMINAL, r.reason_codes)
+
 
 class StrictNkwRejectionTests(unittest.TestCase):
     def test_same_name_different_number_rejected(self) -> None:
@@ -149,6 +193,47 @@ class StrictNkwRejectionTests(unittest.TestCase):
     def test_wrong_marketplace_domain_rejected(self) -> None:
         url = "https://www.ebay.com/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1"
         self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, url))
+
+    def test_active_listings_tab_without_lh_sold_rejected(self) -> None:
+        url = "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon"
+        self.assertFalse(ebay_au_sch_sold_query_contract_ok(url))
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, url))
+
+    def test_lh_sold_zero_and_duplicate_rejected(self) -> None:
+        zero = "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=0"
+        dup = "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1&LH_Sold=0"
+        self.assertFalse(ebay_au_sch_sold_query_contract_ok(zero))
+        self.assertFalse(ebay_au_sch_sold_query_contract_ok(dup))
+
+    def test_hostile_url_variants_rejected(self) -> None:
+        evil = "https://www.ebay.com.au.evil.com/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1"
+        userinfo = (
+            "https://attacker:secret@www.ebay.com.au/sch/i.html"
+            "?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1"
+        )
+        http_scheme = "http://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1"
+        extra_nkw = "https://www.ebay.com.au/sch/i.html?_nkw=a&_nkw=b&LH_Sold=1"
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, evil))
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, userinfo))
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, http_scheme))
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, extra_nkw))
+
+    def test_empty_query_and_empty_nkw_rejected(self) -> None:
+        self.assertFalse(
+            url_matches_job_query(None, "https://www.ebay.com.au/sch/i.html?_nkw=+&LH_Sold=1")
+        )
+        self.assertFalse(url_matches_job_query("", "https://www.ebay.com.au/sch/i.html?LH_Sold=1"))
+        self.assertFalse(url_matches_job_query(DRIFLOON_QUERY, "https://www.ebay.com.au/sch/i.html?LH_Sold=1"))
+
+    def test_continuation_tab_without_sold_verification_blocks_capture(self) -> None:
+        active = "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon"
+        ev = evaluate_sold_verification(
+            url=active,
+            title="Drifloon 89 scarlet violet Pokemon for sale | eBay",
+            body="",
+        )
+        self.assertFalse(ev.get("captureReady"))
+        self.assertFalse(ev.get("x11SoldStateVerified"))
 
     def test_wrong_card_target_fixture_rejected(self) -> None:
         prior = _stale_charizard_prior()
@@ -205,8 +290,8 @@ class NavContextHandoffStaleTests(unittest.TestCase):
             "writerPid": 4242,
             "expectedPrior": json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8")),
         }
-        self.assertFalse(nav_handoff_payload_is_stale(payload, now=now))
         os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
+        self.assertFalse(nav_handoff_payload_is_stale(payload, now=now))
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "nav_runtime_context.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
@@ -236,6 +321,144 @@ class NavContextHandoffStaleTests(unittest.TestCase):
             ctx = load_navigation_runtime_context()
         self.assertFalse(ctx.prior_handoff_stale)
         self.assertIsNotNone(ctx.expected_prior.target_id)
+
+    def test_recorded_at_without_writer_run_id_is_stale(self) -> None:
+        payload = {
+            "recordedAtUtc": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        self.assertTrue(nav_handoff_payload_is_stale(payload, now=NOW, require_env_writer_run=False))
+
+    def test_future_dated_recorded_at_is_stale(self) -> None:
+        future = (NOW + timedelta(seconds=300)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        payload = {
+            "recordedAtUtc": future,
+            "writerRunId": "run-future",
+        }
+        self.assertTrue(nav_handoff_payload_is_stale(payload, now=NOW, require_env_writer_run=False))
+
+    def test_malformed_recorded_at_is_stale(self) -> None:
+        payload = {"recordedAtUtc": "not-a-timestamp", "writerRunId": "run-bad-ts"}
+        self.assertTrue(nav_handoff_payload_is_stale(payload, require_env_writer_run=False))
+
+    def test_worker_restart_mints_new_run_id_and_file_handoff_is_stale(self) -> None:
+        import tempfile
+
+        now = datetime.now(timezone.utc)
+        recorded = (now - timedelta(minutes=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        old_run = "prior-worker-aaa"
+        payload = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": recorded,
+            "writerRunId": old_run,
+            "expectedPrior": json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8")),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nav_runtime_context.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            os.environ[NAV_CONTEXT_PATH_ENV] = str(path)
+            mint_nav_handoff_writer_run_id()
+            ctx = load_navigation_runtime_context()
+        self.assertTrue(ctx.prior_handoff_stale)
+        self.assertNotEqual(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV), old_run)
+
+    def test_subprocess_without_env_treats_handoff_as_stale(self) -> None:
+        import tempfile
+
+        now = datetime.now(timezone.utc)
+        recorded = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        run_id = "worker-env-missing"
+        payload = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": recorded,
+            "writerRunId": run_id,
+            "expectedPrior": json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8")),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nav_runtime_context.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            os.environ[NAV_CONTEXT_PATH_ENV] = str(path)
+            ctx = load_navigation_runtime_context()
+        self.assertTrue(ctx.prior_handoff_stale)
+
+    def test_subprocess_inherits_env_writer_run_handoff_fresh(self) -> None:
+        import tempfile
+
+        now = datetime.now(timezone.utc)
+        recorded = (now - timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        run_id = "worker-child-inherit"
+        payload = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": recorded,
+            "writerRunId": run_id,
+            "expectedPrior": json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8")),
+        }
+        os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nav_runtime_context.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            os.environ[NAV_CONTEXT_PATH_ENV] = str(path)
+            ctx = load_navigation_runtime_context()
+        self.assertFalse(ctx.prior_handoff_stale)
+
+    def test_fresh_env_handoff_overrides_stale_disk_metadata(self) -> None:
+        import tempfile
+
+        now = datetime.now(timezone.utc)
+        stale_recorded = (now - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        fresh_recorded = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        run_id = "env-handoff-run"
+        prior = json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8"))
+        file_payload = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": stale_recorded,
+            "writerRunId": "stale-disk",
+            "expectedPrior": prior,
+        }
+        env_ctx = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": fresh_recorded,
+            "writerRunId": run_id,
+            "expectedPrior": prior,
+        }
+        os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nav_runtime_context.json"
+            path.write_text(json.dumps(file_payload), encoding="utf-8")
+            os.environ[NAV_CONTEXT_PATH_ENV] = str(path)
+            os.environ[NAV_CONTEXT_ENV] = json.dumps(env_ctx, separators=(",", ":"))
+            ctx = load_navigation_runtime_context()
+        self.assertEqual(ctx.handoff_source, "env")
+        self.assertFalse(ctx.prior_handoff_stale)
+
+    def test_stale_env_handoff_not_refreshed_by_fresh_disk_file(self) -> None:
+        import tempfile
+
+        now = datetime.now(timezone.utc)
+        fresh_recorded = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        stale_recorded = (now - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        run_id = "env-stale-run"
+        prior = json.loads((FIX / "stale_prior_charizard.json").read_text(encoding="utf-8"))
+        file_payload = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": fresh_recorded,
+            "writerRunId": "fresh-disk",
+            "expectedPrior": prior,
+        }
+        env_ctx = {
+            "runtimeMode": "INTER_CARD",
+            "recordedAtUtc": stale_recorded,
+            "writerRunId": run_id,
+            "expectedPrior": prior,
+        }
+        os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "nav_runtime_context.json"
+            path.write_text(json.dumps(file_payload), encoding="utf-8")
+            os.environ[NAV_CONTEXT_PATH_ENV] = str(path)
+            os.environ[NAV_CONTEXT_ENV] = json.dumps(env_ctx, separators=(",", ":"))
+            ctx = load_navigation_runtime_context()
+        self.assertEqual(ctx.handoff_source, "env")
+        self.assertTrue(ctx.prior_handoff_stale)
 
 
 class EbayBrowserReferenceFreshnessTests(unittest.TestCase):

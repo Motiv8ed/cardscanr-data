@@ -239,27 +239,57 @@ def normalize_ebay_search_query(query: str | None) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def ebay_au_sch_nkw(url: str) -> str | None:
-    parsed = urlparse(url)
+def _ebay_au_sch_url_base_ok(url: str) -> bool:
+    raw = str(url or "").strip()
+    if not raw:
+        return False
+    parsed = urlparse(raw)
+    if (parsed.scheme or "").lower() != "https":
+        return False
+    if parsed.username or parsed.password:
+        return False
     host = (parsed.hostname or "").lower()
     if host.startswith("www."):
         host = host[4:]
     if host != "ebay.com.au":
+        return False
+    return "/sch/" in (parsed.path or "")
+
+
+def ebay_au_sch_sold_query_contract_ok(url: str) -> bool:
+    """Sold-listings continuation requires exactly one LH_Sold=1 on AU /sch/ (no LH_Complete deep-link)."""
+    if not _ebay_au_sch_url_base_ok(url):
+        return False
+    parsed = urlparse(str(url or "").strip())
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    lh_keys = [k for k in query if k.lower() == "lh_sold"]
+    if len(lh_keys) != 1:
+        return False
+    lh_sold_vals = [str(v) for v in query[lh_keys[0]]]
+    if len(lh_sold_vals) != 1 or lh_sold_vals[0] != "1":
+        return False
+    nkw_vals = query.get("_nkw") or []
+    if len(nkw_vals) != 1:
+        return False
+    return bool(normalize_ebay_search_query(nkw_vals[0]))
+
+
+def ebay_au_sch_nkw(url: str) -> str | None:
+    if not ebay_au_sch_sold_query_contract_ok(url):
         return None
-    if "/sch/" not in (parsed.path or ""):
-        return None
-    values = parse_qs(parsed.query, keep_blank_values=False).get("_nkw") or []
-    if not values:
-        return None
+    values = parse_qs(urlparse(str(url or "").strip()).query, keep_blank_values=False).get("_nkw") or []
     return normalize_ebay_search_query(values[0])
 
 
 def url_matches_job_query(query: str | None, url: str) -> bool:
-    """True when ebay.com.au /sch/ _nkw equals the normalized current query."""
+    """True when ebay.com.au sold /sch/ _nkw equals the normalized current query."""
     nkw = ebay_au_sch_nkw(url)
-    if nkw is None:
+    if not nkw:
         return False
-    return nkw == normalize_ebay_search_query(query)
+    job_nkw = normalize_ebay_search_query(query)
+    if not job_nkw:
+        return False
+    return nkw == job_nkw
 
 
 def correlates_to_prior(target: dict[str, Any], prior: PriorCardContext) -> bool:
@@ -375,11 +405,12 @@ def evaluate_runtime_targets(
             if expected:
                 pass
             elif (
-                (prior_ok or prior_handoff_stale)
+                prior_handoff_stale
                 and not prior_target_id_present(raw_targets, prior)
                 and url_matches_job_query(current_query, top_ebay[0].url)
             ):
-                # Prior CDP target absent; strict _nkw continuation for current query.
+                # Stale handoff only: prior CDP target gone after restart/legacy file.
+                # Fresh healthy priors still fail closed via UNKNOWN_EBAY / NOT_CORRELATED.
                 for row in classified:
                     if row.top_level and row.origin_class == "ebay_marketplace":
                         row.blocking = False
