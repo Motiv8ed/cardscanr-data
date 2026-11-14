@@ -47,6 +47,10 @@ def test_worker_wrapper_treats_supervised_stop_as_non_fatal() -> None:
     assert "STATUS_CONTROL_C_EXIT" in wrapper
     assert "Write-StopIntent" in ensure
     assert "ensure_runtime_stop" in ensure
+    assert "classify_live_ebay_component_health.py" in ensure
+    assert "Get-WorkerComponentHealthJson" in ensure
+    assert "already_running_healthy" in ensure
+    assert "unknown_fail_closed" in ensure
 
     checker_ps1 = read_script("scripts/check_live_ebay_worker_config.ps1")
     checker_py = read_script("scripts/check_live_ebay_worker_config.py")
