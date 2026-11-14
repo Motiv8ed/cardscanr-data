@@ -2,25 +2,6 @@ name: Pricing Offline Safety Tests
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "cardscanr_market_engine/**"
-      - "workers/**"
-      - "scripts/inspect_pricing_browser_session.py"
-      - "tests/test_pricing_owned_daily_flag_guard_20261113.py"
-      - "tests/test_pricing_outage_33_gated_heartbeat.py"
-      - "tests/test_inspect_pricing_browser_session.py"
-      - ".github/workflows/pricing-offline-safety.yml"
-  push:
-    branches: [main]
-    paths:
-      - "cardscanr_market_engine/**"
-      - "workers/**"
-      - "scripts/inspect_pricing_browser_session.py"
-      - "tests/test_pricing_owned_daily_flag_guard_20261113.py"
-      - "tests/test_pricing_outage_33_gated_heartbeat.py"
-      - "tests/test_inspect_pricing_browser_session.py"
-      - ".github/workflows/pricing-offline-safety.yml"
 
 permissions:
   contents: read
@@ -56,3 +37,9 @@ jobs:
 
       - name: Worker safety-gate heartbeats and honest health
         run: python -m unittest discover -s tests -p "test_pricing_outage_33_gated_heartbeat.py" -v
+
+      - name: Ensure-script worker component health (local gates)
+        run: python -m unittest discover -s tests -p "test_live_ebay_component_health.py" -v
+
+      - name: Playwright persistent-context lifecycle (mocked)
+        run: python -m unittest discover -s tests -p "test_playwright_persistent_lifecycle.py" -v

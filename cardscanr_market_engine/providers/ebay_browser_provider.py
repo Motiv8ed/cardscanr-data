@@ -38,6 +38,11 @@ from ..navigation_runtime_context import (
     load_navigation_runtime_context,
     pre_submit_only_requested,
 )
+from ..playwright_persistent_lifecycle import (
+    launch_persistent_context_with_retry,
+    run_with_target_closed_retry,
+    teardown_persistent_context,
+)
 
 
 # ACTIVE challenge: user-facing verification copy (never bare "captcha" alone).
@@ -2439,19 +2444,21 @@ class EbayBrowserSoldCompsProvider:
                 cdp_browser.close()  # disconnect from CDP; does not exit Chrome
             except Exception:
                 pass
-        elif context is not None:
+        elif context is not None or (pw is not None and cdp_browser is None):
+            profile_dir = None
             try:
-                context.close()
+                profile_dir = self.config.ensure_profile_dir()
             except Exception:
-                pass
+                profile_dir = None
+            teardown_persistent_context(
+                context=context,
+                pw=pw if cdp_browser is None else None,
+                profile_dir=profile_dir,
+                wait_profile_lock=profile_dir is not None,
+            )
         elif page is not None:
             try:
                 page.close()
-            except Exception:
-                pass
-        if pw is not None and cdp_browser is None:
-            try:
-                pw.stop()
             except Exception:
                 pass
         elif pw is not None and cdp_browser is not None:
@@ -2482,9 +2489,10 @@ class EbayBrowserSoldCompsProvider:
         launch_timeout_ms = self.config.launch_timeout_seconds * 1000
         timeout_ms = self.config.timeout_seconds * 1000
         profile_dir = self.config.ensure_profile_dir()
-        pw = sync_playwright().start()
-        try:
-            context = pw.chromium.launch_persistent_context(
+
+        def _launch_session() -> tuple[Any, Any, Any]:
+            owned_pw = sync_playwright().start()
+            context = owned_pw.chromium.launch_persistent_context(
                 str(profile_dir),
                 channel=self.config.channel,
                 headless=self.config.headless,
@@ -2494,11 +2502,12 @@ class EbayBrowserSoldCompsProvider:
             )
             page = context.new_page()
             page.set_default_timeout(timeout_ms)
+            return owned_pw, context, page
+
+        try:
+            pw, context, page = launch_persistent_context_with_retry(_launch_session, profile_dir=profile_dir)
         except Exception:
-            try:
-                pw.stop()
-            except Exception:
-                pass
+            teardown_persistent_context(context=None, pw=None, profile_dir=profile_dir)
             raise
         self._pw = pw
         self._context = context
@@ -3693,45 +3702,37 @@ class EbayBrowserSoldCompsProvider:
                     ) from exc
                 page.set_default_timeout(timeout_ms)
             else:
-                owned_pw = sync_playwright().start()
+                profile_dir = self.config.ensure_profile_dir()
+
+                def _launch_owned() -> tuple[Any, Any]:
+                    local_pw = sync_playwright().start()
+                    with _StageTimer(stage_timings, "launch_browser"):
+                        local_context = local_pw.chromium.launch_persistent_context(
+                            str(profile_dir),
+                            channel=self.config.channel,
+                            headless=self.config.headless,
+                            locale=request.search_locale,
+                            viewport={"width": 1366, "height": 900},
+                            timeout=launch_timeout_ms,
+                        )
+                    return local_pw, local_context
+
                 try:
-                    profile_dir = self.config.ensure_profile_dir()
-                    try:
-                        with _StageTimer(stage_timings, "launch_browser"):
-                            context = owned_pw.chromium.launch_persistent_context(
-                                str(profile_dir),
-                                channel=self.config.channel,
-                                headless=self.config.headless,
-                                locale=request.search_locale,
-                                viewport={"width": 1366, "height": 900},
-                                timeout=launch_timeout_ms,
-                            )
-                    except Exception as exc:
-                        raise ProviderTemporaryError(
-                            "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
-                            "Install Google Chrome, then verify Playwright support with: python -m playwright install chromium",
-                            diagnostics={
-                                "errorType": type(exc).__name__,
-                                "browserConfig": self.config.safe_diagnostics(),
-                                "timedOutStage": "launch_browser" if _looks_like_timeout(exc) else None,
-                                "stageTimings": stage_timings.snapshot(),
-                            },
-                        ) from exc
-                    page = context.new_page()
-                    page.set_default_timeout(timeout_ms)
-                except Exception:
-                    if context is not None:
-                        try:
-                            context.close()
-                        except Exception:
-                            pass
-                        context = None
-                    try:
-                        owned_pw.stop()
-                    except Exception:
-                        pass
-                    owned_pw = None
-                    raise
+                    owned_pw, context = launch_persistent_context_with_retry(_launch_owned, profile_dir=profile_dir)
+                except Exception as exc:
+                    teardown_persistent_context(context=context, pw=owned_pw, profile_dir=profile_dir)
+                    raise ProviderTemporaryError(
+                        "Installed Google Chrome could not be launched through Playwright channel='chrome'. "
+                        "Install Google Chrome, then verify Playwright support with: python -m playwright install chromium",
+                        diagnostics={
+                            "errorType": type(exc).__name__,
+                            "browserConfig": self.config.safe_diagnostics(),
+                            "timedOutStage": "launch_browser" if _looks_like_timeout(exc) else None,
+                            "stageTimings": stage_timings.snapshot(),
+                        },
+                    ) from exc
+                page = context.new_page()
+                page.set_default_timeout(timeout_ms)
             with _StageTimer(stage_timings, "open_ebay_page"):
                 # Production query entry is RENDERED_UI_X11 (linux_x11 / desktop_win32).
                 # Playwright must never navigate to a constructed /sch?_nkw= URL — that was
@@ -4112,16 +4113,17 @@ class EbayBrowserSoldCompsProvider:
                 )
         finally:
             if not reuse:
-                if context is not None:
-                    try:
-                        context.close()
-                    except Exception:
-                        pass
-                if owned_pw is not None:
-                    try:
-                        owned_pw.stop()
-                    except Exception:
-                        pass
+                profile_dir = None
+                try:
+                    profile_dir = self.config.ensure_profile_dir()
+                except Exception:
+                    profile_dir = None
+                teardown_persistent_context(
+                    context=context,
+                    pw=owned_pw,
+                    profile_dir=profile_dir,
+                    wait_profile_lock=profile_dir is not None,
+                )
 
     def _parse_page(
         self,
