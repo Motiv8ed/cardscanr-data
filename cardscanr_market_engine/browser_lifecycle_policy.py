@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import unquote, urlparse
+import re
+from urllib.parse import parse_qs, unquote, urlparse
 
 RUNTIME_COLD_START = "COLD_START"
 RUNTIME_INTER_CARD = "INTER_CARD"
@@ -28,6 +29,7 @@ REASON_EXPECTED_PRIOR = "INTER_CARD_EXPECTED_PRIOR_TARGET"
 REASON_UNKNOWN_EBAY = "INTER_CARD_UNKNOWN_EBAY_TARGET"
 REASON_MULTIPLE_TOP = "INTER_CARD_MULTIPLE_TOP_LEVEL_EBAY_TARGETS"
 REASON_NOT_CORRELATED = "INTER_CARD_PRIOR_TARGET_NOT_CORRELATED"
+REASON_CONTINUATION_TAB = "INTER_CARD_CONTINUATION_TAB"
 REASON_PRIOR_NOT_TERMINAL = "INTER_CARD_PRIOR_CARD_NOT_TERMINAL"
 REASON_CHALLENGE = "INTER_CARD_CHALLENGE_TARGET"
 REASON_COLD_UNEXPECTED = "COLD_START_UNEXPECTED_EBAY_TARGET"
@@ -217,6 +219,49 @@ def prior_context_is_healthy_terminal(prior: PriorCardContext | None) -> bool:
     return True
 
 
+def prior_target_id_present(raw_targets: list[dict[str, Any]], prior: PriorCardContext | None) -> bool:
+    if prior is None or not prior.target_id:
+        return False
+    expected = prior.target_id.upper()
+    for item in raw_targets or []:
+        if not isinstance(item, dict):
+            continue
+        tid = _s(item.get("id") or item.get("targetId"))
+        if tid and tid.upper() == expected:
+            return True
+    return False
+
+
+def normalize_ebay_search_query(query: str | None) -> str:
+    """Normalize eBay _nkw / job query strings (case, whitespace, +, %20, hyphen only)."""
+    text = unquote(str(query or "")).replace("+", " ").replace("%20", " ")
+    text = text.replace("-", " ")
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def ebay_au_sch_nkw(url: str) -> str | None:
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if host != "ebay.com.au":
+        return None
+    if "/sch/" not in (parsed.path or ""):
+        return None
+    values = parse_qs(parsed.query, keep_blank_values=False).get("_nkw") or []
+    if not values:
+        return None
+    return normalize_ebay_search_query(values[0])
+
+
+def url_matches_job_query(query: str | None, url: str) -> bool:
+    """True when ebay.com.au /sch/ _nkw equals the normalized current query."""
+    nkw = ebay_au_sch_nkw(url)
+    if nkw is None:
+        return False
+    return nkw == normalize_ebay_search_query(query)
+
+
 def correlates_to_prior(target: dict[str, Any], prior: PriorCardContext) -> bool:
     tid = _s(target.get("id") or target.get("targetId"))
     url = str(target.get("url") or "")
@@ -297,11 +342,14 @@ def evaluate_runtime_targets(
     *,
     mode: str,
     prior: PriorCardContext | None = None,
+    current_query: str | None = None,
+    prior_handoff_stale: bool = False,
 ) -> TargetPolicyResult:
     mode = (mode or RUNTIME_COLD_START).upper()
     if mode not in {RUNTIME_COLD_START, RUNTIME_INTER_CARD}:
         mode = RUNTIME_COLD_START
     classified = classify_cdp_targets(raw_targets, mode=mode, prior=prior)
+    prior_ok = prior_context_is_healthy_terminal(prior)
     reasons: list[str] = []
     top_ebay = [c for c in classified if c.top_level and c.origin_class == "ebay_marketplace"]
     challenges = [c for c in classified if c.reason == REASON_CHALLENGE or c.origin_class == "ebay_challenge"]
@@ -326,9 +374,22 @@ def evaluate_runtime_targets(
         elif len(top_ebay) == 1:
             if expected:
                 pass
+            elif (
+                (prior_ok or prior_handoff_stale)
+                and not prior_target_id_present(raw_targets, prior)
+                and url_matches_job_query(current_query, top_ebay[0].url)
+            ):
+                # Prior CDP target absent; strict _nkw continuation for current query.
+                for row in classified:
+                    if row.top_level and row.origin_class == "ebay_marketplace":
+                        row.blocking = False
+                        row.reason = REASON_CONTINUATION_TAB
             else:
-                reasons.append(REASON_UNKNOWN_EBAY)
-                reasons.append(REASON_NOT_CORRELATED)
+                if prior_handoff_stale and top_ebay:
+                    reasons.append(REASON_COLD_UNEXPECTED)
+                else:
+                    reasons.append(REASON_UNKNOWN_EBAY)
+                    reasons.append(REASON_NOT_CORRELATED)
         # zero top-level ebay is also OK for INTER_CARD (already reset)
 
     # Mark blocking flags consistently for multiples.
@@ -521,6 +582,10 @@ __all__ = [
     "TargetPolicyResult",
     "classify_cdp_targets",
     "correlates_to_prior",
+    "prior_target_id_present",
+    "normalize_ebay_search_query",
+    "ebay_au_sch_nkw",
+    "url_matches_job_query",
     "evaluate_runtime_targets",
     "extra_inter_card_ebay_target_ids",
     "hostname_of",

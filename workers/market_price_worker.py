@@ -230,6 +230,9 @@ def run_worker_loop(
     if pacing_controller is None and _ebay_pacing_enabled(config):
         pacing_controller = OwnedDailyPacingController()
     ensure_continuous_au_safety_env()
+    from cardscanr_market_engine.navigation_runtime_context import ensure_nav_handoff_writer_run_id
+
+    ensure_nav_handoff_writer_run_id()
     budget = ContinuousSafetyBudget.from_env()
     # t323u R0: enforce hourly/daily budget + transient auto-pause in staged (non-continuous) runs too.
     enforce_budget = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "false").strip().lower() in {"1", "true", "yes", "on"}
@@ -446,6 +449,7 @@ def run_worker_loop(
             or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
         )
         try:
+            # eBay-sold freshness (not reference TTL) is enforced in MarketPriceJobRunner.run_job.
             results = runner.run_once(max_jobs=max_jobs)
         except Exception as exc:
             if not is_transient_worker_error(exc):

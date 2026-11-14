@@ -8,7 +8,9 @@ from __future__ import annotations
 import json
 import os
 import traceback
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +31,9 @@ EXPECTED_PRIOR_PATH_ENV = "CARDSCANR_EXPECTED_PRIOR_JSON_PATH"
 PRE_SUBMIT_ONLY_ENV = "CARDSCANR_PRE_SUBMIT_ONLY"
 
 DEFAULT_CONTEXT_PATH = Path(__file__).resolve().parents[1] / "reports" / "runtime" / "nav_runtime_context.json"
+
+NAV_HANDOFF_WRITER_RUN_ENV = "CARDSCANR_NAV_HANDOFF_WRITER_RUN_ID"
+NAV_HANDOFF_MAX_AGE_SECONDS = 30 * 60
 
 INTER_CARD_CONTEXT_NOT_PROPAGATED = "INTER_CARD_CONTEXT_NOT_PROPAGATED"
 INTER_CARD_EXPECTED_TARGET_REJECTED = "INTER_CARD_EXPECTED_TARGET_REJECTED"
@@ -64,6 +69,7 @@ class NavigationRuntimeContext:
     current_market: str | None = None
     current_currency: str | None = None
     marketplace_home: str | None = None
+    prior_handoff_stale: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         prior = self.expected_prior.to_dict() if self.expected_prior is not None else None
@@ -91,7 +97,9 @@ class NavigationRuntimeContext:
     def persist(self, path: Path | None = None) -> Path:
         dest = path or DEFAULT_CONTEXT_PATH
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
+        payload = self.to_dict()
+        payload.update(nav_handoff_write_metadata())
+        dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return dest
 
     def env_exports(self, *, path: Path | None = None) -> dict[str, str]:
@@ -223,6 +231,82 @@ def clear_context_from_environ() -> None:
         os.environ.pop(key, None)
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def nav_handoff_write_metadata() -> dict[str, Any]:
+    ensure_nav_handoff_writer_run_id()
+    return {
+        "recordedAtUtc": _utc_now_iso(),
+        "writerRunId": str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip(),
+        "writerPid": os.getpid(),
+    }
+
+
+def ensure_nav_handoff_writer_run_id() -> str:
+    existing = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
+    if existing:
+        return existing
+    if DEFAULT_CONTEXT_PATH.is_file():
+        try:
+            data = json.loads(DEFAULT_CONTEXT_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                writer_run = str(data.get("writerRunId") or "").strip()
+                recorded = data.get("recordedAtUtc")
+                if writer_run and recorded and not nav_handoff_payload_is_stale(
+                    data, now=datetime.now(timezone.utc)
+                ):
+                    os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = writer_run
+                    return writer_run
+        except (OSError, json.JSONDecodeError):
+            pass
+    run_id = f"{os.getpid()}-{uuid.uuid4().hex[:12]}"
+    os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = run_id
+    return run_id
+
+
+def nav_handoff_payload_is_stale(
+    payload: dict[str, Any],
+    *,
+    now: datetime | None = None,
+) -> bool:
+    recorded = payload.get("recordedAtUtc")
+    if not recorded:
+        return True
+    now = now or datetime.now(timezone.utc)
+    try:
+        ts = datetime.fromisoformat(str(recorded).replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return True
+    if (now - ts).total_seconds() > NAV_HANDOFF_MAX_AGE_SECONDS:
+        return True
+    file_run = str(payload.get("writerRunId") or "").strip()
+    env_run = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
+    if file_run and env_run and file_run != env_run:
+        return True
+    return False
+
+
+def _prior_without_target_id(prior: PriorCardContext) -> PriorCardContext:
+    return PriorCardContext(
+        job_id=prior.job_id,
+        attempt_id=prior.attempt_id,
+        price_key_id=prior.price_key_id,
+        fingerprint=prior.fingerprint,
+        target_id=None,
+        final_url=prior.final_url,
+        query=prior.query,
+        x11_sold_state_verified=prior.x11_sold_state_verified,
+        capture_correlated=prior.capture_correlated,
+        card_verdict=prior.card_verdict,
+        market=prior.market,
+        currency=prior.currency,
+    )
+
+
 def _load_json_env(raw: str) -> dict[str, Any]:
     try:
         data = json.loads(raw)
@@ -233,6 +317,7 @@ def _load_json_env(raw: str) -> dict[str, Any]:
 
 def load_navigation_runtime_context() -> NavigationRuntimeContext:
     data: dict[str, Any] = {}
+    file_payload: dict[str, Any] | None = None
     candidates: list[Path] = []
     path = (os.environ.get(NAV_CONTEXT_PATH_ENV) or os.environ.get(EXPECTED_PRIOR_PATH_ENV) or "").strip()
     if path:
@@ -253,6 +338,7 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
         if not isinstance(loaded, dict):
             continue
         if "runtimeMode" in loaded or "expectedPrior" in loaded or "currentJobId" in loaded:
+            file_payload = dict(loaded)
             data.update(loaded)
             break
         data.setdefault("_priorFile", loaded)
@@ -280,7 +366,7 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
     pre_submit = str(os.environ.get(PRE_SUBMIT_ONLY_ENV) or "").strip() == "1" or bool(
         data.get("preSubmitOnly")
     )
-    return NavigationRuntimeContext(
+    ctx = NavigationRuntimeContext(
         runtime_mode=mode,
         current_job_id=str(data.get("currentJobId") or os.environ.get("CARDSCANR_JOB_ID") or "").strip()
         or None,
@@ -308,6 +394,13 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
         ).strip()
         or None,
     )
+    ensure_nav_handoff_writer_run_id()
+    handoff_basis = file_payload if file_payload is not None else data
+    if nav_handoff_payload_is_stale(handoff_basis):
+        ctx.prior_handoff_stale = True
+        if ctx.expected_prior is not None:
+            ctx.expected_prior = _prior_without_target_id(ctx.expected_prior)
+    return ctx
 
 
 def prepare_context_for_market(
