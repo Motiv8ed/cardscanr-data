@@ -5,6 +5,7 @@ All tests are offline: no Supabase, browser, scheduler writes or eBay requests.
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -58,3 +59,38 @@ class OwnedDailyReleaseHoldTests(TestCase):
             self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "20")
             self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
             self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
+
+    def test_directory_at_flag_path_fails_closed_ignoring_true_environment(self) -> None:
+        with TemporaryDirectory() as temp:
+            flag_dir = Path(temp) / "owned_daily_full_enable.flag"
+            flag_dir.mkdir()
+            with patch.dict(os.environ, {"OWNED_DAILY_FULL_ENABLE": "true"}):
+                self.assertFalse(owned_daily_enablement.owned_daily_full_enable(flag_path=flag_dir))
+
+    def test_unreadable_flag_file_fails_closed_ignoring_true_environment(self) -> None:
+        with TemporaryDirectory() as temp:
+            flag = Path(temp) / "owned_daily_full_enable.flag"
+            flag.write_text("true\n", encoding="utf-8")
+            flag.chmod(0)
+            try:
+                with patch.dict(os.environ, {"OWNED_DAILY_FULL_ENABLE": "true"}):
+                    self.assertFalse(owned_daily_enablement.owned_daily_full_enable(flag_path=flag))
+            finally:
+                flag.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
+    def test_worker_entry_binds_daily_cap_without_prior_apply_continuous_au_env(self) -> None:
+        with TemporaryDirectory() as temp:
+            flag = Path(temp) / "owned_daily_full_enable.flag"
+            flag.write_text("true\n", encoding="utf-8")
+            with (
+                patch.dict(
+                    os.environ,
+                    {"OWNED_DAILY_FULL_ENABLE": "false", "MAX_LIVE_SUBMISSIONS_PER_DAY": "200"},
+                    clear=False,
+                ),
+                patch.object(owned_daily_enablement, "FLAG_PATH", flag),
+            ):
+                self.assertTrue(owned_daily_enablement.ensure_continuous_au_safety_env())
+                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
+                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "20")
+                self.assertEqual(os.environ["MARKET_WORKER_CONCURRENCY"], "1")
