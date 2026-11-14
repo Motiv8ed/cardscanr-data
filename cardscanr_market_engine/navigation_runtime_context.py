@@ -117,6 +117,11 @@ class NavigationRuntimeContext:
             NAV_CONTEXT_PATH_ENV: _windows_to_wsl(dest),
             EXPECTED_PRIOR_PATH_ENV: _windows_to_wsl(prior_dest),
         }
+        # WSL only receives explicit exports (no ambient Windows env), so the
+        # writer run id must be forwarded for same-run handoffs to stay fresh.
+        writer_run = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
+        if writer_run:
+            exports[NAV_HANDOFF_WRITER_RUN_ENV] = writer_run
         if self.current_attempt_id:
             exports["CARDSCANR_LIVE_ATTEMPT_ID"] = str(self.current_attempt_id)
         if self.current_price_key_id:
@@ -238,9 +243,14 @@ def _utc_now_iso() -> str:
 
 
 def nav_handoff_write_metadata() -> dict[str, Any]:
+    # The writing process owns the handoff run identity. The worker mints one at
+    # start; any other writer without one mints its own (never adopts a file id).
+    writer_run = str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip()
+    if not writer_run:
+        writer_run = mint_nav_handoff_writer_run_id()
     return {
         "recordedAtUtc": _utc_now_iso(),
-        "writerRunId": str(os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV) or "").strip(),
+        "writerRunId": writer_run,
         "writerPid": os.getpid(),
     }
 

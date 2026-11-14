@@ -628,6 +628,134 @@ class EbayBrowserReferenceFreshnessTests(unittest.TestCase):
         budget = ContinuousSafetyBudget.from_env()
         self.assertIsInstance(budget, ContinuousSafetyBudget)
 
+class WriterRunPropagationTests(unittest.TestCase):
+    """Writer run id must cross the explicit-export (WSL) boundary for same-run handoffs."""
+
+    def setUp(self) -> None:
+        import tempfile
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = Path(self._tmp.name)
+        self._saved_run = os.environ.get(NAV_HANDOFF_WRITER_RUN_ENV)
+
+    def tearDown(self) -> None:
+        clear_context_from_environ()
+        if self._saved_run is None:
+            os.environ.pop(NAV_HANDOFF_WRITER_RUN_ENV, None)
+        else:
+            os.environ[NAV_HANDOFF_WRITER_RUN_ENV] = self._saved_run
+        self._tmp.cleanup()
+
+    def _ctx(self):
+        from cardscanr_market_engine.navigation_runtime_context import NavigationRuntimeContext
+
+        return NavigationRuntimeContext(
+            runtime_mode=RUNTIME_INTER_CARD,
+            current_job_id="next-job",
+            current_query=DRIFLOON_QUERY,
+            expected_prior=_stale_charizard_prior(),
+        )
+
+    def _run_child(self, exports: dict, *, forward_run_id: bool) -> dict:
+        import subprocess
+
+        from cardscanr_market_engine.navigation_runtime_context import EXPECTED_PRIOR_PATH_ENV
+
+        env = {k: v for k, v in os.environ.items() if not k.startswith("CARDSCANR_")}
+        for key, value in exports.items():
+            if key == NAV_HANDOFF_WRITER_RUN_ENV and not forward_run_id:
+                continue
+            env[key] = value
+        # WSL paths are remapped to the Windows temp files for this offline child.
+        env[NAV_CONTEXT_PATH_ENV] = str(self.tmp / "nav.json")
+        env[EXPECTED_PRIOR_PATH_ENV] = str(self.tmp / "nav.prior.json")
+        code = (
+            "import json,sys; sys.path.insert(0, sys.argv[1]);"
+            "from cardscanr_market_engine.navigation_runtime_context import load_navigation_runtime_context as L;"
+            "c=L(); p=c.expected_prior;"
+            "print(json.dumps({'stale': c.prior_handoff_stale, 'target': p.target_id if p else None}))"
+        )
+        out = subprocess.run(
+            [sys.executable, "-c", code, str(ROOT)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+        return json.loads(out.stdout.strip().splitlines()[-1])
+
+    def test_env_exports_forward_writer_run_id(self) -> None:
+        run_id = mint_nav_handoff_writer_run_id()
+        exports = self._ctx().env_exports(path=self.tmp / "nav.json")
+        self.assertEqual(exports.get(NAV_HANDOFF_WRITER_RUN_ENV), run_id)
+        written = json.loads((self.tmp / "nav.json").read_text(encoding="utf-8"))
+        self.assertEqual(written.get("writerRunId"), run_id)
+
+    def test_writer_without_run_id_mints_own_and_exports_it(self) -> None:
+        os.environ.pop(NAV_HANDOFF_WRITER_RUN_ENV, None)
+        exports = self._ctx().env_exports(path=self.tmp / "nav.json")
+        run_id = exports.get(NAV_HANDOFF_WRITER_RUN_ENV)
+        self.assertTrue(run_id)
+        written = json.loads((self.tmp / "nav.json").read_text(encoding="utf-8"))
+        self.assertEqual(written.get("writerRunId"), run_id)
+
+    def test_cross_process_same_run_handoff_is_fresh(self) -> None:
+        mint_nav_handoff_writer_run_id()
+        exports = self._ctx().env_exports(path=self.tmp / "nav.json")
+        result = self._run_child(exports, forward_run_id=True)
+        self.assertFalse(result["stale"])
+        self.assertEqual(result["target"], _stale_charizard_prior().target_id)
+
+    def test_cross_process_without_run_id_is_stale(self) -> None:
+        mint_nav_handoff_writer_run_id()
+        exports = self._ctx().env_exports(path=self.tmp / "nav.json")
+        result = self._run_child(exports, forward_run_id=False)
+        self.assertTrue(result["stale"])
+        self.assertIsNone(result["target"])
+
+    def test_cross_process_other_run_id_is_stale(self) -> None:
+        mint_nav_handoff_writer_run_id()
+        exports = dict(self._ctx().env_exports(path=self.tmp / "nav.json"))
+        exports[NAV_HANDOFF_WRITER_RUN_ENV] = "other-run-000000000000"
+        result = self._run_child(exports, forward_run_id=True)
+        self.assertTrue(result["stale"])
+        self.assertIsNone(result["target"])
+
+    def test_wsl_search_call_receives_writer_run_id(self) -> None:
+        from cardscanr_market_engine.navigation_runtime_context import (
+            PRE_SUBMIT_ONLY_ENV,
+            PRE_SUBMIT_QUERY_READY,
+            apply_context_to_environ,
+        )
+        from cardscanr_market_engine.providers.linux_x11_ebay_nav import navigate_query_to_sold
+
+        run_id = mint_nav_handoff_writer_run_id()
+        apply_context_to_environ(self._ctx())
+        os.environ[PRE_SUBMIT_ONLY_ENV] = "1"
+        captured: dict = {}
+
+        def _fake_wsl(args, **kwargs):
+            captured["env"] = dict(kwargs.get("env_exports") or {})
+            return {
+                "ok": True,
+                "resultCode": PRE_SUBMIT_QUERY_READY,
+                "preSubmitQueryReady": True,
+                "query": DRIFLOON_QUERY,
+                "submitted": False,
+                "searchSubmissionStarted": False,
+                "queryVisibleConfirmed": True,
+            }
+
+        try:
+            with mock.patch(
+                "cardscanr_market_engine.providers.linux_x11_ebay_nav._wsl_python",
+                side_effect=_fake_wsl,
+            ):
+                navigate_query_to_sold(DRIFLOON_QUERY, reset_homepage=True, attempt_id="a1", pre_submit_only=True)
+        finally:
+            os.environ.pop(PRE_SUBMIT_ONLY_ENV, None)
+        self.assertEqual(captured["env"].get(NAV_HANDOFF_WRITER_RUN_ENV), run_id)
 
 if __name__ == "__main__":
     unittest.main()
