@@ -30,6 +30,7 @@ from cardscanr_market_engine.international.fallback_runner import InternationalM
 from cardscanr_market_engine.navigation_runtime_context import bind_persisted_nav_context_path
 from cardscanr_market_engine.owned_daily_enablement import (
     apply_continuous_au_env,
+    ensure_continuous_au_safety_env,
     owned_daily_full_enable,
     write_owned_daily_flag,
 )
@@ -186,6 +187,7 @@ def run_worker_loop(
     pacing_controller = pacing
     if pacing_controller is None and _ebay_pacing_enabled(config):
         pacing_controller = OwnedDailyPacingController()
+    ensure_continuous_au_safety_env()
     budget = ContinuousSafetyBudget.from_env()
     last_success = None
     last_transient = None
@@ -454,8 +456,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     bind_persisted_nav_context_path()
     args = parse_args()
-    if owned_daily_full_enable():
-        apply_continuous_au_env()
+    ensure_continuous_au_safety_env()
     config = MarketEngineConfig.from_env(require_supabase=True)
     if config.provider_name == "ebay_browser" and os.getenv("CONFIRM_LIVE_EBAY_WORKER", "").strip().lower() != "true":
         raise ValueError(

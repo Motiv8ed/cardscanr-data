@@ -11,13 +11,16 @@ import time
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from cardscanr_market_engine.owned_daily_enablement import owned_daily_full_enable
 from cardscanr_market_engine.scheduler import MarketPriceRefreshScheduler, MarketSchedulerConfig
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 
 def _maybe_run_owned_daily(client: object) -> dict | None:
     """Once-daily owned pass via the existing scheduler process (no second competitor)."""
-    enabled = os.getenv("OWNED_DAILY_FULL_ENABLE", "false").strip().lower() in {"1", "true", "yes", "on"}
+    # The persistent flag is authoritative; the environment is only a fallback
+    # when no flag file exists. Never bypass an explicit owner hold.
+    enabled = owned_daily_full_enable()
     print(
         "[market-scheduler] owned-daily "
         f"FULL_ENABLE={str(enabled).lower()} "
