@@ -42,7 +42,7 @@ def official_mark() -> Image.Image:
         if res.geturl() != url:
             raise RuntimeError("Unapproved brand mark redirect")
         data = res.read(400_001)
-    if len(data) > 400_000 or not data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+    if len(data) > 400_000 or not data.startswith(bytes.fromhex("89504e470d0a1a0a")):
         raise RuntimeError("Official live gold mark unavailable: no replacement logo permitted")
     image = Image.open(io.BytesIO(data)).convert("RGBA")
     if image.width < 100 or image.height < 100:
