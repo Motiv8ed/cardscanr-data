@@ -50,7 +50,7 @@ class AutoAcquisitionTests(unittest.TestCase):
         db.execute('CREATE TABLE artifacts (source_id TEXT,kind TEXT,url TEXT,sha256 TEXT,byte_size INTEGER,relative_path TEXT,metadata_json TEXT,fetched_at TEXT)')
         card_url='https://official.test/kr/cards/123'
         image_url='https://official.test/images/123.png'
-        data=[('card',card_url,b'<html>pika</html>', {'region':'KR','language':'ko','rights_status':rights}),
+        data=[('card',card_url,b'<html>pika</html>', {'region':'KR','language':'ko','collector_number':'012','rights_status':rights}),
               ('image',image_url,b'\x89PNG\r\n\x1a\nfilebytes', {'region':'KR','language':'ko','rights_status':rights,'parent_url':card_url})]
         for kind,url,content,meta in data:
             relative=f'sources/kr-official/{kind}/test.{"png" if kind=="image" else "html"}'
@@ -93,13 +93,34 @@ class AutoAcquisitionTests(unittest.TestCase):
                 'canonical_printing_id':'cid1','card_variant_id':'vid1'})+'\n')
             staging=root/'world.sqlite'
             conn=sqlite3.connect(staging)
-            conn.executescript('CREATE TABLE card_printing (id TEXT PRIMARY KEY); CREATE TABLE card_variant (id TEXT PRIMARY KEY,card_printing_id TEXT); INSERT INTO card_printing VALUES ("cid1"); INSERT INTO card_variant VALUES ("vid1","cid1");')
+            conn.executescript('CREATE TABLE set_release (id TEXT PRIMARY KEY,region_code TEXT,language_code TEXT); CREATE TABLE card_printing (id TEXT PRIMARY KEY,set_release_id TEXT,collector_number TEXT); CREATE TABLE card_variant (id TEXT PRIMARY KEY,card_printing_id TEXT); INSERT INTO set_release VALUES ("s1","KR","ko"); INSERT INTO card_printing VALUES ("cid1","s1","012"); INSERT INTO card_variant VALUES ("vid1","cid1");')
             conn.close()
             summary=module.stage_app_candidates(arch,root/'output',crosswalk=mapping,worldwide_db=staging)
             self.assertEqual(summary['app_image_import_candidates'],1)
             manifest=json.loads((root/'output'/'app_image_import_candidates.jsonl').read_text().strip())
             self.assertFalse(manifest['publicationApproved'])
             self.assertEqual(manifest['cardVariantId'],'vid1')
+
+    def test_crosswalk_wrong_region_or_card_number_is_quarantined(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            arch,url=self.make_archive(root,rights='approved_for_mirror')
+            mapping=root/'map.jsonl'
+            mapping.write_text(json.dumps({'source_id':'kr-official','source_card_url':url,'match_status':'verified',
+                'canonical_printing_id':'cid1','card_variant_id':'vid1'})+'\n')
+            world=root/'world.sqlite';conn=sqlite3.connect(world)
+            conn.executescript('CREATE TABLE set_release (id TEXT PRIMARY KEY,region_code TEXT,language_code TEXT); '
+                'CREATE TABLE card_printing (id TEXT PRIMARY KEY,set_release_id TEXT,collector_number TEXT); '
+                'CREATE TABLE card_variant (id TEXT PRIMARY KEY,card_printing_id TEXT); '
+                'INSERT INTO set_release VALUES ("s1","CN","zh-cn"); '
+                'INSERT INTO card_printing VALUES ("cid1","s1","999"); '
+                'INSERT INTO card_variant VALUES ("vid1","cid1");')
+            conn.close()
+            summary=module.stage_app_candidates(arch,root/'output',crosswalk=mapping,worldwide_db=world)
+            self.assertEqual(summary['app_image_import_candidates'],0)
+            row=json.loads((root/'output'/'card_candidates.jsonl').read_text())
+            self.assertIn('crosswalk_region_or_language_mismatch',row['blocked_reasons'])
+            self.assertIn('crosswalk_collector_number_not_confirmed',row['blocked_reasons'])
 
     def test_worldwide_gap_query_counts_distinct_printings(self):
         with tempfile.TemporaryDirectory() as tmp:
