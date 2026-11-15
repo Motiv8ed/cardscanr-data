@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "note": "Owner-editable LOCAL-ONLY acquisition sources. Disabled until source permissions, robots and selectors are reviewed. These are examples, not approvals to reproduce artwork commercially.",
+  "sources": [
+    {
+      "id": "tw-official",
+      "name": "Pokémon Card Game Taiwan",
+      "region": "TW", "language": "zh-Hant", "rights_status": "metadata_only",
+      "archive_policy": "private_research_only", "enabled": false,
+      "page_hosts": ["asia.pokemon-card.com"], "page_paths": ["/tw/card-search/"],
+      "image_hosts": ["asia.pokemon-card.com"], "image_paths": ["/tw/card-img/"],
+      "selectors": {
+        "card_links": "a[href*='/tw/card-search/detail/']", "next_page": "a[rel='next']",
+        "card_image": "img[src*='/tw/card-img/']",
+        "fields": {"name": "h1", "collector_number": ".collectorNumber", "artist": ".illustrator"}
+      },
+      "seeds": [{"kind": "index", "url": "https://asia.pokemon-card.com/tw/card-search/"}]
+    },
+    {
+      "id": "hk-official",
+      "name": "Pokémon Card Game Hong Kong",
+      "region": "HK", "language": "zh-Hant", "rights_status": "metadata_only",
+      "archive_policy": "private_research_only", "enabled": false,
+      "page_hosts": ["asia.pokemon-card.com"], "page_paths": ["/hk/card-search/"],
+      "image_hosts": ["asia.pokemon-card.com"], "image_paths": ["/hk/card-img/"],
+      "selectors": {
+        "card_links": "a[href*='/hk/card-search/detail/']", "next_page": "a[rel='next']",
+        "card_image": "img[src*='/hk/card-img/']",
+        "fields": {"name": "h1", "collector_number": ".collectorNumber", "artist": ".illustrator"}
+      },
+      "seeds": [{"kind": "index", "url": "https://asia.pokemon-card.com/hk/card-search/"}]
+    },
+    {
+      "id": "cn-official",
+      "name": "Pokémon China official product/card research",
+      "region": "CN", "language": "zh-Hans", "rights_status": "metadata_only",
+      "archive_policy": "private_research_only", "enabled": false,
+      "page_hosts": ["www.pokemon.cn"], "page_paths": ["/tcg/"],
+      "image_hosts": ["www.pokemon.cn"], "image_paths": ["/tcg/"],
+      "selectors": {"card_links": "a[href*='/tcg/']", "card_image": "meta[property='og:image']", "fields": {"name": "h1"}},
+      "seeds": []
+    },
+    {
+      "id": "kr-official",
+      "name": "Pokémon Korea card catalogue",
+      "region": "KR", "language": "ko", "rights_status": "metadata_only",
+      "archive_policy": "private_research_only", "enabled": false,
+      "page_hosts": ["pokemoncard.co.kr"], "page_paths": ["/cards"],
+      "image_hosts": ["pokemoncard.co.kr"], "image_paths": ["/upload/", "/data/", "/cards/"],
+      "selectors": {"card_links": "a[href*='/cards/']", "card_image": "meta[property='og:image']", "fields": {"name": "h1"}},
+      "seeds": [{"kind": "index", "url": "https://pokemoncard.co.kr/cards"}]
+    },
+    {
+      "id": "jp-official",
+      "name": "Pokémon Card Game Japan",
+      "region": "JP", "language": "ja", "rights_status": "metadata_only",
+      "archive_policy": "private_research_only", "enabled": false,
+      "page_hosts": ["www.pokemon-card.com"], "page_paths": ["/card-search/"],
+      "image_hosts": ["www.pokemon-card.com"], "image_paths": ["/assets/", "/card-search/"],
+      "selectors": {"card_links": "a[href*='/card-search/details.php']", "card_image": "meta[property='og:image']", "fields": {"name": "h1"}},
+      "seeds": [{"kind": "index", "url": "https://www.pokemon-card.com/card-search/"}]
+    }
+  ]
+}
