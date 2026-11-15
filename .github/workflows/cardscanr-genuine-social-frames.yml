@@ -1,0 +1,45 @@
+name: Build CardScanR genuine social image frames
+
+on:
+  push:
+    branches:
+      - assets/dark-gold-story-frames-20261115
+    paths:
+      - '.github/workflows/cardscanr-genuine-social-frames.yml'
+      - 'social/2026-11-15/build_frames.py'
+
+permissions:
+  contents: write
+
+jobs:
+  frame:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout source screenshots
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+
+      - name: Render exact screenshots within black and gold branded frames
+        run: python social/2026-11-15/build_frames.py
+
+      - name: Publish framed files to the same PR branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add social/2026-11-15/framed/
+          if git diff --cached --quiet; then
+            echo 'Frames already current'
+          else
+            git commit -m 'assets: real CardScanR framed feed and Story images [skip ci]'
+            git push origin HEAD:assets/dark-gold-story-frames-20261115
+          fi
