@@ -101,6 +101,25 @@ class AutoAcquisitionTests(unittest.TestCase):
             self.assertFalse(manifest['publicationApproved'])
             self.assertEqual(manifest['cardVariantId'],'vid1')
 
+    def test_automatic_existing_provider_identity_only_if_one_exact_variant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); arch,url=self.make_archive(root,rights='approved_for_mirror')
+            world=root/'world.sqlite'; conn=sqlite3.connect(world)
+            conn.executescript('CREATE TABLE source_record (id TEXT,provider_id TEXT,provider_record_id TEXT,record_type TEXT); '
+                'CREATE TABLE set_release (id TEXT,region_code TEXT,language_code TEXT); '
+                'CREATE TABLE card_printing (id TEXT,set_release_id TEXT,collector_number TEXT,source_record_id TEXT); '
+                'CREATE TABLE card_variant (id TEXT,card_printing_id TEXT); '
+                'INSERT INTO source_record VALUES ("rec1","pokemon-korea-official-archive","123","card"); '
+                'INSERT INTO set_release VALUES ("s1","KR","ko"); '
+                'INSERT INTO card_printing VALUES ("p1","s1","012","rec1"); '
+                'INSERT INTO card_variant VALUES ("v1","p1");')
+            conn.close()
+            summary=module.stage_app_candidates(arch,root/'output',worldwide_db=world)
+            self.assertEqual(summary['app_image_import_candidates'],1)
+            card=json.loads((root/'output'/'card_candidates.jsonl').read_text())
+            self.assertEqual(card['exact_identity']['match_method'],
+                             'exact_existing_provider_card_id_region_language_collector_single_variant')
+
     def test_crosswalk_wrong_region_or_card_number_is_quarantined(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
