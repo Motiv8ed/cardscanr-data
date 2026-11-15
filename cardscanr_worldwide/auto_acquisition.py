@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -117,6 +118,51 @@ def run_cycle(feed: Path, archive: Path, *, database: Path | None = None,
             "nothing_run_reason": "no_enabled_sources_or_seeds" if not results else None}
 
 
+SOURCE_PROVIDERS = {
+    "tw-official": "pokemon-asia-tw-official",
+    "hk-official": "pokemon-asia-hk-official",
+    "kr-official": "pokemon-korea-official-archive",
+    "jp-official": "pokemon-japan-cards-official",
+    "cn-official": "pokemon-cn-official",
+}
+
+
+def automatic_exact_crosswalk(world: sqlite3.Connection, source_id: str,
+                              page_url: str, region: str, language: str,
+                              collector_number: str | None) -> dict[str, str] | None:
+    """Find an unambiguous existing canonical identity from exact provider ID.
+
+    No fuzzy name matching, no conflation of finish variants, and no assumption
+    that two regional cards with the same number represent the same printing.
+    """
+    provider = SOURCE_PROVIDERS.get(source_id)
+    if not provider or not collector_number:
+        return None
+    source_num = re.search(r"/(\d+)/?$", page_url.split("?",1)[0])
+    if source_num is None:
+        return None
+    try:
+        candidates = world.execute(
+            "SELECT DISTINCT p.id,v.id,sr.region_code,sr.language_code,p.collector_number "
+            "FROM source_record r JOIN card_printing p ON p.source_record_id=r.id "
+            "JOIN card_variant v ON v.card_printing_id=p.id "
+            "JOIN set_release sr ON sr.id=p.set_release_id "
+            "WHERE r.provider_id=? AND r.provider_record_id=? AND r.record_type='card'",
+            (provider,source_num.group(1))
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return None
+    expected_language = {"zh-Hant":"zh-tw", "zh-Hans":"zh-cn"}.get(language, language)
+    printed_number = str(collector_number).split("/",1)[0].strip()
+    exact = [row for row in candidates if row[2]==region and row[3]==expected_language
+             and str(row[4]).strip()==printed_number]
+    if len(exact) != 1:
+        return None
+    return {"source_id":source_id,"source_card_url":page_url,
+            "canonical_printing_id":exact[0][0],"card_variant_id":exact[0][1],
+            "match_status":"verified","match_method":"exact_existing_provider_card_id_region_language_collector_single_variant"}
+
+
 def stage_app_candidates(archive: Path, output: Path, *,
                          crosswalk: Path | None = None,
                          worldwide_db: Path | None = None) -> dict[str, Any]:
@@ -181,6 +227,9 @@ def stage_app_candidates(archive: Path, output: Path, *,
                 continue
             md = row["metadata"]
             mapping = maps.get((row["source_id"],row["url"]))
+            if mapping is None and world is not None:
+                mapping = automatic_exact_crosswalk(world, row["source_id"], row["url"],
+                    md.get("region"), md.get("language"), md.get("collector_number"))
             images = images_by_parent.get((row["source_id"],row["url"]), [])
             reasons = []
             if not mapping or mapping.get("match_status") != "verified":
@@ -208,7 +257,7 @@ def stage_app_candidates(archive: Path, output: Path, *,
                         str(md.get("language")),str(md.get("language")))
                     if found[0] != md.get("region") or found[1] != expected_language:
                         reasons.append("crosswalk_region_or_language_mismatch")
-                    if not md.get("collector_number") or str(md.get("collector_number")).strip() != str(found[2]).strip():
+                    if not md.get("collector_number") or str(md.get("collector_number")).split("/",1)[0].strip() != str(found[2]).strip():
                         reasons.append("crosswalk_collector_number_not_confirmed")
             record = {
                 "source_id": row["source_id"], "source_card_url": row["url"],
