@@ -35,7 +35,7 @@ def load_mark():
     with urlopen(req,timeout=15) as r:
         if r.geturl().split("/")[2].lower()!="cardscanr.com":raise RuntimeError("Unexpected logo redirect")
         content=r.read(1_000_001)
-    if len(content)>1_000_000 or not content.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+    if len(content)>1_000_000 or not content.startswith(b"\x89PNG\r\n\x1a\n"):
         raise RuntimeError("Official CardScanR logo PNG unavailable")
     return Image.open(BytesIO(content)).convert("RGBA")
 def rtext(draw,txt,x,y,max_width,size,color=WHITE,bold=False,space=1.19):
@@ -100,6 +100,6 @@ def main():
             img.save(file,format="PNG",optimize=True)
             item["outputs"][fmt]=str(file.relative_to(ROOT))
         manifest["items"].append(item)
-    (OUTPUT/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n",encoding="utf8")
+    (OUTPUT/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf8")
     print("Generated "+str(len(ITEMS)*2)+" first-party branded social PNGs")
 if __name__=="__main__":main()
