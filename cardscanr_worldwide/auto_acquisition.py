@@ -195,9 +195,21 @@ def stage_app_candidates(archive: Path, output: Path, *,
                 reasons.append("no_read_only_worldwide_identity_check")
             if mapping and world is not None:
                 cid, vid = mapping.get("canonical_printing_id"),mapping.get("card_variant_id")
-                found = world.execute("SELECT 1 FROM card_variant v JOIN card_printing p "
-                    "ON p.id=v.card_printing_id WHERE p.id=? AND v.id=?",(cid,vid)).fetchone() if cid and vid else None
-                if not found: reasons.append("crosswalk_ids_not_in_worldwide_staging")
+                found = world.execute(
+                    "SELECT sr.region_code,sr.language_code,p.collector_number FROM card_variant v "
+                    "JOIN card_printing p ON p.id=v.card_printing_id "
+                    "JOIN set_release sr ON sr.id=p.set_release_id "
+                    "WHERE p.id=? AND v.id=?",(cid,vid)
+                ).fetchone() if cid and vid else None
+                if not found:
+                    reasons.append("crosswalk_ids_not_in_worldwide_staging")
+                else:
+                    expected_language = {"zh-Hant":"zh-tw", "zh-Hans":"zh-cn"}.get(
+                        str(md.get("language")),str(md.get("language")))
+                    if found[0] != md.get("region") or found[1] != expected_language:
+                        reasons.append("crosswalk_region_or_language_mismatch")
+                    if not md.get("collector_number") or str(md.get("collector_number")).strip() != str(found[2]).strip():
+                        reasons.append("crosswalk_collector_number_not_confirmed")
             record = {
                 "source_id": row["source_id"], "source_card_url": row["url"],
                 "region": md.get("region"),"language": md.get("language"),
