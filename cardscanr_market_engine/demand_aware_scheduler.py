@@ -323,7 +323,7 @@ def assign_scheduler_lane(
         return "FRESH_SKIP" if band == "FRESH_SKIP" else "NOT_ELIGIBLE"
     if demand_class in {"HIGH", "MEDIUM"}:
         return "DEMAND"
-    if source_class in {"none", "reference_only", "structured_fallback"} or band in {
+    if source_class in {"none", "reference_only", "structured_fallback", "unattributed"} or band in {
         "P0_NEVER_PRICED",
         "P0_NEEDS_VERIFIED_LOCAL",
     }:
@@ -352,6 +352,8 @@ def reason_code_for(
         return f"FRESH_SKIP_{demand_class}_LT_{threshold}H"
     if source_class in {"reference_only", "structured_fallback"}:
         return "DUE_REFERENCE_ONLY_NEEDS_VERIFIED_LOCAL"
+    if source_class == "unattributed":
+        return "DUE_UNATTRIBUTED_NEEDS_VERIFIED_LOCAL"
     if source_class == "none" or band == "P0_NEVER_PRICED":
         return "DUE_NEVER_PRICED"
     if demand_class == "HIGH":

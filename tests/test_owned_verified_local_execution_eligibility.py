@@ -133,6 +133,89 @@ class ExecutionEligibilityUnitTests(unittest.TestCase):
         self.assertTrue(d.scheduler_due)
         self.assertEqual(d.scheduler_band, "P0_NEEDS_VERIFIED_LOCAL")
 
+
+    def test_unattributed_legacy_price_is_not_verified_local(self) -> None:
+        from cardscanr_market_engine.owned_daily_source_policy import classify_owned_price_source
+
+        self.assertEqual(
+            classify_owned_price_source(
+                current_market_price=3.25, display_price_source=None, provider=None
+            ),
+            "unattributed",
+        )
+        self.assertEqual(
+            classify_owned_price_source(
+                current_market_price=3.25, display_price_source="", provider=""
+            ),
+            "unattributed",
+        )
+
+    def test_recent_legacy_price_with_future_reference_due_never_fresh_skips(self) -> None:
+        # ChatGPT CHANGES_NEEDED on cbb19de6: a recent unattributed price plus a
+        # future reference-due date must never return SKIP_ALREADY_FRESH_VERIFIED_LOCAL.
+        d = evaluate_owned_verified_local_execution(
+            {
+                "current_market_price": 3.25,
+                "display_price_source": None,
+                "provider": None,
+                "last_updated_at": (NOW - timedelta(hours=1)).isoformat(),
+                "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+                "stale_after": "2099-01-01T00:00:00+00:00",
+                "refresh_status": "completed",
+            },
+            now=NOW,
+        )
+        self.assertTrue(d.should_execute)
+        self.assertFalse(d.would_skip_fresh)
+        self.assertNotEqual(d.reason_code, "SKIP_ALREADY_FRESH_VERIFIED_LOCAL")
+        self.assertEqual(d.reason_code, "EXECUTE_UNATTRIBUTED_NEEDS_VERIFIED_LOCAL")
+        self.assertEqual(d.source_class, "unattributed")
+        self.assertFalse(d.verified_local)
+        self.assertIsNone(d.successful_verified_at)
+        self.assertEqual(d.scheduler_band, "P0_NEEDS_VERIFIED_LOCAL")
+
+    def test_unattributed_failed_backoff_is_not_verified_freshness_skip(self) -> None:
+        # Failed-attempt backoff stays a separate, explicit skip — not sold freshness.
+        d = evaluate_owned_verified_local_execution(
+            {
+                "current_market_price": 3.25,
+                "display_price_source": None,
+                "provider": None,
+                "last_updated_at": (NOW - timedelta(hours=1)).isoformat(),
+                "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+                "stale_after": "2099-01-01T00:00:00+00:00",
+                "refresh_status": "failed",
+                "last_error_message": "POST_SOLD_CAPTURE_FAILURE: CAPTCHA",
+            },
+            now=NOW,
+        )
+        self.assertFalse(d.should_execute)
+        self.assertFalse(d.scheduler_due)
+        self.assertFalse(d.would_skip_fresh)
+        self.assertEqual(d.reason_code, "SKIP_BACKOFF_NOT_DUE")
+        self.assertNotEqual(d.reason_code, "SKIP_ALREADY_FRESH_VERIFIED_LOCAL")
+        self.assertEqual(d.source_class, "unattributed")
+        self.assertFalse(d.verified_local)
+        self.assertEqual(d.scheduler_band, "P0_NEEDS_VERIFIED_LOCAL")
+        self.assertEqual(d.details.get("bandReason"), "p0_needs_verified_local_backoff")
+
+    def test_attributed_verified_local_still_fresh_skips(self) -> None:
+        # Control: explicit eBay sold attribution plus a fresh stamp may still noop.
+        d = evaluate_owned_verified_local_execution(
+            {
+                "current_market_price": 3.25,
+                "display_price_source": "verified_local",
+                "provider": "ebay_browser",
+                "last_updated_at": (NOW - timedelta(hours=1)).isoformat(),
+                "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+                "refresh_status": "completed",
+            },
+            now=NOW,
+        )
+        self.assertFalse(d.should_execute)
+        self.assertTrue(d.would_skip_fresh)
+        self.assertEqual(d.reason_code, "SKIP_ALREADY_FRESH_VERIFIED_LOCAL")
+
     def test_scheduler_due_and_execution_agree(self) -> None:
         row = _ref_row()
         band, due, *_ = classify_owned_daily_band(row, now=NOW)

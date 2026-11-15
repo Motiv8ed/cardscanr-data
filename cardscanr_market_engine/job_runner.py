@@ -757,6 +757,9 @@ class MarketPriceJobRunner:
             # Owned verified-local intent: reason contains owned_daily: (scheduler or
             # reliability harness that embeds the scheduler reason).
             is_owned_verified_local_intent = job_requests_owned_verified_local(reason=job.reason)
+            provider_name = str(getattr(self.provider, "provider_name", "") or "").strip().lower()
+            apply_ebay_sold_freshness = provider_name == "ebay_browser"
+            use_source_aware_freshness = is_owned_verified_local_intent or apply_ebay_sold_freshness
             is_owned_daily = is_owned_verified_local_intent
             due_raw = (prior_cache or {}).get("next_refresh_due_at") or (prior_cache or {}).get("stale_after")
             due = None
@@ -775,7 +778,7 @@ class MarketPriceJobRunner:
             # Source-aware owned verified-local gate — MUST run before generic due skip.
             # A recent REFERENCE-ONLY last_updated_at / next_refresh_due_at must not
             # produce skipped_already_fresh for P0_NEEDS_VERIFIED_LOCAL work.
-            if not force and is_owned_verified_local_intent:
+            if not force and use_source_aware_freshness:
                 demand_hours = int(DEFAULT_DEMAND_AWARE_POLICY.normal_verified_ttl_hours)
                 demand_index = getattr(self, "_demand_index", None)
                 if demand_index is None:
@@ -828,20 +831,37 @@ class MarketPriceJobRunner:
                     pricing_intent=PRICING_INTENT_OWNED_VERIFIED_LOCAL,
                 )
                 if not owned_exec.should_execute:
+                    # Verified sold freshness and failed-attempt backoff are both
+                    # intentional skips, but they must not share the fresh-noop
+                    # outcome. Only genuine fresh eBay sold evidence may claim
+                    # owned_daily_fresh_noop / skipped_already_fresh.
+                    if (
+                        owned_exec.reason_code == "SKIP_ALREADY_FRESH_VERIFIED_LOCAL"
+                        or owned_exec.would_skip_fresh
+                    ):
+                        skip_status = "skipped_already_fresh"
+                        cancel_reason = "skipped_already_fresh"
+                        outcome_class = "owned_daily_fresh_noop"
+                        owned_outcome = "already_fresh_noop"
+                    else:
+                        skip_status = "skipped_backoff_not_due"
+                        cancel_reason = "skipped_backoff_not_due"
+                        outcome_class = "owned_daily_backoff_noop"
+                        owned_outcome = "backoff_not_due_noop"
                     self.logger(
-                        f"[market-engine] skipped_already_fresh job={job.id} "
+                        f"[market-engine] {skip_status} job={job.id} "
                         f"reason={owned_exec.reason_code} band={owned_exec.scheduler_band} "
                         f"sourceClass={owned_exec.source_class} "
                         f"verifiedAt={owned_exec.successful_verified_at}"
                     )
                     if hasattr(self.client, "cancel_job"):
-                        self.client.cancel_job(job_id=job.id, reason="skipped_already_fresh")
+                        self.client.cancel_job(job_id=job.id, reason=cancel_reason)
                     return {
                         "jobId": job.id,
                         "priceKeyId": price_key.id,
-                        "status": "skipped_already_fresh",
-                        "outcomeClass": "owned_daily_fresh_noop",
-                        "ownedDailyOutcome": "already_fresh_noop",
+                        "status": skip_status,
+                        "outcomeClass": outcome_class,
+                        "ownedDailyOutcome": owned_outcome,
                         "executionEligibility": owned_exec.to_dict(),
                         "lastUpdatedAt": owned_exec.successful_verified_at,
                         "nextRefreshDueAt": owned_exec.next_eligible_at,
@@ -851,8 +871,13 @@ class MarketPriceJobRunner:
                     f"reason={owned_exec.reason_code} band={owned_exec.scheduler_band} "
                     f"sourceClass={owned_exec.source_class} cacheDue={due_raw}"
                 )
-            elif not force and due is not None and due > now:
-                # Generic (non-owned) cache freshness — unchanged for manual/API/reference jobs.
+            elif (
+                not force
+                and due is not None
+                and due > now
+                and not apply_ebay_sold_freshness
+            ):
+                # Generic cache TTL skip — not used for ebay_browser (eBay sold evidence only).
                 self.logger(f"[market-engine] skipped_already_fresh job={job.id} due={due_raw}")
                 if hasattr(self.client, "cancel_job"):
                     self.client.cancel_job(

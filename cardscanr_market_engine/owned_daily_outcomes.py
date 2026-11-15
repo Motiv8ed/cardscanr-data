@@ -249,7 +249,7 @@ def summarize_outcome_counts(results: list[dict[str, Any]]) -> dict[str, int]:
     }
     for row in results:
         outcome = str(row.get("ownedDailyOutcome") or row.get("outcomeClass") or "").strip()
-        if outcome in HEALTHY_CHECK_OUTCOMES or outcome == "already_fresh_noop" or outcome == "owned_daily_fresh_noop":
+        if outcome in HEALTHY_CHECK_OUTCOMES or outcome in {"already_fresh_noop", "owned_daily_fresh_noop", "owned_daily_backoff_noop", "backoff_not_due_noop"}:
             counts["OWNED_PRICE_CHECKS_COMPLETED"] += 1
         if outcome == UPDATED_FROM_EBAY:
             counts["OWNED_PRICE_ESTIMATES_UPDATED"] += 1

@@ -938,10 +938,13 @@ def gui_search(
             "discoveryMethod": g.get("discoveryMethod"),
         },
     }
+    current_query = query or ctx.current_query or (os.environ.get("CARDSCANR_CURRENT_QUERY") or "").strip() or None
     policy = evaluate_runtime_targets(
         cdp_raw_targets(),
         mode=ctx.runtime_mode or RUNTIME_COLD_START,
         prior=ctx.expected_prior,
+        current_query=current_query,
+        prior_handoff_stale=ctx.prior_handoff_stale,
     )
     if ctx.is_inter_card() and not policy.ok:
         extra_ids = extra_inter_card_ebay_target_ids(policy)
@@ -963,6 +966,8 @@ def gui_search(
                 cdp_raw_targets(),
                 mode=ctx.runtime_mode or RUNTIME_COLD_START,
                 prior=ctx.expected_prior,
+                current_query=current_query,
+                prior_handoff_stale=ctx.prior_handoff_stale,
             )
             diag["closedExtraEbayTargets"] = closed
     diag["targetPolicy"] = policy.to_dict()
