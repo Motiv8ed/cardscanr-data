@@ -150,6 +150,12 @@ class SourcePolicyTests(unittest.TestCase):
             ),
             "reference_only",
         )
+        self.assertEqual(
+            classify_owned_price_source(
+                current_market_price=1, display_price_source=None, provider=None
+            ),
+            "unattributed",
+        )
 
 
 class MigrationContractTests(unittest.TestCase):

@@ -831,20 +831,37 @@ class MarketPriceJobRunner:
                     pricing_intent=PRICING_INTENT_OWNED_VERIFIED_LOCAL,
                 )
                 if not owned_exec.should_execute:
+                    # Verified sold freshness and failed-attempt backoff are both
+                    # intentional skips, but they must not share the fresh-noop
+                    # outcome. Only genuine fresh eBay sold evidence may claim
+                    # owned_daily_fresh_noop / skipped_already_fresh.
+                    if (
+                        owned_exec.reason_code == "SKIP_ALREADY_FRESH_VERIFIED_LOCAL"
+                        or owned_exec.would_skip_fresh
+                    ):
+                        skip_status = "skipped_already_fresh"
+                        cancel_reason = "skipped_already_fresh"
+                        outcome_class = "owned_daily_fresh_noop"
+                        owned_outcome = "already_fresh_noop"
+                    else:
+                        skip_status = "skipped_backoff_not_due"
+                        cancel_reason = "skipped_backoff_not_due"
+                        outcome_class = "owned_daily_backoff_noop"
+                        owned_outcome = "backoff_not_due_noop"
                     self.logger(
-                        f"[market-engine] skipped_already_fresh job={job.id} "
+                        f"[market-engine] {skip_status} job={job.id} "
                         f"reason={owned_exec.reason_code} band={owned_exec.scheduler_band} "
                         f"sourceClass={owned_exec.source_class} "
                         f"verifiedAt={owned_exec.successful_verified_at}"
                     )
                     if hasattr(self.client, "cancel_job"):
-                        self.client.cancel_job(job_id=job.id, reason="skipped_already_fresh")
+                        self.client.cancel_job(job_id=job.id, reason=cancel_reason)
                     return {
                         "jobId": job.id,
                         "priceKeyId": price_key.id,
-                        "status": "skipped_already_fresh",
-                        "outcomeClass": "owned_daily_fresh_noop",
-                        "ownedDailyOutcome": "already_fresh_noop",
+                        "status": skip_status,
+                        "outcomeClass": outcome_class,
+                        "ownedDailyOutcome": owned_outcome,
                         "executionEligibility": owned_exec.to_dict(),
                         "lastUpdatedAt": owned_exec.successful_verified_at,
                         "nextRefreshDueAt": owned_exec.next_eligible_at,

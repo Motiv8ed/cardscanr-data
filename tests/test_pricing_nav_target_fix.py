@@ -623,6 +623,117 @@ class EbayBrowserReferenceFreshnessTests(unittest.TestCase):
         self.assertEqual(result.get("status"), "skipped_already_fresh")
         self.assertEqual(result.get("outcomeClass"), "owned_daily_fresh_noop")
 
+
+    def test_unattributed_legacy_fresh_price_with_future_due_executes(self) -> None:
+        key = MarketPriceKey(
+            id="key-legacy-au",
+            game="pokemon",
+            card_name="Drifloon",
+            normalized_card_name="drifloon",
+            set_name="Scarlet Violet",
+            set_code="sv1",
+            collector_number="89",
+            language="en",
+            variant="raw",
+            condition="raw",
+            market_country="au",
+            currency="aud",
+            fingerprint="pokemon|en|sv1|89|drifloon|raw|raw|au|aud",
+        )
+        client = _FakeClient(key)
+        client._cache_row = {
+            "current_market_price": 0.55,
+            "last_updated_at": (NOW - timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
+            "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+            "stale_after": "2099-01-01T00:00:00+00:00",
+            "refresh_status": "completed",
+        }
+
+        class _EbayProvider(_StaticProvider):
+            provider_name = "ebay_browser"
+
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=_EbayProvider([_sold_comp(title="Drifloon 89 Scarlet Violet Pokemon")]),
+            config=_config(),
+            now_func=lambda: NOW,
+            logger=lambda _m: None,
+        )
+        reached = {"called": False}
+
+        def _stop(**_kwargs):
+            reached["called"] = True
+            raise ProviderTemporaryError("STOP_BEFORE_PROVIDER_FOR_TEST")
+
+        with mock.patch.object(runner, "_assert_market_allowed_for_worker", return_value=None):
+            with mock.patch.object(runner, "fetch_fallback_result", side_effect=_stop):
+                result = runner.run_job(
+                    MarketPriceRefreshJob(
+                        id="job-legacy",
+                        price_key_id=key.id,
+                        reason="scheduler:stale_refresh",
+                        priority=1,
+                        status="running",
+                        attempt_count=1,
+                    )
+                )
+        self.assertTrue(reached["called"])
+        self.assertNotEqual(result.get("status"), "skipped_already_fresh")
+
+    def test_unattributed_failed_backoff_skips_as_backoff_not_verified_fresh(self) -> None:
+        key = MarketPriceKey(
+            id="key-legacy-backoff-au",
+            game="pokemon",
+            card_name="Drifloon",
+            normalized_card_name="drifloon",
+            set_name="Scarlet Violet",
+            set_code="sv1",
+            collector_number="89",
+            language="en",
+            variant="raw",
+            condition="raw",
+            market_country="au",
+            currency="aud",
+            fingerprint="pokemon|en|sv1|89|drifloon|raw|raw|au|aud",
+        )
+        client = _FakeClient(key)
+        client._cache_row = {
+            "current_market_price": 0.55,
+            "last_updated_at": (NOW - timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
+            "next_refresh_due_at": "2099-01-01T00:00:00+00:00",
+            "stale_after": "2099-01-01T00:00:00+00:00",
+            "refresh_status": "failed",
+            "last_error_message": "POST_SOLD_CAPTURE_FAILURE: CAPTCHA",
+        }
+
+        class _EbayProvider(_StaticProvider):
+            provider_name = "ebay_browser"
+
+        runner = MarketPriceJobRunner(
+            client=client,
+            provider=_EbayProvider([_sold_comp()]),
+            config=_config(),
+            now_func=lambda: NOW,
+            logger=lambda _m: None,
+        )
+        result = runner.run_job(
+            MarketPriceRefreshJob(
+                id="job-legacy-backoff",
+                price_key_id=key.id,
+                reason="owned_daily:p0_needs_verified_local",
+                priority=1,
+                status="running",
+                attempt_count=1,
+            )
+        )
+        self.assertEqual(result.get("status"), "skipped_backoff_not_due")
+        self.assertEqual(result.get("outcomeClass"), "owned_daily_backoff_noop")
+        self.assertEqual(result.get("ownedDailyOutcome"), "backoff_not_due_noop")
+        self.assertNotEqual(result.get("status"), "skipped_already_fresh")
+        self.assertNotEqual(result.get("outcomeClass"), "owned_daily_fresh_noop")
+        eligibility = result.get("executionEligibility") or {}
+        self.assertEqual(eligibility.get("reason_code"), "SKIP_BACKOFF_NOT_DUE")
+
     def test_budget_paths_unchanged_by_freshness_tweak(self) -> None:
         """Safety budget env parsing is unchanged — freshness only touches early run_job gate."""
         budget = ContinuousSafetyBudget.from_env()
