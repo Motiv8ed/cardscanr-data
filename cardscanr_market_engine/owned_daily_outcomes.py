@@ -17,6 +17,7 @@ UNCHANGED_FROM_EBAY = "UNCHANGED_FROM_EBAY"
 CHECKED_NO_NEW_EXACT_EVIDENCE = "CHECKED_NO_NEW_EXACT_EVIDENCE"
 TEMPORARY_BROWSER_FAILURE = "TEMPORARY_BROWSER_FAILURE"
 TEMPORARY_EBAY_SERVER_FAILURE = "TEMPORARY_EBAY_SERVER_FAILURE"
+EBAY_RATE_LIMITED = "EBAY_RATE_LIMITED"
 POST_SOLD_CAPTURE_FAILURE = "POST_SOLD_CAPTURE_FAILURE"
 FINALIZE_TIMEOUT_SAFE = "FINALIZE_TIMEOUT_SAFE"
 ALTERNATE_EBAY_SURFACE = "ALTERNATE_EBAY_SURFACE"
@@ -32,6 +33,7 @@ NO_PRICE_EVER_FOUND = "NO_PRICE_EVER_FOUND"
 TRANSIENT_EBAY_FAILURE_OUTCOMES = frozenset(
     {
         TEMPORARY_EBAY_SERVER_FAILURE,
+        EBAY_RATE_LIMITED,
         TEMPORARY_BROWSER_FAILURE,
         FINALIZE_TIMEOUT_SAFE,
         EBAY_ACCESS_DENIED_403,
@@ -92,6 +94,44 @@ def classify_completed_ebay_write(
     if prior_price is not None and prior_price > 0 and abs(float(new_price) - float(prior_price)) < 1e-9:
         return UNCHANGED_FROM_EBAY
     return UPDATED_FROM_EBAY
+
+
+def _is_genuine_ebay_rate_limit(
+    exc: BaseException | str | None,
+    *,
+    text: str,
+    diag: dict[str, Any],
+) -> bool:
+    from .providers.errors import ProviderRateLimitedError
+
+    if isinstance(exc, ProviderRateLimitedError):
+        return True
+    for key in ("statusCode", "status_code", "httpStatus", "http_status"):
+        raw = diag.get(key)
+        if raw in (429, "429"):
+            return True
+    owned = str(diag.get("ownedDailyOutcome") or "").strip().upper()
+    if owned in {EBAY_RATE_LIMITED, TEMPORARY_EBAY_SERVER_FAILURE} and (
+        "429" in text or "rate limit" in text or "too many requests" in text
+    ):
+        return True
+    reason = str(diag.get("reason") or "").lower()
+    blob = " ".join([text, reason, str(diag.get("providerOutcome") or "").lower()])
+    if "provider_rate_limited" in blob or "ebay_rate_limited" in blob:
+        return True
+    if "429" in blob and any(
+        marker in blob
+        for marker in (
+            "http",
+            "too many",
+            "rate limit",
+            "rate_limit",
+            "rate-limited",
+            "over limit",
+        )
+    ):
+        return True
+    return False
 
 
 def classify_exception_outcome(
@@ -212,6 +252,8 @@ def classify_exception_outcome(
         or "ebay_access_denied_403" in text
     ):
         return EBAY_ACCESS_DENIED_403
+    if _is_genuine_ebay_rate_limit(exc, text=text, diag=diag):
+        return EBAY_RATE_LIMITED
     # Classic eBay SORRY / Error Page after successful local GUI navigation.
     if (
         reason == "ebay_sorry_error_page"
@@ -223,6 +265,8 @@ def classify_exception_outcome(
     ):
         return TEMPORARY_EBAY_SERVER_FAILURE
     if isinstance(exc, (ProviderTemporaryError, ProviderBlockedError)):
+        if _is_genuine_ebay_rate_limit(exc, text=text, diag=diag):
+            return EBAY_RATE_LIMITED
         # ProviderTemporaryError with ebay_sorry already returned above.
         return TEMPORARY_BROWSER_FAILURE
     if "sorry" in text:

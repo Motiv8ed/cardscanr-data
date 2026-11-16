@@ -25,10 +25,13 @@ from cardscanr_market_engine.ebay_availability import (
 )
 from cardscanr_market_engine.owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
+    EBAY_RATE_LIMITED,
     TEMPORARY_BROWSER_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
     POST_SOLD_CAPTURE_FAILURE,
+    classify_exception_outcome,
 )
+from cardscanr_market_engine.providers.errors import ProviderRateLimitedError
 from cardscanr_market_engine.providers.post_sold_capture_process import (
     DEFAULT_CAPTURE_DEADLINE_SECONDS,
     MAX_CAPTURE_DEADLINE_SECONDS,
@@ -386,6 +389,19 @@ HEALTHY_ROW = {
     "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
     "searchSubmissionStarted": True,
 }
+RATE_LIMIT_ROW = {
+    "jobId": "rl",
+    "status": "failed",
+    "ownedDailyOutcome": EBAY_RATE_LIMITED,
+    "error": "HTTP 429 Too Many Requests: eBay marketplace throttle",
+}
+
+
+def _pre_classification_revert_429_outcome(exc_message: str) -> str:
+    """QA-02 bug: HTTP 429 fell through to TEMPORARY_BROWSER_FAILURE."""
+    if "429" in exc_message.lower():
+        return TEMPORARY_BROWSER_FAILURE
+    return classify_exception_outcome(exc_message, diagnostics={"statusCode": 429})
 
 
 def _buggy_qa02_noop_latch(outcome: str | None, row: dict) -> bool:
@@ -451,6 +467,78 @@ class SorryTransientLatchTests(unittest.TestCase):
             )
         )
         self.assertFalse(_buggy_qa02_noop_latch(TEMPORARY_EBAY_SERVER_FAILURE, SORRY_ROW))
+
+
+class RateLimitTransientLatchTests(unittest.TestCase):
+    def test_http_429_classifies_as_marketplace_rate_limit(self) -> None:
+        exc = ProviderRateLimitedError("HTTP 429 Too Many Requests", diagnostics={"statusCode": 429})
+        self.assertEqual(classify_exception_outcome(exc, diagnostics=exc.diagnostics), EBAY_RATE_LIMITED)
+        self.assertEqual(
+            classify_exception_outcome(
+                "HTTP 429 Too Many Requests",
+                diagnostics={"statusCode": 429, "reason": "ebay_rate_limited"},
+            ),
+            EBAY_RATE_LIMITED,
+        )
+
+    def test_local_navigation_timeout_stays_browser_failure(self) -> None:
+        self.assertEqual(
+            classify_exception_outcome(
+                "desktop sold navigation failed: timeout waiting for results",
+                diagnostics={},
+            ),
+            TEMPORARY_BROWSER_FAILURE,
+        )
+
+    def test_three_consecutive_429_latch_hard_stop(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        rows = [dict(RATE_LIMIT_ROW, jobId=f"r{i}") for i in range(3)]
+        for i, row in enumerate(rows):
+            self.assertTrue(worker._counts_toward_marketplace_transient_latch(row["ownedDailyOutcome"], row))
+            stop = budget.record_transient(now + timedelta(minutes=i))
+            if i < 2:
+                self.assertIsNone(stop)
+            else:
+                self.assertEqual(stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+        self.assertEqual(budget.consecutive_transient, 3)
+
+    def test_sorry_and_429_mix_accumulates_to_hard_stop(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        sequence = [SORRY_ROW, SORRY_ROW, RATE_LIMIT_ROW]
+        for i, row in enumerate(sequence):
+            self.assertTrue(worker._counts_toward_marketplace_transient_latch(row["ownedDailyOutcome"], row))
+            stop = budget.record_transient(now + timedelta(minutes=i))
+            if i < 2:
+                self.assertIsNone(stop)
+            else:
+                self.assertEqual(stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+
+    def test_healthy_row_resets_sorry_and_429_streak(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        sequence = [SORRY_ROW, RATE_LIMIT_ROW, HEALTHY_ROW, SORRY_ROW, RATE_LIMIT_ROW, SORRY_ROW]
+        for i, row in enumerate(sequence):
+            outcome = row.get("ownedDailyOutcome")
+            if worker._counts_toward_marketplace_transient_latch(outcome, row):
+                budget.record_transient(now + timedelta(minutes=i))
+            elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
+                budget.record_healthy()
+        self.assertEqual(budget.last_hard_stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+
+    def test_revert_proof_429_browser_outcome_does_not_latch(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        msg = "HTTP 429 Too Many Requests"
+        reverted_outcome = _pre_classification_revert_429_outcome(msg)
+        self.assertEqual(reverted_outcome, TEMPORARY_BROWSER_FAILURE)
+        row = {"ownedDailyOutcome": reverted_outcome, "error": msg}
+        for _ in range(5):
+            if worker._counts_toward_marketplace_transient_latch(row["ownedDailyOutcome"], row):
+                budget.record_transient(now)
+        self.assertIsNone(budget.last_hard_stop)
+        self.assertEqual(budget.consecutive_transient, 0)
 
 
 class LocalTransientSafetyTests(unittest.TestCase):
