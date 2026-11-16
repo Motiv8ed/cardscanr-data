@@ -60,6 +60,11 @@ def summarise_sweeps(rows: list[dict[str, Any]]) -> dict[str, Any]:
         comparable = [r for r in priced if r.get("perCardPrice") is not None]
         agree_15 = sum(1 for r in comparable if _within_pct(r, 15))
         agree_30 = sum(1 for r in comparable if _within_pct(r, 30))
+        mispriced_20 = sum(
+            1
+            for r in comparable
+            if r.get("pctDiff") is not None and float(r.get("pctDiff")) > 20.0
+        )
         diffs = sorted(
             comparable,
             key=lambda r: float(r.get("absDiffAud") or 0),
@@ -91,6 +96,8 @@ def summarise_sweeps(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "agreementWithin30Pct": agree_30,
                 "agreementRate15Pct": round(agree_15 / len(comparable), 4) if comparable else None,
                 "agreementRate30Pct": round(agree_30 / len(comparable), 4) if comparable else None,
+                "mispricingOver20PctCount": mispriced_20,
+                "mispricingRate20Pct": round(mispriced_20 / len(comparable), 4) if comparable else None,
                 "topDifferences": top_diffs,
                 "suspectedMismatchCount": sum(1 for r in sweep_rows if r.get("suspectedMismatch")),
             }

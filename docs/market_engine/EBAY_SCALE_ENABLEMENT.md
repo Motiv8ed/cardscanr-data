@@ -65,6 +65,23 @@ EBAY_SCALE_SET_SWEEP_LIVE=true
 
 Keep `EBAY_SCALE_SHADOW_AUDIT=true` until agreement rates look stable.
 
+## Set-sweep worker hook (shadow trial)
+
+With `EBAY_SCALE_SET_SWEEP` and `EBAY_SCALE_SHADOW_AUDIT` on, schedulers write
+`reports/runtime/ebay_scale_set_sweep_plan.json` for the AU set of the next queued
+card. The continuous eBay worker consumes that plan before claiming jobs, runs one
+set-level sold search (counts as one submission against the 20/h and 60/24h caps),
+and appends rows under `reports/runtime/ebay_scale_audit/`.
+
+Summarise locally:
+
+```powershell
+python -m cardscanr_market_engine.ebay_scale.audit_report --since 2026-11-16T00:00:00Z
+```
+
+Optional pacing: `EBAY_SCALE_SET_SWEEP_MIN_INTERVAL_HOURS` (default `6`) between sweeps
+for the same set code.
+
 ## Unchanged safety contract
 
 - 20 searches/hour and 60/24h submission caps

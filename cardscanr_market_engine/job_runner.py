@@ -36,7 +36,9 @@ from .navigation_runtime_context import (
     load_navigation_runtime_context,
     persist_inter_card_from_healthy_result,
     prepare_context_for_market,
+    reconcile_navigation_context_for_browser_recycle,
 )
+from .ebay_scale.set_sweep_worker_hook import maybe_apply_set_sweep_live_skip
 from .scheduler import parse_market_allowlist
 from .x11_chrome_focus import is_local_runtime_failure_message
 from .marketplace_ops_state import (
@@ -950,6 +952,7 @@ class MarketPriceJobRunner:
             if getattr(price_key, "fingerprint", None):
                 os.environ["CARDSCANR_FINGERPRINT"] = str(price_key.fingerprint)
             nav_ctx = load_navigation_runtime_context()
+            nav_ctx = reconcile_navigation_context_for_browser_recycle(nav_ctx)
             nav_ctx.current_job_id = str(job.id)
             nav_ctx.current_price_key_id = str(price_key.id)
             if getattr(price_key, "fingerprint", None):
@@ -962,6 +965,20 @@ class MarketPriceJobRunner:
             apply_context_to_environ(nav_ctx)
             os.environ["CARDSCANR_RUNTIME_MODE"] = str(nav_ctx.runtime_mode)
             active_runtime_mode = str(nav_ctx.runtime_mode or "COLD_START")
+
+            live_sweep = maybe_apply_set_sweep_live_skip(
+                price_key=price_key,
+                prior_cache=prior_cache,
+                job_id=str(job.id),
+            )
+            if live_sweep is not None:
+                self.logger(
+                    f"[market-engine] set_sweep_live_skip job={job.id} "
+                    f"median={live_sweep.get('setSweepMedian')}"
+                )
+                if hasattr(self.client, "cancel_job"):
+                    self.client.cancel_job(job_id=job.id, reason="set_sweep_live_median")
+                return live_sweep
 
             self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")

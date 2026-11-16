@@ -541,6 +541,25 @@ class OwnedPrintingRefreshScheduler:
         metrics["OWNED_PRICE_SKIPPED_LIMIT"] = skipped_limits
         metrics["OWNED_PRICE_SKIPPED_ACTIVE"] = skipped_active
 
+        try:
+            from .ebay_scale.set_sweep_worker_hook import record_set_sweep_plan_from_target
+
+            for item in ordered:
+                demand_row: ExplainableSchedulerRow = item["demand_row"]
+                if not demand_row.due or not demand_row.would_hit_ebay:
+                    continue
+                target = item["target"]
+                if str(target.get("market_country") or "").strip().upper() != "AU":
+                    continue
+                record_set_sweep_plan_from_target(
+                    target=target,
+                    price_key_id=str(item.get("price_key_id") or ""),
+                    source="owned_daily_scheduler",
+                )
+                break
+        except Exception:
+            pass
+
         for item in ordered:
             if enqueues_done >= enqueue_limit:
                 skipped_limits += 1
