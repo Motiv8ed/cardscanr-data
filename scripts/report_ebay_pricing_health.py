@@ -32,6 +32,15 @@ from cardscanr_market_engine.marketplace_ops_state import (
     utc_iso,
     utc_now,
 )
+from cardscanr_market_engine.pricing_worker_runtime_gate import (
+    RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES,
+    RUNTIME_EVIDENCE_STALE_MINUTES,
+    WORKER_GATE_STATES_BLOCKING as _WORKER_GATE_STATES_BLOCKING,
+    normalize_gate_state as _normalize_gate_state,
+    runtime_file_evidence as _runtime_file_evidence,
+    worker_gate_blocks_pricing as _worker_gate_blocks_pricing,
+    worker_runtime_gate as _worker_runtime_gate,
+)
 from cardscanr_market_engine.smoke_utils import write_json
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
@@ -39,25 +48,10 @@ STUCK_QUEUE_MINUTES = int(os.getenv("MARKET_HEALTH_STUCK_QUEUE_MINUTES", "45"))
 SCHEDULER_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_SCHEDULER_STALE_MINUTES", "45"))
 NO_SUCCESS_HOURS = float(os.getenv("MARKET_HEALTH_NO_SUCCESS_HOURS", "18"))
 RECENT_WINDOW_HOURS = float(os.getenv("MARKET_HEALTH_RECENT_WINDOW_HOURS", "24"))
-RUNTIME_EVIDENCE_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_RUNTIME_STALE_MINUTES", "10"))
-RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES = float(
-    os.getenv("MARKET_HEALTH_RUNTIME_FUTURE_TOLERANCE_MINUTES", "2")
-)
 DB_HEARTBEAT_STALE_MINUTES = int(os.getenv("MARKET_HEALTH_DB_HEARTBEAT_STALE_MINUTES", "10"))
 
 # Worker local status / ledger gates that mean the process is alive but not claiming pricing jobs.
 # worker.healthy=false for these; pricingWorkingNow stays false until the gate clears.
-_WORKER_GATE_STATES_BLOCKING = frozenset(
-    {
-        "HARD_STOP",
-        "BUDGET_WAIT",
-        "COOLDOWN",
-        "TRANSIENT_HALT",
-        "BROWSER_HALTED",
-        "PROBE_REQUIRED",
-        "NOT_RUNNING",
-    }
-)
 # Supabase pipeline heartbeat states that imply the worker is not actively pricing.
 _DB_HEARTBEAT_GATED_STATES = frozenset(
     {
@@ -102,92 +96,6 @@ def _read_json(path: Path) -> dict | None:
         return payload if isinstance(payload, dict) else None
     except Exception:
         return None
-
-
-def _normalize_gate_state(value: str | None) -> str | None:
-    text = str(value or "").strip()
-    if not text:
-        return None
-    return text.upper().replace("-", "_")
-
-
-def _worker_gate_blocks_pricing(gate_state: str | None) -> bool:
-    normalized = _normalize_gate_state(gate_state)
-    return normalized in _WORKER_GATE_STATES_BLOCKING if normalized else False
-
-
-def _runtime_file_evidence(
-    payload: dict | None,
-    *,
-    path: Path,
-    now: datetime,
-) -> tuple[str, float | None]:
-    """Return freshness label (fresh|stale|missing) and age in minutes when known."""
-    if payload is None:
-        if not path.exists():
-            return "missing", None
-        return "missing", None
-    updated = parse_utc(payload.get("updatedAtUtc"))
-    if updated is None:
-        return "stale", None
-    age_minutes = (now - updated).total_seconds() / 60.0
-    if age_minutes < -RUNTIME_EVIDENCE_FUTURE_TOLERANCE_MINUTES:
-        return "stale", round(age_minutes, 1)
-    if age_minutes > RUNTIME_EVIDENCE_STALE_MINUTES:
-        return "stale", round(age_minutes, 1)
-    return "fresh", round(age_minutes, 1)
-
-
-def _worker_runtime_gate(
-    status: dict | None,
-    ledger: dict | None,
-    *,
-    status_evidence: str | None = None,
-    db_heartbeat_fresh: bool = False,
-) -> tuple[str | None, str | None]:
-    """Fail-safe latch / gate state from local runtime status files (no Supabase).
-
-    Ledger lastHardStop is authoritative while set. When lastHardStop is cleared
-    (owner recovery via record_healthy), do not report HARD_STOP even if status
-    still carries a stale workerState.
-    """
-    gate_state = None
-    gate_reason = None
-    ledger_stop = None
-    ledger_present = ledger is not None
-    if ledger is not None:
-        ledger_stop = str(ledger.get("lastHardStop") or "").strip() or None
-
-    if status:
-        gate_state = str(status.get("workerState") or "").strip() or None
-        if _normalize_gate_state(gate_state) == "HARD_STOP":
-            gate_reason = str(status.get("lastHardStopReason") or "").strip() or None
-
-    if ledger_stop:
-        gate_state = "HARD_STOP"
-        gate_reason = ledger_stop
-    elif ledger_present and _normalize_gate_state(gate_state) == "HARD_STOP":
-        # Cleared latch in ledger supersedes HARD_STOP on status only with fresh evidence.
-        gate_state = None
-        gate_reason = None
-        fresh_runtime = status_evidence == "fresh"
-        if status:
-            gate_state = str(status.get("workerState") or "").strip() or None
-            if _normalize_gate_state(gate_state) == "HARD_STOP":
-                if fresh_runtime or db_heartbeat_fresh:
-                    gate_state = "SELECTING"
-                else:
-                    gate_state = None
-                    gate_reason = "STALE_RUNTIME_AFTER_LATCH_CLEAR"
-
-    if _normalize_gate_state(gate_state) == "BUDGET_WAIT" and not gate_reason:
-        gate_reason = "BUDGET_WAIT"
-    elif _normalize_gate_state(gate_state) == "COOLDOWN":
-        if not gate_reason and status:
-            gate_reason = str(status.get("cooldownUntil") or "COOLDOWN").strip() or "COOLDOWN"
-    elif _normalize_gate_state(gate_state) == "HARD_STOP" and not gate_reason:
-        gate_reason = "UNKNOWN_HARD_STOP"
-    return gate_state, gate_reason
 
 
 def _heartbeat_sort_key(row: dict) -> datetime:

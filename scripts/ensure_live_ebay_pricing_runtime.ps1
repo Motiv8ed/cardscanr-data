@@ -93,12 +93,36 @@ function Ensure-Worker {
     $existing = @(Get-MatchingPythonProcesses -CommandNeedle "workers/market_price_worker.py")
     if ($existing.Count -gt 0) {
         $pidValue = $existing[0].ProcessId
-        Write-Host "[runtime] Worker already healthy PID=$pidValue"
+        $componentHealth = Get-WorkerComponentHealthJson -ProcessId $pidValue
+        $healthStatus = [string]$componentHealth.status
+        if ($healthStatus -eq "healthy") {
+            Write-Host "[runtime] Worker already running (healthy) PID=$pidValue"
+            Write-StateFile -Path $workerStatePath -Payload @{
+                component = "worker"
+                pid = $pidValue
+                checkedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+                status = "already_running_healthy"
+                workerComponentHealth = $healthStatus
+                gateState = $componentHealth.gateState
+            }
+            return
+        }
+        $gateState = [string]$componentHealth.gateState
+        $gateReason = [string]$componentHealth.gateReason
+        $note = [string]$componentHealth.note
+        Write-Host "[runtime] Worker PID=$pidValue present but componentHealth=$healthStatus gate=$gateState reason=$gateReason"
+        if ($note) {
+            Write-Host "[runtime] $note"
+        }
         Write-StateFile -Path $workerStatePath -Payload @{
             component = "worker"
             pid = $pidValue
             checkedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-            status = "already_running"
+            status = $healthStatus
+            workerComponentHealth = $healthStatus
+            gateState = $gateState
+            gateReason = $gateReason
+            note = $note
         }
         return
     }
@@ -223,6 +247,30 @@ function Show-Status {
         workerState = Read-StateFile -Path $workerStatePath
         schedulerState = Read-StateFile -Path $schedulerStatePath
     } | ConvertTo-Json -Depth 6
+}
+
+function Get-WorkerComponentHealthJson {
+    param([Parameter(Mandatory = $true)][int]$ProcessId)
+    $classifier = Join-Path $repoRoot "scripts\classify_live_ebay_component_health.py"
+    if (-not (Test-Path $classifier)) {
+        return @{
+            status = "unknown_fail_closed"
+            note = "classify_live_ebay_component_health.py missing"
+            processPresent = $true
+            processId = $ProcessId
+        }
+    }
+    try {
+        $raw = & $pythonPath $classifier --process-present --pid $ProcessId 2>&1 | Out-String
+        return ($raw | ConvertFrom-Json)
+    } catch {
+        return @{
+            status = "unknown_fail_closed"
+            note = "Worker health classifier failed: $($_.Exception.Message)"
+            processPresent = $true
+            processId = $ProcessId
+        }
+    }
 }
 
 function Write-HealthReportBestEffort {
