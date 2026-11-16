@@ -133,16 +133,13 @@ def classify_provider_failure(message: str | None, *, diagnostics: dict[str, Any
             "something went wrong on our end",
             "error page | ebay",
             "ebay_error_page",
-            "provider_rate_limited",
-            "ebay_rate_limited",
-            "http 429",
-            "status_code=429",
         )
     ):
         return "TRANSIENT_EBAY"
-    if "429" in blob and any(
-        marker in blob for marker in ("http", "too many", "rate limit", "rate_limit", "rate-limited")
-    ):
+    provider_outcome = str(diag.get("providerOutcome") or diag.get("provider_outcome") or "").strip().lower()
+    if provider_outcome in {"provider_rate_limited", "ebay_rate_limited"}:
+        return "TRANSIENT_EBAY"
+    if str(diag.get("failureClass") or "").upper() in {"EBAY_RATE_LIMITED", "HTTP_429", "MARKETPLACE_RATE_LIMITED"}:
         return "TRANSIENT_EBAY"
     if fail_cls := str(diag.get("failureClass") or "").upper():
         if fail_cls in {"MARKETPLACE_ERROR_PAGE", "EBAY_ERROR_PAGE", "TARGET_REJECTED_UNHEALTHY_PAGE"}:

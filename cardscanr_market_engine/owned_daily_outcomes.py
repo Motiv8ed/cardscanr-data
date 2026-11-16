@@ -96,40 +96,67 @@ def classify_completed_ebay_write(
     return UPDATED_FROM_EBAY
 
 
+_STRUCTURED_RATE_LIMIT_REASONS = frozenset(
+    {
+        "ebay_rate_limited",
+        "provider_rate_limited",
+        "http_429",
+        "rate_limited_429",
+    }
+)
+_STRUCTURED_RATE_LIMIT_OUTCOMES = frozenset(
+    {
+        "provider_rate_limited",
+        "ebay_rate_limited",
+    }
+)
+_STRUCTURED_RATE_LIMIT_FAILURE_CLASSES = frozenset(
+    {
+        "EBAY_RATE_LIMITED",
+        "HTTP_429",
+        "MARKETPLACE_RATE_LIMITED",
+    }
+)
+
+
+def _diag_http_status_429(diag: dict[str, Any]) -> bool:
+    for key in ("statusCode", "status_code", "httpStatus", "http_status"):
+        raw = diag.get(key)
+        if raw in (429, "429"):
+            return True
+    return False
+
+
 def _is_genuine_ebay_rate_limit(
     exc: BaseException | str | None,
     *,
     text: str,
     diag: dict[str, Any],
 ) -> bool:
+    """True only for structured marketplace rate-limit signals (not error-message substrings)."""
     from .providers.errors import ProviderRateLimitedError
+
+    del text  # classification must not scrape free-text error messages for 429/http tokens
 
     if isinstance(exc, ProviderRateLimitedError):
         return True
-    for key in ("statusCode", "status_code", "httpStatus", "http_status"):
-        raw = diag.get(key)
-        if raw in (429, "429"):
-            return True
-    owned = str(diag.get("ownedDailyOutcome") or "").strip().upper()
-    if owned in {EBAY_RATE_LIMITED, TEMPORARY_EBAY_SERVER_FAILURE} and (
-        "429" in text or "rate limit" in text or "too many requests" in text
-    ):
+    status_code = getattr(exc, "status_code", None)
+    if status_code in (429, "429"):
         return True
-    reason = str(diag.get("reason") or "").lower()
-    blob = " ".join([text, reason, str(diag.get("providerOutcome") or "").lower()])
-    if "provider_rate_limited" in blob or "ebay_rate_limited" in blob:
+    if _diag_http_status_429(diag):
         return True
-    if "429" in blob and any(
-        marker in blob
-        for marker in (
-            "http",
-            "too many",
-            "rate limit",
-            "rate_limit",
-            "rate-limited",
-            "over limit",
-        )
-    ):
+    if str(diag.get("ownedDailyOutcome") or "").strip().upper() == EBAY_RATE_LIMITED:
+        return True
+    reason = str(diag.get("reason") or "").strip().lower()
+    if reason in _STRUCTURED_RATE_LIMIT_REASONS:
+        return True
+    provider_outcome = str(
+        diag.get("providerOutcome") or diag.get("provider_outcome") or ""
+    ).strip().lower()
+    if provider_outcome in _STRUCTURED_RATE_LIMIT_OUTCOMES:
+        return True
+    failure_class = str(diag.get("failureClass") or "").strip().upper()
+    if failure_class in _STRUCTURED_RATE_LIMIT_FAILURE_CLASSES:
         return True
     return False
 

@@ -490,6 +490,31 @@ class RateLimitTransientLatchTests(unittest.TestCase):
             TEMPORARY_BROWSER_FAILURE,
         )
 
+    def test_local_timeout_with_429_in_message_stays_browser_failure(self) -> None:
+        cases = [
+            (
+                "CDP_CAPTURE_PROCESS_TIMEOUT: http timeout after 429ms waiting for sold results",
+                {"reason": "cdp_post_sold_capture_failed"},
+                POST_SOLD_CAPTURE_FAILURE,
+            ),
+            (
+                "HTTP 429 Too Many Requests",
+                {},
+                TEMPORARY_BROWSER_FAILURE,
+            ),
+        ]
+        for message, diagnostics, expected in cases:
+            with self.subTest(message=message):
+                outcome = classify_exception_outcome(message, diagnostics=diagnostics)
+                self.assertEqual(outcome, expected)
+                self.assertNotEqual(outcome, EBAY_RATE_LIMITED)
+                self.assertFalse(
+                    worker._counts_toward_marketplace_transient_latch(
+                        outcome,
+                        {"ownedDailyOutcome": outcome, "error": message},
+                    )
+                )
+
     def test_three_consecutive_429_latch_hard_stop(self) -> None:
         now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
         budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
