@@ -29,6 +29,7 @@ class SetSweepCatalogueCard:
     language: str = "en"
     variant: str = "raw"
     condition: str = "raw"
+    rarity: str = ""
 
 
 def _price_key_for_card(card: SetSweepCatalogueCard) -> MarketPriceKey:

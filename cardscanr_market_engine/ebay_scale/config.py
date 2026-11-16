@@ -22,6 +22,8 @@ class EbayScaleFlags:
     direct_sold_results_url: bool = False
     set_sweep_mode: bool = False
     set_sweep_exact_card_aud_threshold: float = 20.0
+    shadow_audit: bool = False
+    set_sweep_live: bool = False
 
     @classmethod
     def from_env(cls) -> "EbayScaleFlags":
@@ -35,6 +37,8 @@ class EbayScaleFlags:
             set_sweep_exact_card_aud_threshold=float(
                 os.getenv("EBAY_SCALE_SET_SWEEP_EXACT_AUD", "20").strip() or "20"
             ),
+            shadow_audit=master and _parse_bool("EBAY_SCALE_SHADOW_AUDIT", False),
+            set_sweep_live=master and _parse_bool("EBAY_SCALE_SET_SWEEP_LIVE", False),
         )
 
     def to_public_dict(self) -> dict[str, object]:
@@ -45,6 +49,8 @@ class EbayScaleFlags:
             "directSoldResultsUrl": self.direct_sold_results_url,
             "setSweepMode": self.set_sweep_mode,
             "setSweepExactCardAudThreshold": self.set_sweep_exact_card_aud_threshold,
+            "shadowAudit": self.shadow_audit,
+            "setSweepLive": self.set_sweep_live,
         }
 
 
@@ -66,3 +72,17 @@ def ebay_scale_value_first_queue_enabled() -> bool:
 
 def ebay_scale_set_sweep_enabled() -> bool:
     return EbayScaleFlags.from_env().set_sweep_mode
+
+
+def ebay_scale_shadow_audit_enabled() -> bool:
+    flags = EbayScaleFlags.from_env()
+    return flags.enabled and flags.set_sweep_mode and flags.shadow_audit
+
+
+def ebay_scale_set_sweep_live_enabled() -> bool:
+    return EbayScaleFlags.from_env().set_sweep_live
+
+
+def should_write_set_sweep_live_price() -> bool:
+    flags = EbayScaleFlags.from_env()
+    return bool(flags.enabled and flags.set_sweep_mode and flags.set_sweep_live)
