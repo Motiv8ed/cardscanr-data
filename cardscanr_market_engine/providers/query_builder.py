@@ -11,6 +11,7 @@ from ..catalogue_identity import (
     searchable_collector_number,
     searchable_set_label,
 )
+from ..ebay_scale.sold_results_url import build_au_sold_results_url, sold_url_mode_for_query
 from ..fingerprints import normalize_market_variant
 from ..models import ProviderRequest
 from .errors import ProviderIdentityUnavailableError
@@ -388,8 +389,17 @@ def build_provider_search_queries(
             "queryIndex": len(queries),
             "querySource": source,
             "queryStyle": diagnostics.get("queryStyle") or "unquoted_discovery",
-            "soldFilterMode": "ui_after_active_search",
+            "soldFilterMode": sold_url_mode_for_query(market_country=request.market_country),
         }
+        sold_filter_mode = str(query_diagnostics.get("soldFilterMode") or "ui_after_active_search")
+        if sold_filter_mode == "direct_sold_url_scale":
+            search_url = build_au_sold_results_url(
+                query_text=query_text,
+                provider_domain=request.provider_domain,
+                market_country=request.market_country,
+            )
+        else:
+            search_url = _build_search_url(request=request, query_text=query_text)
         queries.append(
             ProviderSearchQuery(
                 query_text=query_text,
@@ -397,7 +407,7 @@ def build_provider_search_queries(
                 exclude_terms=exclude_terms,
                 provider_domain=request.provider_domain,
                 provider_marketplace_id=request.provider_marketplace_id,
-                search_url=_build_search_url(request=request, query_text=query_text),
+                search_url=search_url,
                 currency=request.currency.upper(),
                 market_country=request.market_country.upper(),
                 query_index=len(queries),

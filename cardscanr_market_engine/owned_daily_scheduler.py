@@ -44,6 +44,8 @@ from .demand_aware_scheduler import (
     select_fair_lane_mix,
 )
 from .owned_daily_source_policy import classify_owned_daily_band
+from .ebay_scale.queue_priority import cross_user_dedupe_work_items
+from .ebay_scale.config import ebay_scale_value_first_queue_enabled
 from .smoke_utils import append_jsonl, write_json
 
 PRIORITY_BY_BAND: dict[str, int] = {
@@ -467,6 +469,9 @@ class OwnedPrintingRefreshScheduler:
                     target, now=now, demand_index=self._demand_index
                 )
             work_items.append({**item, "price_key_id": price_key_id, "demand_row": demand_row})
+
+        if ebay_scale_value_first_queue_enabled():
+            work_items = cross_user_dedupe_work_items(work_items, now=now)
 
         due_by_market: dict[str, int] = {}
         for w in work_items:
