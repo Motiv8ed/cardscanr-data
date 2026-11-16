@@ -1,0 +1,40 @@
+name: Catalogue Auto Acquisition Offline Tests
+
+on:
+  pull_request:
+    paths:
+      - 'cardscanr_worldwide/auto_acquisition.py'
+      - 'cardscanr_worldwide/source_feed.py'
+      - 'config/catalogue_source_feed.json'
+      - 'tests/test_auto_acquisition.py'
+      - 'tests/test_catalogue_source_feed.py'
+      - 'tools/auto_acquire_catalogue.py'
+      - 'tools/catalogue_source_feed.py'
+      - 'requirements-catalogue-source-feed.txt'
+      - '.github/workflows/catalogue-auto-acquisition-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-collector-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install declared offline test dependencies
+        run: python -m pip install -r requirements-catalogue-source-feed.txt
+      - name: Compile collector and CLI code
+        run: python -m compileall -q cardscanr_worldwide/auto_acquisition.py cardscanr_worldwide/source_feed.py tools/auto_acquire_catalogue.py tools/catalogue_source_feed.py
+      - name: Validate all configured source entries (no network)
+        run: python tools/catalogue_source_feed.py validate
+      - name: Verify auto acquisition, staging and source guards using fixtures only
+        run: |
+          PYTHONPATH=. python -m unittest discover -s tests -p 'test_auto_acquisition.py' -v
+          PYTHONPATH=. python -m pytest -q tests/test_catalogue_source_feed.py
