@@ -374,6 +374,85 @@ class TimeoutReliefTests(unittest.TestCase):
             self.assertEqual(psp.post_sold_finalize_deadline_seconds(), 40.0)
 
 
+SORRY_ROW = {
+    "jobId": "sorry",
+    "status": "failed",
+    "ownedDailyOutcome": TEMPORARY_EBAY_SERVER_FAILURE,
+    "error": "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page",
+}
+HEALTHY_ROW = {
+    "jobId": "ok",
+    "status": "completed",
+    "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
+    "searchSubmissionStarted": True,
+}
+
+
+def _buggy_qa02_noop_latch(outcome: str | None, row: dict) -> bool:
+    """Pre-QA-02 latch: excluded every TRANSIENT_EBAY_FAILURE_OUTCOME before the membership check."""
+    text = str(outcome or "").strip()
+    if not text:
+        return False
+    from cardscanr_market_engine.continuous_worker_policy import HARD_STOP_OUTCOMES
+    from cardscanr_market_engine.owned_daily_outcomes import (
+        CHALLENGE_REQUIRED,
+        TEMPORARY_EBAY_SERVER_FAILURE,
+        TRANSIENT_EBAY_FAILURE_OUTCOMES,
+    )
+
+    if text in HARD_STOP_OUTCOMES or text in {CHALLENGE_REQUIRED, "EBAY_AUTH_REQUIRED"}:
+        return False
+    if text in {
+        TEMPORARY_EBAY_SERVER_FAILURE,
+        "POST_SOLD_CAPTURE_FAILURE",
+        "FINALIZE_TIMEOUT_SAFE",
+        "TEMPORARY_BROWSER_FAILURE",
+        "EBAY_ACCESS_DENIED_403",
+    }:
+        return False
+    if worker.is_local_runtime_failure_message(str(row.get("error") or "")):
+        return False
+    return text in TRANSIENT_EBAY_FAILURE_OUTCOMES
+
+
+class SorryTransientLatchTests(unittest.TestCase):
+    def test_three_consecutive_sorry_latch_hard_stop(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        sorry_rows = [dict(SORRY_ROW, jobId=f"s{i}") for i in range(3)]
+        for i, row in enumerate(sorry_rows):
+            self.assertTrue(worker._counts_toward_marketplace_transient_latch(row["ownedDailyOutcome"], row))
+            stop = budget.record_transient(now + timedelta(minutes=i))
+            if i < 2:
+                self.assertIsNone(stop)
+            else:
+                self.assertEqual(stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+        self.assertEqual(budget.consecutive_transient, 3)
+        self.assertEqual(budget.last_hard_stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+
+    def test_success_between_sorry_resets_consecutive_count(self) -> None:
+        now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
+        budget = ContinuousSafetyBudget(max_consecutive_transient=3, max_transient_per_hour=5)
+        sequence = [SORRY_ROW, SORRY_ROW, HEALTHY_ROW, SORRY_ROW, SORRY_ROW, SORRY_ROW]
+        for i, row in enumerate(sequence):
+            outcome = row.get("ownedDailyOutcome")
+            if worker._counts_toward_marketplace_transient_latch(outcome, row):
+                budget.record_transient(now + timedelta(minutes=i))
+            elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
+                budget.record_healthy()
+        self.assertEqual(budget.consecutive_transient, 3)
+        self.assertEqual(budget.last_hard_stop, "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES")
+
+    def test_revert_proof_sorry_latch_is_not_noop(self) -> None:
+        self.assertTrue(
+            worker._counts_toward_marketplace_transient_latch(
+                TEMPORARY_EBAY_SERVER_FAILURE,
+                SORRY_ROW,
+            )
+        )
+        self.assertFalse(_buggy_qa02_noop_latch(TEMPORARY_EBAY_SERVER_FAILURE, SORRY_ROW))
+
+
 class LocalTransientSafetyTests(unittest.TestCase):
     def test_local_failures_do_not_latch_hard_stop(self) -> None:
         now = datetime(2026, 11, 16, 6, 0, tzinfo=timezone.utc)
@@ -431,28 +510,29 @@ class CapsAndProbeToolTests(unittest.TestCase):
     def test_au_caps_and_market_allowlist(self) -> None:
         au_cap_values = {
             "MAX_LIVE_SUBMISSIONS_PER_HOUR": "20",
-            "MAX_LIVE_SUBMISSIONS_PER_DAY": "60",
+            "MAX_LIVE_SUBMISSIONS_PER_DAY": "200",
             "OWNED_DAILY_ALLOWED_MARKETS": "AU",
             "MARKET_WORKER_CONCURRENCY": "1",
         }
-        with mock.patch.dict(os.environ, au_cap_values, clear=False):
-            self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_HOUR"), "20")
-            self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_DAY"), "60")
-            self.assertEqual(os.environ.get("OWNED_DAILY_ALLOWED_MARKETS"), "AU")
-        budget = ContinuousSafetyBudget(
-            max_submissions_per_hour=20,
-            max_submissions_per_day=60,
-        )
-        now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
-        hour_anchor = now - timedelta(minutes=59)
-        for i in range(20):
-            budget.record_submission(hour_anchor + timedelta(seconds=30 * i))
-        self.assertEqual(budget.budget_exhausted(now), "HOURLY_SUBMISSION_CEILING")
-        budget2 = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
-        for i in range(60):
-            budget2.record_submission(now - timedelta(hours=12) + timedelta(minutes=i))
-        budget2.record_submission(now)
-        self.assertEqual(budget2.budget_exhausted(now), "DAILY_SUBMISSION_CEILING")
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "budget.json"
+            with mock.patch.dict(os.environ, au_cap_values, clear=False):
+                self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_HOUR"), "20")
+                self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_DAY"), "200")
+                self.assertEqual(os.environ.get("OWNED_DAILY_ALLOWED_MARKETS"), "AU")
+                budget = ContinuousSafetyBudget.from_env(path=ledger)
+                self.assertEqual(budget.max_submissions_per_hour, 20)
+                self.assertEqual(budget.max_submissions_per_day, 200)
+            now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
+            hour_anchor = now - timedelta(minutes=59)
+            for i in range(20):
+                budget.record_submission(hour_anchor + timedelta(seconds=30 * i))
+            self.assertEqual(budget.budget_exhausted(now), "HOURLY_SUBMISSION_CEILING")
+            budget2 = ContinuousSafetyBudget.from_env(path=ledger)
+            for i in range(199):
+                budget2.record_submission(now - timedelta(hours=3) - timedelta(minutes=i))
+            budget2.record_submission(now)
+            self.assertEqual(budget2.budget_exhausted(now), "DAILY_SUBMISSION_CEILING")
         self.assertTrue(is_region_dispatchable(region_definition("AU").region))
         self.assertFalse(is_region_dispatchable(region_definition("JP").region))
         self.assertFalse(is_region_dispatchable(region_definition("EU").region))

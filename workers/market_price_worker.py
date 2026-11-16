@@ -36,6 +36,9 @@ from cardscanr_market_engine.owned_daily_enablement import (
 )
 from cardscanr_market_engine.owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
+    FINALIZE_TIMEOUT_SAFE,
+    POST_SOLD_CAPTURE_FAILURE,
+    TEMPORARY_BROWSER_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
     TRANSIENT_EBAY_FAILURE_OUTCOMES,
 )
@@ -62,21 +65,19 @@ def _should_classify_ebay_availability_gate(*, config: MarketEngineConfig, conti
 
 
 def _counts_toward_marketplace_transient_latch(outcome: str | None, row: dict[str, Any]) -> bool:
-    """Only genuine marketplace defects latch HARD_STOP; sorry/local/runtime do not."""
+    """Marketplace SORRY/429 latch HARD_STOP; local GUI/runtime timeouts do not."""
     text = str(outcome or "").strip()
     if not text:
         return False
     if text in HARD_STOP_OUTCOMES or text in {CHALLENGE_REQUIRED, "EBAY_AUTH_REQUIRED"}:
         return False
-    if text in {
-        TEMPORARY_EBAY_SERVER_FAILURE,
-        "POST_SOLD_CAPTURE_FAILURE",
-        "FINALIZE_TIMEOUT_SAFE",
-        "TEMPORARY_BROWSER_FAILURE",
-        "EBAY_ACCESS_DENIED_403",
-    }:
-        return False
     if is_local_runtime_failure_message(str(row.get("error") or "")):
+        return False
+    if text in {
+        POST_SOLD_CAPTURE_FAILURE,
+        FINALIZE_TIMEOUT_SAFE,
+        TEMPORARY_BROWSER_FAILURE,
+    }:
         return False
     return text in TRANSIENT_EBAY_FAILURE_OUTCOMES
 
@@ -524,7 +525,11 @@ def run_worker_loop(
                 )
                 if outcome in HARD_STOP_OUTCOMES:
                     break
-                if (continuous or enforce_budget) and _counts_toward_marketplace_transient_latch(outcome, row):
+                if (
+                    (continuous or enforce_budget)
+                    and not getattr(runner, "_ebay_probe_mode", False)
+                    and _counts_toward_marketplace_transient_latch(outcome, row)
+                ):
                     last_transient = utc_iso()
                     # No-op (no extra history) when already HARD_STOPPED; still
                     # returns the latched reason.
