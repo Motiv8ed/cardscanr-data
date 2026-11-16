@@ -30,13 +30,59 @@ from cardscanr_market_engine.ebay_scale.set_sweep_matcher import (
     match_sold_row_to_catalogue,
 )
 from cardscanr_market_engine.ebay_scale.sold_results_url import build_au_sold_results_url
-from cardscanr_market_engine.ebay_scale.sold_row_html import parse_sold_results_html
+from cardscanr_market_engine.ebay_scale.sold_row_html import SoldResultsRow, parse_sold_results_html
 from cardscanr_market_engine.marketplaces import resolve_marketplace_config
 from cardscanr_market_engine.models import MarketPriceKey, ProviderRequest
 from cardscanr_market_engine.providers.query_builder import build_provider_search_queries
 
 FIXTURES = ROOT / "tests" / "fixtures" / "ebay_scale"
 BLOODMOON_FIXTURE = ROOT / "tests" / "fixtures" / "ebay_sold" / "bloodmoon_ursaluna_54_sold_fixture.html"
+
+
+def _buggy_sweep_match_name_set_only(
+    row: SoldResultsRow,
+    *,
+    catalogue: list[SetSweepCatalogueCard],
+    index: int = 0,
+) -> SetSweepMatch | None:
+    """Pre-number_gate matcher: name + set only (false-positives on wrong/missing numbers)."""
+    from cardscanr_market_engine.ebay_scale.set_sweep_matcher import (
+        SetSweepMatch,
+        _price_key_for_card,
+        _set_identity_match_info,
+        _sold_comp_from_row,
+    )
+    from cardscanr_market_engine.filters import _reject_reason
+    from cardscanr_market_engine.fingerprints import normalize_name, normalize_text
+
+    normalized_title = normalize_text(row.title)
+    candidates: list[tuple[SetSweepCatalogueCard, str]] = []
+    for card in catalogue:
+        price_key = _price_key_for_card(card)
+        reject = _reject_reason(price_key, _sold_comp_from_row(row, index=index))
+        if reject:
+            continue
+        name_ok = normalize_name(card.normalized_card_name).replace("_", " ") in normalized_title or (
+            normalize_name(card.card_name).replace("_", " ") in normalized_title
+        )
+        set_info = _set_identity_match_info(price_key, normalized_title)
+        set_ok = bool(set_info.get("matches"))
+        if name_ok and set_ok:
+            candidates.append((card, "high"))
+        elif name_ok:
+            candidates.append((card, "ambiguous"))
+
+    if not candidates:
+        return None
+    if len({c[0].catalogue_card_id for c in candidates}) > 1:
+        return None
+    card, confidence = candidates[0]
+    return SetSweepMatch(
+        catalogue_card_id=card.catalogue_card_id,
+        card_name=card.card_name,
+        collector_number=card.collector_number,
+        confidence=confidence if confidence == "high" else "ambiguous",
+    )
 
 
 class SoldResultsUrlTests(unittest.TestCase):
@@ -161,7 +207,7 @@ class SoldRowParserTests(unittest.TestCase):
     def test_parses_every_bloodmoon_row(self) -> None:
         html = BLOODMOON_FIXTURE.read_text(encoding="utf-8")
         rows = parse_sold_results_html(html)
-        self.assertEqual(len(rows), 5)
+        self.assertEqual(len(rows), 6)
         self.assertEqual(rows[0].title, "Bloodmoon Ursaluna 054/131 Prismatic Evolutions Pokemon Card")
         self.assertEqual(rows[0].sold_price, 2.80)
         self.assertEqual(rows[0].postage, 12.0)
@@ -170,7 +216,7 @@ class SoldRowParserTests(unittest.TestCase):
     def test_set_sweep_fixture_rows(self) -> None:
         html = (FIXTURES / "sv3_set_sweep_fixture.html").read_text(encoding="utf-8")
         rows = parse_sold_results_html(html)
-        self.assertEqual(len(rows), 5)
+        self.assertEqual(len(rows), 6)
         self.assertTrue(rows[0].best_offer)
 
 
@@ -211,15 +257,13 @@ class SetSweepMatcherTests(unittest.TestCase):
         self.assertIsNone(match_sold_row_to_catalogue(rows[4], catalogue=self.catalogue))
 
     def test_revert_proof_number_required(self) -> None:
-        """Revert: without collector-number matching, promos/lots false-positive."""
+        """Revert: without collector-number matching, name+set rows false-positive."""
         html = (FIXTURES / "sv3_set_sweep_fixture.html").read_text(encoding="utf-8")
         rows = parse_sold_results_html(html)
-        row = rows[4]  # lot listing
-        with mock.patch(
-            "cardscanr_market_engine.ebay_scale.set_sweep_matcher.normalize_collector_number",
-            return_value="",
-        ):
-            self.assertIsNone(match_sold_row_to_catalogue(row, catalogue=self.catalogue))
+        row = rows[5]  # single card: name+set match, title lacks full N/M
+        self.assertEqual(row.title, "Pidgey 162 Obsidian Flames Pokemon")
+        self.assertIsNone(match_sold_row_to_catalogue(row, catalogue=self.catalogue))
+        self.assertIsNotNone(_buggy_sweep_match_name_set_only(row, catalogue=self.catalogue))
 
 
 class SetSweepRunTests(unittest.TestCase):
@@ -244,7 +288,7 @@ class SetSweepRunTests(unittest.TestCase):
         ]
         html = (FIXTURES / "sv3_set_sweep_fixture.html").read_text(encoding="utf-8")
         stats, _ = run_set_sweep(html=html, catalogue=catalogue)
-        self.assertEqual(stats.rows_parsed, 5)
+        self.assertEqual(stats.rows_parsed, 6)
         self.assertGreaterEqual(stats.rows_matched, 2)
         lot_reasons = {"lot_or_bundle", "likely_bundle_lot"}
         self.assertTrue(lot_reasons & set(stats.rows_rejected))
