@@ -106,6 +106,35 @@ class ReferenceSnapshotDedupeTests(unittest.TestCase):
             verification_budget=[0],
         )
 
+    def test_utc_midnight_boundary_skip_then_checkpoint(self):
+        """Just before 00:00 UTC skips; first tick after midnight inserts."""
+        self.client.cache[self.key.id] = _verified_cache(
+            self.key.id, prior_checked="2026-11-06T00:00:01Z",
+        )
+        self.clock[0] = datetime(2026, 11, 6, 23, 59, 59, tzinfo=timezone.utc)
+        self.process()
+        self.assertEqual(self.client.snapshots, [])
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 1)
+
+        self.counters = BulkRefreshCounters()
+        self.clock[0] = datetime(2026, 11, 7, 0, 0, 1, tzinfo=timezone.utc)
+        self.process()
+        self.assertEqual(len(self.client.snapshots), 1)
+        self.assertEqual(self.counters.snapshots_skipped_unchanged, 0)
+
+    def test_skip_path_still_upserts_cache_reference_timestamp(self):
+        self.client.cache[self.key.id] = _verified_cache(
+            self.key.id, prior_checked="2026-11-06T00:00:00Z",
+        )
+        self.clock[0] = START + timedelta(hours=6)
+        prior_checked = self.client.cache[self.key.id]["reference_updated_at"]
+        self.process()
+        self.assertEqual(self.client.snapshots, [])
+        after = self.client.cache[self.key.id]
+        self.assertNotEqual(after["reference_updated_at"], prior_checked)
+        self.assertEqual(after["reference_updated_at"], "2026-11-06T06:00:00Z")
+        self.assertEqual(after["latest_snapshot_id"], "ebay-original-snapshot")
+
     def test_hourly_verified_rechecks_keep_one_daily_checkpoint(self):
         self.client.cache[self.key.id] = _verified_cache(
             self.key.id, prior_checked="2026-11-05T23:00:00Z",
