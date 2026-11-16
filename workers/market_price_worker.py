@@ -36,6 +36,9 @@ from cardscanr_market_engine.owned_daily_enablement import (
 )
 from cardscanr_market_engine.owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
+    FINALIZE_TIMEOUT_SAFE,
+    POST_SOLD_CAPTURE_FAILURE,
+    TEMPORARY_BROWSER_FAILURE,
     TEMPORARY_EBAY_SERVER_FAILURE,
     TRANSIENT_EBAY_FAILURE_OUTCOMES,
 )
@@ -43,6 +46,7 @@ from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingControlle
 from cardscanr_market_engine.providers import create_market_comps_provider
 from cardscanr_market_engine.scheduler import parse_market_allowlist
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
+from cardscanr_market_engine.x11_chrome_focus import is_local_runtime_failure_message
 
 MIN_TRANSIENT_BACKOFF_SECONDS = 10
 MAX_TRANSIENT_BACKOFF_SECONDS = 60
@@ -51,6 +55,31 @@ MAX_REPORT_ERROR_CHARS = 1000
 
 def _ebay_pacing_enabled(config: MarketEngineConfig) -> bool:
     return str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
+
+
+def _should_classify_ebay_availability_gate(*, config: MarketEngineConfig, continuous: bool, operation_mode: str) -> bool:
+    """Classify AU availability even when owned_daily is false (scheduled worker recovery)."""
+    if continuous or operation_mode in {"PROBE", "CANARY"}:
+        return True
+    return _ebay_pacing_enabled(config)
+
+
+def _counts_toward_marketplace_transient_latch(outcome: str | None, row: dict[str, Any]) -> bool:
+    """Marketplace SORRY/429 latch HARD_STOP; local GUI/runtime timeouts do not."""
+    text = str(outcome or "").strip()
+    if not text:
+        return False
+    if text in HARD_STOP_OUTCOMES or text in {CHALLENGE_REQUIRED, "EBAY_AUTH_REQUIRED"}:
+        return False
+    if is_local_runtime_failure_message(str(row.get("error") or "")):
+        return False
+    if text in {
+        POST_SOLD_CAPTURE_FAILURE,
+        FINALIZE_TIMEOUT_SAFE,
+        TEMPORARY_BROWSER_FAILURE,
+    }:
+        return False
+    return text in TRANSIENT_EBAY_FAILURE_OUTCOMES
 
 
 def _outcome_from_result(row: dict[str, Any]) -> str | None:
@@ -253,9 +282,11 @@ def run_worker_loop(
         worker_state = "SELECTING"
         hard = None
         budget_reason = None
-        # Probe / canary modes must classify the target market even when the
-        # continuous flag is false so PROBE_REQUIRED can begin_probe.
-        if continuous or operation_mode in {"PROBE", "CANARY"}:
+        # Scheduled AU eBay worker must classify availability (PROBE_REQUIRED recovery)
+        # even when owned_daily_full_enable is false.
+        if _should_classify_ebay_availability_gate(
+            config=config, continuous=continuous, operation_mode=operation_mode
+        ):
             gate_info = classify_continuous_gate(market=gate_market)
             if continuous and pacing_controller is not None:
                 maybe_resume_transient_halt(pacing_controller, gate_info)
@@ -448,9 +479,10 @@ def run_worker_loop(
             or operation_mode == "PROBE"
             or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
         )
+        cycle_max_jobs = min(max_jobs, 1) if getattr(runner, "_ebay_probe_mode", False) else max_jobs
         try:
             # eBay-sold freshness (not reference TTL) is enforced in MarketPriceJobRunner.run_job.
-            results = runner.run_once(max_jobs=max_jobs)
+            results = runner.run_once(max_jobs=cycle_max_jobs)
         except Exception as exc:
             if not is_transient_worker_error(exc):
                 raise
@@ -493,9 +525,10 @@ def run_worker_loop(
                 )
                 if outcome in HARD_STOP_OUTCOMES:
                     break
-                if (continuous or enforce_budget) and (
-                    outcome == TEMPORARY_EBAY_SERVER_FAILURE
-                    or outcome in TRANSIENT_EBAY_FAILURE_OUTCOMES
+                if (
+                    (continuous or enforce_budget)
+                    and not getattr(runner, "_ebay_probe_mode", False)
+                    and _counts_toward_marketplace_transient_latch(outcome, row)
                 ):
                     last_transient = utc_iso()
                     # No-op (no extra history) when already HARD_STOPPED; still

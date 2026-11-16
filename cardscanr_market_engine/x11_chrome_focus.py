@@ -61,17 +61,26 @@ class ChromeFocusResult:
         return payload
 
 
-def _run(cmd: list[str] | str, *, shell: bool = False, timeout: int = 10) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd,
-        shell=shell,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        encoding="utf-8",
-        errors="replace",
-        env={**os.environ, "DISPLAY": DISPLAY_NAME},
-    )
+def _run(cmd: list[str] | str, *, shell: bool = False, timeout: int = 20) -> subprocess.CompletedProcess[str]:
+    def _once() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            cmd,
+            shell=shell,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "DISPLAY": DISPLAY_NAME},
+        )
+
+    try:
+        return _once()
+    except subprocess.TimeoutExpired as first:
+        try:
+            return _once()
+        except subprocess.TimeoutExpired:
+            raise first
 
 
 def probe_ewmh_window_manager() -> dict[str, Any]:

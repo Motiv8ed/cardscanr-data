@@ -169,6 +169,7 @@ class ContinuousSafetyBudget:
         """Owner-clear / healthy reset: clear consecutive streak and HARD_STOP latch."""
         self.consecutive_transient = 0
         self.last_hard_stop = None
+        self.transients = []
 
     def record_transient(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()

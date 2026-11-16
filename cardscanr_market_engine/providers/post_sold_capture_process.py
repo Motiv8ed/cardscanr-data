@@ -32,10 +32,10 @@ from .post_sold_capture import (
 ROOT = Path(__file__).resolve().parent.parent.parent
 WORKER_MODULE = "cardscanr_market_engine.providers.post_sold_capture_worker"
 
-DEFAULT_CAPTURE_DEADLINE_SECONDS = 15.0
-MAX_CAPTURE_DEADLINE_SECONDS = 20.0
+DEFAULT_CAPTURE_DEADLINE_SECONDS = 25.0
+MAX_CAPTURE_DEADLINE_SECONDS = 30.0
 DEFAULT_GRACE_SECONDS = 1.0
-DEFAULT_POST_SOLD_FINALIZE_SECONDS = 30.0
+DEFAULT_POST_SOLD_FINALIZE_SECONDS = 40.0
 
 
 def capture_deadline_seconds(default: float = DEFAULT_CAPTURE_DEADLINE_SECONDS) -> float:

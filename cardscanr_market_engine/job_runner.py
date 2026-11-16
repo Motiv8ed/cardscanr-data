@@ -67,6 +67,7 @@ from .owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
     CHECKED_NO_NEW_EXACT_EVIDENCE,
     EBAY_ACCESS_DENIED_403,
+    EBAY_RATE_LIMITED,
     FINALIZE_TIMEOUT_SAFE,
     NO_PRICE_EVER_FOUND,
     TEMPORARY_BROWSER_FAILURE,
@@ -1198,7 +1199,8 @@ class MarketPriceJobRunner:
                     release_probe_local_failure(now=now, reference=error_message)
                 elif (
                     bool(getattr(self, "_ebay_probe_mode", False))
-                    and owned_outcome not in {TEMPORARY_EBAY_SERVER_FAILURE, CHALLENGE_REQUIRED, EBAY_ACCESS_DENIED_403}
+                    and owned_outcome
+                    not in {TEMPORARY_EBAY_SERVER_FAILURE, EBAY_RATE_LIMITED, CHALLENGE_REQUIRED, EBAY_ACCESS_DENIED_403}
                     and operational not in {EBAY_AVAILABILITY_COOLDOWN, AVAIL_CHALLENGE}
                 ):
                     # Probe slot must not stay in_flight after local/browser failures.
@@ -1216,12 +1218,13 @@ class MarketPriceJobRunner:
                         market=(price_key.market_country if price_key is not None else None),
                         incident_id=(cooldown_row.incident_id if cooldown_row is not None else None),
                     )
-                elif owned_outcome == TEMPORARY_EBAY_SERVER_FAILURE or owned_outcome == EBAY_ACCESS_DENIED_403 or str(
+                elif owned_outcome in {TEMPORARY_EBAY_SERVER_FAILURE, EBAY_RATE_LIMITED} or owned_outcome == EBAY_ACCESS_DENIED_403 or str(
                     diag.get("reason") or ""
                 ) in {
                     "ebay_sorry_error_page",
                     "ebay_error_page",
                     "ebay_access_denied_403",
+                    "ebay_rate_limited",
                     "marketplace_error_page",
                 } or str(diag.get("failureClass") or "").upper() in {
                     "MARKETPLACE_ERROR_PAGE",

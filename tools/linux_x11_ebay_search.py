@@ -34,6 +34,7 @@ from cardscanr_market_engine.browser_lifecycle_policy import (  # noqa: E402
     RUNTIME_COLD_START,
     evaluate_runtime_targets,
     extra_inter_card_ebay_target_ids,
+    url_matches_job_query,
 )
 from cardscanr_market_engine.providers.linux_x11_gui_diagnostics import (  # noqa: E402
     GuiAttemptTimings,
@@ -337,11 +338,22 @@ def chrome_owner_count() -> int:
 
 
 def title() -> str:
-    return subprocess.check_output(
-        "xwininfo -root -tree | awk -F'\"' '/Google Chrome/{print $2; exit}'",
-        shell=True,
-        text=True,
-    ).strip()
+    try:
+        tree = subprocess.check_output(
+            ["xwininfo", "-root", "-tree"],
+            text=True,
+            timeout=20,
+            env={**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":99")},
+        )
+    except Exception:
+        return ""
+    for line in tree.splitlines():
+        if '"Google Chrome": (' not in line:
+            continue
+        match = re.search(r'^\s*0x[0-9a-fA-F]+\s+"(.*)"\s+"Google Chrome": \(', line)
+        if match:
+            return match.group(1)
+    return ""
 
 
 def omnibox_url() -> str:
@@ -707,7 +719,7 @@ def wait_results(query: str, timeout: int = 40) -> dict:
                     "routeClass": EBAY_LIVE_RESULTS,
                     "surface": surface,
                 }
-            ok = is_ordinary_sch_results_url(last_u)
+            ok = is_ordinary_sch_results_url(last_u) and url_matches_job_query(query, last_u)
             return {
                 "ok": ok,
                 "title": last_t,
