@@ -776,6 +776,48 @@ class MarketPriceJobRunner:
             except (TypeError, ValueError):
                 prior_price = None
 
+            if not force and apply_ebay_sold_freshness:
+                from .ebay_scale.cross_user_cache import evaluate_cross_user_cache_for_job
+
+                cache_target = {
+                    **dict(price_key.raw or {}),
+                    "fingerprint": price_key.fingerprint,
+                    "language": price_key.language,
+                    "condition": price_key.condition,
+                    "variant": price_key.variant,
+                    "market_country": price_key.market_country,
+                }
+                cache_decision = evaluate_cross_user_cache_for_job(
+                    target=cache_target,
+                    prior_cache=prior_cache,
+                    now=now,
+                )
+                if cache_decision is not None and cache_decision.skip_job:
+                    self.logger(
+                        f"[market-engine] skipped_cross_user_cache_fresh job={job.id} "
+                        f"key={cache_decision.cache_key} freshnessDays={cache_decision.freshness_days}"
+                    )
+                    if hasattr(self.client, "cancel_job"):
+                        self.client.cancel_job(
+                            job_id=job.id,
+                            reason="skipped_cross_user_cache_fresh",
+                        )
+                    else:
+                        self.client.fail_job(
+                            job_id=job.id,
+                            error_message="skipped_cross_user_cache_fresh",
+                            retryable=False,
+                            retry_delay_minutes=cache_decision.freshness_days * 24 * 60,
+                        )
+                    return {
+                        "jobId": job.id,
+                        "priceKeyId": price_key.id,
+                        "status": "skipped_cross_user_cache_fresh",
+                        "outcomeClass": "cross_user_cache_hit",
+                        "cacheKey": cache_decision.cache_key,
+                        "freshnessDays": cache_decision.freshness_days,
+                    }
+
             # Source-aware owned verified-local gate — MUST run before generic due skip.
             # A recent REFERENCE-ONLY last_updated_at / next_refresh_due_at must not
             # produce skipped_already_fresh for P0_NEEDS_VERIFIED_LOCAL work.
