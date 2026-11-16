@@ -1,0 +1,45 @@
+name: Pricing Offline Safety Tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CONFIRM_LIVE_EBAY_WORKER: "false"
+      EBAY_BROWSER_ENABLED: "false"
+      EBAY_BROWSER_KILL_SWITCH: "true"
+      OWNED_DAILY_FULL_ENABLE: "false"
+    steps:
+      - name: Check out exact tested commit
+        uses: actions/checkout@v4
+
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install existing backend dependencies (no browser installation)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Browser preflight tests (loopback fixture only)
+        run: python -m unittest discover -s tests -p "test_inspect_pricing_browser_session.py" -v
+
+      - name: Owned-daily persistent safety flag and caps
+        run: python -m unittest discover -s tests -p "test_pricing_owned_daily_flag_guard_20261113.py" -v
+
+      - name: Worker safety-gate heartbeats and honest health
+        run: python -m unittest discover -s tests -p "test_pricing_outage_33_gated_heartbeat.py" -v
+
+      - name: Ensure-script worker component health (local gates)
+        run: python -m unittest discover -s tests -p "test_live_ebay_component_health.py" -v
+
+      - name: Playwright persistent-context lifecycle (mocked)
+        run: python -m unittest discover -s tests -p "test_playwright_persistent_lifecycle.py" -v

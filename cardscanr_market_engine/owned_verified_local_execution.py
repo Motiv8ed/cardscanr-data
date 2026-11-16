@@ -91,6 +91,8 @@ def evaluate_owned_verified_local_execution(
         reason_code = f"EXECUTE_{reason_suffix.upper()}"
         if source_class in {"reference_only", "structured_fallback"}:
             reason_code = "EXECUTE_REFERENCE_ONLY_NEEDS_VERIFIED_LOCAL"
+        elif source_class == "unattributed":
+            reason_code = "EXECUTE_UNATTRIBUTED_NEEDS_VERIFIED_LOCAL"
         elif not view.has_any_price:
             reason_code = "EXECUTE_NO_PRICE"
         elif band == "P1_STALE_GT_24H":

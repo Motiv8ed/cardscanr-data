@@ -33,7 +33,7 @@ from .price_source_precedence import (
 from .scheduler import _parse_utc, utc_iso
 from .x11_chrome_focus import is_local_runtime_failure_message
 
-SourceClass = Literal["none", "reference_only", "structured_fallback", "verified_local"]
+SourceClass = Literal["none", "reference_only", "structured_fallback", "verified_local", "unattributed"]
 
 
 def classify_owned_price_source(
@@ -65,11 +65,13 @@ def classify_owned_price_source(
     if is_verified_provider(prov):
         return "verified_local"
 
-    # Legacy priced rows with neither display nor provider attribution: treat the
-    # selected price clock (last_updated_at) as the success freshness basis — the
-    # historical owned_daily behaviour before source-aware bands.
+    # Priced rows with neither display nor provider attribution are not
+    # verified eBay sold evidence. Fail closed: never classify them as
+    # verified_local, so a recent last_updated_at cannot FRESH_SKIP an
+    # ebay_browser job. They remain due for first verified-local pricing,
+    # unless an explicit failed-attempt backoff applies.
     if not source and not prov:
-        return "verified_local"
+        return "unattributed"
 
     # Unknown named provider with a price: never above verified; due for eBay verify.
     return "reference_only"
@@ -131,6 +133,10 @@ def build_owned_daily_freshness_view(
         # Structured intl fallback is not verified-local eBay sold for home market.
         ebay_success = None
         field = "none_pending_verified_local"
+    elif source_class == "unattributed":
+        # Unlabelled legacy price is not eBay-sold provenance.
+        ebay_success = None
+        field = "none_unattributed_legacy"
     elif has_reference_only:
         ebay_success = None
         field = "none_reference_only"
@@ -195,7 +201,7 @@ def classify_owned_daily_band(
             return "P0_NEVER_PRICED", False, "p0_never_priced_backoff", view, extras
         return "P0_NEVER_PRICED", True, "p0_never_priced", view, extras
 
-    if view.source_class in {"reference_only", "structured_fallback"}:
+    if view.source_class in {"reference_only", "structured_fallback", "unattributed"}:
         # Recent reference must not FRESH_SKIP eBay verification.
         # Local X11/runtime failures may set refresh_status=failed but must not
         # demote this identity away from P0_NEEDS_VERIFIED_LOCAL.
