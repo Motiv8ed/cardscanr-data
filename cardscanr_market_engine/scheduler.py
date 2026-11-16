@@ -557,6 +557,8 @@ class MarketPriceRefreshScheduler:
                     "market_country": candidate.get("market_country"),
                     "currency": candidate.get("currency"),
                     "marketplace": candidate.get("marketplace"),
+                    "set_code": candidate.get("set_code"),
+                    "set_name": candidate.get("set_name"),
                     "candidate_type": candidate.get("candidate_type"),
                     "decision": decision,
                     "active_job": active_job,
@@ -598,6 +600,33 @@ class MarketPriceRefreshScheduler:
             watermarks=watermarks,
             max_enqueues_per_run=self.config.max_enqueues_per_run,
         )
+
+        try:
+            from .ebay_scale.set_sweep_worker_hook import record_set_sweep_plan_from_target
+
+            for item in decisions:
+                decision: SchedulerDecision = item["decision"]
+                if not decision.should_enqueue:
+                    continue
+                if item.get("active_job") is not None:
+                    continue
+                market = str(item.get("market_country") or "").strip().upper()
+                if market != "AU":
+                    continue
+                record_set_sweep_plan_from_target(
+                    target={
+                        "set_code": item.get("set_code"),
+                        "set_name": item.get("set_name"),
+                        "market_country": market,
+                        "fingerprint": item.get("fingerprint"),
+                        "price_key_id": item.get("price_key_id"),
+                    },
+                    price_key_id=str(item.get("price_key_id") or ""),
+                    source="market_price_scheduler",
+                )
+                break
+        except Exception:
+            pass
 
         for item in decisions:
             decision: SchedulerDecision = item["decision"]

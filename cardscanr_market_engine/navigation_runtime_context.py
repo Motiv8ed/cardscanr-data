@@ -33,6 +33,7 @@ PRE_SUBMIT_ONLY_ENV = "CARDSCANR_PRE_SUBMIT_ONLY"
 DEFAULT_CONTEXT_PATH = Path(__file__).resolve().parents[1] / "reports" / "runtime" / "nav_runtime_context.json"
 
 NAV_HANDOFF_WRITER_RUN_ENV = "CARDSCANR_NAV_HANDOFF_WRITER_RUN_ID"
+NAV_BROWSER_RECYCLE_FIELD = "browserSessionRecycleEvents"
 NAV_HANDOFF_MAX_AGE_SECONDS = 30 * 60
 NAV_HANDOFF_FUTURE_TOLERANCE_SECONDS = 120
 
@@ -242,6 +243,15 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _browser_session_recycle_events() -> int:
+    try:
+        from .providers.ebay_browser_provider import browser_session_recycle_events
+
+        return int(browser_session_recycle_events())
+    except Exception:
+        return 0
+
+
 def nav_handoff_write_metadata() -> dict[str, Any]:
     # The writing process owns the handoff run identity. The worker mints one at
     # start; any other writer without one mints its own (never adopts a file id).
@@ -252,7 +262,47 @@ def nav_handoff_write_metadata() -> dict[str, Any]:
         "recordedAtUtc": _utc_now_iso(),
         "writerRunId": writer_run,
         "writerPid": os.getpid(),
+        NAV_BROWSER_RECYCLE_FIELD: _browser_session_recycle_events(),
     }
+
+
+def invalidate_inter_card_handoff_after_browser_recycle() -> None:
+    """Persistently clear expected CDP target ids after a Chrome recycle."""
+    ctx = load_navigation_runtime_context()
+    if ctx.expected_prior is not None:
+        ctx.expected_prior = _prior_without_target_id(ctx.expected_prior)
+    ctx.prior_handoff_stale = True
+    recycle = _browser_session_recycle_events()
+    dest = bind_persisted_nav_context_path()
+    payload = ctx.to_dict()
+    payload.update(nav_handoff_write_metadata())
+    payload[NAV_BROWSER_RECYCLE_FIELD] = recycle
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    apply_context_to_environ(ctx)
+
+
+def reconcile_navigation_context_for_browser_recycle(
+    ctx: NavigationRuntimeContext,
+    *,
+    file_payload: dict[str, Any] | None = None,
+) -> NavigationRuntimeContext:
+    """Drop stale CDP target expectations after Chrome session recycle.
+
+    Wrong-page protection stays intact for fresh handoffs (target_id enforced). After
+    recycle, the prior tab target id cannot exist; continuation uses query correlation only.
+    """
+    data = file_payload if isinstance(file_payload, dict) else {}
+    if NAV_BROWSER_RECYCLE_FIELD not in data:
+        return ctx
+    stored = int(data.get(NAV_BROWSER_RECYCLE_FIELD) or 0)
+    current = _browser_session_recycle_events()
+    if current <= stored:
+        return ctx
+    if ctx.expected_prior is not None:
+        ctx.expected_prior = _prior_without_target_id(ctx.expected_prior)
+    ctx.prior_handoff_stale = True
+    return ctx
 
 
 def mint_nav_handoff_writer_run_id() -> str:
@@ -439,6 +489,7 @@ def load_navigation_runtime_context() -> NavigationRuntimeContext:
         ctx.prior_handoff_stale = True
         if ctx.expected_prior is not None:
             ctx.expected_prior = _prior_without_target_id(ctx.expected_prior)
+    ctx = reconcile_navigation_context_for_browser_recycle(ctx, file_payload=file_payload)
     return ctx
 
 

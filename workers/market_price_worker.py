@@ -480,6 +480,17 @@ def run_worker_loop(
             or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
         )
         cycle_max_jobs = min(max_jobs, 1) if getattr(runner, "_ebay_probe_mode", False) else max_jobs
+        if continuous and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser":
+            try:
+                from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import try_set_sweep_worker_cycle
+
+                try_set_sweep_worker_cycle(
+                    client=runner.client,
+                    budget=budget,
+                    logger=logger,
+                )
+            except Exception as sweep_exc:
+                logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
         try:
             # eBay-sold freshness (not reference TTL) is enforced in MarketPriceJobRunner.run_job.
             results = runner.run_once(max_jobs=cycle_max_jobs)

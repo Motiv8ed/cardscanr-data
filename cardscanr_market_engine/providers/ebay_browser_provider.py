@@ -341,6 +341,12 @@ def note_browser_session_recycle() -> None:
     global _BROWSER_SESSION_RECYCLE_EVENTS
     with _TIMEOUT_INSTRUMENTATION_LOCK:
         _BROWSER_SESSION_RECYCLE_EVENTS += 1
+    try:
+        from ..navigation_runtime_context import invalidate_inter_card_handoff_after_browser_recycle
+
+        invalidate_inter_card_handoff_after_browser_recycle()
+    except Exception:
+        pass
 
 
 def browser_session_recycle_events() -> int:
@@ -2909,6 +2915,67 @@ class EbayBrowserSoldCompsProvider:
             "linux_x11",
             "linux_gui",
         }
+
+    def fetch_set_sweep_results_html(self, *, query_text: str) -> str:
+        """One AU set-level sold search; returns authoritative HTML (counts as browser work)."""
+        if not self._linux_x11_nav_mode_enabled():
+            raise ProviderTemporaryError(
+                "Set sweep HTML capture requires linux_x11 nav mode",
+                diagnostics={},
+            )
+        from ..navigation_runtime_context import RUNTIME_COLD_START, apply_context_to_environ, load_navigation_runtime_context
+        from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
+        from .linux_x11_ebay_nav import navigate_query_to_sold
+        from .post_sold_capture import resolve_authoritative_capture_html_path
+        from .post_sold_capture_process import (
+            capture_deadline_seconds,
+            capture_process_result_to_sold_page,
+            run_capture_worker_process,
+        )
+
+        ctx = load_navigation_runtime_context()
+        ctx.runtime_mode = RUNTIME_COLD_START
+        ctx.expected_prior = None
+        apply_context_to_environ(ctx)
+        port = self._ensure_linux_chrome_cdp_ready()
+        nav = navigate_query_to_sold(
+            query_text,
+            reset_homepage=True,
+            attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+            price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+        )
+        if not nav.ok or not nav.sold_state_verified:
+            raise ProviderTemporaryError(
+                f"Set sweep navigation failed: {nav.error or 'unknown'}",
+                diagnostics={"desktopNav": nav.diagnostics if isinstance(nav.diagnostics, dict) else {}},
+            )
+        artifact_path = resolve_authoritative_capture_html_path(
+            job_id=os.environ.get("CARDSCANR_JOB_ID"),
+            attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+            price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+        )
+        cdp_port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or port
+        capture_budget = capture_deadline_seconds()
+        proc_result = run_capture_worker_process(
+            cdp_endpoint=f"http://127.0.0.1:{int(cdp_port)}",
+            expected_url=nav.url,
+            expected_query=query_text,
+            expected_origin="ebay.com.au",
+            deadline_seconds=capture_budget,
+            max_results=self.config.max_results * 3,
+            socket_timeout=min(4.0, max(2.0, capture_budget / 3.0)),
+            artifact_path=str(artifact_path),
+        )
+        sold_capture = capture_process_result_to_sold_page(
+            proc_result,
+            x11_sold_state_verified=bool(nav.sold_state_verified),
+        )
+        if not sold_capture.success and not artifact_path.is_file():
+            raise ProviderTemporaryError(
+                "Set sweep capture produced no HTML artifact",
+                diagnostics={"artifactPath": str(artifact_path)},
+            )
+        return artifact_path.read_text(encoding="utf-8", errors="replace")
 
     def _ensure_linux_chrome_cdp_ready(self) -> int:
         """Ensure Linux :99 Chrome is up with CDP; do not attach Playwright yet."""
