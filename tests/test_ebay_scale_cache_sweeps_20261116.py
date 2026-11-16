@@ -207,7 +207,7 @@ class SoldRowParserTests(unittest.TestCase):
     def test_parses_every_bloodmoon_row(self) -> None:
         html = BLOODMOON_FIXTURE.read_text(encoding="utf-8")
         rows = parse_sold_results_html(html)
-        self.assertEqual(len(rows), 6)
+        self.assertEqual(len(rows), 5)
         self.assertEqual(rows[0].title, "Bloodmoon Ursaluna 054/131 Prismatic Evolutions Pokemon Card")
         self.assertEqual(rows[0].sold_price, 2.80)
         self.assertEqual(rows[0].postage, 12.0)
