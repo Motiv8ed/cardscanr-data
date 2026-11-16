@@ -85,6 +85,20 @@ class LiveEbayComponentHealthTests(unittest.TestCase):
         self.assertEqual(row.gate_reason, "AU_THREE_TRANSIENT")
         self.assertNotEqual(row.status, "healthy")
 
+    def test_fresh_hard_stop_status_cleared_ledger_latch_not_healthy(self) -> None:
+        """Regression: cleared owner latch must not promote fresh HARD_STOP status to healthy."""
+        status, ledger = _fresh_runtime_pair(
+            self.tmp,
+            now=self.now,
+            worker_state="HARD_STOP",
+            status_extra={"lastHardStopReason": "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES"},
+            last_hard_stop=None,
+        )
+        row = self._classify(status_path=status, ledger_path=ledger)
+        self.assertEqual(row.gate_state, "HARD_STOP")
+        self.assertEqual(row.status, "stopped_hard_stop")
+        self.assertNotEqual(row.status, "healthy")
+
     def test_stale_status_timestamp_not_healthy(self) -> None:
         status = self.tmp / "status.json"
         ledger = self.tmp / "ledger.json"

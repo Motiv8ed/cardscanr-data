@@ -140,6 +140,7 @@ def classify_live_ebay_worker_component_health(
         ledger_payload,
         status_evidence=status_evidence,
         db_heartbeat_fresh=False,
+        allow_latch_clear_promotion=False,
     )
     if worker_gate_blocks_pricing(gate_state):
         return LiveEbayWorkerComponentHealth(

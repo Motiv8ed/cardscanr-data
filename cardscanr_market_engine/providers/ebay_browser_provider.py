@@ -2492,17 +2492,27 @@ class EbayBrowserSoldCompsProvider:
 
         def _launch_session() -> tuple[Any, Any, Any]:
             owned_pw = sync_playwright().start()
-            context = owned_pw.chromium.launch_persistent_context(
-                str(profile_dir),
-                channel=self.config.channel,
-                headless=self.config.headless,
-                locale=request.search_locale,
-                viewport={"width": 1366, "height": 900},
-                timeout=launch_timeout_ms,
-            )
-            page = context.new_page()
-            page.set_default_timeout(timeout_ms)
-            return owned_pw, context, page
+            context = None
+            try:
+                context = owned_pw.chromium.launch_persistent_context(
+                    str(profile_dir),
+                    channel=self.config.channel,
+                    headless=self.config.headless,
+                    locale=request.search_locale,
+                    viewport={"width": 1366, "height": 900},
+                    timeout=launch_timeout_ms,
+                )
+                page = context.new_page()
+                page.set_default_timeout(timeout_ms)
+                return owned_pw, context, page
+            except Exception:
+                teardown_persistent_context(
+                    context=context,
+                    pw=owned_pw,
+                    profile_dir=profile_dir,
+                    wait_profile_lock=False,
+                )
+                raise
 
         try:
             pw, context, page = launch_persistent_context_with_retry(_launch_session, profile_dir=profile_dir)
@@ -3706,16 +3716,26 @@ class EbayBrowserSoldCompsProvider:
 
                 def _launch_owned() -> tuple[Any, Any]:
                     local_pw = sync_playwright().start()
-                    with _StageTimer(stage_timings, "launch_browser"):
-                        local_context = local_pw.chromium.launch_persistent_context(
-                            str(profile_dir),
-                            channel=self.config.channel,
-                            headless=self.config.headless,
-                            locale=request.search_locale,
-                            viewport={"width": 1366, "height": 900},
-                            timeout=launch_timeout_ms,
+                    local_context = None
+                    try:
+                        with _StageTimer(stage_timings, "launch_browser"):
+                            local_context = local_pw.chromium.launch_persistent_context(
+                                str(profile_dir),
+                                channel=self.config.channel,
+                                headless=self.config.headless,
+                                locale=request.search_locale,
+                                viewport={"width": 1366, "height": 900},
+                                timeout=launch_timeout_ms,
+                            )
+                        return local_pw, local_context
+                    except Exception:
+                        teardown_persistent_context(
+                            context=local_context,
+                            pw=local_pw,
+                            profile_dir=profile_dir,
+                            wait_profile_lock=False,
                         )
-                    return local_pw, local_context
+                        raise
 
                 try:
                     owned_pw, context = launch_persistent_context_with_retry(_launch_owned, profile_dir=profile_dir)

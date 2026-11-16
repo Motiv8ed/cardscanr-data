@@ -93,6 +93,7 @@ def worker_runtime_gate(
     *,
     status_evidence: str | None = None,
     db_heartbeat_fresh: bool = False,
+    allow_latch_clear_promotion: bool = True,
 ) -> tuple[str | None, str | None]:
     """Fail-safe latch / gate state from local runtime status files (no Supabase)."""
     gate_state = None
@@ -111,17 +112,23 @@ def worker_runtime_gate(
         gate_state = "HARD_STOP"
         gate_reason = ledger_stop
     elif ledger_present and normalize_gate_state(gate_state) == "HARD_STOP":
-        gate_state = None
-        gate_reason = None
         fresh_runtime = status_evidence == "fresh"
-        if status:
-            gate_state = str(status.get("workerState") or "").strip() or None
-            if normalize_gate_state(gate_state) == "HARD_STOP":
-                if fresh_runtime or db_heartbeat_fresh:
-                    gate_state = "SELECTING"
-                else:
-                    gate_state = None
-                    gate_reason = "STALE_RUNTIME_AFTER_LATCH_CLEAR"
+        if not allow_latch_clear_promotion and fresh_runtime:
+            # Ensure-runtime: keep HARD_STOP until worker publishes an explicit healthy state.
+            pass
+        else:
+            gate_state = None
+            gate_reason = None
+            if status:
+                gate_state = str(status.get("workerState") or "").strip() or None
+                if normalize_gate_state(gate_state) == "HARD_STOP":
+                    if allow_latch_clear_promotion and (fresh_runtime or db_heartbeat_fresh):
+                        gate_state = "SELECTING"
+                    elif not fresh_runtime and db_heartbeat_fresh:
+                        gate_state = "SELECTING"
+                    else:
+                        gate_state = None
+                        gate_reason = "STALE_RUNTIME_AFTER_LATCH_CLEAR"
 
     if normalize_gate_state(gate_state) == "BUDGET_WAIT" and not gate_reason:
         gate_reason = "BUDGET_WAIT"
