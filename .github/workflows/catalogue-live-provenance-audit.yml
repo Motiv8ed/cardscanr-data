@@ -9,13 +9,14 @@ on:
       - 'tools/Run-CardScanR-Source-ID-Audit.cmd'
       - 'tests/test_catalogue_public_and_source_audits.py'
       - '.github/workflows/catalogue-live-provenance-audit.yml'
-  push:
-    branches:
-      - 'catalogue/live-pack-source-provenance-audit-*'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -34,7 +35,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_catalogue_public_and_source_audits.py -v
 
   live-pointer-check:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 4
@@ -79,7 +80,7 @@ jobs:
 
 
   owner-source-id-package:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: [offline-tests, windows-launcher]
     runs-on: ubuntu-latest
     timeout-minutes: 4
