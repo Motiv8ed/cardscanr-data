@@ -20,7 +20,7 @@ from urllib.request import Request, HTTPRedirectHandler, build_opener
 API = "https://api.tcgdex.net/v2"
 LANGUAGES = ("ja", "zh-tw", "ko", "en", "th", "id", "zh-cn")
 REGIONS = {"ja": "JP", "zh-tw": "TW", "ko": "KR", "en": "INTL", "th": "TH", "id": "ID", "zh-cn": "CN"}
-SET_ID = re.compile(r"^[A-Za-z0-9_-]{1,48}$")
+SET_ID = re.compile(r"^[A-Za-z0-9_.-]{1,48}$")
 CARD_ID = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
 MAX_RESPONSE_BYTES = 2_000_000
 USER_AGENT = "CardScanR-private-metadata-discovery/1.0 (metadata-only)"
@@ -59,11 +59,12 @@ def _short(value: Any, limit: int = 250) -> str | None:
 
 
 def _choose_sets(payload: Any, max_sets: int) -> list[str]:
+    """Use confirmed release dates when present, otherwise preserve provider order."""
     if not isinstance(payload, list):
         raise ValueError("set_index_not_array")
     candidates = []
     seen = set()
-    for item in payload:
+    for position, item in enumerate(payload):
         if not isinstance(item, dict):
             continue
         sid = item.get("id")
@@ -71,10 +72,52 @@ def _choose_sets(payload: Any, max_sets: int) -> list[str]:
             continue
         seen.add(sid)
         date = item.get("releaseDate")
-        sort_date = date if isinstance(date, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) else "0000-00-00"
-        candidates.append((sort_date, sid))
+        valid_date = date if isinstance(date, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) else ""
+        candidates.append((bool(valid_date), valid_date, -position, sid))
     candidates.sort(reverse=True)
-    return [sid for _, sid in candidates[:max_sets]]
+    return [sid for _, _, _, sid in candidates[:max_sets]]
+
+
+def _korean_index_records(items: Any, set_index: Any, sha: str, max_items: int = 300) -> tuple[list[dict], int, int]:
+    """Use exact provider set-prefix evidence from ko/cards; never infer variants."""
+    if not isinstance(items, list) or not isinstance(set_index, list):
+        raise ValueError("invalid_korean_card_index")
+    set_ids = sorted({
+        item["id"] for item in set_index
+        if isinstance(item, dict) and isinstance(item.get("id"), str) and SET_ID.fullmatch(item["id"])
+    }, key=lambda sid: (-len(sid), sid))
+    records: list[dict] = []
+    rejected, unprocessed = 0, 0
+    seen = set()
+    for position, item in enumerate(items):
+        if len(records) >= max_items:
+            unprocessed = len(items) - position
+            break
+        if not isinstance(item, dict):
+            rejected += 1
+            continue
+        cid, name, local_id = item.get("id"), _short(item.get("name"), 300), _short(item.get("localId"), 80)
+        if not isinstance(cid, str) or not CARD_ID.fullmatch(cid) or not name or not local_id or cid in seen:
+            rejected += 1
+            continue
+        matches = [sid for sid in set_ids if cid.startswith(sid + "-")]
+        if len(matches) != 1:
+            rejected += 1
+            continue
+        sid = matches[0]
+        seen.add(cid)
+        records.append({
+            "source_provider": "tcgdex", "source_language": "ko",
+            "source_region_hint": "KR", "source_set_id": sid,
+            "source_card_id": cid, "local_id": local_id, "name": name,
+            "source_url": f"{API}/ko/cards", "source_response_sha256": sha,
+            "metadata_route": "korean_card_index_fallback",
+            "source_image_reference_present": bool(_short(item.get("image"), 2000)),
+            "identity_status": "unmatched_candidate", "variant_status": "unverified",
+            "artwork_downloaded": False, "artwork_publication_allowed": False,
+            "production_published": False,
+        })
+    return records, rejected, unprocessed
 
 
 def _records(language: str, set_id: str, payload: Any, source_sha: str, max_cards: int) -> tuple[list[dict], int]:
@@ -152,16 +195,46 @@ def collect(
                 responses.append({"language": lang, "kind": "set_details", "set_id": sid, "sha256": checksum, "bytes": len(raw), "accepted_card_candidates": len(batch), "rejected_rows": invalid})
             except (ValueError, HTTPError, URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
                 warnings.append({"language": lang, "stage": "set_details", "set_id": sid, "reason": type(exc).__name__})
+        if lang == "ko":
+            # The Korean /sets index can list set shells with 0 cards while
+            # /cards contains real Korean card metadata. Reconcile with exact
+            # known set prefixes; never fabricate missing set or variant IDs.
+            try:
+                if pace_seconds:
+                    time.sleep(pace_seconds)
+                request_count += 1
+                all_cards, card_raw = get(f"{API}/ko/cards")
+                digest = hashlib.sha256(card_raw).hexdigest()
+                fallback, rejected, unprocessed = _korean_index_records(all_cards, index, digest)
+                existing = {rec["source_card_id"] for rec in records if rec["source_language"] == "ko"}
+                newly_added = [rec for rec in fallback if rec["source_card_id"] not in existing]
+                records.extend(newly_added)
+                language_counts["ko"] += len(newly_added)
+                responses.append({
+                    "language": "ko", "kind": "card_index_fallback",
+                    "sha256": digest, "bytes": len(card_raw),
+                    "index_card_rows": len(all_cards),
+                    "accepted_card_candidates": len(newly_added),
+                    "rejected_rows": rejected, "unprocessed_due_to_cap": unprocessed,
+                })
+                if rejected or unprocessed:
+                    warnings.append({"language": "ko", "stage": "card_index_fallback",
+                                     "reason": "some_rows_unmatched_or_capped",
+                                     "rejected": rejected, "capped": unprocessed})
+            except (ValueError, HTTPError, URLError, TimeoutError, OSError,
+                    UnicodeDecodeError, json.JSONDecodeError) as exc:
+                warnings.append({"language": "ko", "stage": "card_index_fallback",
+                                 "reason": type(exc).__name__})
     for lang in languages:
         if language_counts[lang] == 0:
             warnings.append({"language": lang, "stage": "coverage", "reason": "no_valid_card_candidates"})
     records.sort(key=lambda row: (LANGUAGES.index(row["source_language"]), row["source_set_id"], row["source_card_id"]))
     report = {
         "schema_version": 1, "provider": "tcgdex", "languages_requested": languages,
-        "requests_completed": request_count, "request_budget": len(languages) * (1 + max_sets),
+        "requests_completed": request_count, "request_budget": len(languages) * (1 + max_sets) + int("ko" in languages),
         "set_limit_per_language": max_sets, "card_limit_per_set": max_cards,
         "candidate_cards": len(records), "candidate_cards_by_language": language_counts,
-        "set_selection": "release_date_when_in_index_else_provider_id_desc_unverified_recency",
+        "set_selection": "release_date_when_present_else_provider_index_order_unverified_recency",
         "response_receipts": responses,
         "warnings": warnings, "status": "pass" if records and not warnings else ("partial" if records else "no_candidates"),
         "metadata_only": True, "image_files_downloaded": 0,
