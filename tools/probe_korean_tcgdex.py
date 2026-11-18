@@ -6,10 +6,14 @@ import argparse
 import hashlib
 import json
 import time
+import sys
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import URLError, HTTPError
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 from tools.tcgdex_metadata_batch import API, fetch_json
 
 MAX_SAMPLES = 12
@@ -23,7 +27,7 @@ def sample_set_ids(index: Any, count: int) -> list[str]:
     for sid, card_count in items:
         if (isinstance(sid, str) and 0 < len(sid) <= 48 and
                 all(c.isalnum() or c in "_-." for c in sid) and sid not in unique):
-            n = (card_count.get("total") if isinstance(card_count, dict) else card_count)
+            n = (card_count.get("total", card_count.get("official")) if isinstance(card_count, dict) else card_count)
             unique[sid] = n if isinstance(n, int) else None
     # Favor explicitly populated sets, but spread across remaining provider index
     # rather than selecting alphanumerically "latest" IDs that aren't actual dates.
