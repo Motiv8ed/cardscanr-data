@@ -1,0 +1,111 @@
+name: CardScanR Catalogue Public Pointers and Provider Provenance Audit
+
+on:
+  pull_request:
+    paths:
+      - 'tools/audit_public_catalogue_pointers.py'
+      - 'tools/audit_source_ids_readonly.py'
+      - 'tools/Run-CardScanR-Source-ID-Audit.ps1'
+      - 'tools/Run-CardScanR-Source-ID-Audit.cmd'
+      - 'tests/test_catalogue_public_and_source_audits.py'
+      - '.github/workflows/catalogue-live-provenance-audit.yml'
+  push:
+    branches:
+      - 'catalogue/live-pack-source-provenance-audit-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source syntax and immutable SQLite fixtures
+        run: |
+          python -m py_compile tools/audit_public_catalogue_pointers.py tools/audit_source_ids_readonly.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_catalogue_public_and_source_audits.py -v
+
+  live-pointer-check:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read two fixed public R2 manifests only; no pack downloads
+        continue-on-error: true
+        run: |
+          python tools/audit_public_catalogue_pointers.py --output "$RUNNER_TEMP/public-pointer-audit"
+      - name: Retain public manifest status report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Public-Pointer-Audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/public-pointer-audit/
+          if-no-files-found: warn
+          retention-days: 7
+
+  windows-launcher:
+    runs-on: windows-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: PowerShell 5.1 parse and read-only policy checks
+        shell: powershell
+        run: |
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile("$PWD\tools\Run-CardScanR-Source-ID-Audit.ps1",[ref]$tokens,[ref]$errors)
+          if ($errors.Count -gt 0) { throw "PowerShell parse error count: $($errors.Count)" }
+          $source = Get-Content -Raw "$PWD\tools\Run-CardScanR-Source-ID-Audit.ps1"
+          foreach ($unsafe in @('Remove-Item','Set-ScheduledTask','Unregister-ScheduledTask','Invoke-WebRequest','Stop-Process')) {
+            if ($source.Contains($unsafe)) { throw "Disallowed operation: $unsafe" }
+          }
+          Write-Host 'PASS: non-admin read-only launcher parsed on Windows PowerShell 5.1'
+
+
+  owner-source-id-package:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: [offline-tests, windows-launcher]
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package source audit without adding user data to GitHub
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"source-id-package"
+          root.mkdir()
+          for name in ("audit_source_ids_readonly.py","Run-CardScanR-Source-ID-Audit.ps1",
+                       "Run-CardScanR-Source-ID-Audit.cmd","README_SOURCE_ID_AUDIT.txt"):
+              shutil.copy2(Path("tools")/name,root/name)
+          (root/"PACKAGE_MANIFEST.json").write_text(json.dumps({
+              "read_only":True,"requires_owner_uploaded_report_files":True,
+              "files_sha256":{f.name:hashlib.sha256(f.read_bytes()).hexdigest()
+                              for f in root.iterdir() if f.is_file()}},indent=2)+"\n")
+          PY
+      - name: Private package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-ReadOnly-Provider-ID-Diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-id-package/
+          retention-days: 7
+          if-no-files-found: error
