@@ -126,11 +126,12 @@ def collect(
     responses: list[dict] = []
     warnings: list[dict] = []
     request_count = 0
+    language_counts = {lang: 0 for lang in languages}
     for lang in languages:
         url = f"{API}/{lang}/sets"
         try:
-            index, raw = get(url)
             request_count += 1
+            index, raw = get(url)
             selected = _choose_sets(index, max_sets)
             if not selected:
                 warnings.append({"language": lang, "stage": "index", "reason": "no_eligible_sets"})
@@ -142,20 +143,26 @@ def collect(
             if pace_seconds:
                 time.sleep(pace_seconds)
             try:
-                detail, raw = get(f"{API}/{lang}/sets/{sid}")
                 request_count += 1
+                detail, raw = get(f"{API}/{lang}/sets/{sid}")
                 checksum = hashlib.sha256(raw).hexdigest()
                 batch, invalid = _records(lang, sid, detail, checksum, max_cards)
                 records.extend(batch)
+                language_counts[lang] += len(batch)
                 responses.append({"language": lang, "kind": "set_details", "set_id": sid, "sha256": checksum, "bytes": len(raw), "accepted_card_candidates": len(batch), "rejected_rows": invalid})
             except (ValueError, HTTPError, URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
                 warnings.append({"language": lang, "stage": "set_details", "set_id": sid, "reason": type(exc).__name__})
+    for lang in languages:
+        if language_counts[lang] == 0:
+            warnings.append({"language": lang, "stage": "coverage", "reason": "no_valid_card_candidates"})
     records.sort(key=lambda row: (LANGUAGES.index(row["source_language"]), row["source_set_id"], row["source_card_id"]))
     report = {
         "schema_version": 1, "provider": "tcgdex", "languages_requested": languages,
         "requests_completed": request_count, "request_budget": len(languages) * (1 + max_sets),
         "set_limit_per_language": max_sets, "card_limit_per_set": max_cards,
-        "candidate_cards": len(records), "response_receipts": responses,
+        "candidate_cards": len(records), "candidate_cards_by_language": language_counts,
+        "set_selection": "release_date_when_in_index_else_provider_id_desc_unverified_recency",
+        "response_receipts": responses,
         "warnings": warnings, "status": "pass" if records and not warnings else ("partial" if records else "no_candidates"),
         "metadata_only": True, "image_files_downloaded": 0,
         "provider_ids_are_canonical": False, "public_artwork_rights_cleared": False,
