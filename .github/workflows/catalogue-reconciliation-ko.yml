@@ -1,0 +1,104 @@
+name: Catalogue Read-only Reconciliation and Korean Probe
+
+on:
+  pull_request:
+    paths:
+      - 'tools/reconcile_tcgdex_metadata_batch.py'
+      - 'tools/probe_korean_tcgdex.py'
+      - 'tests/test_tcgdex_reconciliation_and_korean_probe.py'
+      - '.github/workflows/catalogue-reconciliation-ko.yml'
+  push:
+    branches:
+      - 'catalogue/read-only-reconcile-*'
+    paths:
+      - 'tools/reconcile_tcgdex_metadata_batch.py'
+      - 'tools/probe_korean_tcgdex.py'
+      - 'tests/test_tcgdex_reconciliation_and_korean_probe.py'
+      - '.github/workflows/catalogue-reconciliation-ko.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate source and read-only fixture checks
+        run: |
+          python -m py_compile tools/reconcile_tcgdex_metadata_batch.py tools/probe_korean_tcgdex.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_reconciliation_and_korean_probe.py -v
+
+  korean-coverage:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe Korean provider metadata only; record partial errors
+        id: probe
+        continue-on-error: true
+        run: |
+          PYTHONPATH=. python tools/probe_korean_tcgdex.py --sample-sets 12 --output "$RUNNER_TEMP/korean-provider"
+      - name: Private Korean coverage receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: korean-provider-metadata-${{ github.run_id }}
+          path: ${{ runner.temp }}/korean-provider/
+          if-no-files-found: warn
+          retention-days: 7
+
+  sample-reconciliation:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve previously verified 273-row provider snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: tcgdex-private-metadata-44227144510
+          path: ${{ runner.temp }}/tcgdex-input
+          run-id: 44227144510
+          github-token: ${{ github.token }}
+      - name: Reconcile real snapshot integrity (staging unavailable in CI)
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+          tmp = Path(os.environ["RUNNER_TEMP"])
+          with ZipFile(tmp / "tcgdex-input.zip", "w") as archive:
+              for name in ("card_candidates.jsonl", "manifest.json"):
+                  archive.write(tmp / "tcgdex-input" / name, arcname=name)
+          PY
+          PYTHONPATH=. python tools/reconcile_tcgdex_metadata_batch.py --archive "$RUNNER_TEMP/tcgdex-input.zip" --output "$RUNNER_TEMP/metadata-reconciliation"
+      - name: Retain reconciliation review-only receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcgdex-reconciliation-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/metadata-reconciliation/
+          if-no-files-found: warn
+          retention-days: 7
