@@ -26,7 +26,7 @@ def _parse_dt(value: Any) -> datetime | None:
 @dataclass
 class ContinuousSafetyBudget:
     max_submissions_per_hour: int = 20
-    max_submissions_per_day: int = 200
+    max_submissions_per_day: int = 60
     max_consecutive_transient: int = 3
     max_transient_per_hour: int = 5
     submissions: list[datetime] = field(default_factory=list)
@@ -39,7 +39,7 @@ class ContinuousSafetyBudget:
     def from_env(cls, *, path: Path | None = None) -> "ContinuousSafetyBudget":
         budget = cls(
             max_submissions_per_hour=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_HOUR", 20),
-            max_submissions_per_day=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_DAY", 200),
+            max_submissions_per_day=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_DAY", 60),
             max_consecutive_transient=_parse_positive_int(
                 "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES", 3
             ),

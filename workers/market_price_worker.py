@@ -480,15 +480,39 @@ def run_worker_loop(
             or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
         )
         cycle_max_jobs = min(max_jobs, 1) if getattr(runner, "_ebay_probe_mode", False) else max_jobs
-        if continuous and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser":
+        if (
+            continuous
+            and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
+            and worker_state not in {"PROBE_REQUIRED", "HARD_STOP"}
+            and not hard
+        ):
             try:
                 from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import try_set_sweep_worker_cycle
 
-                try_set_sweep_worker_cycle(
+                sweep_result = try_set_sweep_worker_cycle(
                     client=runner.client,
                     budget=budget,
                     logger=logger,
+                    worker_state=worker_state,
+                    availability_state=str(gate_info.get("availabilityState") or ""),
+                    hard_stop=str(hard) if hard else None,
                 )
+                stop_reason = sweep_result.hard_stop_reason if sweep_result is not None else None
+                if stop_reason:
+                    write_owned_daily_flag(False)
+                    write_continuous_status(
+                        {
+                            "enabled": False,
+                            "workerState": "HARD_STOP",
+                            "lastHardStopReason": stop_reason,
+                            "consecutiveTransientFailures": budget.consecutive_transient,
+                        }
+                    )
+                    budget.persist()
+                    logger(
+                        "[market-engine] "
+                        f"cycle={cycle} status=HARD_STOP reason={stop_reason} source=set_sweep"
+                    )
             except Exception as sweep_exc:
                 logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
         try:
