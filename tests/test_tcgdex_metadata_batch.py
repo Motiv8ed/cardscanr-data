@@ -70,6 +70,17 @@ class BatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             collect(["ja"], max_sets=1, max_cards=26, get=self.get, pace_seconds=0)
 
+    def test_empty_language_not_reported_as_complete(self):
+        def empty_ko(url):
+            if url.endswith("/ko/sets/latest"):
+                return payload({"id": "latest", "cards": []})
+            return self.get(url)
+        rows, m = collect(["ja", "ko"], max_sets=1, max_cards=2, get=empty_ko, pace_seconds=0)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(m["status"], "partial")
+        self.assertEqual(m["candidate_cards_by_language"]["ko"], 0)
+        self.assertTrue(any(w["reason"] == "no_valid_card_candidates" for w in m["warnings"]))
+
     def test_partial_fetch_failures_not_misreported_as_success(self):
         def broken(url):
             if "/ko/" in url:
