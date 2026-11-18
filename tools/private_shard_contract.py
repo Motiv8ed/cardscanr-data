@@ -8,7 +8,26 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
-from cardscanr_search_index.global_builder import _normalize
+import unicodedata
+from cardscanr_search_index.normalization import normalize_collector_number, split_collector_number
+
+# Mirrors the web-beta.js search fold for the preview metadata fields.
+# NFKC handles full-width ASCII, NFKD removes combining accents and the
+# explicit map handles Latin ligatures/letters not decomposed by Unicode.
+_LATIN_SEARCH_FOLD = str.maketrans({
+    'æ': 'ae', 'œ': 'oe', 'ø': 'o', 'ł': 'l',
+    'ð': 'd', 'ı': 'i', 'ß': 'ss', 'ẞ': 'ss',
+})
+
+
+def normalize_website_search(value: str) -> str:
+    text = unicodedata.normalize('NFKC', str(value or '')).strip().lower()
+    text = unicodedata.normalize('NFKD', text.translate(_LATIN_SEARCH_FOLD))
+    letters = (
+        ch if unicodedata.category(ch)[0] in ('L', 'N') else ' '
+        for ch in text
+    )
+    return ' '.join(''.join(letters).split())
 
 WEB_FIELDS = frozenset({
     "id", "lang", "set", "num", "local", "numNorm", "setTotal",
@@ -34,10 +53,13 @@ def preview_metadata_row(row: Mapping[str, Any], language: str) -> dict[str, Any
         raise ValueError("missing_canonical_metadata")
     if len(base) > 300 or len(number) > 100 or len(native) > 500:
         raise ValueError("unbounded_metadata_field")
-    normalized = _normalize(native)
+    normalized = normalize_website_search(native)
     if not normalized:
         raise ValueError("empty_normalized_name")
-    local_number = number.split("/", 1)[0].strip()
+    local_number, _ = split_collector_number(number)
+    normalized_number = normalize_collector_number(number)
+    if not local_number or not normalized_number:
+        raise ValueError("invalid_collector_number")
     # Existing website shard folder/API code is jp, whereas R2 pack is ja.
     web_language = "jp" if language == "ja" else language
     output = {
@@ -46,7 +68,7 @@ def preview_metadata_row(row: Mapping[str, Any], language: str) -> dict[str, Any
         "set": set_id,
         "num": number,
         "local": local_number,
-        "numNorm": str(row.get("normalized_collector_number") or _normalize(number)),
+        "numNorm": normalized_number,
         "setTotal": None,
         "printedTotal": None,
         "name": native,
