@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from ..config import REPORTS_DIR
+from ..owned_daily_enablement import BUDGET_LEDGER_PATH
 from ..models import MarketPriceKey
 from ..navigation_runtime_context import (
     RUNTIME_COLD_START,
@@ -303,11 +304,10 @@ def _reserve_set_sweep_submission(
     now: datetime,
     attempt_paths: dict[str, Path] | None = None,
 ) -> tuple[bool, str | None]:
-    exhausted = budget.budget_exhausted(now)
-    if exhausted:
-        return False, exhausted
-    budget.record_submission(now=now, market=market)
-    budget.persist()
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
+    blocked = budget.reserve_live_submission(path=ledger_path, market=market, now=now)
+    if blocked:
+        return False, blocked
     attempts_path = (attempt_paths or {}).get("attempts")
     append_set_sweep_attempt_receipt(
         {
@@ -334,9 +334,10 @@ def _finish_set_sweep_failure(
     logger: Callable[[str], None] | None = None,
 ) -> SetSweepExecutionResult:
     hard_stop: str | None = None
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
     if marketplace_outcome:
         hard_stop = handle_set_sweep_marketplace_outcome(marketplace_outcome, budget=budget, now=now)
-        budget.persist()
+        budget.persist(ledger_path)
     circuit_path = (attempt_paths or {}).get("circuit")
     record_set_sweep_circuit_failure(load_set_sweep_circuit(circuit_path), now=now, path=circuit_path)
     append_set_sweep_attempt_receipt(
@@ -403,110 +404,127 @@ def execute_set_sweep_shadow(
     if not reserved:
         return SetSweepExecutionResult(ok=False, reason=str(reserve_reason or "budget_exhausted"))
 
-    query = build_set_level_query_text(set_name=set_name, set_code=set_code)
-    ctx = load_navigation_runtime_context()
-    ctx = reconcile_navigation_context_for_browser_recycle(ctx)
-    ctx.runtime_mode = RUNTIME_COLD_START
-    ctx.expected_prior = None
-    apply_context_to_environ(ctx)
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
 
     try:
-        html = fetch_html(query, set_code, set_name)
-    except Exception as exc:
-        outcome = classify_set_sweep_fetch_failure(exc)
+        query = build_set_level_query_text(set_name=set_name, set_code=set_code)
+        ctx = load_navigation_runtime_context()
+        ctx = reconcile_navigation_context_for_browser_recycle(ctx)
+        ctx.runtime_mode = RUNTIME_COLD_START
+        ctx.expected_prior = None
+        apply_context_to_environ(ctx)
+
+        try:
+            html = fetch_html(query, set_code, set_name)
+        except Exception as exc:
+            outcome = classify_set_sweep_fetch_failure(exc)
+            if logger:
+                logger(f"[set-sweep] fetch_failed set={set_code} error={type(exc).__name__}:{exc}")
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason="fetch_failed",
+                marketplace_outcome=outcome,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        marketplace_outcome = classify_set_sweep_html(html)
+        if marketplace_outcome:
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason="marketplace_unhealthy_html",
+                marketplace_outcome=marketplace_outcome,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        sweep_id = new_sweep_id(set_code, at=now)
+        per_card = _per_card_prices_from_targets(targets)
+        batch = apply_set_sweep_pricing_batch(
+            sweep_id=sweep_id,
+            set_code=set_code,
+            set_name=set_name,
+            html=html,
+            catalogue=catalogue,
+            per_card_prices=per_card,
+        )
+        audit = batch.get("audit") if isinstance(batch.get("audit"), dict) else {}
+        if not audit.get("recorded"):
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason=str(audit.get("reason") or "audit_not_recorded"),
+                marketplace_outcome=None,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        from .set_sweep import run_set_sweep
+
+        sweep_stats, _ = run_set_sweep(html=html, catalogue=catalogue)
+        medians = median_prices_by_card(sweep_stats)
+        _ = audit.get("stats")
+
+        _record_set_sweep_run(set_code, sweep_id=sweep_id)
+        plan_update = dict(plan)
+        plan_update["consumed"] = True
+        plan_update["consumedAtUtc"] = utc_iso(now)
+        plan_update["sweepId"] = sweep_id
+        plan_update["mediansByCatalogueCardId"] = medians
+        write_json_atomic(SET_SWEEP_PLAN_PATH, plan_update)
+
+        circuit_path = (attempt_paths or {}).get("circuit")
+        record_set_sweep_circuit_success(load_set_sweep_circuit(circuit_path), path=circuit_path)
+        append_set_sweep_attempt_receipt(
+            {
+                "phase": "recorded",
+                "setCode": set_code,
+                "marketCountry": market,
+                "sweepId": sweep_id,
+                "atUtc": utc_iso(now),
+            },
+            path=(attempt_paths or {}).get("attempts"),
+        )
+
         if logger:
-            logger(f"[set-sweep] fetch_failed set={set_code} error={type(exc).__name__}:{exc}")
+            logger(
+                f"[set-sweep] shadow_recorded set={set_code} sweep={sweep_id} "
+                f"rows={audit.get('rowCount')} liveWrite={batch.get('livePriceWrite')}"
+            )
+        return SetSweepExecutionResult(
+            ok=True,
+            reason="recorded",
+            submission_consumed=True,
+            audit=audit,
+            sweep_id=sweep_id,
+            medians_by_card=medians,
+            attempt_receipt_written=True,
+        )
+    except Exception as exc:
+        if logger:
+            logger(f"[set-sweep] post_reserve_failed set={set_code} error={type(exc).__name__}:{exc}")
         return _finish_set_sweep_failure(
             budget=budget,
             plan=plan,
             set_code=set_code,
             market=market,
-            reason="fetch_failed",
-            marketplace_outcome=outcome,
+            reason="post_reserve_failed",
+            marketplace_outcome=classify_set_sweep_fetch_failure(exc),
             now=now,
             attempt_paths=attempt_paths,
             logger=logger,
         )
-
-    marketplace_outcome = classify_set_sweep_html(html)
-    if marketplace_outcome:
-        return _finish_set_sweep_failure(
-            budget=budget,
-            plan=plan,
-            set_code=set_code,
-            market=market,
-            reason="marketplace_unhealthy_html",
-            marketplace_outcome=marketplace_outcome,
-            now=now,
-            attempt_paths=attempt_paths,
-            logger=logger,
-        )
-
-    sweep_id = new_sweep_id(set_code, at=now)
-    per_card = _per_card_prices_from_targets(targets)
-    batch = apply_set_sweep_pricing_batch(
-        sweep_id=sweep_id,
-        set_code=set_code,
-        set_name=set_name,
-        html=html,
-        catalogue=catalogue,
-        per_card_prices=per_card,
-    )
-    audit = batch.get("audit") if isinstance(batch.get("audit"), dict) else {}
-    if not audit.get("recorded"):
-        return _finish_set_sweep_failure(
-            budget=budget,
-            plan=plan,
-            set_code=set_code,
-            market=market,
-            reason=str(audit.get("reason") or "audit_not_recorded"),
-            marketplace_outcome=None,
-            now=now,
-            attempt_paths=attempt_paths,
-            logger=logger,
-        )
-
-    from .set_sweep import run_set_sweep
-
-    sweep_stats, _ = run_set_sweep(html=html, catalogue=catalogue)
-    medians = median_prices_by_card(sweep_stats)
-    _ = audit.get("stats")
-
-    _record_set_sweep_run(set_code, sweep_id=sweep_id)
-    plan_update = dict(plan)
-    plan_update["consumed"] = True
-    plan_update["consumedAtUtc"] = utc_iso(now)
-    plan_update["sweepId"] = sweep_id
-    plan_update["mediansByCatalogueCardId"] = medians
-    write_json_atomic(SET_SWEEP_PLAN_PATH, plan_update)
-
-    circuit_path = (attempt_paths or {}).get("circuit")
-    record_set_sweep_circuit_success(load_set_sweep_circuit(circuit_path), path=circuit_path)
-    append_set_sweep_attempt_receipt(
-        {
-            "phase": "recorded",
-            "setCode": set_code,
-            "marketCountry": market,
-            "sweepId": sweep_id,
-            "atUtc": utc_iso(now),
-        },
-        path=(attempt_paths or {}).get("attempts"),
-    )
-
-    if logger:
-        logger(
-            f"[set-sweep] shadow_recorded set={set_code} sweep={sweep_id} "
-            f"rows={audit.get('rowCount')} liveWrite={batch.get('livePriceWrite')}"
-        )
-    return SetSweepExecutionResult(
-        ok=True,
-        reason="recorded",
-        submission_consumed=True,
-        audit=audit,
-        sweep_id=sweep_id,
-        medians_by_card=medians,
-        attempt_receipt_written=True,
-    )
 
 
 def try_set_sweep_worker_cycle(

@@ -508,11 +508,26 @@ def run_worker_loop(
                             "consecutiveTransientFailures": budget.consecutive_transient,
                         }
                     )
+                    budget.reload()
                     budget.persist()
                     logger(
                         "[market-engine] "
                         f"cycle={cycle} status=HARD_STOP reason={stop_reason} source=set_sweep"
                     )
+                    _emit_gated_heartbeat(
+                        runner,
+                        config,
+                        cycle=cycle,
+                        started_at=started_at,
+                        state="hard_stop",
+                        reason=str(stop_reason),
+                        mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
+                        logger=logger,
+                    )
+                    if args.once:
+                        return 2
+                    sleep_func(max(poll_seconds, 60))
+                    continue
             except Exception as sweep_exc:
                 logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
         try:
@@ -568,7 +583,7 @@ def run_worker_loop(
                     last_transient = utc_iso()
                     # No-op (no extra history) when already HARD_STOPPED; still
                     # returns the latched reason.
-                    stop_reason = budget.record_transient()
+                    stop_reason = budget.record_transient(hard_stop_source="worker")
                     budget.persist()
                     if stop_reason:
                         write_owned_daily_flag(False)

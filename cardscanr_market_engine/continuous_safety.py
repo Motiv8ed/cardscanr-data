@@ -2,15 +2,24 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .atomic_json_state import (
+    AtomicStateError,
+    atomic_write_json,
+    mutate_json_state,
+    read_json_object,
+)
 from .owned_daily_enablement import BUDGET_LEDGER_PATH
 from .scheduler import _parse_positive_int, utc_iso, utc_now
+
+HARD_STOP_SOURCE_SET_SWEEP = "set_sweep"
+HARD_STOP_SOURCE_WORKER = "worker"
+SAFETY_LEDGER_FAIL_CLOSED = "SAFETY_LEDGER_FAIL_CLOSED"
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -33,7 +42,10 @@ class ContinuousSafetyBudget:
     transients: list[datetime] = field(default_factory=list)
     consecutive_transient: int = 0
     last_hard_stop: str | None = None
+    hard_stop_source: str | None = None
     market_submissions: list[tuple[datetime, str]] = field(default_factory=list)
+    fail_closed: bool = False
+    ledger_initialized: bool = False
 
     @classmethod
     def from_env(cls, *, path: Path | None = None) -> "ContinuousSafetyBudget":
@@ -47,20 +59,33 @@ class ContinuousSafetyBudget:
                 "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR", 5
             ),
         )
-        budget.load(path or BUDGET_LEDGER_PATH)
+        target = path or BUDGET_LEDGER_PATH
+        budget.load(target)
         return budget
 
-    def load(self, path: Path) -> None:
-        if not path.is_file():
-            return
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            return
+    def to_payload(self) -> dict[str, Any]:
+        self._reconcile_consecutive_with_history()
+        payload: dict[str, Any] = {
+            "submissions": [utc_iso(x) for x in self.submissions[-400:]],
+            "transients": [utc_iso(x) for x in self.transients[-200:]],
+            "consecutiveTransient": self.consecutive_transient,
+            "lastHardStop": self.last_hard_stop,
+            "hardStopSource": self.hard_stop_source,
+            "marketSubmissions": [
+                {"at": utc_iso(at), "market": market} for at, market in self.market_submissions[-400:]
+            ],
+            "updatedAtUtc": utc_iso(),
+            "ledgerInitialized": True,
+        }
+        return payload
+
+    def apply_payload(self, data: dict[str, Any]) -> None:
         self.submissions = [d for d in (_parse_dt(x) for x in data.get("submissions") or []) if d]
         self.transients = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d]
         self.consecutive_transient = int(data.get("consecutiveTransient") or 0)
         self.last_hard_stop = str(data.get("lastHardStop") or "") or None
+        self.hard_stop_source = str(data.get("hardStopSource") or "") or None
+        self.ledger_initialized = bool(data.get("ledgerInitialized"))
         tagged: list[tuple[datetime, str]] = []
         for row in data.get("marketSubmissions") or []:
             if isinstance(row, dict):
@@ -69,33 +94,73 @@ class ContinuousSafetyBudget:
                 if parsed is not None:
                     tagged.append((parsed, market))
         self.market_submissions = tagged
-        # Repair impossible consecutiveTransient vs retained history after load.
         self._reconcile_consecutive_with_history()
+
+    def load(self, path: Path) -> None:
+        if not path.is_file():
+            return
+        try:
+            data = read_json_object(path, default={})
+        except AtomicStateError:
+            self.fail_closed = True
+            self.ledger_initialized = True
+            return
+        self.apply_payload(data)
 
     def persist(self, path: Path | None = None) -> None:
+        if self.fail_closed:
+            return
         target = path or BUDGET_LEDGER_PATH
         target.parent.mkdir(parents=True, exist_ok=True)
-        # Never write a contradictory consecutiveTransient > retained history.
-        self._reconcile_consecutive_with_history()
-        payload = {
-            "submissions": [utc_iso(x) for x in self.submissions[-400:]],
-            "transients": [utc_iso(x) for x in self.transients[-200:]],
-            "consecutiveTransient": self.consecutive_transient,
-            "lastHardStop": self.last_hard_stop,
-            "marketSubmissions": [
-                {"at": utc_iso(at), "market": market} for at, market in self.market_submissions[-400:]
-            ],
-            "updatedAtUtc": utc_iso(),
-        }
-        target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        self.ledger_initialized = True
+        atomic_write_json(target, self.to_payload())
+        self.ledger_initialized = True
+
+    def reload(self, path: Path | None = None) -> None:
+        target = path or BUDGET_LEDGER_PATH
+        was_initialized = self.ledger_initialized
+        if was_initialized and not target.is_file():
+            self.fail_closed = True
+            return
+        if not target.is_file():
+            return
+        self.load(target)
+
+    def reserve_live_submission(
+        self,
+        *,
+        path: Path | None = None,
+        market: str | None = None,
+        now: datetime | None = None,
+    ) -> str | None:
+        """Cross-process locked reservation: reload, check caps, record submission, persist."""
+        target = path or BUDGET_LEDGER_PATH
+        current = now or utc_now()
+        blocked_reason: list[str] = []
+
+        def _mutate(data: dict[str, Any]) -> dict[str, Any]:
+            self.apply_payload(data)
+            if self.fail_closed:
+                blocked_reason.append(SAFETY_LEDGER_FAIL_CLOSED)
+                return data
+            blocked = self.budget_exhausted(current)
+            if blocked:
+                blocked_reason.append(blocked)
+                return data
+            self.record_submission(now=current, market=market)
+            data.clear()
+            data.update(self.to_payload())
+            return data
+
+        try:
+            mutate_json_state(target, _mutate, default={})
+        except AtomicStateError:
+            self.fail_closed = True
+            return SAFETY_LEDGER_FAIL_CLOSED
+        self.reload(target)
+        return blocked_reason[0] if blocked_reason else None
 
     def _reconcile_consecutive_with_history(self) -> None:
-        """Keep consecutiveTransient consistent with retained transient timestamps.
-
-        Pruning must not leave consecutiveTransient above len(transients). A
-        legitimate HARD_STOP remains latched via last_hard_stop until owner
-        record_healthy(); pruning alone never clears that latch.
-        """
         retained = len(self.transients)
         if self.consecutive_transient > retained:
             self.consecutive_transient = retained
@@ -138,6 +203,8 @@ class ContinuousSafetyBudget:
         return sum(1 for t in self.transients if t >= hour)
 
     def budget_exhausted(self, now: datetime | None = None) -> str | None:
+        if self.fail_closed:
+            return SAFETY_LEDGER_FAIL_CLOSED
         current = now or utc_now()
         self._prune(current)
         if self.submissions_1h(current) >= self.max_submissions_per_hour:
@@ -149,7 +216,6 @@ class ContinuousSafetyBudget:
     def transient_hard_stop(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
         self._prune(current)
-        # Owner-latched HARD_STOP survives prune; consecutive may drop with history.
         if self.last_hard_stop:
             return self.last_hard_stop
         if self.consecutive_transient >= self.max_consecutive_transient:
@@ -166,14 +232,23 @@ class ContinuousSafetyBudget:
         self._prune(current)
 
     def record_healthy(self) -> None:
-        """Owner-clear / healthy reset: clear consecutive streak and HARD_STOP latch."""
+        """Owner-clear / healthy reset; never clears a set-sweep HARD_STOP latch."""
+        if self.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP and self.last_hard_stop:
+            self.consecutive_transient = 0
+            self.transients = []
+            return
         self.consecutive_transient = 0
         self.last_hard_stop = None
+        self.hard_stop_source = None
         self.transients = []
 
-    def record_transient(self, now: datetime | None = None) -> str | None:
+    def record_transient(
+        self,
+        now: datetime | None = None,
+        *,
+        hard_stop_source: str | None = HARD_STOP_SOURCE_WORKER,
+    ) -> str | None:
         current = now or utc_now()
-        # Already HARD_STOPPED: do not manufacture additional equivalent history.
         existing = self.transient_hard_stop(current)
         if existing:
             return existing
@@ -187,7 +262,18 @@ class ContinuousSafetyBudget:
             reason = "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR"
         if reason:
             self.last_hard_stop = reason
+            self.hard_stop_source = hard_stop_source
         return reason
+
+    def latch_hard_stop(
+        self,
+        reason: str,
+        *,
+        hard_stop_source: str = HARD_STOP_SOURCE_SET_SWEEP,
+    ) -> str:
+        self.last_hard_stop = str(reason)
+        self.hard_stop_source = hard_stop_source
+        return self.last_hard_stop
 
 
 # Imported by tests that monkeypatch env after import.

@@ -8,7 +8,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from ..atomic_json_state import atomic_write_json
 from ..config import REPORTS_DIR
+from ..continuous_safety import HARD_STOP_SOURCE_SET_SWEEP
 from ..continuous_worker_policy import HARD_STOP_OUTCOMES
 from ..owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
@@ -36,6 +38,9 @@ SET_SWEEP_CIRCUIT_PATH = REPORTS_DIR / "runtime" / "ebay_scale_set_sweep_circuit
 
 MinFailureBackoffSecondsEnv = "EBAY_SCALE_SET_SWEEP_MIN_FAILURE_BACKOFF_SECONDS"
 MaxFailureBackoffSecondsEnv = "EBAY_SCALE_SET_SWEEP_MAX_FAILURE_BACKOFF_SECONDS"
+MinFailureBackoffFloorSeconds = 30.0
+AttemptLogMaxLinesEnv = "EBAY_SCALE_SET_SWEEP_ATTEMPTS_MAX_LINES"
+DefaultAttemptLogMaxLines = 4000
 
 
 def _parse_positive_float(name: str, default: float) -> float:
@@ -172,11 +177,14 @@ def load_set_sweep_circuit(path: Path | None = None) -> SetSweepCircuit:
 def persist_set_sweep_circuit(circuit: SetSweepCircuit, path: Path | None = None) -> None:
     target = path or SET_SWEEP_CIRCUIT_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(circuit.to_dict(), indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(target, circuit.to_dict())
 
 
 def compute_failure_backoff_seconds(consecutive_failures: int) -> float:
-    floor = _parse_positive_float(MinFailureBackoffSecondsEnv, 60.0)
+    floor = max(
+        MinFailureBackoffFloorSeconds,
+        _parse_positive_float(MinFailureBackoffSecondsEnv, 60.0),
+    )
     ceiling = _parse_positive_float(MaxFailureBackoffSecondsEnv, 900.0)
     if consecutive_failures <= 0:
         return floor
@@ -211,6 +219,21 @@ def record_set_sweep_circuit_success(
     return circuit
 
 
+def _rotate_attempts_log(path: Path, max_lines: int) -> None:
+    if not path.is_file():
+        return
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    if len(lines) <= max_lines:
+        return
+    tail = lines[-max_lines:]
+    tmp = path.with_suffix(path.suffix + ".rotate.tmp")
+    tmp.write_text("\n".join(tail) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
 def append_set_sweep_attempt_receipt(
     payload: dict[str, Any],
     *,
@@ -220,8 +243,10 @@ def append_set_sweep_attempt_receipt(
     target.parent.mkdir(parents=True, exist_ok=True)
     row = dict(payload)
     row.setdefault("recordedAtUtc", utc_iso())
+    max_lines = int(_parse_positive_float(AttemptLogMaxLinesEnv, float(DefaultAttemptLogMaxLines)))
     with target.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(row, sort_keys=True) + "\n")
+    _rotate_attempts_log(target, max_lines=max_lines)
 
 
 def handle_set_sweep_marketplace_outcome(
@@ -233,8 +258,7 @@ def handle_set_sweep_marketplace_outcome(
     """Apply transient/HARD_STOP latch to continuous safety budget; return latched reason if any."""
     immediate = sweep_immediate_hard_stop_outcome(outcome)
     if immediate:
-        budget.last_hard_stop = immediate
-        return immediate
+        return budget.latch_hard_stop(immediate, hard_stop_source=HARD_STOP_SOURCE_SET_SWEEP)
     if sweep_outcome_counts_toward_transient_latch(outcome):
-        return budget.record_transient(now)
+        return budget.record_transient(now, hard_stop_source=HARD_STOP_SOURCE_SET_SWEEP)
     return None

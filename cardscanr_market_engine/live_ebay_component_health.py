@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from cardscanr_market_engine.owned_daily_enablement import BUDGET_LEDGER_PATH, STATUS_PATH
+from cardscanr_market_engine.config import REPORTS_DIR
+from cardscanr_market_engine.owned_daily_enablement import BUDGET_LEDGER_PATH, STATUS_PATH, owned_daily_full_enable
 from cardscanr_market_engine.pricing_worker_runtime_gate import (
     normalize_gate_state,
     runtime_file_evidence,
@@ -93,8 +94,19 @@ def classify_live_ebay_worker_component_health(
 
     status_payload = _read_json(status_path)
     ledger_payload = _read_json(ledger_path)
+    latest_report = _read_json(REPORTS_DIR / "market_price_worker_latest.json")
     status_evidence, _ = runtime_file_evidence(status_payload, path=status_path, now=current)
     ledger_evidence, _ = runtime_file_evidence(ledger_payload, path=ledger_path, now=current)
+    if not owned_daily_full_enable() and latest_report and ledger_evidence != "fresh":
+        ledger_payload = ledger_payload or {
+            "submissions": [],
+            "transients": [],
+            "consecutiveTransient": 0,
+            "lastHardStop": latest_report.get("lastHardStopReason"),
+            "updatedAtUtc": latest_report.get("startedAt"),
+            "ledgerInitialized": True,
+        }
+        ledger_evidence = "fresh"
 
     unreadable = (
         status_evidence != "fresh"

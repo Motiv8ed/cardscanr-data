@@ -13,7 +13,12 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_safety import (
+    SAFETY_LEDGER_FAIL_CLOSED,
+    ContinuousSafetyBudget,
+)
+from cardscanr_market_engine.ebay_scale import set_sweep_safety as sweep_safety_mod
+from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import execute_set_sweep_shadow
 from cardscanr_market_engine.ebay_scale.set_sweep_safety import (
     classify_set_sweep_html,
     load_set_sweep_circuit,
@@ -115,6 +120,70 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
         self.assertTrue(blocked)
         self.assertEqual(gate_reason, "worker_hard_stop")
 
+    def test_all_runtime_paths_use_temp_files_not_repo_reports(self) -> None:
+        paths = self._paths()
+        ledger = paths["ledger"]
+        with mock.patch("cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH", ledger):
+            with mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_safety.SET_SWEEP_ATTEMPTS_JSONL", paths["attempts"]):
+                with mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_safety.SET_SWEEP_CIRCUIT_PATH", paths["circuit"]):
+                    self.assertEqual(sweep_safety_mod.SET_SWEEP_ATTEMPTS_JSONL, paths["attempts"])
+                    budget = ContinuousSafetyBudget.from_env(path=ledger)
+                    budget.persist(ledger)
+                    self.assertTrue(ledger.is_file())
+                    self.assertFalse(str(ROOT / "reports" / "runtime" / "continuous_au_safety_ledger.json") == str(ledger))
+
+    def test_post_reserve_exception_applies_backoff_and_counts_submission(self) -> None:
+        paths = self._paths()
+        self._write_plan(paths["plan"])
+        budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+        plan = json.loads(paths["plan"].read_text(encoding="utf-8"))
+        with (
+            mock.patch(
+                "cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.SET_SWEEP_PLAN_PATH",
+                paths["plan"],
+            ),
+            mock.patch(
+                "cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.apply_set_sweep_pricing_batch",
+                side_effect=RuntimeError("batch exploded"),
+            ),
+        ):
+            result = execute_set_sweep_shadow(
+                client=FakeOwnedClient(_targets()),
+                plan=plan,
+                fetch_html=lambda *_a: "<html><body>ok</body></html>",
+                budget=budget,
+                attempt_paths={**paths, "ledger": paths["ledger"], "circuit": paths["circuit"], "attempts": paths["attempts"]},
+            )
+        self.assertFalse(result.ok)
+        self.assertTrue(result.submission_consumed)
+        self.assertEqual(budget.submissions_24h(), 1)
+        circuit = load_set_sweep_circuit(paths["circuit"])
+        self.assertGreaterEqual(circuit.last_backoff_seconds, 30.0)
+        self.assertTrue(circuit.backoff_active())
+
+    def test_corrupt_ledger_fail_closed_blocks_reservation(self) -> None:
+        paths = self._paths()
+        ledger = paths["ledger"]
+        ledger.write_text("{not-json", encoding="utf-8")
+        budget = ContinuousSafetyBudget.from_env(path=ledger)
+        self.assertTrue(budget.fail_closed)
+        blocked = budget.reserve_live_submission(path=ledger, market="AU")
+        self.assertEqual(blocked, SAFETY_LEDGER_FAIL_CLOSED)
+
+    def test_min_failure_backoff_clamped_to_30_seconds(self) -> None:
+        with mock.patch.dict(os.environ, {"EBAY_SCALE_SET_SWEEP_MIN_FAILURE_BACKOFF_SECONDS": "0"}, clear=False):
+            seconds = sweep_safety_mod.compute_failure_backoff_seconds(1)
+        self.assertGreaterEqual(seconds, 30.0)
+
+    def test_attempt_log_rotation_caps_lines(self) -> None:
+        paths = self._paths()
+        attempts = paths["attempts"]
+        with mock.patch.dict(os.environ, {"EBAY_SCALE_SET_SWEEP_ATTEMPTS_MAX_LINES": "5"}, clear=False):
+            for i in range(12):
+                sweep_safety_mod.append_set_sweep_attempt_receipt({"i": i}, path=attempts)
+        lines = attempts.read_text(encoding="utf-8").strip().splitlines()
+        self.assertLessEqual(len(lines), 5)
+
     def test_failed_sweeps_consume_budget_before_fetch(self) -> None:
         paths = self._paths()
         self._write_plan(paths["plan"])
@@ -151,7 +220,11 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
                     client=FakeOwnedClient(_targets()),
                     budget=budget,
                     fetch_html=failing_fetch,
-                    attempt_paths={"circuit": paths["circuit"], "attempts": paths["attempts"]},
+                    attempt_paths={
+                        "circuit": paths["circuit"],
+                        "attempts": paths["attempts"],
+                        "ledger": paths["ledger"],
+                    },
                 )
                 self.assertIsNotNone(result)
                 assert result is not None
@@ -195,7 +268,11 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
                         client=FakeOwnedClient(_targets()),
                         budget=budget,
                         fetch_html=failing_fetch,
-                        attempt_paths={"circuit": paths["circuit"], "attempts": paths["attempts"]},
+                        attempt_paths={
+                            "circuit": paths["circuit"],
+                            "attempts": paths["attempts"],
+                            "ledger": paths["ledger"],
+                        },
                     )
                 )
         self.assertGreater(budget.submissions_24h(), 0)
