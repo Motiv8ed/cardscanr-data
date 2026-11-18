@@ -1,0 +1,107 @@
+name: CardScanR Portable Catalogue Reconciliation Kit
+
+on:
+  pull_request:
+    paths:
+      - 'tools/Run-CardScanR-Reconciliation.ps1'
+      - 'tools/Run-CardScanR-Reconciliation.cmd'
+      - 'tools/PORTABLE_CATALOGUE_README.txt'
+      - '.github/workflows/catalogue-portable-kit.yml'
+  push:
+    branches:
+      - 'catalogue/portable-reconcile-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  portable-safety:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: PowerShell 5.1 parse and forbidden-operation check
+        shell: powershell
+        run: |
+          $tokens = $null; $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\tools\Run-CardScanR-Reconciliation.ps1", [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) { throw "PowerShell parser errors: $($parseErrors.Count)" }
+          $source = Get-Content -Raw .\tools\Run-CardScanR-Reconciliation.ps1
+          foreach ($forbidden in @('Unregister-ScheduledTask','Remove-Item','Set-ScheduledTask','Stop-Process','Invoke-WebRequest')) {
+            if ($source.Contains($forbidden)) { throw "Forbidden launcher operation: $forbidden" }
+          }
+          Write-Host 'PASS: Windows PowerShell 5.1 parses read-only launcher'
+
+  portable-package:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: portable-safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline reconciliation unit suite
+        run: |
+          python -m py_compile tools/reconcile_tcgdex_metadata_batch.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_reconciliation_and_korean_probe.py -v
+      - name: Fetch previously verified 480-row provider metadata batch
+        uses: actions/download-artifact@v4
+        with:
+          name: tcgdex-private-metadata-44231007062
+          path: ${{ runner.temp }}/source
+          run-id: 44231007062
+          github-token: ${{ github.token }}
+      - name: Repack exact source ZIP and validate hashes (no staging DB in CI)
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          temp = Path(os.environ["RUNNER_TEMP"])
+          source = temp / "source"
+          out = temp / "portable"
+          out.mkdir()
+          m = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+          payload = (source / "card_candidates.jsonl").read_bytes()
+          assert m["candidate_cards"] == 480
+          assert m["candidate_cards_by_language"]["ko"] == 239
+          assert m["candidate_sha256"] == hashlib.sha256(payload).hexdigest()
+          assert m["metadata_only"] is True and m["image_files_downloaded"] == 0
+          with ZipFile(out / "metadata-source.zip", "w", ZIP_DEFLATED) as z:
+              for name in ("card_candidates.jsonl", "manifest.json"):
+                  z.write(source / name, arcname=name)
+          for name in ("reconcile_tcgdex_metadata_batch.py", "Run-CardScanR-Reconciliation.ps1",
+                       "Run-CardScanR-Reconciliation.cmd", "PORTABLE_CATALOGUE_README.txt"):
+              shutil.copy2(Path("tools") / name, out / name)
+          evidence = {name: hashlib.sha256((out / name).read_bytes()).hexdigest()
+                      for name in sorted(p.name for p in out.iterdir() if p.is_file())}
+          (out / "PACKAGE_MANIFEST.json").write_text(
+              json.dumps({"mode": "read_only", "candidate_cards": 480,
+                          "korean_candidates": 239, "sha256": evidence}, indent=2) + "\n")
+          PY
+          PYTHONPATH=. python tools/reconcile_tcgdex_metadata_batch.py --archive "$RUNNER_TEMP/portable/metadata-source.zip" --output "$RUNNER_TEMP/reconcile-smoke"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          result = json.loads((Path(os.environ['RUNNER_TEMP'])/'reconcile-smoke/report.json').read_text())
+          assert result['input_rows'] == 480
+          assert result['results'] == {'requires_staging_snapshot': 480}
+          assert result['canonical_database_writes'] == 0
+          print("PASS: real source archive hash and 480 metadata candidates verified")
+          PY
+      - name: Publish private portable review kit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-480-Metadata-Portable-Reconciliation-${{ github.run_id }}
+          path: ${{ runner.temp }}/portable/
+          retention-days: 7
+          if-no-files-found: error
