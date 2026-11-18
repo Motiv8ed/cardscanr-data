@@ -1,15 +1,25 @@
 name: Build authentic CardScanR social images
+# Writes to main (git push). Manual only, typed confirmation, protected environment.
+# Was: push to main (paths) with contents: write, i.e. unattended writes.
 on:
-  push:
-    branches: [main]
-    paths:
-      - scripts/generate_real_social_frames.py
-      - .github/workflows/cardscanr-real-social.yml
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type PUBLISH to commit regenerated social PNGs to main
+        required: true
+        type: string
 permissions:
-  contents: write
+  contents: read
+concurrency:
+  group: cardscanr-data-writer-main
+  cancel-in-progress: false
 jobs:
   build:
+    if: inputs.confirm == 'PUBLISH'
+    # Create this environment in repo settings with Andy as required reviewer.
+    environment: social-publish
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
