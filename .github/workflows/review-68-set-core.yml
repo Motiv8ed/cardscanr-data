@@ -6,13 +6,14 @@ on:
       - 'tools/build_review_68_set_core.py'
       - 'tests/test_build_review_68_set_core.py'
       - '.github/workflows/review-68-set-core.yml'
-  push:
-    branches:
-      - 'catalogue/review-minimal-68-set-core-*'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -31,7 +32,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
 
   live-review-core:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15

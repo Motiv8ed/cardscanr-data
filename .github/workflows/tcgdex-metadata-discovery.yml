@@ -6,18 +6,14 @@ on:
       - 'tools/tcgdex_metadata_batch.py'
       - 'tests/test_tcgdex_metadata_batch.py'
       - '.github/workflows/tcgdex-metadata-discovery.yml'
-  push:
-    branches:
-      - 'catalogue/tcgdex-metadata-*'
-      - 'catalogue/korean-card-index-fallback-*'
-    paths:
-      - 'tools/tcgdex_metadata_batch.py'
-      - 'tests/test_tcgdex_metadata_batch.py'
-      - '.github/workflows/tcgdex-metadata-discovery.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   safety-tests:
@@ -36,7 +32,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_metadata_batch.py -v
 
   live-metadata-sample:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch'
     needs: safety-tests
     runs-on: ubuntu-latest
     timeout-minutes: 6
