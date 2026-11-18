@@ -75,6 +75,8 @@ class BatchTests(unittest.TestCase):
 
     def test_empty_language_not_reported_as_complete(self):
         def empty_ko(url):
+            if url == API + "/ko/cards":
+                return payload([])
             if url.endswith("/ko/sets/latest"):
                 return payload({"id": "latest", "cards": []})
             return self.get(url)
