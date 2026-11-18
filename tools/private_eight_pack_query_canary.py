@@ -12,6 +12,7 @@ from urllib.parse import quote
 from tools.build_review_68_set_core import audit_and_build, read_core_rows
 from tools.preflight_multilingual_crossrelease import ACTIVE_PACKS, ARCHIVE_PACKS, ACTIVE, CANARY, MAX_GZIP, get, inspect_pack
 from tools.preflight_legacy_korean_pack import pick
+from tools.private_shard_contract import validate_bounded_preview
 
 
 def checked_canary(output: Path, fetch=get) -> dict:
@@ -65,6 +66,15 @@ def checked_canary(output: Path, fetch=get) -> dict:
                         ).fetchone()[0]
                         if n < 1:
                             raise ValueError("collector_number_lookup_failed")
+                # Verify each real pack has an in-memory metadata-only projection
+                # compatible with legacy website shard JSON. Never publish it.
+                names = ("canonical_base_id","canonical_printing_id",
+                         "language","set_id","printed_collector_number",
+                         "normalized_collector_number","native_card_name",
+                         "native_set_name","rarity")
+                query = "SELECT " + ",".join(names) + " FROM cards ORDER BY canonical_base_id LIMIT 3"
+                raw_preview=[dict(zip(names, row)) for row in db.execute(query)]
+                preview_proof=validate_bounded_preview(raw_preview,name)
                 blocked = db.execute("""
                     SELECT COUNT(*) FROM cards
                     WHERE mirror_permission_status IS NULL OR
@@ -73,6 +83,7 @@ def checked_canary(output: Path, fetch=get) -> dict:
                 results.append({
                     "pack_id":name,"card_rows":card_count,"fts_rows":fts_count,
                     "sample_identity_lookup_passed":len(examples),
+                    "private_legacy_web_shard_contract":preview_proof,
                     "not_approved_for_mirroring":blocked,
                     "image_mirroring_performed":False,
                     "identity_hash_sample":[hashlib.sha256(str(r[1]).encode()).hexdigest() for r in examples]
