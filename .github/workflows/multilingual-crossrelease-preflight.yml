@@ -1,0 +1,56 @@
+name: Multilingual Cross-Release Pack Preflight
+
+on:
+  pull_request:
+    paths:
+      - 'tools/preflight_multilingual_crossrelease.py'
+      - 'tests/test_preflight_multilingual_crossrelease.py'
+      - '.github/workflows/multilingual-crossrelease-preflight.yml'
+  push:
+    branches:
+      - 'catalogue/multilingual-pack-crossrelease-preflight-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test eight-pack compatibility checks without network
+        run: |
+          python -m py_compile tools/preflight_multilingual_crossrelease.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_preflight_multilingual_crossrelease.py -v
+
+  live-crossrelease-preflight:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read-only verify live core/en/ja and archived ko/zh-tw/th/id/zh-cn packs
+        continue-on-error: true
+        run: |
+          PYTHONPATH=. python tools/preflight_multilingual_crossrelease.py --output "$RUNNER_TEMP/crossrelease-proof"
+      - name: Save private compatibility receipt (no pack binaries)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Multilingual-CrossRelease-Preflight-${{ github.run_id }}
+          path: ${{ runner.temp }}/crossrelease-proof/
+          retention-days: 7
+          if-no-files-found: warn
