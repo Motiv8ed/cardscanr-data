@@ -36,3 +36,9 @@ If provider coverage is incomplete, investigate CardScanR's existing Korean coll
 ## Next integration gates
 
 Review actual read-only staging matches. Quarantine ambiguous region and finish variants, preserve canonical IDs and user ownership, then stage approved metadata using the existing worldwide importer. Artwork acquisition/public release remain separately permission-gated.
+
+## 18 November: provider-ID evidence quality correction
+
+A verified 480-row local staging run matched all rows by TCGdex source, set release, language and collector number. However, **all 480 provider_card_id_provenance_confirmed flags were false**; set/number matching alone must never be described as exact provider-card identity confirmation. The reconciler now gives these results their own `set_language_number_match_provider_card_id_unconfirmed` status, while preserving existing printings as potential overlaps. It reports counts for provider-ID-confirmed/unconfirmed rows and existing printings with multiple physical variants. No newly discovered printing or merge is inferred from this classification.
+
+Existing source_record.provider_record_id may use a different namespace or format. Do not normalize or assert equivalence without inspecting the actual provider record and verifying an explicit mapping. If necessary, use a narrow, read-only local diagnostic to examine provider ID format; no need to upload the 3GB database.

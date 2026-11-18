@@ -132,7 +132,8 @@ def classify(row: dict, db: sqlite3.Connection | None) -> dict:
         card_id = row["source_card_id"]
         source_id_matches = (source_id == card_id or source_id.endswith("/" + card_id))
         output.update({
-            "status": "represented_exact_set_language_number",
+            "status": ("represented_exact_set_language_number" if source_id_matches
+                       else "set_language_number_match_provider_card_id_unconfirmed"),
             "existing_printing_id": found["printing_id"],
             "existing_region": found["region"],
             "existing_variant_count": variant_count,
@@ -151,6 +152,9 @@ def reconcile(archive: Path, database: Path | None, output: Path) -> dict:
     try:
         results = [classify(row, db) for row in rows]
         counts = collections.Counter(r["status"] for r in results)
+        provider_id_confirmed = sum(r.get("source_card_id_provenance_confirmed") is True for r in results)
+        provider_id_unconfirmed = sum(r.get("source_card_id_provenance_confirmed") is False for r in results)
+        multiple_variants = sum(r.get("existing_variant_count", 0) > 1 for r in results)
         by_language: dict[str, dict[str, int]] = {}
         for r in results:
             lan = r["source_language"]
@@ -167,6 +171,11 @@ def reconcile(archive: Path, database: Path | None, output: Path) -> dict:
             "input_rows": len(rows),
             "staging_snapshot_provided": db is not None,
             "results": dict(sorted(counts.items())),
+            "provider_card_id_confirmed_matches": provider_id_confirmed,
+            "provider_card_id_unconfirmed_matches": provider_id_unconfirmed,
+            "existing_printings_with_multiple_variants": multiple_variants,
+            "all_variant_identities_still_unverified": True,
+            "set_number_match_alone_is_not_provider_id_confirmation": True,
             "by_language": by_language,
             "missing_from_staging_is_not_confirmed_new_printing": True,
             "variants_automatically_merged": 0,

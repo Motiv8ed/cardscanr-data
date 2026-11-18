@@ -77,6 +77,9 @@ class ReconciliationTests(unittest.TestCase):
             report = reconcile(make_zip(p, [row(), row("set1-002", local="002")]),
                                database, p / "out")
             self.assertEqual(report["results"]["represented_exact_set_language_number"], 1)
+            self.assertEqual(report["provider_card_id_confirmed_matches"], 1)
+            self.assertEqual(report["provider_card_id_unconfirmed_matches"], 0)
+            self.assertEqual(report["existing_printings_with_multiple_variants"], 1)
             self.assertEqual(report["results"]["not_found_by_exact_provider_set_language_number"], 1)
             found = [json.loads(s) for s in (p / "out/reconciliation.jsonl").read_text().splitlines()]
             self.assertEqual(found[0]["existing_printing_id"], "print-001")
@@ -87,6 +90,23 @@ class ReconciliationTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), before)
             self.assertFalse((p / "worldwide.sqlite-wal").exists())
             self.assertFalse((p / "worldwide.sqlite-shm").exists())
+
+    def test_set_and_number_match_with_wrong_provider_card_id_is_not_confirmed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)
+            database = p / "worldwide.sqlite"
+            fixture_db(database)
+            with sqlite3.connect(database) as db:
+                db.execute("UPDATE source_record SET provider_record_id='unrelated-provider-id'")
+            before = hashlib.sha256(database.read_bytes()).hexdigest()
+            report = reconcile(make_zip(p, [row()]), database, p / "out")
+            self.assertEqual(report["results"],
+                             {"set_language_number_match_provider_card_id_unconfirmed": 1})
+            self.assertEqual(report["provider_card_id_unconfirmed_matches"], 1)
+            self.assertEqual(report["provider_card_id_confirmed_matches"], 0)
+            self.assertEqual(report["existing_printings_with_multiple_variants"], 1)
+            self.assertEqual(report["canonical_database_writes"], 0)
+            self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), before)
 
     def test_ambiguous_different_regions_is_not_silently_matched(self):
         with tempfile.TemporaryDirectory() as tmp:
