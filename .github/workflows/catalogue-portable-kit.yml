@@ -105,3 +105,58 @@ jobs:
           path: ${{ runner.temp }}/portable/
           retention-days: 7
           if-no-files-found: error
+
+
+  portable-windows-smoke:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: portable-package
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download just-created portable kit
+        uses: actions/download-artifact@v4
+        with:
+          name: CardScanR-480-Metadata-Portable-Reconciliation-${{ github.run_id }}
+          path: ${{ runner.temp }}/kit
+      - name: Create disposable worldwide staging database fixture
+        shell: powershell
+        run: |
+          @'
+          import os
+          import sqlite3
+          from pathlib import Path
+          path = Path(os.environ["RUNNER_TEMP"]) / "worldwide-catalogue.sqlite"
+          with sqlite3.connect(path) as db:
+              db.executescript("""
+                  CREATE TABLE card_set(id TEXT, provider_id TEXT);
+                  CREATE TABLE set_release(id TEXT, card_set_id TEXT, language_code TEXT,
+                                           region_code TEXT, release_code TEXT);
+                  CREATE TABLE source_record(id TEXT, provider_id TEXT, provider_record_id TEXT);
+                  CREATE TABLE card_printing(id TEXT, set_release_id TEXT,
+                                             source_record_id TEXT, collector_number TEXT);
+                  CREATE TABLE card_variant(id TEXT, card_printing_id TEXT);
+                  INSERT INTO card_set VALUES('s1','tcgdex-cards-database');
+                  INSERT INTO set_release VALUES('sr1','s1','ko','KR','SV4K');
+                  INSERT INTO source_record VALUES('src1','tcgdex-cards-database','ko/cards/SV4K-001');
+                  INSERT INTO card_printing VALUES('sample-known','sr1','src1','001');
+              """)
+          print("Created read-only smoke fixture", path)
+          '@ | python -
+      - name: Execute actual v2 Windows launcher with verified 480 record artifact
+        shell: powershell
+        run: |
+          $kit = Join-Path $env:RUNNER_TEMP 'kit'
+          $db = Join-Path $env:RUNNER_TEMP 'worldwide-catalogue.sqlite'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $kit 'Run-CardScanR-Reconciliation.ps1') -Database $db
+          if ($LASTEXITCODE -ne 0) { throw "Windows launcher failed: $LASTEXITCODE" }
+          $results = @(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'CardScanR\CatalogueReconciliation') -Recurse -Filter 'report.json')
+          if ($results.Count -ne 1) { throw "Expected one review report; saw $($results.Count)" }
+          $report = Get-Content -LiteralPath $results[0].FullName -Raw | ConvertFrom-Json
+          if ($report.input_rows -ne 480 -or $report.canonical_database_writes -ne 0 -or
+              $report.results.represented_exact_set_language_number -lt 1) {
+              throw 'Windows launcher report failed exact match/read-only assertions'
+          }
+          Write-Host "PASS: full Windows 5.1 launcher read real 480 metadata records with one exact fixture match, no DB writes"

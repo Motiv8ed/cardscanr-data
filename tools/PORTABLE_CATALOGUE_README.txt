@@ -1,30 +1,36 @@
-CARDSCANR WORLDWIDE CATALOGUE - READ ONLY RECONCILIATION
+CARDSCANR WORLDWIDE CATALOGUE — READ-ONLY RECONCILIATION v2
 18 November 2026
 
-This archive packages a real 480-card-metadata candidate batch, including
-239 Korean metadata records. NO card images were downloaded.
+This portable kit contains a verified 480-record TCGdex metadata snapshot,
+including 239 Korean entries. NO card images were downloaded.
 
-On your home Windows PC:
-1. Right-click the ZIP and choose Extract All.
-2. Double-click Run-CardScanR-Reconciliation.cmd in the extracted folder.
-3. The launcher reads the existing SQLite staging DB at:
-   D:\CardScanR_worldwide_runtime_20260802\staging\worldwide-catalogue.sqlite
-4. The result is under:
-   %LOCALAPPDATA%\CardScanR\CatalogueReconciliation\<timestamp>\report.json
-5. Share ONLY report.json with ChatGPT.
+1. Extract the complete ZIP on your Windows PC.
+2. Double-click Run-CardScanR-Reconciliation.cmd
+3. The launcher searches ONLY likely CardScanR data folders under D: to depth 4,
+   max 1200 directories. It never scans the entire drive indiscriminately.
+4. If ONE staging SQLite file exists, it is checked and read without writes.
+   The review report is placed at:
+       %LOCALAPPDATA%\CardScanR\CatalogueReconciliation\<timestamp>\verified-review\report.json
+5. If NONE or MULTIPLE staging files are found, it stops safely and writes:
+       %LOCALAPPDATA%\CardScanR\CatalogueReconciliation\<timestamp>\SAFE-Database-Locator.json
+6. Upload ONLY the report.json or SAFE-Database-Locator.json to Atlas/ChatGPT.
+   Do NOT upload staging database files, private backups or credentials.
 
-If your staging DB was moved, run PowerShell with:
-  .\Run-CardScanR-Reconciliation.ps1 -Database "D:\path\to\worldwide-catalogue.sqlite"
+If you already know the verified staging SQLite location, you can bypass discovery:
+  PowerShell: .\Run-CardScanR-Reconciliation.ps1 -Database 'D:\correct\path\worldwide-catalogue.sqlite'
 
-The program refuses active SQLite WAL files, unexpected archive members,
-altered source hashes and already-populated output directories. It never
-changes staging, Supabase, cloud, website or Android data. All print variants
-remain unverified, regardless of exact provider/set/number matches.
+If the staging DB has an active -wal file, the launcher stops; use a
+checkpointed copy to avoid an incomplete immutable snapshot.
 
-This is NOT an installable catalogue pack and is NOT proof artwork rights
-or production publication. Korean matches still require real CardScanR
-staging comparison and variant-level review. Do not send private DB files.
+Safety:
+- Never modifies, deletes, installs or moves databases/files.
+- Does not run against production Supabase or change app/website data.
+- Preserves canonical IDs and physical variant distinctions.
+- No image downloads, public uploads or app publication.
+- A source not found in staging is NOT confirmed to be a newly printed card.
+- Results reflect the particular dated staging snapshot, not necessarily
+  the latest production catalogue.
 
-Provenance:
+Source evidence:
 https://github.com/Motiv8ed/cardscanr-data/pull/51
 https://github.com/Motiv8ed/cardscanr-data/actions/runs/44231007062
