@@ -186,6 +186,7 @@ def compute_failure_backoff_seconds(consecutive_failures: int) -> float:
         _parse_positive_float(MinFailureBackoffSecondsEnv, 60.0),
     )
     ceiling = _parse_positive_float(MaxFailureBackoffSecondsEnv, 900.0)
+    ceiling = max(ceiling, floor)
     if consecutive_failures <= 0:
         return floor
     scaled = floor * (2 ** min(consecutive_failures - 1, 4))

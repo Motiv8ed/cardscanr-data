@@ -10,7 +10,6 @@ from typing import Any
 
 from .atomic_json_state import (
     AtomicStateError,
-    atomic_write_json,
     mutate_json_state,
     read_json_object,
 )
@@ -112,9 +111,21 @@ class ContinuousSafetyBudget:
             return
         target = path or BUDGET_LEDGER_PATH
         target.parent.mkdir(parents=True, exist_ok=True)
+        local_payload = self.to_payload()
         self.ledger_initialized = True
-        atomic_write_json(target, self.to_payload())
-        self.ledger_initialized = True
+
+        def _mutate(data: dict[str, Any]) -> dict[str, Any]:
+            merged = merge_budget_payloads(data, local_payload)
+            data.clear()
+            data.update(merged)
+            return data
+
+        try:
+            mutate_json_state(target, _mutate, default={})
+        except AtomicStateError:
+            self.fail_closed = True
+            return
+        self.reload(target)
 
     def reload(self, path: Path | None = None) -> None:
         target = path or BUDGET_LEDGER_PATH
@@ -137,6 +148,9 @@ class ContinuousSafetyBudget:
         target = path or BUDGET_LEDGER_PATH
         current = now or utc_now()
         blocked_reason: list[str] = []
+        if self.ledger_initialized and not target.is_file():
+            self.fail_closed = True
+            return SAFETY_LEDGER_FAIL_CLOSED
 
         def _mutate(data: dict[str, Any]) -> dict[str, Any]:
             self.apply_payload(data)
@@ -274,6 +288,55 @@ class ContinuousSafetyBudget:
         self.last_hard_stop = str(reason)
         self.hard_stop_source = hard_stop_source
         return self.last_hard_stop
+
+
+def _merge_unique_datetimes(values: list[datetime]) -> list[datetime]:
+    seen: set[str] = set()
+    merged: list[datetime] = []
+    for item in sorted(values):
+        key = utc_iso(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+    return merged
+
+
+def _merge_unique_market_submissions(
+    rows: list[tuple[datetime, str]],
+) -> list[tuple[datetime, str]]:
+    seen: set[tuple[str, str]] = set()
+    merged: list[tuple[datetime, str]] = []
+    for at, market in sorted(rows, key=lambda pair: pair[0]):
+        key = (utc_iso(at), market)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append((at, market))
+    return merged
+
+
+def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
+    """Union submission history and latches so persist never drops another process."""
+    on_disk = ContinuousSafetyBudget()
+    on_disk.apply_payload(disk)
+    incoming = ContinuousSafetyBudget()
+    incoming.apply_payload(local)
+    on_disk.submissions = _merge_unique_datetimes(on_disk.submissions + incoming.submissions)[-400:]
+    on_disk.transients = _merge_unique_datetimes(on_disk.transients + incoming.transients)[-200:]
+    on_disk.market_submissions = _merge_unique_market_submissions(
+        on_disk.market_submissions + incoming.market_submissions
+    )[-400:]
+    on_disk.consecutive_transient = max(on_disk.consecutive_transient, incoming.consecutive_transient)
+    if incoming.last_hard_stop:
+        if on_disk.last_hard_stop is None or incoming.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP:
+            on_disk.last_hard_stop = incoming.last_hard_stop
+            on_disk.hard_stop_source = incoming.hard_stop_source
+    on_disk.fail_closed = on_disk.fail_closed or incoming.fail_closed
+    on_disk.ledger_initialized = (
+        on_disk.ledger_initialized or incoming.ledger_initialized or bool(on_disk.submissions)
+    )
+    return on_disk.to_payload()
 
 
 # Imported by tests that monkeypatch env after import.

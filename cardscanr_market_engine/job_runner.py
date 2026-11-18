@@ -1190,16 +1190,14 @@ class MarketPriceJobRunner:
                 owned_outcome=write_outcome,
                 result=completed_result,
             )
-            try:
-                from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
+            from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
 
-                observe_inter_card_no_request_outcome(
-                    load_navigation_runtime_context(),
-                    runtime_error=None,
-                    search_submission_started=bool(_diag.get("searchSubmissionStarted")),
-                )
-            except Exception:
-                pass
+            nav_ctx_ok, _latch = observe_inter_card_no_request_outcome(
+                load_navigation_runtime_context(),
+                runtime_error=None,
+                search_submission_started=bool(_diag.get("searchSubmissionStarted")),
+            )
+            apply_context_to_environ(nav_ctx_ok)
             return completed_result
         except Exception as exc:
             provider_diagnostics: dict[str, Any] | None = None
@@ -1232,25 +1230,26 @@ class MarketPriceJobRunner:
                     now=now,
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
-            try:
-                from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
-                from .navigation_runtime_context import classify_pre_submit_runtime_error
+            from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
+            from .navigation_runtime_context import classify_pre_submit_runtime_error
 
-                pre_submit_submitted = False
-                if isinstance(provider_diagnostics, dict):
-                    pre_submit_submitted = bool(provider_diagnostics.get("searchSubmissionStarted"))
-                runtime_err = classify_pre_submit_runtime_error(
-                    exc if isinstance(exc, Exception) else Exception(error_message),
-                    runtime_mode=active_runtime_mode,
-                )
-                nav_ctx_fail = observe_inter_card_no_request_outcome(
-                    load_navigation_runtime_context(),
-                    runtime_error=runtime_err,
-                    search_submission_started=pre_submit_submitted,
-                )
-                apply_context_to_environ(nav_ctx_fail)
-            except Exception:
-                pass
+            pre_submit_submitted = False
+            if isinstance(provider_diagnostics, dict):
+                pre_submit_submitted = bool(provider_diagnostics.get("searchSubmissionStarted"))
+            runtime_err = classify_pre_submit_runtime_error(
+                exc if isinstance(exc, Exception) else Exception(error_message),
+                runtime_mode=active_runtime_mode,
+            )
+            nav_ctx_fail, inter_latch = observe_inter_card_no_request_outcome(
+                load_navigation_runtime_context(),
+                runtime_error=runtime_err,
+                search_submission_started=pre_submit_submitted,
+                raw_error=error_message,
+            )
+            apply_context_to_environ(nav_ctx_fail)
+            if inter_latch:
+                provider_diagnostics = dict(provider_diagnostics or {})
+                provider_diagnostics["interCardMarketplaceLatch"] = inter_latch
             # Worker-wide eBay availability circuit (do not re-open on cooldown skip).
             try:
                 diag = (exc.diagnostics if isinstance(exc, ProviderError) else None) or {}

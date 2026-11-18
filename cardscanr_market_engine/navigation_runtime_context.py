@@ -526,7 +526,7 @@ def classify_pre_submit_runtime_error(exc: BaseException, *, runtime_mode: str) 
         if mode == RUNTIME_INTER_CARD:
             return INTER_CARD_CONTEXT_NOT_PROPAGATED
         return COLD_START_UNEXPECTED_EBAY_TARGET
-    if "target_policy_rejected" in text:
+    if "inter_card_expected_target_rejected" in text or "target_policy_rejected" in text:
         if mode == RUNTIME_INTER_CARD:
             return INTER_CARD_EXPECTED_TARGET_REJECTED
         return COLD_START_UNEXPECTED_EBAY_TARGET

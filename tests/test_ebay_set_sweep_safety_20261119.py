@@ -123,7 +123,10 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
     def test_all_runtime_paths_use_temp_files_not_repo_reports(self) -> None:
         paths = self._paths()
         ledger = paths["ledger"]
-        with mock.patch("cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH", ledger):
+        with (
+            mock.patch("cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH", ledger),
+            mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.BUDGET_LEDGER_PATH", ledger),
+        ):
             with mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_safety.SET_SWEEP_ATTEMPTS_JSONL", paths["attempts"]):
                 with mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_safety.SET_SWEEP_CIRCUIT_PATH", paths["circuit"]):
                     self.assertEqual(sweep_safety_mod.SET_SWEEP_ATTEMPTS_JSONL, paths["attempts"])

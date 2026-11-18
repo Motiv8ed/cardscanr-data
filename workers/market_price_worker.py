@@ -568,6 +568,10 @@ def run_worker_loop(
             per_job = elapsed / max(1, len(results))
             for row in results:
                 pacing_controller.record_check_duration(per_job)
+                if (continuous or enforce_budget) and not getattr(runner, "_ebay_probe_mode", False):
+                    if bool(row.get("searchSubmissionStarted")):
+                        market = str(row.get("marketCountry") or "AU").upper()
+                        budget.reserve_live_submission(market=market)
                 outcome = _outcome_from_result(row)
                 pacing_controller.observe_outcome(
                     outcome,
@@ -607,9 +611,6 @@ def run_worker_loop(
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-                    consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"
-                    if consumed:
-                        budget.record_submission()
                     budget.persist()
         summary = build_cycle_summary(
             config=config,

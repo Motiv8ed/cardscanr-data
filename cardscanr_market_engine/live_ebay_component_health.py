@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +18,38 @@ from cardscanr_market_engine.pricing_worker_runtime_gate import (
     worker_gate_blocks_pricing,
     worker_runtime_gate,
 )
+
+SCHEDULED_REPORT_MAX_AGE_MINUTES = int(os.getenv("MARKET_HEALTH_REPORT_STALE_MINUTES", "45"))
+
+
+def _parse_report_started_at(report: dict[str, Any]) -> datetime | None:
+    for key in ("startedAtUtc", "startedAt", "finishedAtUtc"):
+        text = str(report.get(key) or "").strip()
+        if not text:
+            continue
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            continue
+    return None
+
+
+def scheduled_report_allows_ledger_fallback(
+    report: dict[str, Any] | None,
+    *,
+    now: datetime,
+) -> bool:
+    if not isinstance(report, dict) or not report:
+        return False
+    if str(report.get("workerState") or "").upper() == "HARD_STOP":
+        return False
+    if str(report.get("lastHardStopReason") or "").strip():
+        return False
+    started = _parse_report_started_at(report)
+    if started is None:
+        return False
+    age_minutes = (now - started).total_seconds() / 60.0
+    return age_minutes <= SCHEDULED_REPORT_MAX_AGE_MINUTES
 
 
 @dataclass(frozen=True)
@@ -97,13 +130,19 @@ def classify_live_ebay_worker_component_health(
     latest_report = _read_json(REPORTS_DIR / "market_price_worker_latest.json")
     status_evidence, _ = runtime_file_evidence(status_payload, path=status_path, now=current)
     ledger_evidence, _ = runtime_file_evidence(ledger_payload, path=ledger_path, now=current)
-    if not owned_daily_full_enable() and latest_report and ledger_evidence != "fresh":
+    if (
+        not owned_daily_full_enable()
+        and latest_report
+        and ledger_evidence != "fresh"
+        and scheduled_report_allows_ledger_fallback(latest_report, now=current)
+    ):
+        started_key = "startedAtUtc" if latest_report.get("startedAtUtc") else "startedAt"
         ledger_payload = ledger_payload or {
             "submissions": [],
             "transients": [],
             "consecutiveTransient": 0,
             "lastHardStop": latest_report.get("lastHardStopReason"),
-            "updatedAtUtc": latest_report.get("startedAt"),
+            "updatedAtUtc": latest_report.get(started_key),
             "ledgerInitialized": True,
         }
         ledger_evidence = "fresh"

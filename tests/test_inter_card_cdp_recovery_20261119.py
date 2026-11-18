@@ -81,11 +81,13 @@ class InterCardCdpRecoveryTests(unittest.TestCase):
                     ctx,
                     runtime_error=INTER_CARD_EXPECTED_TARGET_REJECTED,
                     search_submission_started=False,
+                    raw_error="Desktop sold navigation failed: INTER_CARD_EXPECTED_TARGET_REJECTED",
                 )
-                out = observe_inter_card_no_request_outcome(
+                out, _latch = observe_inter_card_no_request_outcome(
                     ctx,
                     runtime_error=INTER_CARD_EXPECTED_TARGET_REJECTED,
                     search_submission_started=False,
+                    raw_error="Desktop sold navigation failed: INTER_CARD_EXPECTED_TARGET_REJECTED",
                 )
         self.assertEqual(out.runtime_mode, RUNTIME_COLD_START)
         self.assertIsNone(out.expected_prior)
