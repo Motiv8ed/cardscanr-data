@@ -1,0 +1,55 @@
+name: Archived Core Set Gap Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'tools/audit_legacy_core_set_gap.py'
+      - 'tests/test_audit_legacy_core_set_gap.py'
+      - '.github/workflows/archived-core-set-gap.yml'
+  push:
+    branches:
+      - 'catalogue/legacy-core-set-gap-analysis-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and validate set coverage logic
+        run: |
+          python -m py_compile tools/audit_legacy_core_set_gap.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_audit_legacy_core_set_gap.py -v
+
+  live-read-only-gap-check:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect published current and archived core plus language pack metadata
+        run: |
+          PYTHONPATH=. python tools/audit_legacy_core_set_gap.py --output "$RUNNER_TEMP/legacy-core-audit"
+      - name: Keep small review report; discard all raw SQLite pack files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Legacy-Core-Set-Evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/legacy-core-audit/
+          retention-days: 7
+          if-no-files-found: warn
