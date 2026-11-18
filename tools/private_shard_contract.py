@@ -12,8 +12,8 @@ import unicodedata
 from cardscanr_search_index.normalization import normalize_collector_number, split_collector_number
 
 # Mirrors the web-beta.js search fold for the preview metadata fields.
-# NFKC handles full-width ASCII, NFKD removes combining accents and the
-# explicit map handles Latin ligatures/letters not decomposed by Unicode.
+# Fold full-width ASCII like the web client; decompose only Latin accents.
+# Non-Latin characters, especially Korean syllables, remain intact.
 _LATIN_SEARCH_FOLD = str.maketrans({
     'æ': 'ae', 'œ': 'oe', 'ø': 'o', 'ł': 'l',
     'ð': 'd', 'ı': 'i', 'ß': 'ss', 'ẞ': 'ss',
