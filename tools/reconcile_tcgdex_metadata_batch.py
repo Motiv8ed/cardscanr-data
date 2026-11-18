@@ -55,8 +55,10 @@ def read_candidates(archive: Path) -> tuple[list[dict], dict]:
         if lang not in LANGUAGES or not all(isinstance(v, str) and v and len(v) <= 120
                                              for v in (sid, cid, local)):
             raise ValueError(f"row {lineno}: invalid provider identity")
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+", cid) or not re.fullmatch(r"[A-Za-z0-9_-]+", sid):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", cid) or not re.fullmatch(r"[A-Za-z0-9_.-]+", sid):
             raise ValueError(f"row {lineno}: unexpected identity format")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(row.get("source_response_sha256", ""))):
+            raise ValueError(f"row {lineno}: invalid response SHA")
         key = (lang, cid)
         if key in keys:
             raise ValueError(f"row {lineno}: duplicate provider card identity")
