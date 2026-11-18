@@ -114,9 +114,9 @@ def verify(rows: list[dict], lookup=inspect_set) -> tuple[list[dict], dict]:
         api_shape_valid = cid == sid + "-" + local
         set_id_verified = info["upstream_set_file_id"] == sid
         file_present = local in info["source_card_file_stems"]
-        status = ("source_file_and_set_identity_corrobated" if
+        status = ("source_file_and_set_identity_corroborated" if
                   api_shape_valid and set_id_verified and file_present
-                  else "not_corrobated_review_required")
+                  else "not_corroborated_review_required")
         classifications[status] += 1
         by_language.setdefault(lang, Counter())[status] += 1
         details.append({
@@ -172,7 +172,7 @@ def main() -> int:
     print(json.dumps({"candidate_cards": len(rows),
                       "classifications": result["classifications"],
                       "input_sha256": result["input_candidate_sha256"]}, sort_keys=True))
-    return 0 if result["classifications"].get("not_corrobated_review_required", 0) == 0 else 2
+    return 0 if result["classifications"].get("not_corroborated_review_required", 0) == 0 else 2
 
 
 if __name__ == "__main__":
