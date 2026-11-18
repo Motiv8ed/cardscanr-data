@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - 'catalogue/tcgdex-metadata-*'
+      - 'catalogue/korean-card-index-fallback-*'
     paths:
       - 'tools/tcgdex_metadata_batch.py'
       - 'tests/test_tcgdex_metadata_batch.py'
