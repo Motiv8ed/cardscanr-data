@@ -1,0 +1,52 @@
+name: Archived Multilingual Catalogue Pack Inventory
+on:
+  pull_request:
+    paths:
+      - 'tools/audit_archived_language_packs.py'
+      - 'tests/test_archived_language_pack_inventory.py'
+      - '.github/workflows/archived-language-packs.yml'
+  push:
+    branches:
+      - 'catalogue/archived-multilingual-pack-inventory-*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax and network-free safety tests
+        run: |
+          python -m py_compile tools/audit_archived_language_packs.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_archived_language_pack_inventory.py -v
+  live-archive:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch only known public archived JSON manifests and HEAD pack links
+        continue-on-error: true
+        run: |
+          python tools/audit_archived_language_packs.py --output "$RUNNER_TEMP/archive-audit"
+      - name: Keep read-only inventory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Archived-Language-Pack-Inventory-${{ github.run_id }}
+          path: ${{ runner.temp }}/archive-audit/
+          if-no-files-found: warn
+          retention-days: 7
