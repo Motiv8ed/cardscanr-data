@@ -317,21 +317,29 @@ def _merge_unique_market_submissions(
 
 
 def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
-    """Union submission history and latches so persist never drops another process."""
+    """Union submission history only; transient/latch fields follow the writer (local)."""
     on_disk = ContinuousSafetyBudget()
     on_disk.apply_payload(disk)
     incoming = ContinuousSafetyBudget()
     incoming.apply_payload(local)
     on_disk.submissions = _merge_unique_datetimes(on_disk.submissions + incoming.submissions)[-400:]
-    on_disk.transients = _merge_unique_datetimes(on_disk.transients + incoming.transients)[-200:]
     on_disk.market_submissions = _merge_unique_market_submissions(
         on_disk.market_submissions + incoming.market_submissions
     )[-400:]
-    on_disk.consecutive_transient = max(on_disk.consecutive_transient, incoming.consecutive_transient)
-    if incoming.last_hard_stop:
-        if on_disk.last_hard_stop is None or incoming.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP:
-            on_disk.last_hard_stop = incoming.last_hard_stop
-            on_disk.hard_stop_source = incoming.hard_stop_source
+    on_disk.consecutive_transient = incoming.consecutive_transient
+    on_disk.transients = list(incoming.transients)[-200:]
+    on_disk.last_hard_stop = incoming.last_hard_stop
+    on_disk.hard_stop_source = incoming.hard_stop_source
+    disk_latch = ContinuousSafetyBudget()
+    disk_latch.apply_payload(disk)
+    if (
+        disk_latch.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP
+        and disk_latch.last_hard_stop
+        and incoming.last_hard_stop is None
+    ):
+        # A concurrent worker healthy-reset must not clear an active set-sweep latch.
+        on_disk.last_hard_stop = disk_latch.last_hard_stop
+        on_disk.hard_stop_source = disk_latch.hard_stop_source
     on_disk.fail_closed = on_disk.fail_closed or incoming.fail_closed
     on_disk.ledger_initialized = (
         on_disk.ledger_initialized or incoming.ledger_initialized or bool(on_disk.submissions)

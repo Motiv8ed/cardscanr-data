@@ -22,17 +22,50 @@ from .navigation_runtime_context import (
 CDP_RECOVERY_STATE_PATH = REPORTS_DIR / "runtime" / "nav_cdp_recovery_state.json"
 INTER_CARD_NO_REQUEST_STUCK_ALERT_HOURS = 2
 
-MARKETPLACE_GATE_BLOCK_MARKERS = frozenset(
+MARKETPLACE_GATE_REASON_CODES = frozenset(
     {
-        REASON_CHALLENGE.lower(),
-        "inter_card_challenge_target",
-        "challenge_required",
-        "ebay_sorry",
-        "ebay_auth_required",
-        "ebay_error_page",
-        "inter_card_challenge",
+        REASON_CHALLENGE,
+        "INTER_CARD_CHALLENGE_TARGET",
+        "CHALLENGE_REQUIRED",
+        "EBAY_CHALLENGE_REQUIRED",
+        "EBAY_AUTH_REQUIRED",
+        "INTER_CARD_CHALLENGE",
     }
 )
+
+MARKETPLACE_GATE_URL_MARKERS = (
+    "splashui/challenge",
+    "challenge",
+    "captcha",
+    "ebay_sorry",
+    "/sorry",
+    "signin.ebay",
+    "signin",
+    "auth",
+)
+
+
+def extract_policy_reason_codes(
+    *,
+    result_code: str | None = None,
+    diagnostics: dict[str, Any] | None = None,
+) -> list[str]:
+    codes: list[str] = []
+    if result_code:
+        codes.extend(part.strip() for part in str(result_code).split(",") if part.strip())
+    diag = diagnostics if isinstance(diagnostics, dict) else {}
+    nested = diag.get("diagnostics") if isinstance(diag.get("diagnostics"), dict) else diag
+    if isinstance(nested, dict):
+        rc = nested.get("resultCode")
+        if rc:
+            codes.extend(part.strip() for part in str(rc).split(",") if part.strip())
+        policy = nested.get("targetPolicy")
+        if isinstance(policy, dict):
+            for item in policy.get("reason_codes") or policy.get("reasonCodes") or []:
+                text = str(item or "").strip()
+                if text:
+                    codes.append(text)
+    return sorted(set(codes))
 
 
 def _top_level_page_ids(raw_targets: list[dict[str, Any]]) -> list[str]:
@@ -46,6 +79,17 @@ def _top_level_page_ids(raw_targets: list[dict[str, Any]]) -> list[str]:
         if tid:
             ids.append(tid)
     return sorted(ids)
+
+
+def _recycle_generation(fingerprint: str) -> int:
+    text = str(fingerprint or "")
+    if not text.startswith("r") or ":" not in text:
+        return 0
+    head = text.split(":", 1)[0]
+    try:
+        return int(head[1:])
+    except ValueError:
+        return 0
 
 
 def _fingerprint_cdp_targets(raw_targets: list[dict[str, Any]]) -> str:
@@ -75,7 +119,7 @@ def _save_state(payload: dict[str, Any], path: Path | None = None) -> None:
 
 
 def reconcile_nav_context_for_cdp_change(ctx: NavigationRuntimeContext) -> NavigationRuntimeContext:
-    """Clear stale expected CDP target only when the expected top-level tab id is gone."""
+    """Clear stale expected CDP target only after browser recycle with missing expected tab."""
     try:
         from .local_browser_runtime import probe_local_browser_runtime
     except Exception:
@@ -89,9 +133,11 @@ def reconcile_nav_context_for_cdp_change(ctx: NavigationRuntimeContext) -> Navig
         return ctx
     state = _load_state()
     previous = str(state.get("cdpTopLevelFingerprint") or state.get("cdpTargetSetFingerprint") or "")
+    recycled = _recycle_generation(fingerprint) > _recycle_generation(previous)
     if (
         previous
         and previous != fingerprint
+        and recycled
         and ctx.expected_prior is not None
         and ctx.expected_prior.target_id
     ):
@@ -104,12 +150,42 @@ def reconcile_nav_context_for_cdp_change(ctx: NavigationRuntimeContext) -> Navig
     return ctx
 
 
-def _marketplace_gate_blocks_progress(*, runtime_error: str | None, raw_error: str | None) -> bool:
+def _marketplace_gate_blocks_progress(
+    *,
+    runtime_error: str | None,
+    raw_error: str | None,
+    policy_reason_codes: list[str] | None = None,
+    page_url: str | None = None,
+    page_title: str | None = None,
+) -> bool:
+    codes = {str(c).strip().upper() for c in (policy_reason_codes or []) if str(c).strip()}
+    if codes & {c.upper() for c in MARKETPLACE_GATE_REASON_CODES}:
+        return True
     blob = f"{runtime_error or ''} {raw_error or ''}".lower()
-    return any(marker in blob for marker in MARKETPLACE_GATE_BLOCK_MARKERS)
+    if any(marker in blob for marker in ("inter_card_challenge_target", "challenge_required", "ebay_auth")):
+        return True
+    page_blob = f"{page_url or ''} {page_title or ''}".lower()
+    if any(marker in page_blob for marker in MARKETPLACE_GATE_URL_MARKERS):
+        return True
+    return False
 
 
-def _is_stuck_tab_rejection(*, runtime_error: str | None, raw_error: str | None) -> bool:
+def _is_stuck_tab_rejection(
+    *,
+    runtime_error: str | None,
+    raw_error: str | None,
+    policy_reason_codes: list[str] | None = None,
+    page_url: str | None = None,
+    page_title: str | None = None,
+) -> bool:
+    if _marketplace_gate_blocks_progress(
+        runtime_error=runtime_error,
+        raw_error=raw_error,
+        policy_reason_codes=policy_reason_codes,
+        page_url=page_url,
+        page_title=page_title,
+    ):
+        return False
     code = str(runtime_error or "").strip().upper()
     if code == INTER_CARD_EXPECTED_TARGET_REJECTED:
         return True
@@ -123,21 +199,35 @@ def observe_inter_card_no_request_outcome(
     runtime_error: str | None,
     search_submission_started: bool,
     raw_error: str | None = None,
+    result_code: str | None = None,
+    diagnostics: dict[str, Any] | None = None,
+    page_url: str | None = None,
+    page_title: str | None = None,
 ) -> tuple[NavigationRuntimeContext, str | None]:
-    """Track no-request rejections; force COLD_START after two stuck-tab rejections in a row.
-
-    Marketplace challenge/sorry/auth blocks never count toward cold-start; they fail closed.
-    """
+    """Track no-request rejections; force COLD_START after two stuck-tab rejections in a row."""
+    policy_codes = extract_policy_reason_codes(result_code=result_code, diagnostics=diagnostics)
     state = _load_state()
     if search_submission_started:
         state["consecutiveInterCardNoRequestRejections"] = 0
         state.pop("stuckNoRequestSinceUtc", None)
         _save_state(state)
         return ctx, None
-    if _marketplace_gate_blocks_progress(runtime_error=runtime_error, raw_error=raw_error):
+    if _marketplace_gate_blocks_progress(
+        runtime_error=runtime_error,
+        raw_error=raw_error,
+        policy_reason_codes=policy_codes,
+        page_url=page_url,
+        page_title=page_title,
+    ):
         _save_state(state)
         return ctx, "CHALLENGE_REQUIRED"
-    if not _is_stuck_tab_rejection(runtime_error=runtime_error, raw_error=raw_error):
+    if not _is_stuck_tab_rejection(
+        runtime_error=runtime_error,
+        raw_error=raw_error,
+        policy_reason_codes=policy_codes,
+        page_url=page_url,
+        page_title=page_title,
+    ):
         return ctx, None
     count = int(state.get("consecutiveInterCardNoRequestRejections") or 0) + 1
     state["consecutiveInterCardNoRequestRejections"] = count

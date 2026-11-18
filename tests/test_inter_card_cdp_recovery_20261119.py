@@ -48,9 +48,16 @@ class InterCardCdpRecoveryTests(unittest.TestCase):
                     return_value="fp-new",
                 ),
             ):
-                state_path.write_text(json.dumps({"cdpTargetSetFingerprint": "fp-old"}), encoding="utf-8")
-                probe.return_value = mock.Mock(raw_targets=[{"id": "X"}])
-                out = reconcile_nav_context_for_cdp_change(ctx)
+                state_path.write_text(
+                    json.dumps({"cdpTopLevelFingerprint": "r0:CDP-VOLTORB"}),
+                    encoding="utf-8",
+                )
+                probe.return_value = mock.Mock(raw_targets=[{"id": "X", "type": "page"}])
+                with mock.patch(
+                    "cardscanr_market_engine.inter_card_cdp_recovery._fingerprint_cdp_targets",
+                    return_value="r1:X",
+                ):
+                    out = reconcile_nav_context_for_cdp_change(ctx)
         self.assertTrue(out.prior_handoff_stale)
         assert out.expected_prior is not None
         self.assertIsNone(out.expected_prior.target_id)

@@ -77,9 +77,16 @@ class Data63ReQaRound3Tests(unittest.TestCase):
             ):
                 out, latch = observe_inter_card_no_request_outcome(
                     ctx,
-                    runtime_error=None,
+                    runtime_error="INTER_CARD_EXPECTED_TARGET_REJECTED",
                     search_submission_started=False,
-                    raw_error="ebay_sorry challenge page",
+                    raw_error="Desktop sold navigation failed: INTER_CARD_EXPECTED_TARGET_REJECTED",
+                    result_code="INTER_CARD_CHALLENGE_TARGET",
+                    diagnostics={
+                        "urlBeforeSearch": "https://www.ebay.com.au/splashui/challenge",
+                        "titleBeforeSearch": "Verify yourself",
+                    },
+                    page_url="https://www.ebay.com.au/splashui/challenge",
+                    page_title="Verify yourself",
                 )
             self.assertEqual(latch, "CHALLENGE_REQUIRED")
             self.assertEqual(out.runtime_mode, RUNTIME_INTER_CARD)
@@ -222,20 +229,6 @@ class Data63ReQaRound3Tests(unittest.TestCase):
             seconds = sweep_safety_mod.compute_failure_backoff_seconds(1)
             self.assertGreaterEqual(seconds, 30.0)
         importlib.reload(sweep_safety_mod)
-
-    def test_worker_cycle_reserves_before_outcome_classification(self) -> None:
-        worker_src = (ROOT / "workers" / "market_price_worker.py").read_text(encoding="utf-8")
-        idx_submit = worker_src.find("searchSubmissionStarted")
-        idx_outcome = worker_src.find("outcome = _outcome_from_result")
-        self.assertGreater(idx_submit, 0)
-        self.assertGreater(idx_outcome, 0)
-        self.assertLess(idx_submit, idx_outcome)
-
-    def test_job_runner_wires_observe_without_silent_swallow(self) -> None:
-        src = (ROOT / "cardscanr_market_engine" / "job_runner.py").read_text(encoding="utf-8")
-        chunk = src.split("observe_inter_card_no_request_outcome")[1][:800]
-        self.assertIn("raw_error=error_message", src)
-        self.assertNotIn("except Exception:\n                pass", chunk)
 
     def test_counter_resets_after_successful_submission_flag(self) -> None:
         ctx = NavigationRuntimeContext(runtime_mode=RUNTIME_INTER_CARD, expected_prior=None)

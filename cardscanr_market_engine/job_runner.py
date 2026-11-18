@@ -297,6 +297,25 @@ class MarketPriceJobRunner:
         self.config = config
         self.now_func = now_func
         self.logger = logger
+        self._safety_budget: Any | None = None
+        self._continuous_worker: bool = False
+        self._enforce_safety_budget: bool = False
+
+    def _per_card_budget_active(self) -> bool:
+        if getattr(self, "_ebay_probe_mode", False):
+            return False
+        if self._safety_budget is None:
+            return False
+        if not (self._continuous_worker or self._enforce_safety_budget):
+            return False
+        provider = str(getattr(self.config, "provider_name", "") or "").strip().lower()
+        return provider == "ebay_browser"
+
+    def _reserve_per_card_submission(self, market: str) -> tuple[bool, str | None]:
+        if not self._per_card_budget_active():
+            return False, None
+        blocked = self._safety_budget.reserve_live_submission(market=str(market or "AU").upper())
+        return True, blocked
 
     def _assert_market_allowed_for_worker(self, price_key: MarketPriceKey) -> None:
         market = str(price_key.market_country or "").strip().upper()
@@ -743,6 +762,7 @@ class MarketPriceJobRunner:
         price_key: MarketPriceKey | None = None
         prior_price: float | None = None
         prior_cache: dict[str, Any] | None = None
+        live_submission_reserved = False
         try:
             price_key = self.client.get_price_key(job.price_key_id)
             if not price_key.id:
@@ -986,6 +1006,23 @@ class MarketPriceJobRunner:
             self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
+            market_country = str(price_key.market_country or "AU").upper()
+            reserved, blocked = self._reserve_per_card_submission(market_country)
+            if blocked:
+                return {
+                    "jobId": job.id,
+                    "priceKeyId": price_key.id,
+                    "status": "failed",
+                    "ownedDailyOutcome": blocked,
+                    "outcomeClass": blocked,
+                    "marketCountry": market_country,
+                    "searchSubmissionStarted": True,
+                    "liveSubmissionReserved": reserved,
+                    "budgetBlocked": True,
+                    "budgetSubmissionCounted": True,
+                    "runtimeMode": active_runtime_mode,
+                }
+            live_submission_reserved = reserved
             try:
                 (
                     provider_request,
@@ -1181,6 +1218,9 @@ class MarketPriceJobRunner:
                 "runtimeMode": active_runtime_mode,
                 # Authoritative pipeline phases for harness/reporting (fail-closed consumers).
                 "providerDiagnostics": _diag,
+                "searchSubmissionStarted": bool(_diag.get("searchSubmissionStarted"))
+                or live_submission_reserved,
+                "liveSubmissionReserved": live_submission_reserved,
                 **_phase,
             }
             persist_healthy_inter_card_handoff(
@@ -1195,7 +1235,8 @@ class MarketPriceJobRunner:
             nav_ctx_ok, _latch = observe_inter_card_no_request_outcome(
                 load_navigation_runtime_context(),
                 runtime_error=None,
-                search_submission_started=bool(_diag.get("searchSubmissionStarted")),
+                search_submission_started=bool(completed_result.get("searchSubmissionStarted")),
+                diagnostics=_diag if isinstance(_diag, dict) else None,
             )
             apply_context_to_environ(nav_ctx_ok)
             return completed_result
@@ -1236,6 +1277,17 @@ class MarketPriceJobRunner:
             pre_submit_submitted = False
             if isinstance(provider_diagnostics, dict):
                 pre_submit_submitted = bool(provider_diagnostics.get("searchSubmissionStarted"))
+            policy_diag: dict[str, Any] = {}
+            if isinstance(exc, ProviderError) and isinstance(exc.diagnostics, dict):
+                policy_diag = exc.diagnostics
+            result_code = str(policy_diag.get("resultCode") or "")
+            page_url = str(
+                policy_diag.get("urlBeforeSearch")
+                or policy_diag.get("currentUrl")
+                or policy_diag.get("url")
+                or ""
+            )
+            page_title = str(policy_diag.get("titleBeforeSearch") or policy_diag.get("title") or "")
             runtime_err = classify_pre_submit_runtime_error(
                 exc if isinstance(exc, Exception) else Exception(error_message),
                 runtime_mode=active_runtime_mode,
@@ -1245,11 +1297,23 @@ class MarketPriceJobRunner:
                 runtime_error=runtime_err,
                 search_submission_started=pre_submit_submitted,
                 raw_error=error_message,
+                result_code=result_code or None,
+                diagnostics=policy_diag or provider_diagnostics,
+                page_url=page_url or None,
+                page_title=page_title or None,
             )
             apply_context_to_environ(nav_ctx_fail)
             if inter_latch:
                 provider_diagnostics = dict(provider_diagnostics or {})
                 provider_diagnostics["interCardMarketplaceLatch"] = inter_latch
+                if self._safety_budget is not None and inter_latch == CHALLENGE_REQUIRED:
+                    from .continuous_safety import HARD_STOP_SOURCE_WORKER
+
+                    self._safety_budget.latch_hard_stop(
+                        CHALLENGE_REQUIRED,
+                        hard_stop_source=HARD_STOP_SOURCE_WORKER,
+                    )
+                    self._safety_budget.persist()
             # Worker-wide eBay availability circuit (do not re-open on cooldown skip).
             try:
                 diag = (exc.diagnostics if isinstance(exc, ProviderError) else None) or {}
@@ -1449,6 +1513,13 @@ class MarketPriceJobRunner:
                 "consecutiveSameFailures": consecutive,
                 "lastGoodRetained": bool(prior_price is not None and prior_price > 0),
             }
+            if live_submission_reserved:
+                result["liveSubmissionReserved"] = True
+                result["searchSubmissionStarted"] = True
+                result["budgetSubmissionCounted"] = True
+                result["marketCountry"] = str(
+                    price_key.market_country if price_key is not None else "AU"
+                ).upper()
             if provider_diagnostics:
                 result["providerDiagnostics"] = provider_diagnostics
                 result.update(_phase_fields_from_diagnostics(provider_diagnostics))

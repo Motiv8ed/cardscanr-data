@@ -310,6 +310,7 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
         def sorry_html(_q: str, _c: str, _n: str) -> str:
             return sorry
 
+        ledger = paths["ledger"]
         with (
             mock.patch(
                 "cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.SET_SWEEP_PLAN_PATH",
@@ -323,13 +324,19 @@ class SetSweepSafety20261119Tests(unittest.TestCase):
                 "cardscanr_market_engine.ebay_scale.set_sweep_safety.compute_failure_backoff_seconds",
                 return_value=0.0,
             ),
+            mock.patch("cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH", ledger),
+            mock.patch("cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.BUDGET_LEDGER_PATH", ledger),
         ):
             for _ in range(3):
                 try_set_sweep_worker_cycle(
                     client=FakeOwnedClient(_targets()),
                     budget=budget,
                     fetch_html=sorry_html,
-                    attempt_paths={"circuit": paths["circuit"], "attempts": paths["attempts"]},
+                    attempt_paths={
+                        "circuit": paths["circuit"],
+                        "attempts": paths["attempts"],
+                        "ledger": ledger,
+                    },
                 )
         self.assertIsNotNone(budget.last_hard_stop)
 
