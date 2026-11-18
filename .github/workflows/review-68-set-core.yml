@@ -1,0 +1,74 @@
+name: Private Minimal Multilingual Core Review
+
+on:
+  pull_request:
+    paths:
+      - 'tools/build_review_68_set_core.py'
+      - 'tests/test_build_review_68_set_core.py'
+      - '.github/workflows/review-68-set-core.yml'
+  push:
+    branches:
+      - 'catalogue/review-minimal-68-set-core-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile, test immutable preservation and reject unsafe merges
+        run: |
+          python -m py_compile tools/build_review_68_set_core.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
+
+  live-review-core:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build private candidate core from verified public R2 pack metadata
+        run: |
+          PYTHONPATH=. python tools/build_review_68_set_core.py --output "$RUNNER_TEMP/review-core"
+      - name: Verify candidate SQLite and manifest integrity independently
+        run: |
+          python - <<'PY'
+          import hashlib,json,os,sqlite3
+          from pathlib import Path
+          out=Path(os.environ["RUNNER_TEMP"])/"review-core"
+          report=json.loads((out/"SAFE-68-Set-Review-Core.json").read_text())
+          dbfile=out/"review-core.sqlite"
+          data=dbfile.read_bytes()
+          assert hashlib.sha256(data).hexdigest()==report["candidate_core"]["sqlite_sha256"]
+          assert report["unresolved_card_set_references_after"]==0
+          assert report["candidate_core"]["sets_added"]==68
+          assert not report["safe_to_publish"]
+          with sqlite3.connect(f"file:{dbfile.as_posix()}?mode=ro",uri=True) as db:
+              assert db.execute("PRAGMA quick_check").fetchone()[0]=="ok"
+              assert db.execute("SELECT COUNT(*) FROM sets").fetchone()[0]==711
+              assert db.execute("SELECT COUNT(*) FROM cards").fetchone()[0]==0
+          print("PASS: minimal 68-row review core; preserves current, no production writes")
+          PY
+      - name: Store private review candidate, never upload to public R2
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-68-Set-Private-Review-Core-${{ github.run_id }}
+          path: ${{ runner.temp }}/review-core/
+          retention-days: 7
+          if-no-files-found: warn
