@@ -608,7 +608,11 @@ class BulkReferenceRefreshRunner:
         rows = self.client._table_get_paged(
             "market_price_keys",
             params={
-                "select": "*",
+                "select": (
+                    "id,game,card_name,normalized_card_name,set_name,set_code,collector_number,"
+                    "language,variant,condition,market_country,currency,fingerprint,"
+                    "popularity_score,inventory_count,last_seen_at,updated_at"
+                ),
                 # id tie-break keeps offset pages stable when timestamps tie.
                 "order": "last_seen_at.desc.nullslast,updated_at.desc,id.asc",
             },
