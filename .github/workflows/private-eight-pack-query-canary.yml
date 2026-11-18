@@ -1,0 +1,64 @@
+name: Private Eight-Pack Data-Layer Integration Canary
+on:
+  push:
+    branches:
+      - 'catalogue/private-eight-pack-integration-*'
+  pull_request:
+    paths:
+      - 'tools/private_eight_pack_query_canary.py'
+      - '.github/workflows/private-eight-pack-query-canary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and run existing core-preservation tests
+        run: |
+          python -m py_compile tools/private_eight_pack_query_canary.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
+  private-query-canary:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Rebuild verified core and test seven language packs privately
+        run: |
+          PYTHONPATH=. python tools/private_eight_pack_query_canary.py --output private-canary
+      - name: Fail closed on publication and identity risks
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("private-canary/SAFE-Private-Data-Layer-Canary.json").read_text())
+          assert d["classification"]=="PASS_PRIVATE_DATA_LAYER_ONLY"
+          assert d["core_set_count"]==711 and d["unresolved_set_refs"]==0
+          assert len(d["language_packs"])==7
+          assert d["unique_base_ids"]==d["unique_printing_ids"]
+          assert all(p["card_rows"]==p["fts_rows"] for p in d["language_packs"])
+          assert not d["safe_to_publish"] and not d["artwork_mirroring_performed"]
+          assert d["production_writes"]==0
+          print("PASS private data-layer canary; app and rights gates still open")
+          PY
+      - name: Store private seven-day reports, never publish pack data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-Eight-Pack-Query
+          path: private-canary/*.json
+          retention-days: 7
+          if-no-files-found: warn
