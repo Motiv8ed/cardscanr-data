@@ -6,13 +6,13 @@ This task discovers a **small bounded sample** of recent sets and card metadata 
 
 - Fixed HTTPS origin: https://api.tcgdex.net/v2.
 - Languages: Japanese (ja), Traditional Chinese (zh-tw), Korean (ko), English (en), Thai (th), Indonesian (id), optionally Simplified Chinese (zh-cn).
-- Max 3 sets and 25 card records per set per language; serial requests with pacing and 2 MB response limit; cross-domain redirects refused.
+- Max 3 set-detail samples and 25 card records per set per language; Korean card index may contribute up to 300 extra **metadata-only** records with exact set-prefix checks; serial requests with pacing and 2 MB response limit; cross-domain redirects refused.
 - No card artwork downloaded, prices, customer data, Supabase, Cloudflare/R2 writes, or app release.
 - Each candidate retains provider card ID, set ID, language, region hint (not proof of distinct regional printing), source URL and response SHA256.
 - Finish/variant and canonical CardScanR printing IDs remain unverified; metadata is a candidate.
 - Outputs card_candidates.jsonl plus a SHA256 manifest in a new empty output directory.
 - TCGdex's database MIT license does not grant Pokemon card-artwork redistribution rights. Preserve existing provider approval and publication gates.
-- A partial status is reported when at least one language has no accepted candidates or a set/request failed; zero candidates return nonzero. Set indexes may omit release dates, so provider-ID fallback does NOT establish release recency.
+- A partial status is reported when at least one language has no accepted candidates or a set/request failed; zero candidates return nonzero. Set indexes may omit release dates, so undated entries preserve original provider index order rather than assuming lexical ID order establishes recency. Korean card-index entries are admitted only when the card ID matches a unique ID from the same Korean set index.
 
 ## Run locally or in GitHub Actions
 
