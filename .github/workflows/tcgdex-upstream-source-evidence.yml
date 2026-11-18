@@ -1,0 +1,76 @@
+name: TCGdex Pinned Upstream Source Evidence
+
+on:
+  pull_request:
+    paths:
+      - 'tools/verify_tcgdex_upstream_source.py'
+      - 'tests/test_verify_tcgdex_upstream_source.py'
+      - '.github/workflows/tcgdex-upstream-source-evidence.yml'
+  push:
+    branches:
+      - 'catalogue/tcgdex-upstream-source-evidence-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run fail-closed source verification tests
+        run: |
+          python -m py_compile tools/verify_tcgdex_upstream_source.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_verify_tcgdex_upstream_source.py -v
+
+  live-pinned-source-proof:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download original SHA-verified 480-card source metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: tcgdex-private-metadata-44231007062
+          path: ${{ runner.temp }}/tcgdex-input
+          run-id: 44231007062
+          github-token: ${{ github.token }}
+      - name: Recreate original exact-name ZIP, validate every original candidate hash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+          root=Path(os.environ["RUNNER_TEMP"])
+          with ZipFile(root/"tcgdex-input.zip","w") as out:
+              for name in ("manifest.json","card_candidates.jsonl"):
+                  out.write(root/"tcgdex-input"/name,arcname=name)
+          PY
+      - name: Verify 480 provider IDs against pinned upstream set and card-file listings
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          PYTHONPATH=. python tools/verify_tcgdex_upstream_source.py --source-zip "$RUNNER_TEMP/tcgdex-input.zip" --output "$RUNNER_TEMP/upstream-proof"
+      - name: Retain private source evidence without images or production changes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TCGdex-Pinned-Upstream-Proof-${{ github.run_id }}
+          path: ${{ runner.temp }}/upstream-proof/
+          retention-days: 7
+          if-no-files-found: warn
