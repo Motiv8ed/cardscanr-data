@@ -76,3 +76,36 @@ jobs:
             if ($source.Contains($unsafe)) { throw "Disallowed operation: $unsafe" }
           }
           Write-Host 'PASS: non-admin read-only launcher parsed on Windows PowerShell 5.1'
+
+
+  owner-source-id-package:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: [offline-tests, windows-launcher]
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package source audit without adding user data to GitHub
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/"source-id-package"
+          root.mkdir()
+          for name in ("audit_source_ids_readonly.py","Run-CardScanR-Source-ID-Audit.ps1",
+                       "Run-CardScanR-Source-ID-Audit.cmd","README_SOURCE_ID_AUDIT.txt"):
+              shutil.copy2(Path("tools")/name,root/name)
+          (root/"PACKAGE_MANIFEST.json").write_text(json.dumps({
+              "read_only":True,"requires_owner_uploaded_report_files":True,
+              "files_sha256":{f.name:hashlib.sha256(f.read_bytes()).hexdigest()
+                              for f in root.iterdir() if f.is_file()}},indent=2)+"\n")
+          PY
+      - name: Private package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-ReadOnly-Provider-ID-Diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-id-package/
+          retention-days: 7
+          if-no-files-found: error
