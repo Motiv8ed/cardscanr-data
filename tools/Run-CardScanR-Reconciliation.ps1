@@ -149,13 +149,14 @@ New-Item -ItemType Directory -Path $diagFolder -Force | Out-Null
 Write-Host "Found staging candidate: $Database" -ForegroundColor Green
 Write-Host "Last modified: $((Get-Item -LiteralPath $Database).LastWriteTime)"
 Write-Host "Review output: $diagFolder"
-& $python $reconciler --archive $source --database $Database --output $diagFolder
+$verifiedReview = Join-Path $diagFolder "verified-review"
+& $python $reconciler --archive $source --database $Database --output $verifiedReview
 $exitCode = $LASTEXITCODE
 if ($exitCode -ne 0) {
     Write-Host "Reconciliation stopped ($exitCode). No DB or production changes." -ForegroundColor Yellow
     exit $exitCode
 }
 Write-Host 'PASS: exact read-only reconciliation report created.' -ForegroundColor Green
-Write-Host "Safe report: $(Join-Path $diagFolder 'report.json')"
+Write-Host "Safe report: $(Join-Path $verifiedReview 'report.json')"
 Write-Host 'Send ONLY report.json to ChatGPT. Do not upload the database.'
 exit 0
