@@ -26,7 +26,6 @@ jobs:
           python -m py_compile tools/private_eight_pack_query_canary.py
           PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
   private-query-canary:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: offline
     runs-on: ubuntu-latest
     timeout-minutes: 20
