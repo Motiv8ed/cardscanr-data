@@ -269,7 +269,7 @@ def main() -> int:
         parser.error("max-sets must be 1..3; max-cards must be 1..25")
     rows, report = collect(langs, max_sets=args.max_sets, max_cards=args.max_cards)
     manifest = write_snapshot(args.output, rows, report)
-    print(json.dumps({"status": manifest["status"], "candidate_cards": len(rows), "requests_completed": manifest["requests_completed"], "image_files_downloaded": 0, "manifest_sha256": manifest["candidate_sha256"]}, sort_keys=True))
+    print(json.dumps({"status": manifest["status"], "candidate_cards": len(rows), "candidate_cards_by_language": manifest["candidate_cards_by_language"], "requests_completed": manifest["requests_completed"], "image_files_downloaded": 0, "manifest_sha256": manifest["candidate_sha256"]}, sort_keys=True))
     return 0 if rows else 2
 
 
