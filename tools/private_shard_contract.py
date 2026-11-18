@@ -21,13 +21,29 @@ _LATIN_SEARCH_FOLD = str.maketrans({
 
 
 def normalize_website_search(value: str) -> str:
-    text = unicodedata.normalize('NFKC', str(value or '')).strip().lower()
-    text = unicodedata.normalize('NFKD', text.translate(_LATIN_SEARCH_FOLD))
-    letters = (
-        ch if unicodedata.category(ch)[0] in ('L', 'N') else ' '
+    # JS folds full-width ASCII, but keeps Hangul syllables intact. Applying
+    # NFKD indiscriminately would split Korean names into separate Jamo.
+    text = ''.join(
+        chr(ord(ch) - 0xFF01 + 0x21) if 0xFF01 <= ord(ch) <= 0xFF5E
+        else (' ' if ch == '\u3000' else ch)
+        for ch in str(value or '').strip()
+    ).lower().translate(_LATIN_SEARCH_FOLD)
+    expanded = ''.join(
+        unicodedata.normalize('NFKD', ch)
+        if unicodedata.name(ch, '').startswith('LATIN ') else ch
         for ch in text
     )
-    return ' '.join(''.join(letters).split())
+    # Browser code removes combining marks, then replaces punctuation with
+    # spaces. Removing marks (not replacing with spaces) matters for Thai.
+    filtered = ''.join(
+        ch for ch in expanded if unicodedata.category(ch)[0] != 'M'
+    )
+    return ' '.join(
+        ''.join(
+            ch if unicodedata.category(ch)[0] in ('L', 'N') else ' '
+            for ch in filtered
+        ).split()
+    )
 
 WEB_FIELDS = frozenset({
     "id", "lang", "set", "num", "local", "numNorm", "setTotal",
