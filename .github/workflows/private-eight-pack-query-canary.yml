@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'tools/private_eight_pack_query_canary.py'
+      - 'tools/private_shard_contract.py'
+      - 'tests/test_private_shard_contract.py'
       - '.github/workflows/private-eight-pack-query-canary.yml'
   workflow_dispatch:
 permissions:
@@ -23,7 +25,8 @@ jobs:
           python-version: '3.12'
       - name: Compile and run existing core-preservation tests
         run: |
-          python -m py_compile tools/private_eight_pack_query_canary.py
+          python -m py_compile tools/private_eight_pack_query_canary.py tools/private_shard_contract.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_shard_contract.py -v
           PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
   private-query-canary:
     needs: offline
@@ -50,6 +53,9 @@ jobs:
           assert len(d["language_packs"])==7
           assert d["unique_base_ids"]==d["unique_printing_ids"]
           assert all(p["card_rows"]==p["fts_rows"] for p in d["language_packs"])
+          assert all(p["private_legacy_web_shard_contract"]["no_images"] for p in d["language_packs"])
+          assert all(p["private_legacy_web_shard_contract"]["sample_count"]==3 for p in d["language_packs"])
+          assert all(not p["private_legacy_web_shard_contract"]["production_enabled"] for p in d["language_packs"])
           assert not d["safe_to_publish"] and not d["artwork_mirroring_performed"]
           assert d["production_writes"]==0
           print("PASS private data-layer canary; app and rights gates still open")
