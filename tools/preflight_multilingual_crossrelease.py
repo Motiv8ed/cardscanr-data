@@ -83,6 +83,9 @@ def inspect_pack(pack: dict, zipped: bytes, destination: Path) -> tuple[dict, se
         print_ids={v[0] for v in db.execute("SELECT canonical_printing_id FROM cards")}
         if len(base_ids)!=card_count or len(print_ids)!=card_count:
             raise ValueError("duplicate_canonical_ids_within_pack")
+        set_ids={v[0] for v in db.execute("SELECT set_id FROM sets")}
+        card_set_counts=collections.Counter({str(k):int(v) for k,v in db.execute(
+            "SELECT set_id,COUNT(*) FROM cards GROUP BY set_id")})
         if pack["packId"] in ARCHIVE_PACKS:
             wrong_lang=db.execute("SELECT COUNT(*) FROM cards WHERE language <> ?",
                                   (pack["packId"],)).fetchone()[0]
@@ -93,7 +96,7 @@ def inspect_pack(pack: dict, zipped: bytes, destination: Path) -> tuple[dict, se
             "GROUP BY mirror_permission_status ORDER BY COUNT(*) DESC LIMIT 20")}
         info={
             "pack_id":pack["packId"],"card_count":card_count,"set_count":set_count,
-            "fts_rows":fts_count,"unresolved_set_references":orphan_count,
+            "fts_rows":fts_count,"unresolved_set_references_within_pack":orphan_count,
             "wrong_language_rows":wrong_lang,"gzip_bytes":len(zipped),
             "sqlite_bytes":size,"sha256_verified":True,"sqlite_quick_check":"ok",
             "search_schema_version":meta.get("schema_version"),
@@ -102,7 +105,7 @@ def inspect_pack(pack: dict, zipped: bytes, destination: Path) -> tuple[dict, se
         }
         signature=(columns["cards"],columns["sets"],columns["card_aliases"],
                    meta.get("schema_version"),meta.get("packSchemaVersion"))
-        return info,base_ids,print_ids,signature
+        return info,base_ids,print_ids,signature,set_ids,card_set_counts
     finally:
         db.close()
 
@@ -115,6 +118,8 @@ def analyze(active: dict, archive: dict, fetch=get) -> dict:
     print_owner={}
     collisions=[]
     schema_signatures=[]
+    all_pack_set_ids=set()
+    pack_reference_counts={}
     with tempfile.TemporaryDirectory(prefix="cardscanr-crossrelease-preflight-") as temp:
         root=Path(temp)
         for origin,pack in selected:
@@ -122,9 +127,11 @@ def analyze(active: dict, archive: dict, fetch=get) -> dict:
             if not isinstance(url,str) or pack["packId"] not in ACTIVE_PACKS+ARCHIVE_PACKS:
                 raise ValueError("disallowed_or_missing_pack")
             zipped=fetch(url,MAX_GZIP)
-            info,bases,printings,sig=inspect_pack(
+            info,bases,printings,sig,local_set_ids,card_set_counts=inspect_pack(
                 pack,zipped,root/(pack["packId"]+".sqlite"))
             schema_signatures.append(sig)
+            all_pack_set_ids.update(local_set_ids)
+            pack_reference_counts[pack["packId"]]=card_set_counts
             for type_name,keys,owners in (("base",bases,base_owner),
                                           ("printing",printings,print_owner)):
                 for key in keys:
@@ -136,8 +143,15 @@ def analyze(active: dict, archive: dict, fetch=get) -> dict:
                         })
             info["release_origin"]=origin
             results.append(info)
+    # A language pack may legitimately refer to a set supplied by the core
+    # or another attached pack. Test both in-pack and combined attached views.
+    for item in results:
+        refs=pack_reference_counts[item["pack_id"]]
+        absent={sid:n for sid,n in refs.items() if sid not in all_pack_set_ids}
+        item["unresolved_set_references_across_all_selected_packs"]=sum(absent.values())
+        item["unresolved_set_id_samples"]=list(sorted(absent))[:5]
     fields_equal=all(sig==schema_signatures[0] for sig in schema_signatures)
-    orphan_free=all(p["unresolved_set_references"]==0 for p in results)
+    orphan_free=all(p["unresolved_set_references_across_all_selected_packs"]==0 for p in results)
     fts_complete=all(p["card_count"]==p["fts_rows"] for p in results)
     locales_clean=all(p["wrong_language_rows"]==0 for p in results)
     collision_free=not collisions
@@ -150,7 +164,8 @@ def analyze(active: dict, archive: dict, fetch=get) -> dict:
         "archive_release_id":archive.get("catalogueReleaseId"),
         "packs":results,
         "schema_fields_and_versions_equal":fields_equal,
-        "all_local_set_references_present":orphan_free,
+        "all_cross_pack_set_references_present":orphan_free,
+        "in_pack_missing_set_refs_are_not_automatically_global_orphans":True,
         "all_fts_card_counts_match":fts_complete,
         "language_pack_contents_match_codes":locales_clean,
         "canonical_id_collisions_found":len(collisions),
