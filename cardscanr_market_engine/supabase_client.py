@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 import re
+import uuid
 from typing import Any
 
 import requests
@@ -329,9 +330,13 @@ class SupabaseMarketEngineClient:
             timeout=self.timeout_seconds,
         )
         response.raise_for_status()
+        if response.status_code == 204 or not response.content:
+            return []
         data = response.json()
         if isinstance(data, list):
             return data
+        if data is None:
+            return []
         return [data]
 
     def _table_patch(
@@ -910,20 +915,27 @@ class SupabaseMarketEngineClient:
         return len(rows)
 
     def insert_snapshot(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._table_post("market_price_snapshots", payload)[0]
+        body = dict(payload)
+        if not str(body.get("id") or "").strip():
+            body["id"] = str(uuid.uuid4())
+        self._table_post("market_price_snapshots", body, prefer="return=minimal")
+        return {"id": str(body["id"])}
 
     def insert_evidence(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not rows:
             return []
-        return self._table_post("market_sold_listing_evidence", rows)
+        self._table_post("market_sold_listing_evidence", rows, prefer="return=minimal")
+        return []
 
     def upsert_cache(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._table_post(
+        self._table_post(
             "market_price_cache",
             payload,
-            prefer="resolution=merge-duplicates,return=representation",
             on_conflict="price_key_id",
-        )[0]
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+        # PostgREST returns no body with return=minimal; echo the submitted payload for callers.
+        return dict(payload)
 
     def extend_reference_cache_freshness(
         self,
@@ -1401,10 +1413,10 @@ class SupabaseMarketEngineClient:
             "updated_at": _iso_or_none(datetime.now(timezone.utc)),
         }
         try:
-            rows = self._table_post(
+            self._table_post(
                 "market_price_pipeline_heartbeats",
                 payload,
-                prefer="resolution=merge-duplicates,return=representation",
+                prefer="resolution=merge-duplicates,return=minimal",
                 on_conflict="component",
             )
         except requests.HTTPError as exc:
@@ -1421,4 +1433,4 @@ class SupabaseMarketEngineClient:
                 if "market_price_pipeline_heartbeats" in body or "could not find" in body:
                     return None
             raise
-        return rows[0] if rows else None
+        return dict(payload)

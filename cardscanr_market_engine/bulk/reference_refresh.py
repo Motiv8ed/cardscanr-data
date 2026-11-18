@@ -29,6 +29,13 @@ def utc_iso(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+MARKET_PRICE_KEY_LIST_SELECT = (
+    "id,game,card_name,normalized_card_name,set_name,set_code,collector_number,"
+    "language,variant,condition,market_country,currency,fingerprint,"
+    "popularity_score,inventory_count,last_seen_at,updated_at"
+)
+
+
 # Verified and pending rows keep their existing writers. "market" is included
 # via VERIFIED_DISPLAY_SOURCES (user-verified / eBay selected estimate).
 _FRESHNESS_PROTECTED_DISPLAY_SOURCES = frozenset(VERIFIED_DISPLAY_SOURCES | {"pending_verification"})
@@ -608,7 +615,7 @@ class BulkReferenceRefreshRunner:
         rows = self.client._table_get_paged(
             "market_price_keys",
             params={
-                "select": "*",
+                "select": MARKET_PRICE_KEY_LIST_SELECT,
                 # id tie-break keeps offset pages stable when timestamps tie.
                 "order": "last_seen_at.desc.nullslast,updated_at.desc,id.asc",
             },
