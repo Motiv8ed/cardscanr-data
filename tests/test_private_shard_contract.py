@@ -33,6 +33,14 @@ class PrivateShardContractTests(unittest.TestCase):
         self.assertIsNone(adapted["thumb"])
         self.assertNotIn("example.invalid", str(adapted))
 
+    def test_japanese_r2_ja_maps_to_existing_web_jp(self):
+        sample=row("ja")
+        sample["native_card_name"]="ピカチュウ"
+        adapted=preview_metadata_row(sample, "ja")
+        self.assertEqual(adapted["lang"], "jp")
+        self.assertEqual(adapted["n"], "ピカチュウ")
+        self.assertIsNone(adapted["thumb"])
+
     def test_language_mismatch_denied(self):
         with self.assertRaisesRegex(ValueError, "language_mismatch"):
             preview_metadata_row(row("ko"), "ja")
