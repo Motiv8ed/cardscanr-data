@@ -12,7 +12,7 @@ This task discovers a **small bounded sample** of recent sets and card metadata 
 - Finish/variant and canonical CardScanR printing IDs remain unverified; metadata is a candidate.
 - Outputs card_candidates.jsonl plus a SHA256 manifest in a new empty output directory.
 - TCGdex's database MIT license does not grant Pokemon card-artwork redistribution rights. Preserve existing provider approval and publication gates.
-- A partial status is reported when at least one language/set failed; zero candidates return nonzero.
+- A partial status is reported when at least one language has no accepted candidates or a set/request failed; zero candidates return nonzero. Set indexes may omit release dates, so provider-ID fallback does NOT establish release recency.
 
 ## Run locally or in GitHub Actions
 
