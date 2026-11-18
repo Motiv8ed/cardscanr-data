@@ -38,9 +38,11 @@ def preview_metadata_row(row: Mapping[str, Any], language: str) -> dict[str, Any
     if not normalized:
         raise ValueError("empty_normalized_name")
     local_number = number.split("/", 1)[0].strip()
+    # Existing website shard folder/API code is jp, whereas R2 pack is ja.
+    web_language = "jp" if language == "ja" else language
     output = {
         "id": base,
-        "lang": language,
+        "lang": web_language,
         "set": set_id,
         "num": number,
         "local": local_number,
