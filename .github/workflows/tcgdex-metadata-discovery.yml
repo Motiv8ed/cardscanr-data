@@ -1,0 +1,59 @@
+name: TCGdex Private Metadata Discovery
+
+on:
+  pull_request:
+    paths:
+      - 'tools/tcgdex_metadata_batch.py'
+      - 'tests/test_tcgdex_metadata_batch.py'
+      - '.github/workflows/tcgdex-metadata-discovery.yml'
+  push:
+    branches:
+      - 'catalogue/tcgdex-metadata-*'
+    paths:
+      - 'tools/tcgdex_metadata_batch.py'
+      - 'tests/test_tcgdex_metadata_batch.py'
+      - '.github/workflows/tcgdex-metadata-discovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test source-only discovery
+        run: |
+          python -m py_compile tools/tcgdex_metadata_batch.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_metadata_batch.py -v
+
+  live-metadata-sample:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    needs: safety-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect bounded multilingual metadata candidates, never artwork
+        run: |
+          python tools/tcgdex_metadata_batch.py --languages ja,zh-tw,ko,en,th,id --max-sets 1 --max-cards 20 --output "$RUNNER_TEMP/tcgdex-private-metadata"
+      - name: Retain private candidate snapshot for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcgdex-private-metadata-${{ github.run_id }}
+          path: ${{ runner.temp }}/tcgdex-private-metadata/
+          if-no-files-found: warn
+          retention-days: 7
