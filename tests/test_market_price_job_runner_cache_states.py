@@ -90,7 +90,7 @@ class _FakeClient:
         return rows
 
     def upsert_cache(self, payload: dict) -> dict:
-        row = {"id": "cache-1", **payload}
+        row = dict(payload)
         self.cache_payloads.append(row)
         return row
 
@@ -219,7 +219,7 @@ class MarketPriceJobRunnerCacheStateTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["marketCountry"], "AU")
         self.assertEqual(result["currency"], "AUD")
-        self.assertEqual(result["cacheRowId"], "cache-1")
+        self.assertEqual(result["cacheRowId"], "key-riolu-au")
         self.assertEqual(result["snapshotId"], "snapshot-1")
         self.assertEqual(len(client.snapshots), 1)
         self.assertEqual(len(client.evidence_rows), 1)

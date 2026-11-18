@@ -931,14 +931,11 @@ class SupabaseMarketEngineClient:
         self._table_post(
             "market_price_cache",
             payload,
-            prefer="resolution=merge-duplicates,return=minimal",
             on_conflict="price_key_id",
+            prefer="resolution=merge-duplicates,return=minimal",
         )
-        # PostgREST returns no body with return=minimal; echo stable ids for callers.
-        return {
-            "id": payload.get("id"),
-            "price_key_id": payload.get("price_key_id"),
-        }
+        # PostgREST returns no body with return=minimal; echo the submitted payload for callers.
+        return dict(payload)
 
     def extend_reference_cache_freshness(
         self,

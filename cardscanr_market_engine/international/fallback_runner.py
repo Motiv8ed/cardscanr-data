@@ -577,7 +577,7 @@ class InternationalFallbackMixin:
             "jobId": job.id,
             "priceKeyId": price_key.id,
             "snapshotId": str(snapshot["id"]),
-            "cacheRowId": str(cache.get("id") or "") or None,
+            "cacheRowId": str(cache.get("id") or cache.get("price_key_id") or "") or None,
             "includedCount": pricing_stats.included_count,
             "rejectedCount": pricing_stats.rejected_count,
             "confidence": pricing_stats.confidence,

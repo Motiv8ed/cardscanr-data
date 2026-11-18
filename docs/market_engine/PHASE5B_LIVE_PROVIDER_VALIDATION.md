@@ -99,7 +99,7 @@ The report includes the refresh RPC action, key id, job id/status, worker result
 For a current market price to be available, check:
 
 - `current_market_evidence_available = true`
-- `cache_row_id` is non-empty
+- `cache_row_id` is non-empty (worker telemetry may carry the cache row UUID or the `price_key_id` when PostgREST uses `return=minimal` on cache upserts)
 - `snapshot_id` is non-empty
 - `included_count > 0`
 - `recommended_price` is non-null
