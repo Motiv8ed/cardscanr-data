@@ -45,18 +45,38 @@ def _integer(value, maximum=10000):
     return value if type(value) is int and 0<=value<=maximum else None
 
 
-def validate_index(lang: str, payload) -> list[dict]:
+def validate_index(lang: str, payload, *, quarantined=None) -> list[dict]:
+    """Quarantine conflicting provider IDs instead of picking an arbitrary row.
+
+    A live ZH-CN provider roster contained two entries named CSV1C with
+    different titles and counts. Both must be excluded from collection until
+    source reconciliation, while other set IDs remain usable.
+    """
     if lang not in PRIORITY or not isinstance(payload,list) or len(payload)>MAX_INDEX_ENTRIES:
         raise ValueError("untrusted_provider_set_index")
-    found=set()
-    results=[]
-    for offset,item in enumerate(payload):
+    counts=Counter()
+    for item in payload:
         if not isinstance(item,dict):
             raise ValueError("provider_index_nonobject")
         sid=item.get("id")
-        if not isinstance(sid,str) or not SET_ID.fullmatch(sid) or sid in found:
-            raise ValueError("invalid_or_duplicate_provider_set_id")
-        found.add(sid)
+        if not isinstance(sid,str) or not SET_ID.fullmatch(sid):
+            raise ValueError("invalid_provider_set_id")
+        counts[sid]+=1
+    if quarantined is None:
+        quarantined=[]
+    results=[]
+    duplicate_noted=set()
+    for offset,item in enumerate(payload):
+        sid=item["id"]
+        if counts[sid]>1:
+            if sid not in duplicate_noted:
+                quarantined.append({
+                    "language":lang,"provider_set_id":sid,
+                    "occurrences":counts[sid],
+                    "status":"quarantined_conflicting_provider_set_id",
+                })
+                duplicate_noted.add(sid)
+            continue
         count=item.get("cardCount")
         if count is not None and not isinstance(count,dict):
             raise ValueError("invalid_card_count")
@@ -75,31 +95,47 @@ def validate_index(lang: str, payload) -> list[dict]:
 
 
 def select_batches(index: dict[str,list[dict]], local_keys: set[tuple[str,str]],
-                   *, batch_index:int, batch_size:int) -> tuple[list[dict],dict]:
+                   *, batch_index:int, batch_size:int,
+                   other_provider_suffix_keys=None) -> tuple[list[dict],dict]:
     if type(batch_index) is not int or batch_index<0 or batch_index>100:
         raise ValueError("invalid_batch_index")
     if type(batch_size) is not int or not 1<=batch_size<=MAX_SETS_PER_BATCH:
         raise ValueError("invalid_batch_size")
+    suffix=other_provider_suffix_keys or set()
     selected=[]
     counts={}
     for lang in PRIORITY:
         rows=index.get(lang)
         if not isinstance(rows,list):
             raise ValueError("missing_provider_index_language")
-        absent=[x for x in rows if (lang,x["provider_set_id"]) not in local_keys]
-        # Latest index positions first; stable position and source SHA in receipt.
+        absent=[]
+        for x in rows:
+            key=(lang,x["provider_set_id"])
+            if key in local_keys:
+                continue
+            candidate=dict(x)
+            candidate["cross_provider_set_code_collision"]=(key in suffix)
+            candidate["candidate_status"]=(
+                "possible_cross_provider_alias" if key in suffix
+                else "provider_set_id_not_in_pack")
+            absent.append(candidate)
         absent.sort(key=lambda r:r["index_position"],reverse=True)
         selected.extend(absent)
         counts[lang]={
             "source_index_sets":len(rows),
-            "exact_set_ids_without_pack_match":len(absent),
+            "source_set_ids_without_same_provider_pack_match":len(absent),
+            "possible_cross_provider_alias_codes":sum(
+                x["cross_provider_set_code_collision"] for x in absent),
             "source_reported_card_positions":sum(
                 x["index_card_count_total"] or 0 for x in absent),
         }
     start=batch_index*batch_size
     selected_page=selected[start:start+batch_size]
+    alias_count=sum(x["cross_provider_set_code_collision"] for x in selected)
     return selected_page,{
         "total_source_unmatched_set_ids":len(selected),
+        "possible_cross_provider_alias_codes":alias_count,
+        "source_set_codes_without_any_pack_suffix_match":len(selected)-alias_count,
         "source_reported_card_positions_unmatched":sum(
             x["index_card_count_total"] or 0 for x in selected),
         "counts_by_language":counts,"batch_index":batch_index,
@@ -177,6 +213,8 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
         raise ValueError("invalid_batch_request")
     source_manifest=json.loads(pack_fetch(CANARY,2_000_000))
     local_keys=set()
+    all_pack_suffix_keys=set()
+    quarantined_source_set_ids=[]
     pack_evidence=[]
     indexes={}
     index_evidence=[]
@@ -198,8 +236,11 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
                 for actual_lang,setid in keys:
                     if actual_lang!=lang:
                         raise ValueError("pack_card_language_drift")
-                    if isinstance(setid,str) and setid.startswith("tcgdex:"):
-                        local_keys.add((lang,setid.rsplit(":",1)[-1]))
+                    if isinstance(setid,str):
+                        code=setid.rsplit(":",1)[-1]
+                        all_pack_suffix_keys.add((lang,code))
+                        if setid.startswith("tcgdex:"):
+                            local_keys.add((lang,code))
             pack_evidence.append({
                 "language":lang,"sha256":descriptor["sha256"],
                 "gzip_sha256":descriptor["gzipSha256"],
@@ -210,14 +251,15 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
             payload,raw=provider_fetch(API+"/"+lang+"/sets")
             if not isinstance(raw,bytes) or len(raw)>2_000_000:
                 raise ValueError("index_source_response_too_large")
-            indexes[lang]=validate_index(lang,payload)
+            indexes[lang]=validate_index(lang,payload,quarantined=quarantined_source_set_ids)
             index_evidence.append({
                 "language":lang,"url":API+"/"+lang+"/sets",
                 "sha256":hashlib.sha256(raw).hexdigest(),
                 "set_count":len(indexes[lang]),
             })
-        selected,plan=select_batches(indexes,local_keys,
-                                      batch_index=batch_index,batch_size=batch_size)
+        selected,plan=select_batches(
+            indexes,local_keys,batch_index=batch_index,batch_size=batch_size,
+            other_provider_suffix_keys=all_pack_suffix_keys)
         for target in selected:
             if requests>=MAX_SOURCE_REQUESTS:
                 raise ValueError("source_request_budget_exceeded")
@@ -242,6 +284,8 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
                 continue
             item["index_card_count_total"]=target["index_card_count_total"]
             item["index_position"]=target["index_position"]
+            item["candidate_status"]=target["candidate_status"]
+            item["cross_provider_set_code_collision"]=target["cross_provider_set_code_collision"]
             detail.append(item)
             briefs.extend(cards)
     ids=[(x["language"],x["provider_card_id"]) for x in briefs]
@@ -252,6 +296,7 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
         "generated_utc":datetime.now(timezone.utc).isoformat(),
         "packs_sha256_verified":pack_evidence,
         "provider_index_sha256_verified":index_evidence,
+        "quarantined_provider_set_id_conflicts":quarantined_source_set_ids,
         **plan,
         "source_requests":requests,
         "source_sets_succeeded":len(detail),
@@ -260,7 +305,7 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
         "card_briefs_captured":len(briefs),
         "source_image_url_bases_found":sum(x["source_image_ref_present"] for x in briefs),
         "verified_new_canonical_cards":0,
-        "source_set_aliases_not_resolved":len(detail),
+        "source_set_identities_not_reconciled":len(detail),
         "production_writes":0,"customer_data_read":False,
         "image_binaries_downloaded":0,"rights_granted":False,
         "safe_for_public_use":False,
@@ -302,6 +347,8 @@ def main()->int:
         "detail_sets_fetched":summary["source_sets_succeeded"],
         "card_briefs_collected":summary["card_briefs_captured"],
         "source_image_refs_found":summary["source_image_url_bases_found"],
+        "possible_alias_set_codes":summary["possible_cross_provider_alias_codes"],
+        "quarantined_source_id_conflicts":len(summary["quarantined_provider_set_id_conflicts"]),
         "no_canonical_card_additions":True,"no_image_files":True,
         "batch_index":args.batch_index,"batch_size":args.batch_size,
         "total_batches":summary["total_batches"],"failed":summary["source_sets_failed"]
