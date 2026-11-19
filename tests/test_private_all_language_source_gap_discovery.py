@@ -24,11 +24,20 @@ class GapDiscoveryTests(unittest.TestCase):
         self.assertEqual(rows[1]["provider_set_id"],"SV4a")
         self.assertEqual(rows[1]["index_position"],1)
         for bad in ([{"id":"../../x"}],
-                    [{"id":"abc"},{"id":"abc"}],
                     [{"id":"x","cardCount":7}],
                     [None]):
             with self.assertRaises(ValueError):
                 validate_index("zh-tw",bad)
+        conflicts=[]
+        self.assertEqual(
+            validate_index("zh-cn",[
+                {"id":"CSV1C","name":"First conflicting set","cardCount":{"total":127}},
+                {"id":"CSV1C","name":"Second conflicting set","cardCount":{"total":9}},
+            ],quarantined=conflicts),[])
+        self.assertEqual(conflicts,[{
+            "language":"zh-cn","provider_set_id":"CSV1C","occurrences":2,
+            "status":"quarantined_conflicting_provider_set_id",
+        }])
         with self.assertRaises(ValueError):
             validate_index("wrong",valid)
 
@@ -56,6 +65,24 @@ class GapDiscoveryTests(unittest.TestCase):
             select_batches(indexed,set(),batch_index=-1,batch_size=2)
         with self.assertRaises(ValueError):
             select_batches(indexed,set(),batch_index=0,batch_size=MAX_SETS_PER_BATCH+1)
+
+    def test_cross_provider_code_collision_is_quarantined_as_possible_alias(self):
+        idx={l:[] for l in PRIORITY}
+        idx["en"]=validate_index("en",[
+            {"id":"base1","cardCount":{"total":102}},
+            {"id":"new1","cardCount":{"total":55}},
+        ])
+        page,proof=select_batches(
+            idx,set(),batch_index=0,batch_size=8,
+            other_provider_suffix_keys={("en","base1")})
+        self.assertEqual(proof["total_source_unmatched_set_ids"],2)
+        self.assertEqual(proof["possible_cross_provider_alias_codes"],1)
+        self.assertEqual(proof["source_set_codes_without_any_pack_suffix_match"],1)
+        byid={r["provider_set_id"]:r for r in page}
+        self.assertEqual(byid["base1"]["candidate_status"],"possible_cross_provider_alias")
+        self.assertEqual(byid["new1"]["candidate_status"],"provider_set_id_not_in_pack")
+        self.assertTrue(byid["base1"]["cross_provider_set_code_collision"])
+        self.assertFalse(byid["new1"]["cross_provider_set_code_collision"])
 
     def test_source_briefs_are_provisional_not_canonical_new_cards(self):
         payload={"id":"SV4a","name":"Known source set",
