@@ -1,0 +1,96 @@
+name: Private All-Language Provider Set Gap Discovery
+on:
+  workflow_dispatch:
+    inputs:
+      batch_index:
+        description: "Zero-based batch: 0..12 (40 source sets each, ordered JA/ZH-TW/KO/EN/TH/ID/ZH-CN)"
+        required: true
+        default: "0"
+        type: string
+permissions:
+  contents: read
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and verify provisional, non-canonical source discovery
+        run: |
+          python -m py_compile tools/private_all_language_source_gap_discovery.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_all_language_source_gap_discovery.py -v
+  source-archive-only:
+    runs-on: ubuntu-latest
+    needs: offline-safety
+    timeout-minutes: 35
+    env:
+      BATCH_INDEX: ${{ inputs.batch_index }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate numeric bounded page, never evaluate untrusted shell
+        shell: bash
+        run: |
+          [[ "$BATCH_INDEX" =~ ^(0|[1-9][0-9]?)$ ]]
+          test "$BATCH_INDEX" -le 12
+      - name: Verify 7 immutable language packs and query up to 40 unmatched source sets
+        shell: bash
+        run: |
+          PYTHONPATH=. python tools/private_all_language_source_gap_discovery.py \
+            --batch-index "$BATCH_INDEX" \
+            --batch-size 40 \
+            --pace 1.25 \
+            --output private-provider-gap-sweep
+      - name: Enforce source provenance and zero public/ownership writes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path("private-provider-gap-sweep")
+          doc=json.loads((root/"receipt.json").read_text("utf-8"))
+          assert doc["classification"]=="PRIVATE_SOURCE_SET_GAP_EVIDENCE_ONLY"
+          assert len(doc["packs_sha256_verified"])==7
+          assert len(doc["provider_index_sha256_verified"])==7
+          assert doc["source_requests"]<=40
+          assert doc["source_sets_succeeded"]+doc["source_sets_failed"]==doc["source_requests"]
+          assert doc["card_briefs_captured"]<=40*4000
+          assert doc["verified_new_canonical_cards"]==0
+          assert doc["production_writes"]==0 and not doc["customer_data_read"]
+          assert doc["image_binaries_downloaded"]==0
+          assert not doc["safe_for_public_use"] and not doc["rights_granted"]
+          for filename in ("unmatched_source_sets.jsonl","unmatched_source_card_briefs.jsonl"):
+            entry=doc[filename]
+            raw=(root/filename).read_bytes()
+            assert hashlib.sha256(raw).hexdigest()==entry["sha256"]
+            assert len(raw)==entry["bytes"]
+            rows=[json.loads(x) for x in raw.splitlines() if x]
+            assert len(rows)==entry["records"]
+            if filename.endswith("card_briefs.jsonl"):
+              assert all(x.get("canonical_printing_id") is None and not x.get("exact_match_verified")
+                         and not x.get("artwork_rights_verified") for x in rows)
+          print("CARDSCANR_SEVEN_LANGUAGE_SOURCE_GAP_PRIVATE_VERIFIED",
+                json.dumps({"batch":doc["batch_index"],
+                            "new_source_set_ID_candidates":doc["total_source_unmatched_set_ids"],
+                            "provider_card_positions_not_yet_reconciled":doc["source_reported_card_positions_unmatched"],
+                            "sets_fetched":doc["source_sets_succeeded"],
+                            "briefs":doc["card_briefs_captured"],
+                            "url_bases":doc["source_image_url_bases_found"]},sort_keys=True))
+          PY
+      - name: Upload SHA-verified source-only card and set evidence for seven days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-Provider-Gap-Page-${{ inputs.batch_index }}
+          path: private-provider-gap-sweep/
+          retention-days: 7
+          if-no-files-found: warn
