@@ -58,6 +58,41 @@ class TcgdexDetailAcquisitionTests(unittest.TestCase):
         self.assertTrue(all(r["url"].startswith(API + "/ja/") for r in report["response_receipts"]))
         self.assertTrue(all(c["image_file_downloaded"] is False for c in cards))
 
+    def test_duplicate_provider_set_id_is_quarantined_not_assigned(self):
+        calls = []
+        def conflicted_source(url):
+            calls.append(url)
+            values = {
+                API + "/ja/sets": [
+                    {"id": "dup-ja", "name": "First", "releaseDate": "2026-11-01"},
+                    {"id": "dup-ja", "name": "Different", "releaseDate": "2026-10-31"},
+                    {"id": "good-ja", "name": "Unique", "releaseDate": "2026-01-01"},
+                ],
+                API + "/ja/sets/good-ja": {
+                    "id": "good-ja", "name": "Unique",
+                    "cards": [{"id": "good-ja-1", "name": "ピカチュウ", "localId": "001"}],
+                },
+                API + "/ja/cards/good-ja-1": {
+                    "id": "good-ja-1", "name": "ピカチュウ",
+                    "set": {"id": "good-ja"},
+                },
+            }
+            if url not in values:
+                raise AssertionError("must not fetch duplicate set id " + url)
+            return api_response(values[url])
+        sets, cards, report = gather(
+            ["ja"], max_sets=2, cards_per_set=1,
+            get=conflicted_source, pace_seconds=0,
+        )
+        self.assertEqual(len(sets), 1)
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(report["set_roster_entries"], 3)
+        self.assertEqual(report["set_roster_unique_ids"], 2)
+        self.assertEqual(report["source_set_id_conflicts"][0]["provider_set_id"], "dup-ja")
+        self.assertEqual(report["source_set_id_conflicts"][0]["count"], 2)
+        self.assertEqual(report["status"], "partial")
+        self.assertNotIn(API + "/ja/sets/dup-ja", calls)
+
     def test_empty_set_offset_stays_bounded(self):
         sets, cards, report = gather(
             ["ja"], max_sets=1, cards_per_set=1,
