@@ -25,8 +25,12 @@ from cardscanr_market_engine.browser_lifecycle_policy import (
     url_matches_job_query,
 )
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, result_consumes_submission_cap
+from cardscanr_market_engine.live_ebay_navigation_accounting import (
+    LIVE_EBAY_NAVIGATION_CONSUMED,
+    live_ebay_navigation_consumed_from_metadata,
+)
+from cardscanr_market_engine.pipeline_phase_diagnostics import build_provider_diagnostics_for_result
 from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.models import MarketPriceKey, MarketPriceRefreshJob
 from cardscanr_market_engine.navigation_runtime_context import (
@@ -169,6 +173,7 @@ class StaleInterCardTargetPolicyTests(unittest.TestCase):
         self.assertTrue(r.ok, r.reason_codes)
 
     def test_fresh_handoff_continuation_when_tab_matches_current_query(self) -> None:
+        """Retry after partial nav: tab already shows this job's sold _nkw (PR #47 strict prior still enforced for wrong tabs)."""
         prior = _stale_charizard_prior()
         targets = json.loads((FIX / "drifloon_continuation_targets.json").read_text(encoding="utf-8"))[
             "rawTargets"
@@ -181,6 +186,24 @@ class StaleInterCardTargetPolicyTests(unittest.TestCase):
             prior_handoff_stale=False,
         )
         self.assertTrue(r.ok, r.reason_codes)
+
+    def test_sold_page_without_nkw_does_not_correlate(self) -> None:
+        prior = _stale_charizard_prior()
+        url = "https://www.ebay.com.au/sch/i.html?LH_Sold=1"
+        self.assertFalse(correlates_to_prior({"url": url, "id": "x"}, prior))
+
+    def test_psa_suffix_not_accepted_as_same_card(self) -> None:
+        prior = PriorCardContext(
+            job_id="j1",
+            final_url="https://www.ebay.com.au/sch/i.html?_nkw=Pikachu+GG30+Pokemon&LH_Sold=1",
+            query="Pikachu GG30 Pokemon",
+            x11_sold_state_verified=True,
+            capture_correlated=True,
+            card_verdict="PASS_PRICE_UPDATED",
+        )
+        url = "https://www.ebay.com.au/sch/i.html?_nkw=Pikachu+GG30+Pokemon+PSA+10&LH_Sold=1"
+        self.assertFalse(correlates_to_prior({"url": url, "id": "x"}, prior))
+        self.assertFalse(url_matches_job_query("Pikachu GG30 Pokemon", url))
 
     def test_fresh_healthy_prior_wrong_tab_still_rejected(self) -> None:
         prior = _stale_charizard_prior()
@@ -781,101 +804,68 @@ class EbayBrowserReferenceFreshnessTests(unittest.TestCase):
         budget = ContinuousSafetyBudget.from_env()
         self.assertIsInstance(budget, ContinuousSafetyBudget)
 
-class InterCardColdFallbackTests(unittest.TestCase):
-    def test_target_reject_retries_cold_start(self) -> None:
-        from unittest import mock
-
-        from cardscanr_market_engine.navigation_runtime_context import (
-            NavigationRuntimeContext,
-            apply_context_to_environ,
-        )
-        from cardscanr_market_engine.providers.linux_x11_ebay_nav import navigate_query_to_sold
-
-        run_id = mint_nav_handoff_writer_run_id()
-        ctx = NavigationRuntimeContext(
-            runtime_mode=RUNTIME_INTER_CARD,
-            expected_prior=_stale_charizard_prior(),
-        )
-        apply_context_to_environ(ctx)
-        calls: list[dict] = []
-
-        def _fake_search(**kwargs):
-            calls.append({"go_home": kwargs.get("go_home"), "mode": kwargs["ctx"].runtime_mode})
-            if len(calls) == 1:
-                return {
-                    "ok": False,
-                    "error": "INTER_CARD_EXPECTED_TARGET_REJECTED",
-                    "reason": "target_policy_rejected",
-                    "diagnostics": {"targetPolicy": {"mode": "INTER_CARD", "ok": False}},
-                }
-            return {
-                "ok": True,
-                "submitted": True,
-                "queryVisibleConfirmed": True,
-                "url": "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1",
-            }
-
-        with mock.patch(
-            "cardscanr_market_engine.providers.linux_x11_ebay_nav._run_linux_search",
-            side_effect=lambda **kw: _fake_search(**kw),
-        ):
-            with mock.patch(
-                "cardscanr_market_engine.providers.linux_x11_ebay_nav._wsl_python",
-                return_value={"SOLD_STATE_VERIFIED": True, "soldClickSuccess": True, "url": "x"},
-            ):
-                nav = navigate_query_to_sold(DRIFLOON_QUERY, reset_homepage=False)
-        self.assertEqual(len(calls), 2)
-        self.assertFalse(calls[0]["go_home"])
-        self.assertEqual(calls[1]["mode"], "COLD_START")
-        self.assertTrue(calls[1]["go_home"])
-        self.assertTrue(nav.search_success or nav.ok)
-
-
 class SubmissionCapAccountingTests(unittest.TestCase):
-    def test_failed_job_with_search_submission_counts(self) -> None:
-        row = {
-            "status": "failed",
+    def test_completed_status_counts_without_extra_flags(self) -> None:
+        row = {"status": "completed", "ownedDailyOutcome": "UNCHANGED_FROM_EBAY"}
+        self.assertTrue(result_consumes_submission_cap(row))
+
+    def test_failed_provider_diag_shape_counts(self) -> None:
+        meta = {
+            "desktopNav": {"searchSuccess": True, "submitted": True},
+            LIVE_EBAY_NAVIGATION_CONSUMED: True,
             "searchSubmissionStarted": True,
-            "marketCountry": "AU",
         }
+        diag = build_provider_diagnostics_for_result(raw_metadata=meta)
+        row = {"status": "failed", "providerDiagnostics": diag}
+        nested = diag.get("diagnostics") if isinstance(diag.get("diagnostics"), dict) else {}
+        self.assertTrue(live_ebay_navigation_consumed_from_metadata(nested))
         self.assertTrue(result_consumes_submission_cap(row))
 
     def test_inter_card_policy_reject_without_submit_does_not_count(self) -> None:
         row = {
             "status": "failed",
             "error": "INTER_CARD_EXPECTED_TARGET_REJECTED",
-            "providerDiagnostics": {"searchSubmissionStarted": False},
+            "providerDiagnostics": {"diagnostics": {"searchSubmissionStarted": False}},
         }
         self.assertFalse(result_consumes_submission_cap(row))
 
-    def test_cold_fallback_page_load_counts(self) -> None:
-        row = {
-            "status": "failed",
-            "providerDiagnostics": {
-                "search": {
-                    "diagnostics": {"interCardColdFallback": {"attempted": True, "fallbackOk": False}},
-                },
-            },
-        }
-        self.assertTrue(result_consumes_submission_cap(row))
-
     def test_hourly_cap_boundary(self) -> None:
-        budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+        import tempfile
+
+        from cardscanr_market_engine import continuous_safety
+
         stamp = NOW
-        for i in range(19):
-            budget.record_submission(stamp + timedelta(minutes=i))
-        self.assertIsNone(budget.budget_exhausted(stamp + timedelta(minutes=18)))
-        budget.record_submission(stamp + timedelta(minutes=19))
-        self.assertEqual(budget.budget_exhausted(stamp + timedelta(minutes=19)), "HOURLY_SUBMISSION_CEILING")
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.json"
+            with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
+                budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+                for i in range(19):
+                    budget.record_submission(stamp + timedelta(minutes=i), path=ledger)
+                self.assertIsNone(budget.budget_exhausted(stamp + timedelta(minutes=18)))
+                budget.record_submission(stamp + timedelta(minutes=19), path=ledger)
+                self.assertEqual(
+                    budget.budget_exhausted(stamp + timedelta(minutes=19)),
+                    "HOURLY_SUBMISSION_CEILING",
+                )
 
     def test_daily_cap_boundary_at_sixty(self) -> None:
-        budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=60)
+        import tempfile
+
+        from cardscanr_market_engine import continuous_safety
+
         stamp = NOW
-        for i in range(59):
-            budget.record_submission(stamp + timedelta(minutes=i * 5))
-        self.assertIsNone(budget.budget_exhausted(stamp + timedelta(hours=12)))
-        budget.record_submission(stamp + timedelta(hours=12))
-        self.assertEqual(budget.budget_exhausted(stamp + timedelta(hours=12)), "DAILY_SUBMISSION_CEILING")
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.json"
+            with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
+                budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=60)
+                for i in range(59):
+                    budget.record_submission(stamp + timedelta(minutes=i * 5), path=ledger)
+                self.assertIsNone(budget.budget_exhausted(stamp + timedelta(hours=12)))
+                budget.record_submission(stamp + timedelta(hours=12), path=ledger)
+                self.assertEqual(
+                    budget.budget_exhausted(stamp + timedelta(hours=12)),
+                    "DAILY_SUBMISSION_CEILING",
+                )
 
 
 class WriterRunPropagationTests(unittest.TestCase):

@@ -83,6 +83,7 @@ from .pipeline_phase_diagnostics import (
     extract_pipeline_phases,
 )
 from .region_pricing_registry import is_region_dispatchable
+from .live_ebay_navigation_accounting import cap_fields_from_provider_metadata
 
 
 def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str, Any]:
@@ -108,6 +109,7 @@ def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str,
         out["desktopNav"] = meta.get("desktopNav")
     if isinstance(meta, dict) and meta.get("navMode"):
         out["navMode"] = meta.get("navMode")
+    out.update(cap_fields_from_provider_metadata(meta if isinstance(meta, dict) else None))
     return out
 
 
@@ -1421,6 +1423,12 @@ class MarketPriceJobRunner:
             if provider_diagnostics:
                 result["providerDiagnostics"] = provider_diagnostics
                 result.update(_phase_fields_from_diagnostics(provider_diagnostics))
+                nested_cap = provider_diagnostics.get("diagnostics")
+                if not isinstance(nested_cap, dict):
+                    nested_cap = provider_diagnostics
+                result.update(
+                    cap_fields_from_provider_metadata(nested_cap if isinstance(nested_cap, dict) else None)
+                )
                 nested = provider_diagnostics.get("diagnostics")
                 if not isinstance(nested, dict):
                     nested = provider_diagnostics if isinstance(provider_diagnostics, dict) else {}
@@ -1437,6 +1445,7 @@ class MarketPriceJobRunner:
                     "childStderrSummary",
                     "expectedPriorTargetId",
                     "searchSubmissionStarted",
+                    "liveEbayNavigationConsumed",
                 ):
                     if nested.get(key) is not None:
                         result[key] = nested.get(key)

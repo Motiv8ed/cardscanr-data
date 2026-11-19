@@ -9,8 +9,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .atomic_json_state import mutate_json_state
+from .live_ebay_navigation_accounting import result_consumes_submission_cap
 from .owned_daily_enablement import BUDGET_LEDGER_PATH
 from .scheduler import _parse_positive_int, utc_iso, utc_now
+
+_LEDGER_DEFAULT: dict[str, Any] = {
+    "submissions": [],
+    "transients": [],
+    "consecutiveTransient": 0,
+    "lastHardStop": None,
+    "marketSubmissions": [],
+}
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -23,10 +33,49 @@ def _parse_dt(value: Any) -> datetime | None:
         return None
 
 
+def _parse_submissions(data: dict[str, Any]) -> list[datetime]:
+    return [d for d in (_parse_dt(x) for x in data.get("submissions") or []) if d]
+
+
+def _parse_market_submissions(data: dict[str, Any]) -> list[tuple[datetime, str]]:
+    tagged: list[tuple[datetime, str]] = []
+    for row in data.get("marketSubmissions") or []:
+        if isinstance(row, dict):
+            parsed = _parse_dt(row.get("at"))
+            market = str(row.get("market") or "").upper()
+            if parsed is not None:
+                tagged.append((parsed, market))
+    return tagged
+
+
+def _prune_submission_lists(
+    data: dict[str, Any],
+    *,
+    now: datetime,
+) -> None:
+    day = now - timedelta(hours=24)
+    hour = now - timedelta(hours=1)
+    subs = [t for t in _parse_submissions(data) if t >= day]
+    data["submissions"] = [utc_iso(x) for x in subs[-400:]]
+    trans = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d and d >= hour]
+    data["transients"] = [utc_iso(x) for x in trans[-200:]]
+    tagged = [(t, m) for t, m in _parse_market_submissions(data) if t >= day]
+    data["marketSubmissions"] = [{"at": utc_iso(at), "market": market} for at, market in tagged[-400:]]
+
+
+def _reconcile_consecutive(data: dict[str, Any]) -> None:
+    retained = len(data.get("transients") or [])
+    consecutive = int(data.get("consecutiveTransient") or 0)
+    if consecutive > retained:
+        data["consecutiveTransient"] = retained
+    if consecutive < 0:
+        data["consecutiveTransient"] = 0
+
+
 @dataclass
 class ContinuousSafetyBudget:
     max_submissions_per_hour: int = 20
-    max_submissions_per_day: int = 200
+    max_submissions_per_day: int = 60
     max_consecutive_transient: int = 3
     max_transient_per_hour: int = 5
     submissions: list[datetime] = field(default_factory=list)
@@ -39,7 +88,7 @@ class ContinuousSafetyBudget:
     def from_env(cls, *, path: Path | None = None) -> "ContinuousSafetyBudget":
         budget = cls(
             max_submissions_per_hour=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_HOUR", 20),
-            max_submissions_per_day=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_DAY", 200),
+            max_submissions_per_day=_parse_positive_int("MAX_LIVE_SUBMISSIONS_PER_DAY", 60),
             max_consecutive_transient=_parse_positive_int(
                 "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES", 3
             ),
@@ -50,6 +99,14 @@ class ContinuousSafetyBudget:
         budget.load(path or BUDGET_LEDGER_PATH)
         return budget
 
+    def _apply_ledger_dict(self, data: dict[str, Any]) -> None:
+        self.submissions = _parse_submissions(data)
+        self.transients = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d]
+        self.consecutive_transient = int(data.get("consecutiveTransient") or 0)
+        self.last_hard_stop = str(data.get("lastHardStop") or "") or None
+        self.market_submissions = _parse_market_submissions(data)
+        self._reconcile_consecutive_with_history()
+
     def load(self, path: Path) -> None:
         if not path.is_file():
             return
@@ -57,27 +114,14 @@ class ContinuousSafetyBudget:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             return
-        self.submissions = [d for d in (_parse_dt(x) for x in data.get("submissions") or []) if d]
-        self.transients = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d]
-        self.consecutive_transient = int(data.get("consecutiveTransient") or 0)
-        self.last_hard_stop = str(data.get("lastHardStop") or "") or None
-        tagged: list[tuple[datetime, str]] = []
-        for row in data.get("marketSubmissions") or []:
-            if isinstance(row, dict):
-                parsed = _parse_dt(row.get("at"))
-                market = str(row.get("market") or "").upper()
-                if parsed is not None:
-                    tagged.append((parsed, market))
-        self.market_submissions = tagged
-        # Repair impossible consecutiveTransient vs retained history after load.
-        self._reconcile_consecutive_with_history()
+        if not isinstance(data, dict):
+            return
+        self._apply_ledger_dict(data)
 
-    def persist(self, path: Path | None = None) -> None:
-        target = path or BUDGET_LEDGER_PATH
-        target.parent.mkdir(parents=True, exist_ok=True)
-        # Never write a contradictory consecutiveTransient > retained history.
+    def _payload_from_state(self, *, now: datetime | None = None) -> dict[str, Any]:
+        now = now or utc_now()
         self._reconcile_consecutive_with_history()
-        payload = {
+        return {
             "submissions": [utc_iso(x) for x in self.submissions[-400:]],
             "transients": [utc_iso(x) for x in self.transients[-200:]],
             "consecutiveTransient": self.consecutive_transient,
@@ -85,17 +129,37 @@ class ContinuousSafetyBudget:
             "marketSubmissions": [
                 {"at": utc_iso(at), "market": market} for at, market in self.market_submissions[-400:]
             ],
-            "updatedAtUtc": utc_iso(),
+            "updatedAtUtc": utc_iso(now),
         }
-        target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    def persist(self, path: Path | None = None) -> None:
+        target = Path(path or BUDGET_LEDGER_PATH)
+        snapshot = self._payload_from_state()
+
+        def mutator(data: dict[str, Any]) -> dict[str, Any]:
+            if not isinstance(data, dict) or not data:
+                data = dict(_LEDGER_DEFAULT)
+            # Merge in-memory submissions from this worker with on-disk (last-writer-wins safe).
+            merged_subs = sorted(set(_parse_submissions(data) + list(self.submissions)))
+            merged_market = list(_parse_market_submissions(data)) + list(self.market_submissions)
+            data["submissions"] = [utc_iso(x) for x in merged_subs[-400:]]
+            data["transients"] = snapshot["transients"]
+            data["consecutiveTransient"] = snapshot["consecutiveTransient"]
+            data["lastHardStop"] = snapshot["lastHardStop"]
+            data["marketSubmissions"] = snapshot["marketSubmissions"]
+            if len(merged_market) > len(_parse_market_submissions(data)):
+                data["marketSubmissions"] = [
+                    {"at": utc_iso(at), "market": market} for at, market in merged_market[-400:]
+                ]
+            _prune_submission_lists(data, now=utc_now())
+            _reconcile_consecutive(data)
+            data["updatedAtUtc"] = utc_iso()
+            return data
+
+        mutate_json_state(target, mutator, default=dict(_LEDGER_DEFAULT))
+        self.load(target)
 
     def _reconcile_consecutive_with_history(self) -> None:
-        """Keep consecutiveTransient consistent with retained transient timestamps.
-
-        Pruning must not leave consecutiveTransient above len(transients). A
-        legitimate HARD_STOP remains latched via last_hard_stop until owner
-        record_healthy(); pruning alone never clears that latch.
-        """
         retained = len(self.transients)
         if self.consecutive_transient > retained:
             self.consecutive_transient = retained
@@ -103,8 +167,8 @@ class ContinuousSafetyBudget:
             self.consecutive_transient = 0
 
     def _prune(self, now: datetime) -> None:
-        hour = now - timedelta(hours=1)
         day = now - timedelta(hours=24)
+        hour = now - timedelta(hours=1)
         self.submissions = [t for t in self.submissions if t >= day]
         self.transients = [t for t in self.transients if t >= hour]
         self.market_submissions = [(t, m) for t, m in self.market_submissions if t >= day]
@@ -149,7 +213,6 @@ class ContinuousSafetyBudget:
     def transient_hard_stop(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
         self._prune(current)
-        # Owner-latched HARD_STOP survives prune; consecutive may drop with history.
         if self.last_hard_stop:
             return self.last_hard_stop
         if self.consecutive_transient >= self.max_consecutive_transient:
@@ -158,22 +221,42 @@ class ContinuousSafetyBudget:
             return "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR"
         return None
 
-    def record_submission(self, now: datetime | None = None, *, market: str | None = None) -> None:
+    def record_submission(
+        self,
+        now: datetime | None = None,
+        *,
+        market: str | None = None,
+        path: Path | None = None,
+    ) -> None:
         current = now or utc_now()
-        self.submissions.append(current)
-        if market:
-            self.market_submissions.append((current, str(market).upper()))
-        self._prune(current)
+        target = Path(path or BUDGET_LEDGER_PATH)
+
+        def mutator(data: dict[str, Any]) -> dict[str, Any]:
+            if not isinstance(data, dict) or not data:
+                data = dict(_LEDGER_DEFAULT)
+            subs = _parse_submissions(data)
+            subs.append(current)
+            data["submissions"] = [utc_iso(x) for x in subs[-400:]]
+            if market:
+                tagged = _parse_market_submissions(data)
+                tagged.append((current, str(market).upper()))
+                data["marketSubmissions"] = [
+                    {"at": utc_iso(at), "market": m} for at, m in tagged[-400:]
+                ]
+            _prune_submission_lists(data, now=current)
+            data["updatedAtUtc"] = utc_iso(current)
+            return data
+
+        mutate_json_state(target, mutator, default=dict(_LEDGER_DEFAULT))
+        self.load(target)
 
     def record_healthy(self) -> None:
-        """Owner-clear / healthy reset: clear consecutive streak and HARD_STOP latch."""
         self.consecutive_transient = 0
         self.last_hard_stop = None
         self.transients = []
 
     def record_transient(self, now: datetime | None = None) -> str | None:
         current = now or utc_now()
-        # Already HARD_STOPPED: do not manufacture additional equivalent history.
         existing = self.transient_hard_stop(current)
         if existing:
             return existing
@@ -190,39 +273,12 @@ class ContinuousSafetyBudget:
         return reason
 
 
-def result_consumes_submission_cap(row: dict[str, Any]) -> bool:
-    """True when a job performed a counted live eBay navigation (20/h, 60/24h ledger)."""
-    if not isinstance(row, dict):
-        return False
-    if row.get("searchSubmissionStarted") or row.get("liveEbayPageNavigation"):
-        return True
-    diag = row.get("providerDiagnostics")
-    if not isinstance(diag, dict):
-        return False
-    if diag.get("searchSubmissionStarted") or diag.get("liveEbayPageNavigation"):
-        return True
-    nested = diag.get("diagnostics")
-    if isinstance(nested, dict):
-        if nested.get("searchSubmissionStarted") or nested.get("liveEbayPageNavigation"):
-            return True
-    search = diag.get("search")
-    if isinstance(search, dict):
-        if search.get("searchSubmissionStarted"):
-            return True
-        sdiag = search.get("diagnostics")
-        if isinstance(sdiag, dict) and (sdiag.get("interCardColdFallback") or {}).get("attempted"):
-            return True
-    desktop = diag.get("desktopNav")
-    if not isinstance(desktop, dict) and isinstance(nested, dict):
-        desktop = nested.get("desktopNav")
-    if isinstance(desktop, dict):
-        search_blob = desktop.get("search") if isinstance(desktop.get("search"), dict) else {}
-        if search_blob.get("searchSubmissionStarted") or desktop.get("searchSubmissionStarted"):
-            return True
-        if (desktop.get("interCardColdFallback") or {}).get("attempted"):
-            return True
-    return False
-
+# Re-export for worker / tests.
+__all__ = [
+    "ContinuousSafetyBudget",
+    "result_consumes_submission_cap",
+]
 
 # Imported by tests that monkeypatch env after import.
 os.environ.setdefault("MAX_LIVE_SUBMISSIONS_PER_HOUR", "20")
+os.environ.setdefault("MAX_LIVE_SUBMISSIONS_PER_DAY", "60")

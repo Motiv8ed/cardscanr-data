@@ -14,9 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ..live_navigation_attempt import attempts_dir_wsl
-from ..browser_lifecycle_policy import RUNTIME_COLD_START
 from ..navigation_runtime_context import (
-    INTER_CARD_EXPECTED_TARGET_REJECTED,
     PRE_SUBMIT_QUERY_READY,
     load_navigation_runtime_context,
     pre_submit_only_requested,
@@ -276,17 +274,6 @@ def _run_linux_search(
     return _wsl_python(args, timeout=120, env_exports=env_exports or None)
 
 
-def _inter_card_target_reject_payload(search: dict[str, Any]) -> bool:
-    err = str(search.get("error") or "")
-    if err == INTER_CARD_EXPECTED_TARGET_REJECTED:
-        return True
-    if str(search.get("reason") or "") == "target_policy_rejected":
-        pol = search.get("diagnostics", {}).get("targetPolicy") if isinstance(search.get("diagnostics"), dict) else None
-        if isinstance(pol, dict) and str(ctx_mode := pol.get("mode") or "").upper() == "INTER_CARD":
-            return not bool(pol.get("ok"))
-    return False
-
-
 def navigate_query_to_sold(
     query: str,
     *,
@@ -341,45 +328,6 @@ def navigate_query_to_sold(
             sold_date_lines=0,
             error=f"search_failed:{exc}",
         )
-
-    cold_fallback: dict[str, Any] | None = None
-    if (
-        not armed_pre_submit
-        and ctx.is_inter_card()
-        and (not search.get("ok") or _inter_card_target_reject_payload(search))
-        and (
-            str(search.get("error") or "") == INTER_CARD_EXPECTED_TARGET_REJECTED
-            or str(search.get("reason") or "") == "target_policy_rejected"
-        )
-    ):
-        ctx.runtime_mode = RUNTIME_COLD_START
-        ctx.expected_prior = None
-        ctx.prior_handoff_stale = False
-        fallback_tag = f"{tag}_cold"
-        try:
-            cold_fallback = _run_linux_search(
-                query=query,
-                tag=fallback_tag,
-                ctx=ctx,
-                go_home=True,
-                armed_pre_submit=False,
-                attempt_id=attempt_id,
-                price_key_id=price_key_id,
-            )
-            if cold_fallback.get("ok") or str(cold_fallback.get("resultCode") or "") == PRE_SUBMIT_QUERY_READY:
-                search = cold_fallback
-                tag = fallback_tag
-        except Exception:
-            pass
-        if cold_fallback is not None:
-            diag = search.setdefault("diagnostics", {}) if isinstance(search, dict) else {}
-            if isinstance(diag, dict):
-                diag["interCardColdFallback"] = {
-                    "attempted": True,
-                    "fallbackOk": bool(cold_fallback.get("ok")),
-                    "fallbackError": cold_fallback.get("error"),
-                }
-                search["liveEbayPageNavigation"] = True
 
     if str(search.get("resultCode") or "") == PRE_SUBMIT_QUERY_READY or search.get("preSubmitQueryReady"):
         return LinuxNavResult(

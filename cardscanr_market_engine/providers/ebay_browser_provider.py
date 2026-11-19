@@ -3187,6 +3187,16 @@ class EbayBrowserSoldCompsProvider:
                 ordinary_results_confirmed=bool(nav.search_success and not nav.sorry and not nav.challenge),
                 attempt_id=attempt_id,
             )
+            from ..live_ebay_navigation_accounting import LIVE_EBAY_NAVIGATION_CONSUMED
+
+            live_nav_consumed = bool(
+                submission_event
+                or search_diag.get("submitted")
+                or search_diag.get("searchSubmissionStarted")
+                or (nav.search_success and not pre_submit)
+            )
+            stage_timings.fields[LIVE_EBAY_NAVIGATION_CONSUMED] = live_nav_consumed
+            stage_timings.fields["searchSubmissionStarted"] = bool(submission_event)
             stage_timings.fields["desktopNav"] = {
                 "ok": nav.ok,
                 "searchSuccess": nav.search_success,
@@ -3198,6 +3208,8 @@ class EbayBrowserSoldCompsProvider:
                 "soldDateLines": nav.sold_date_lines,
                 "error": nav.error,
                 "navMode": nav_mode_label,
+                LIVE_EBAY_NAVIGATION_CONSUMED: live_nav_consumed,
+                "searchSubmissionStarted": bool(submission_event),
                 "guiAttemptTimings": gui_timings,
                 "preSubmit": (search_diag.get("diagnostics") or {}).get("preSubmit")
                 if isinstance(search_diag.get("diagnostics"), dict)
@@ -3315,6 +3327,8 @@ class EbayBrowserSoldCompsProvider:
                     "navMode": nav_mode_label,
                     "desktopNav": stage_timings.fields.get("desktopNav"),
                     "stageTimings": stage_timings.snapshot(),
+                    "liveEbayNavigationConsumed": bool(stage_timings.fields.get("liveEbayNavigationConsumed")),
+                    "searchSubmissionStarted": bool(stage_timings.fields.get("searchSubmissionStarted")),
                 },
             )
 
@@ -3729,6 +3743,12 @@ class EbayBrowserSoldCompsProvider:
                         "playwrightNavigation": False,
                         "cdpUsedFor": "read_only_process_capture",
                         "finalizeTerminal": FINALIZE_SUCCESS,
+                        "liveEbayNavigationConsumed": bool(
+                            stage_timings.fields.get("liveEbayNavigationConsumed")
+                        ),
+                        "searchSubmissionStarted": bool(
+                            stage_timings.fields.get("searchSubmissionStarted")
+                        ),
                     }
                 ),
             )

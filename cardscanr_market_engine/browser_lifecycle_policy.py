@@ -312,14 +312,6 @@ def correlates_to_prior(target: dict[str, Any], prior: PriorCardContext) -> bool
         live_nkw = ebay_au_sch_nkw(url)
         if prior_nkw and live_nkw and prior_nkw == live_nkw:
             return True
-        if prior.query:
-            q = prior.query.replace(" ", "+").lower()
-            if q and q in url.lower().replace("%20", "+"):
-                return True
-        if pu.path and pu.path == tu.path and "LH_Sold=1" in url and "LH_Sold=1" in prior.final_url:
-            if "_nkw=" in prior.final_url.lower() and "_nkw=" in url.lower():
-                return prior.final_url.split("_nkw=")[-1][:40].lower() in url.lower()
-            return True
     return False
 
 

@@ -57,6 +57,16 @@ def _ebay_pacing_enabled(config: MarketEngineConfig) -> bool:
     return str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
 
 
+def _safety_budget_enforced(config: MarketEngineConfig) -> bool:
+    """20/h and 60/24h caps default ON for ebay_browser (documented AU traffic limits)."""
+    raw = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return _ebay_pacing_enabled(config)
+
+
 def _should_classify_ebay_availability_gate(*, config: MarketEngineConfig, continuous: bool, operation_mode: str) -> bool:
     """Classify AU availability even when owned_daily is false (scheduled worker recovery)."""
     if continuous or operation_mode in {"PROBE", "CANARY"}:
@@ -263,8 +273,7 @@ def run_worker_loop(
 
     mint_nav_handoff_writer_run_id()
     budget = ContinuousSafetyBudget.from_env()
-    # t323u R0: enforce hourly/daily budget + transient auto-pause in staged (non-continuous) runs too.
-    enforce_budget = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "false").strip().lower() in {"1", "true", "yes", "on"}
+    enforce_budget = _safety_budget_enforced(config)
     min_spacing_seconds = max(0, int(os.getenv("MARKET_WORKER_MIN_JOB_SPACING_SECONDS", "0") or 0))
     last_success = None
     last_transient = None
@@ -292,6 +301,9 @@ def run_worker_loop(
                 maybe_resume_transient_halt(pacing_controller, gate_info)
             if continuous:
                 budget_reason = budget.budget_exhausted()
+            elif enforce_budget:
+                budget_reason = budget.budget_exhausted()
+            if continuous:
                 transient_stop = budget.transient_hard_stop()
                 hard = gate_info.get("hardStop") or transient_stop
                 if pacing_controller is not None and pacing_controller.state.halt_reason in HARD_STOP_OUTCOMES:
@@ -568,7 +580,7 @@ def run_worker_loop(
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-            if (continuous or enforce_budget) and results and not getattr(runner, "_ebay_probe_mode", False):
+            if enforce_budget and results:
                 for row in results:
                     if result_consumes_submission_cap(row):
                         market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
