@@ -2,6 +2,7 @@
 import unittest
 from tools.private_shard_contract import (
     WEB_FIELDS, preview_metadata_row, validate_bounded_preview,
+    normalize_website_search,
 )
 
 def row(language="ko"):
@@ -32,6 +33,26 @@ class PrivateShardContractTests(unittest.TestCase):
         self.assertEqual(adapted["num"], "001/100")
         self.assertIsNone(adapted["thumb"])
         self.assertNotIn("example.invalid", str(adapted))
+
+    def test_website_search_normalization_matches_supported_script_examples(self):
+        self.assertEqual(normalize_website_search("Pokémon"), "pokemon")
+        self.assertEqual(normalize_website_search("Évoli"), "evoli")
+        self.assertEqual(normalize_website_search("Straße"), "strasse")
+        self.assertEqual(normalize_website_search("Ｐｉｋａｃｈｕ"), "pikachu")
+        self.assertEqual(normalize_website_search("피카츄"), "피카츄")
+        self.assertEqual(normalize_website_search("皮卡丘"), "皮卡丘")
+        self.assertEqual(normalize_website_search("ピカチュウ"), "ピカチュウ")
+
+    def test_collector_normalizes_leading_zero_groups(self):
+        sample=row()
+        adapted=preview_metadata_row(sample, "ko")
+        self.assertEqual(adapted["num"], "001/100")
+        self.assertEqual(adapted["local"], "1")
+        self.assertEqual(adapted["numNorm"], "1/100")
+        sample["printed_collector_number"]="TG01/TG30"
+        adapted=preview_metadata_row(sample,"ko")
+        self.assertEqual(adapted["local"], "tg1")
+        self.assertEqual(adapted["numNorm"], "tg1/tg30")
 
     def test_japanese_r2_ja_maps_to_existing_web_jp(self):
         sample=row("ja")
