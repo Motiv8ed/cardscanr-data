@@ -1,0 +1,70 @@
+name: Private Exact Printing Crosswalk For Image Sources
+on:
+  pull_request:
+    paths:
+      - 'tools/private_image_identity_crosswalk.py'
+      - 'tests/test_private_image_identity_crosswalk.py'
+      - '.github/workflows/private-image-identity-crosswalk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test exact printed number and native name joining
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_image_identity_crosswalk.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_identity_crosswalk.py -v
+  private-real-source:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read four SHA-verified SQLite packs and four TCGdex set JSON sources
+        run: |
+          PYTHONPATH=. python tools/private_image_identity_crosswalk.py --output private-image-crosswalk
+      - name: Block public release, writes, artwork and identity mutations
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("private-image-crosswalk/receipt.json").read_text())
+          assert p["classification"]=="PRIVATE_IDENTITY_CROSSWALK_REVIEW_ONLY"
+          assert p["source_packs_sha256_verified"]==4
+          assert p["audited_gap_rows_in_targets"]==1051
+          assert p["source_candidates"]>0
+          assert p["image_binaries_downloaded"]==0
+          assert p["production_writes"]==0
+          assert not p["customer_data_read"]
+          assert not p["canonical_id_mutation"]
+          assert not p["artwork_rights_verified"]
+          assert not p["safe_to_publish"]
+          print("SAFE-CROSSWALK",json.dumps({
+             "source_candidates":p["source_candidates"],
+             "exact_unique_matches":p["exact_unique_matches"],
+             "matching_missing_image_url_with_source_ref":p["matching_missing_image_url_with_source_ref"],
+             "by_language":p["by_language"],
+          },sort_keys=True))
+          PY
+      - name: Store private source-to-canonical match candidates for seven days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Exact-Source-To-Printing-Crosswalk
+          path: private-image-crosswalk/
+          retention-days: 7
+          if-no-files-found: warn
