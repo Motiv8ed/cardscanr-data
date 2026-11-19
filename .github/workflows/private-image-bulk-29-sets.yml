@@ -48,7 +48,16 @@ jobs:
           assert r["source_target_count"]==29
           assert r["audited_target_gap"]==4636
           assert r["source_set_requests"]<=29
-          assert 0<r["source_sets_succeeded"]<=29
+          assert r["source_sets_succeeded"]==29
+          assert r["source_sets_failed"]==0
+          assert r["card_rows_reconciled"]==4669
+          assert r["exact_unique_printing_matches"]==4669
+          assert r["status_counts"]=={"exact_unique":4669}
+          assert r["valid_missing_image_ref_candidates"]==1295
+          assert sum(v["new_image_ref_candidates"] for v in r["per_language"].values())==1295
+          assert r["per_language"]["th"]["new_image_ref_candidates"]==487
+          assert r["per_language"]["id"]["new_image_ref_candidates"]==471
+          assert r["per_language"]["zh-tw"]["new_image_ref_candidates"]==337
           assert r["exact_unique_printing_matches"]<=r["card_rows_reconciled"]
           assert r["valid_missing_image_ref_candidates"]<=r["exact_unique_printing_matches"]
           assert r["image_binaries_downloaded"]==0
