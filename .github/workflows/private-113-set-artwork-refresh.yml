@@ -1,10 +1,5 @@
 name: Private 113-set card and artwork source refresh
 on:
-  pull_request:
-    paths:
-      - 'tools/private_113_set_artwork_refresh.py'
-      - 'tests/test_private_113_set_artwork_refresh.py'
-      - '.github/workflows/private-113-set-artwork-refresh.yml'
   workflow_dispatch:
 permissions:
   contents: read
