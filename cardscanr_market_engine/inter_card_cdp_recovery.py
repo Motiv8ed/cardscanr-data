@@ -12,7 +12,7 @@ from .browser_lifecycle_policy import (
     PriorCardContext,
 )
 from .config import REPORTS_DIR
-from .marketplace_gate_url import is_ebay_marketplace_gate_url, is_marketplace_gate_page
+from .marketplace_gate_url import is_marketplace_gate_page
 from .navigation_runtime_context import (
     INTER_CARD_EXPECTED_TARGET_REJECTED,
     NavigationRuntimeContext,
