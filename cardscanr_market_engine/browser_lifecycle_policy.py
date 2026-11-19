@@ -10,7 +10,7 @@ from typing import Any
 import re
 from urllib.parse import parse_qs, unquote, urlparse
 
-from .marketplace_gate_url import is_ebay_marketplace_gate_url
+from .marketplace_gate_url import is_ebay_marketplace_gate_url, is_marketplace_gate_page
 
 RUNTIME_COLD_START = "COLD_START"
 RUNTIME_INTER_CARD = "INTER_CARD"
@@ -168,9 +168,8 @@ def is_ebay_marketplace_host(host: str) -> bool:
 
 
 def is_challenge_url(url: str, title: str = "") -> bool:
-    """Gate pages only (host/path); ignore query/title tokens such as card names or '403'."""
-    _ = title
-    return is_ebay_marketplace_gate_url(url)
+    """Gate pages (host/path) and exact whole-document titles; not card-name substrings."""
+    return is_marketplace_gate_page(url, title=title)
 
 
 def origin_class_for(url: str, *, cdp_type: str) -> str:
@@ -328,7 +327,7 @@ def classify_cdp_targets(
         belongs = bool(prior and prior_ok and top and origin == "ebay_marketplace" and correlates_to_prior(item, prior))
         blocking = False
         reason = REASON_AUXILIARY_OK
-        if origin == "ebay_challenge" or (top and is_challenge_url(url)):
+        if origin == "ebay_challenge" or (top and is_challenge_url(url, title)):
             blocking = True
             reason = REASON_CHALLENGE if mode == RUNTIME_INTER_CARD else REASON_COLD_UNEXPECTED
         elif top and origin == "ebay_marketplace":
