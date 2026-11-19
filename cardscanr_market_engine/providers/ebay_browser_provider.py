@@ -761,7 +761,9 @@ def classify_browser_page_state(
                 "securityClass": "ACTIVE_CHALLENGE",
                 **base_diag,
             }
-        if exact_gate_title == "pardon our interruption":
+        if exact_gate_title == "pardon our interruption" or str(exact_gate_title or "").startswith(
+            "pardon our interruption"
+        ):
             return {
                 "outcome": "challenge_detected",
                 "reason": "pardon_our_interruption",
@@ -3317,6 +3319,16 @@ class EbayBrowserSoldCompsProvider:
                 ordinary_results_confirmed=bool(nav.search_success and not nav.sorry and not nav.challenge),
                 attempt_id=attempt_id,
             )
+            from ..live_ebay_navigation_accounting import LIVE_EBAY_NAVIGATION_CONSUMED
+
+            live_nav_consumed = bool(
+                submission_event
+                or search_diag.get("submitted")
+                or search_diag.get("searchSubmissionStarted")
+                or (nav.search_success and not pre_submit)
+            )
+            stage_timings.fields[LIVE_EBAY_NAVIGATION_CONSUMED] = live_nav_consumed
+            stage_timings.fields["searchSubmissionStarted"] = bool(submission_event)
             stage_timings.fields["desktopNav"] = {
                 "ok": nav.ok,
                 "searchSuccess": nav.search_success,
@@ -3328,6 +3340,8 @@ class EbayBrowserSoldCompsProvider:
                 "soldDateLines": nav.sold_date_lines,
                 "error": nav.error,
                 "navMode": nav_mode_label,
+                LIVE_EBAY_NAVIGATION_CONSUMED: live_nav_consumed,
+                "searchSubmissionStarted": bool(submission_event),
                 "guiAttemptTimings": gui_timings,
                 "preSubmit": (search_diag.get("diagnostics") or {}).get("preSubmit")
                 if isinstance(search_diag.get("diagnostics"), dict)
@@ -3460,6 +3474,14 @@ class EbayBrowserSoldCompsProvider:
                     f"Desktop sold navigation failed: {search_result_code or nav.error or 'unknown'}",
                     diagnostics=fail_diag,
                 )
+            fail_diag.setdefault(
+                "liveEbayNavigationConsumed",
+                bool(stage_timings.fields.get("liveEbayNavigationConsumed")),
+            )
+            fail_diag.setdefault(
+                "searchSubmissionStarted",
+                bool(stage_timings.fields.get("searchSubmissionStarted")),
+            )
             raise ProviderTemporaryError(
                 f"Desktop sold navigation failed: {nav.error or 'unknown'}",
                 diagnostics=fail_diag,
@@ -3854,6 +3876,12 @@ class EbayBrowserSoldCompsProvider:
                         "playwrightNavigation": False,
                         "cdpUsedFor": "read_only_process_capture",
                         "finalizeTerminal": FINALIZE_SUCCESS,
+                        "liveEbayNavigationConsumed": bool(
+                            stage_timings.fields.get("liveEbayNavigationConsumed")
+                        ),
+                        "searchSubmissionStarted": bool(
+                            stage_timings.fields.get("searchSubmissionStarted")
+                        ),
                     }
                 ),
             )

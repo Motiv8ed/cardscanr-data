@@ -34,6 +34,10 @@ _WHITESPACE_RE = re.compile(r"[\s\xa0\u00a0\u202f]+")
 PARDON_INTERRUPTION_INTERSTITIAL_MARKER = "pardon our interruption"
 
 
+def _strip_trailing_title_punctuation(text: str) -> str:
+    return text.rstrip(" .…\u2026-—:,;!\"")
+
+
 def normalized_gate_page_title(title: str | None) -> str:
     text = str(title or "").strip()
     if not text:
@@ -50,11 +54,21 @@ def normalized_gate_page_title(title: str | None) -> str:
             text = text[: -len(suffix)].strip()
             text = _WHITESPACE_RE.sub(" ", text).strip()
             lower = text.lower()
-    return lower
+    return _strip_trailing_title_punctuation(lower)
+
+
+def _title_starts_with_pardon(norm_title: str) -> bool:
+    core = _strip_trailing_title_punctuation(norm_title)
+    if core == PARDON_INTERRUPTION_INTERSTITIAL_MARKER:
+        return True
+    return core.startswith(f"{PARDON_INTERRUPTION_INTERSTITIAL_MARKER} ")
 
 
 def is_exact_marketplace_gate_page_title(title: str | None) -> bool:
-    return normalized_gate_page_title(title) in EXACT_GATE_PAGE_TITLES
+    norm = normalized_gate_page_title(title)
+    if norm in EXACT_GATE_PAGE_TITLES:
+        return True
+    return _title_starts_with_pardon(norm)
 
 
 def _ebay_host_ok(host: str) -> bool:
@@ -126,11 +140,13 @@ def is_pardon_interstitial_at_marketplace_url(
     host = (parsed.hostname or "").lower()
     if not _ebay_host_ok(host):
         return False
-    if normalized_gate_page_title(title) == PARDON_INTERRUPTION_INTERSTITIAL_MARKER:
+    title_norm = normalized_gate_page_title(title)
+    if _title_starts_with_pardon(title_norm):
         return True
-    body_norm = normalized_gate_page_title(body)
-    if body_norm == PARDON_INTERRUPTION_INTERSTITIAL_MARKER:
-        return True
+    if not title_norm:
+        body_norm = normalized_gate_page_title(body)
+        if body_norm == PARDON_INTERRUPTION_INTERSTITIAL_MARKER or _title_starts_with_pardon(body_norm):
+            return True
     return False
 
 

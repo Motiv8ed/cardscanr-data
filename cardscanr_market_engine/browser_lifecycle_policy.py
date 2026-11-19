@@ -150,10 +150,16 @@ def hostname_of(url: str) -> str:
     return host
 
 
-def is_ebay_marketplace_host(host: str) -> bool:
-    h = (host or "").lower()
+def normalize_marketplace_hostname(host: str | None) -> str:
+    """Treat www.ebay.com.au and ebay.com.au as the same marketplace identity."""
+    h = (host or "").lower().strip()
     if h.startswith("www."):
         h = h[4:]
+    return h
+
+
+def is_ebay_marketplace_host(host: str) -> bool:
+    h = normalize_marketplace_hostname(host)
     roots = (
         "ebay.com",
         "ebay.com.au",
@@ -290,19 +296,14 @@ def correlates_to_prior(target: dict[str, Any], prior: PriorCardContext) -> bool
     if prior.target_id and tid and tid.upper() == prior.target_id.upper():
         return True
     if prior.final_url and url:
-        # Same sold/search identity: host + _nkw + LH_Sold when present.
         pu = urlparse(prior.final_url)
         tu = urlparse(url)
-        if (pu.hostname or "").lower() == (tu.hostname or "").lower():
-            if prior.query:
-                q = prior.query.replace(" ", "+").lower()
-                if q and q in url.lower().replace("%20", "+"):
-                    return True
-            if pu.path and pu.path == tu.path and "LH_Sold=1" in url and "LH_Sold=1" in prior.final_url:
-                # Require overlapping nkw token if both have it.
-                if "_nkw=" in prior.final_url.lower() and "_nkw=" in url.lower():
-                    return prior.final_url.split("_nkw=")[-1][:40].lower() in url.lower()
-                return True
+        if normalize_marketplace_hostname(pu.hostname) != normalize_marketplace_hostname(tu.hostname):
+            return False
+        prior_nkw = ebay_au_sch_nkw(prior.final_url)
+        live_nkw = ebay_au_sch_nkw(url)
+        if prior_nkw and live_nkw and prior_nkw == live_nkw:
+            return True
     return False
 
 
@@ -394,18 +395,27 @@ def evaluate_runtime_targets(
             if not expected:
                 reasons.append(REASON_NOT_CORRELATED)
         elif len(top_ebay) == 1:
+            lone = top_ebay[0]
             if expected:
                 pass
-            elif (
-                prior_handoff_stale
-                and not prior_target_id_present(raw_targets, prior)
-                and url_matches_job_query(current_query, top_ebay[0].url)
-            ):
-                # Stale handoff only: prior CDP target gone after restart/legacy file.
-                # Fresh healthy priors still fail closed via UNKNOWN_EBAY / NOT_CORRELATED.
+            elif url_matches_job_query(current_query, lone.url):
+                # Tab already shows this job's sold search (retry after partial nav, etc.).
                 for row in classified:
                     if row.top_level and row.origin_class == "ebay_marketplace":
                         row.blocking = False
+                        row.reason = REASON_CONTINUATION_TAB
+            elif (
+                prior_handoff_stale
+                and not prior_target_id_present(raw_targets, prior)
+                and correlates_to_prior(
+                    {"id": lone.target_id, "url": lone.url},
+                    prior,
+                )
+            ):
+                for row in classified:
+                    if row.top_level and row.origin_class == "ebay_marketplace":
+                        row.blocking = False
+                        row.belongs_to_expected_previous_card = True
                         row.reason = REASON_CONTINUATION_TAB
             else:
                 if prior_handoff_stale and top_ebay:

@@ -232,22 +232,17 @@ exit 1
         )
 
 
-def navigate_query_to_sold(
-    query: str,
+def _run_linux_search(
     *,
-    reset_homepage: bool = True,
-    attempt_id: str | None = None,
-    price_key_id: str | None = None,
-    pre_submit_only: bool = False,
-) -> LinuxNavResult:
+    query: str,
+    tag: str,
+    ctx,
+    go_home: bool,
+    armed_pre_submit: bool,
+    attempt_id: str | None,
+    price_key_id: str | None,
+) -> dict[str, Any]:
     search_path = "/mnt/d/cardscanr-data/tools/linux_x11_ebay_search.py"
-    sold_path = "/mnt/d/cardscanr-data/tools/linux_x11_ebay_sold.py"
-    tag = f"nav_{int(time.time())}"
-    attempt_id = (attempt_id or os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID") or "").strip() or None
-    price_key_id = (price_key_id or os.environ.get("CARDSCANR_PRICE_KEY_ID") or "").strip() or None
-    ctx = load_navigation_runtime_context()
-    go_home = bool(reset_homepage) and not ctx.is_inter_card()
-    armed_pre_submit = pre_submit_only_requested(flag=pre_submit_only)
     env_exports: dict[str, str] = dict(ctx.env_exports())
     if attempt_id:
         env_exports["CARDSCANR_LIVE_ATTEMPT_ID"] = str(attempt_id)
@@ -257,27 +252,53 @@ def navigate_query_to_sold(
     # Do not rely on ambient Windows env inheritance inside WSL.
     env_exports["CARDSCANR_LIVE_NAV_ATTEMPTS_DIR"] = attempts_dir_wsl()
     env_exports["CARDSCANR_RUNTIME_MODE"] = ctx.runtime_mode
+    args = [
+        search_path,
+        "--query",
+        query,
+        "--tag",
+        tag,
+        "--submit",
+        "enter",
+        "--runtime-mode",
+        ctx.runtime_mode,
+    ]
+    if go_home:
+        args.append("--home")
+    if attempt_id:
+        args.extend(["--attempt-id", str(attempt_id)])
+    if price_key_id:
+        args.extend(["--price-key-id", str(price_key_id)])
+    if armed_pre_submit:
+        args.append("--pre-submit-only")
+    return _wsl_python(args, timeout=120, env_exports=env_exports or None)
+
+
+def navigate_query_to_sold(
+    query: str,
+    *,
+    reset_homepage: bool = True,
+    attempt_id: str | None = None,
+    price_key_id: str | None = None,
+    pre_submit_only: bool = False,
+) -> LinuxNavResult:
+    sold_path = "/mnt/d/cardscanr-data/tools/linux_x11_ebay_sold.py"
+    tag = f"nav_{int(time.time())}"
+    attempt_id = (attempt_id or os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID") or "").strip() or None
+    price_key_id = (price_key_id or os.environ.get("CARDSCANR_PRICE_KEY_ID") or "").strip() or None
+    ctx = load_navigation_runtime_context()
+    go_home = bool(reset_homepage) and not ctx.is_inter_card()
+    armed_pre_submit = pre_submit_only_requested(flag=pre_submit_only)
     try:
-        args = [
-            search_path,
-            "--query",
-            query,
-            "--tag",
-            tag,
-            "--submit",
-            "enter",
-            "--runtime-mode",
-            ctx.runtime_mode,
-        ]
-        if go_home:
-            args.append("--home")
-        if attempt_id:
-            args.extend(["--attempt-id", str(attempt_id)])
-        if price_key_id:
-            args.extend(["--price-key-id", str(price_key_id)])
-        if armed_pre_submit:
-            args.append("--pre-submit-only")
-        search = _wsl_python(args, timeout=120, env_exports=env_exports or None)
+        search = _run_linux_search(
+            query=query,
+            tag=tag,
+            ctx=ctx,
+            go_home=go_home,
+            armed_pre_submit=armed_pre_submit,
+            attempt_id=attempt_id,
+            price_key_id=price_key_id,
+        )
     except X11NavigationRuntimeError as exc:
         return LinuxNavResult(
             ok=False,

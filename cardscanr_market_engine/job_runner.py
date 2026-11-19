@@ -83,6 +83,7 @@ from .pipeline_phase_diagnostics import (
     extract_pipeline_phases,
 )
 from .region_pricing_registry import is_region_dispatchable
+from .live_ebay_navigation_accounting import cap_fields_from_provider_metadata
 
 
 def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str, Any]:
@@ -108,6 +109,7 @@ def _phase_fields_from_provider_result(provider_result: Any | None) -> dict[str,
         out["desktopNav"] = meta.get("desktopNav")
     if isinstance(meta, dict) and meta.get("navMode"):
         out["navMode"] = meta.get("navMode")
+    out.update(cap_fields_from_provider_metadata(meta if isinstance(meta, dict) else None))
     return out
 
 
@@ -303,8 +305,6 @@ class MarketPriceJobRunner:
         self._inter_card_marketplace_halt = False
 
     def _per_card_budget_active(self) -> bool:
-        if getattr(self, "_ebay_probe_mode", False):
-            return False
         if self._safety_budget is None:
             return False
         if not (self._continuous_worker or self._enforce_safety_budget):
@@ -770,6 +770,224 @@ class MarketPriceJobRunner:
             )
         return rows
 
+    def _complete_live_job_from_provider_fetch(
+        self,
+        *,
+        job: MarketPriceRefreshJob,
+        price_key: MarketPriceKey,
+        provider_request: Any,
+        provider_result: Any,
+        evaluated_comps: Any,
+        source_pricing_stats: Any,
+        pricing_stats: Any,
+        currency_conversion: Any,
+        fallback_attempts: list[dict[str, Any]],
+        now: datetime,
+        prior_cache: dict[str, Any] | None,
+        prior_price: float | None,
+        is_owned_daily: bool,
+        active_runtime_mode: str,
+        live_submission_reserved: bool,
+        inter_card_self_heal_receipt: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        movement = evaluate_price_movement(
+            old_price=(prior_cache or {}).get("current_market_price"),
+            new_price=pricing_stats.recommended_price,
+            included_count=int(pricing_stats.included_count or 0),
+            confidence=pricing_stats.confidence,
+            prior_confidence=(prior_cache or {}).get("confidence"),
+            prior_included_count=(prior_cache or {}).get("included_count")
+            or (prior_cache or {}).get("sample_size"),
+        )
+        provider_result.raw_metadata["priceMovement"] = movement_diagnostics(movement)
+        if movement.action == "pending_verification" and pricing_stats.recommended_price is not None:
+            pricing_stats = replace(
+                pricing_stats,
+                recommended_price=(prior_cache or {}).get("current_market_price"),
+                median_price=pricing_stats.median_price,
+            )
+            provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_pending_verification"
+        elif movement.action == "reject_weak":
+            pricing_stats = replace(
+                pricing_stats,
+                recommended_price=(prior_cache or {}).get("current_market_price"),
+            )
+            provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_reject_weak"
+
+        new_price = pricing_stats.recommended_price
+        try:
+            new_price_f = float(new_price) if new_price is not None else None
+        except (TypeError, ValueError):
+            new_price_f = None
+        prior_good = prior_price is not None and prior_price > 0
+        sparse_reason = str(getattr(pricing_stats, "no_reliable_price_reason", None) or "")
+        if (new_price_f is None or new_price_f <= 0) and prior_good:
+            next_due = now + timedelta(hours=24 if is_owned_daily else max(1, int(self.config.no_comps_hours)))
+            if hasattr(self.client, "mark_cache_checked_no_new_evidence"):
+                self.client.mark_cache_checked_no_new_evidence(
+                    price_key_id=price_key.id,
+                    next_refresh_due_at=next_due,
+                    market_country=price_key.market_country,
+                    currency=price_key.currency,
+                    outcome_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                )
+            if hasattr(self.client, "cancel_job"):
+                self.client.cancel_job(
+                    job_id=job.id,
+                    reason=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                )
+            else:
+                self.client.fail_job(
+                    job_id=job.id,
+                    error_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                    retryable=True,
+                    retry_delay_minutes=max(1, int((next_due - now).total_seconds() // 60)),
+                )
+            self.logger(
+                f"[market-engine] {CHECKED_NO_NEW_EXACT_EVIDENCE} job={job.id} "
+                f"reason={sparse_reason or 'no_reliable_price'} retained={prior_price}"
+            )
+            try:
+                record_healthy_browser_check(
+                    now=now,
+                    from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
+                )
+            except Exception as avail_exc:
+                self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
+            _diag = build_provider_diagnostics_for_result(provider_result)
+            checked_result = {
+                "jobId": job.id,
+                "priceKeyId": price_key.id,
+                "status": "checked_no_new_exact_evidence",
+                "ownedDailyOutcome": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                "outcomeClass": CHECKED_NO_NEW_EXACT_EVIDENCE,
+                "runtimeMode": active_runtime_mode,
+                "noReliablePriceReason": sparse_reason or None,
+                "includedCount": int(pricing_stats.included_count or 0),
+                "rejectedCount": int(pricing_stats.rejected_count or 0),
+                "retainedPrice": prior_price,
+                "lastUpdatedAt": (prior_cache or {}).get("last_updated_at"),
+                "nextRefreshDueAt": utc_iso(next_due),
+                "lastGoodRetained": True,
+                "providerDiagnostics": _diag,
+                **_phase_fields_from_provider_result(provider_result),
+            }
+            persist_healthy_inter_card_handoff(
+                logger=self.logger,
+                price_key=price_key,
+                provider_result=provider_result,
+                owned_outcome=CHECKED_NO_NEW_EXACT_EVIDENCE,
+                result=checked_result,
+            )
+            return checked_result
+        if new_price_f is None or new_price_f <= 0:
+            raise ValueError("no_reliable_price:refusing_zero_or_null_cache_write")
+        provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
+        provider_result.raw_metadata["requestedMarketplace"] = f"EBAY_{price_key.market_country.upper()}"
+        provider_result.raw_metadata["marketplaceActuallyUsed"] = provider_request.provider_marketplace_id
+        snapshot_payload = self.build_snapshot_payload(
+            price_key=price_key,
+            provider_request=provider_request,
+            provider_result=provider_result,
+            evaluated_comps=evaluated_comps,
+            pricing_stats=pricing_stats,
+            now=now,
+            requested_price_key=price_key,
+            source_pricing_stats=source_pricing_stats,
+            currency_conversion=currency_conversion,
+            fallback_attempts=fallback_attempts,
+        )
+        snapshot = self.client.insert_snapshot(snapshot_payload)
+        evidence_rows = self.build_evidence_rows(
+            price_key=price_key,
+            snapshot_id=str(snapshot["id"]),
+            provider_request=provider_request,
+            provider_result=provider_result,
+            evaluated_comps=evaluated_comps,
+            pricing_stats=pricing_stats,
+        )
+        self.client.insert_evidence(evidence_rows)
+        cache_payload = build_cache_payload(
+            price_key=price_key,
+            provider_result=provider_result,
+            pricing_stats=pricing_stats,
+            snapshot_id=str(snapshot["id"]),
+            refreshed_at=now,
+        )
+        cache = self.client.upsert_cache(cache_payload)
+        self.client.complete_job(
+            job_id=job.id,
+            snapshot_id=str(snapshot["id"]),
+            cache_updated_at=now,
+            stale_after=pricing_stats.stale_after,
+            next_refresh_due_at=pricing_stats.stale_after,
+        )
+        write_outcome = classify_completed_ebay_write(
+            prior_price=prior_price,
+            new_price=float(new_price_f),
+        )
+        try:
+            record_healthy_browser_check(
+                now=now,
+                from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
+            )
+        except Exception as avail_exc:
+            self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
+        _diag = build_provider_diagnostics_for_result(provider_result)
+        _phase = _phase_fields_from_provider_result(provider_result)
+        completed_result = {
+            "jobId": job.id,
+            "priceKeyId": price_key.id,
+            "snapshotId": str(snapshot["id"]),
+            "cacheRowId": str(cache.get("id") or "") or None,
+            "includedCount": pricing_stats.included_count,
+            "rejectedCount": pricing_stats.rejected_count,
+            "confidence": pricing_stats.confidence,
+            "recommendedPrice": pricing_stats.recommended_price,
+            "sampleCount": pricing_stats.included_count,
+            "priorPrice": prior_price,
+            "resultingPrice": float(new_price_f) if new_price_f is not None else None,
+            "displayPriceSource": cache.get("display_price_source") if isinstance(cache, dict) else None,
+            "provider": (provider_result.provider_name if provider_result is not None else None),
+            "refreshStatus": "completed",
+            "verifiedSuccessFreshness": utc_iso(now),
+            "requestedMarketplace": f"EBAY_{price_key.market_country.upper()}",
+            "marketCountry": provider_request.market_country,
+            "sourceCurrency": provider_request.currency,
+            "currency": price_key.currency.upper(),
+            "marketplace": provider_request.provider_marketplace_id,
+            "fallbackLevel": int(fallback_attempts[-1].get("fallbackLevel") or 0) if fallback_attempts else 0,
+            "evidenceType": "completed_sale",
+            "status": "completed",
+            "ownedDailyOutcome": write_outcome,
+            "outcomeClass": write_outcome,
+            "runtimeMode": active_runtime_mode,
+            "providerDiagnostics": _diag,
+            "searchSubmissionStarted": bool(_diag.get("searchSubmissionStarted"))
+            or live_submission_reserved,
+            "liveSubmissionReserved": live_submission_reserved,
+            **_phase,
+        }
+        if inter_card_self_heal_receipt:
+            completed_result["interCardSelfHealReceipt"] = inter_card_self_heal_receipt
+        persist_healthy_inter_card_handoff(
+            logger=self.logger,
+            price_key=price_key,
+            provider_result=provider_result,
+            owned_outcome=write_outcome,
+            result=completed_result,
+        )
+        from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
+
+        nav_ctx_ok, _latch, _receipt = observe_inter_card_no_request_outcome(
+            load_navigation_runtime_context(),
+            runtime_error=None,
+            search_submission_started=bool(completed_result.get("searchSubmissionStarted")),
+            diagnostics=_diag if isinstance(_diag, dict) else None,
+        )
+        apply_context_to_environ(nav_ctx_ok)
+        return completed_result
+
     def run_job(self, job: MarketPriceRefreshJob) -> dict[str, Any]:
         if not job.id:
             raise ValueError("Market refresh job is missing id")
@@ -780,12 +998,14 @@ class MarketPriceJobRunner:
         prior_price: float | None = None
         prior_cache: dict[str, Any] | None = None
         live_submission_reserved = False
+        inter_card_self_heal_pass = 0
         try:
             price_key = self.client.get_price_key(job.price_key_id)
             if not price_key.id:
                 raise ValueError(f"Market price key row missing id for job {job.id}")
             if not price_key.fingerprint:
                 raise ValueError(f"Market price key row missing fingerprint for job {job.id}")
+            provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
             # Prefer already-fresh no-op before marketplace allow/cooldown gates so
             # intentional skips never consume provider capacity or fail on ops cooldowns.
             if hasattr(self.client, "get_cache_row"):
@@ -1022,7 +1242,6 @@ class MarketPriceJobRunner:
 
             self._assert_market_allowed_for_worker(price_key)
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
-            provider_marketplace = getattr(self.provider, "marketplace_name", "ebay")
             market_country = str(price_key.market_country or "AU").upper()
             reserved, blocked = self._reserve_per_card_submission(market_country)
             if blocked:
@@ -1062,208 +1281,26 @@ class MarketPriceJobRunner:
             finally:
                 for _env_key in ("CARDSCANR_JOB_ID", "CARDSCANR_FINGERPRINT"):
                     os.environ.pop(_env_key, None)
-            movement = evaluate_price_movement(
-                old_price=(prior_cache or {}).get("current_market_price"),
-                new_price=pricing_stats.recommended_price,
-                included_count=int(pricing_stats.included_count or 0),
-                confidence=pricing_stats.confidence,
-                prior_confidence=(prior_cache or {}).get("confidence"),
-                prior_included_count=(prior_cache or {}).get("included_count")
-                or (prior_cache or {}).get("sample_size"),
-            )
-            provider_result.raw_metadata["priceMovement"] = movement_diagnostics(movement)
-            if movement.action == "pending_verification" and pricing_stats.recommended_price is not None:
-                # Keep prior trusted price in cache; still store snapshot/evidence for audit.
-                pricing_stats = replace(
-                    pricing_stats,
-                    recommended_price=(prior_cache or {}).get("current_market_price"),
-                    median_price=pricing_stats.median_price,
-                )
-                provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_pending_verification"
-            elif movement.action == "reject_weak":
-                pricing_stats = replace(
-                    pricing_stats,
-                    recommended_price=(prior_cache or {}).get("current_market_price"),
-                )
-                provider_result.raw_metadata["priceMovement"]["cacheWriteMode"] = "preserve_prior_reject_weak"
-
-            # Never write $0 / null as a successful refresh when a prior good price exists.
-            new_price = pricing_stats.recommended_price
-            try:
-                new_price_f = float(new_price) if new_price is not None else None
-            except (TypeError, ValueError):
-                new_price_f = None
-            prior_good = prior_price is not None and prior_price > 0
-            sparse_reason = str(getattr(pricing_stats, "no_reliable_price_reason", None) or "")
-            if (new_price_f is None or new_price_f <= 0) and prior_good:
-                # Sold search + identity filter ran; insufficient exact comps.
-                # This is a healthy CHECKED_NO_NEW_EXACT_EVIDENCE outcome, not a browser failure.
-                next_due = now + timedelta(hours=24 if is_owned_daily else max(1, int(self.config.no_comps_hours)))
-                if hasattr(self.client, "mark_cache_checked_no_new_evidence"):
-                    self.client.mark_cache_checked_no_new_evidence(
-                        price_key_id=price_key.id,
-                        next_refresh_due_at=next_due,
-                        market_country=price_key.market_country,
-                        currency=price_key.currency,
-                        outcome_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
-                    )
-                if hasattr(self.client, "cancel_job"):
-                    self.client.cancel_job(
-                        job_id=job.id,
-                        reason=CHECKED_NO_NEW_EXACT_EVIDENCE,
-                    )
-                else:
-                    self.client.fail_job(
-                        job_id=job.id,
-                        error_message=CHECKED_NO_NEW_EXACT_EVIDENCE,
-                        retryable=True,
-                        retry_delay_minutes=max(1, int((next_due - now).total_seconds() // 60)),
-                    )
-                self.logger(
-                    f"[market-engine] {CHECKED_NO_NEW_EXACT_EVIDENCE} job={job.id} "
-                    f"reason={sparse_reason or 'no_recommended_price'} retained={prior_price}"
-                )
-                try:
-                    record_healthy_browser_check(
-                        now=now,
-                        from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
-                    )
-                except Exception as avail_exc:
-                    self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
-                _diag = build_provider_diagnostics_for_result(provider_result)
-                checked_result = {
-                    "jobId": job.id,
-                    "priceKeyId": price_key.id,
-                    "status": "checked_no_new_exact_evidence",
-                    "ownedDailyOutcome": CHECKED_NO_NEW_EXACT_EVIDENCE,
-                    "outcomeClass": CHECKED_NO_NEW_EXACT_EVIDENCE,
-                    "runtimeMode": active_runtime_mode,
-                    "noReliablePriceReason": sparse_reason or None,
-                    "includedCount": int(pricing_stats.included_count or 0),
-                    "rejectedCount": int(pricing_stats.rejected_count or 0),
-                    "retainedPrice": prior_price,
-                    "lastUpdatedAt": (prior_cache or {}).get("last_updated_at"),
-                    "nextRefreshDueAt": utc_iso(next_due),
-                    "lastGoodRetained": True,
-                    "providerDiagnostics": _diag,
-                    **_phase_fields_from_provider_result(provider_result),
-                }
-                persist_healthy_inter_card_handoff(
-                    logger=self.logger,
-                    price_key=price_key,
-                    provider_result=provider_result,
-                    owned_outcome=CHECKED_NO_NEW_EXACT_EVIDENCE,
-                    result=checked_result,
-                )
-                return checked_result
-            if new_price_f is None or new_price_f <= 0:
-                raise ValueError("no_reliable_price:refusing_zero_or_null_cache_write")
-            provider_result.raw_metadata["displayCurrency"] = price_key.currency.upper()
-            provider_result.raw_metadata["requestedMarketplace"] = f"EBAY_{price_key.market_country.upper()}"
-            provider_result.raw_metadata["marketplaceActuallyUsed"] = provider_request.provider_marketplace_id
-            snapshot_payload = self.build_snapshot_payload(
+            return self._complete_live_job_from_provider_fetch(
+                job=job,
                 price_key=price_key,
                 provider_request=provider_request,
                 provider_result=provider_result,
                 evaluated_comps=evaluated_comps,
-                pricing_stats=pricing_stats,
-                now=now,
-                requested_price_key=price_key,
                 source_pricing_stats=source_pricing_stats,
+                pricing_stats=pricing_stats,
                 currency_conversion=currency_conversion,
                 fallback_attempts=fallback_attempts,
-            )
-            snapshot = self.client.insert_snapshot(snapshot_payload)
-            evidence_rows = self.build_evidence_rows(
-                price_key=price_key,
-                snapshot_id=str(snapshot["id"]),
-                provider_request=provider_request,
-                provider_result=provider_result,
-                evaluated_comps=evaluated_comps,
-                pricing_stats=pricing_stats,
-            )
-            self.client.insert_evidence(evidence_rows)
-            cache_payload = build_cache_payload(
-                price_key=price_key,
-                provider_result=provider_result,
-                pricing_stats=pricing_stats,
-                snapshot_id=str(snapshot["id"]),
-                refreshed_at=now,
-            )
-            cache = self.client.upsert_cache(cache_payload)
-            self.client.complete_job(
-                job_id=job.id,
-                snapshot_id=str(snapshot["id"]),
-                cache_updated_at=now,
-                stale_after=pricing_stats.stale_after,
-                next_refresh_due_at=pricing_stats.stale_after,
-            )
-            write_outcome = classify_completed_ebay_write(
+                now=now,
+                prior_cache=prior_cache,
                 prior_price=prior_price,
-                new_price=float(new_price_f),
+                is_owned_daily=is_owned_daily,
+                active_runtime_mode=active_runtime_mode,
+                live_submission_reserved=live_submission_reserved,
             )
-            try:
-                record_healthy_browser_check(
-                    now=now,
-                    from_probe=bool(getattr(self, "_ebay_probe_mode", False)),
-                )
-            except Exception as avail_exc:
-                self.logger(f"[market-engine] ebay availability healthy update failed: {avail_exc}")
-            _diag = build_provider_diagnostics_for_result(provider_result)
-            _phase = _phase_fields_from_provider_result(provider_result)
-            completed_result = {
-                "jobId": job.id,
-                "priceKeyId": price_key.id,
-                "snapshotId": str(snapshot["id"]),
-                "cacheRowId": str(cache.get("id") or "") or None,
-                "includedCount": pricing_stats.included_count,
-                "rejectedCount": pricing_stats.rejected_count,
-                "confidence": pricing_stats.confidence,
-                "recommendedPrice": pricing_stats.recommended_price,
-                "sampleCount": pricing_stats.included_count,
-                "priorPrice": prior_price,
-                "resultingPrice": float(new_price_f) if new_price_f is not None else None,
-                "displayPriceSource": cache.get("display_price_source") if isinstance(cache, dict) else None,
-                "provider": (provider_result.provider_name if provider_result is not None else None),
-                "refreshStatus": "completed",
-                "verifiedSuccessFreshness": utc_iso(now),
-                "requestedMarketplace": f"EBAY_{price_key.market_country.upper()}",
-                "marketCountry": provider_request.market_country,
-                "sourceCurrency": provider_request.currency,
-                "currency": price_key.currency.upper(),
-                "marketplace": provider_request.provider_marketplace_id,
-                "fallbackLevel": int(fallback_attempts[-1].get("fallbackLevel") or 0) if fallback_attempts else 0,
-                "evidenceType": "completed_sale",
-                "status": "completed",
-                "ownedDailyOutcome": write_outcome,
-                "outcomeClass": write_outcome,
-                "runtimeMode": active_runtime_mode,
-                # Authoritative pipeline phases for harness/reporting (fail-closed consumers).
-                "providerDiagnostics": _diag,
-                "searchSubmissionStarted": bool(_diag.get("searchSubmissionStarted"))
-                or live_submission_reserved,
-                "liveSubmissionReserved": live_submission_reserved,
-                **_phase,
-            }
-            persist_healthy_inter_card_handoff(
-                logger=self.logger,
-                price_key=price_key,
-                provider_result=provider_result,
-                owned_outcome=write_outcome,
-                result=completed_result,
-            )
-            from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
-
-            nav_ctx_ok, _latch = observe_inter_card_no_request_outcome(
-                load_navigation_runtime_context(),
-                runtime_error=None,
-                search_submission_started=bool(completed_result.get("searchSubmissionStarted")),
-                diagnostics=_diag if isinstance(_diag, dict) else None,
-            )
-            apply_context_to_environ(nav_ctx_ok)
-            return completed_result
         except Exception as exc:
             active_runtime_mode = locals().get("active_runtime_mode", "COLD_START")
+            inter_self_heal_receipt = None
             provider_diagnostics: dict[str, Any] | None = None
             if isinstance(exc, ProviderError):
                 provider_diagnostics = sanitize_provider_diagnostics(
@@ -1318,7 +1355,7 @@ class MarketPriceJobRunner:
                 exc if isinstance(exc, Exception) else Exception(error_message),
                 runtime_mode=active_runtime_mode,
             )
-            nav_ctx_fail, inter_latch = observe_inter_card_no_request_outcome(
+            nav_ctx_fail, inter_latch, inter_self_heal_receipt = observe_inter_card_no_request_outcome(
                 load_navigation_runtime_context(),
                 runtime_error=runtime_err,
                 search_submission_started=pre_submit_submitted,
@@ -1329,6 +1366,76 @@ class MarketPriceJobRunner:
                 page_title=page_title or None,
             )
             apply_context_to_environ(nav_ctx_fail)
+            if (
+                inter_self_heal_receipt
+                and inter_self_heal_receipt.get("status") == "EXECUTED"
+                and inter_card_self_heal_pass == 0
+            ):
+                inter_card_self_heal_pass = 1
+                self.logger(
+                    f"[market-engine] INTER_CARD leftover-tab self-heal cold retry job={job.id} "
+                    f"receipt={inter_self_heal_receipt.get('receiptId')}"
+                )
+                active_runtime_mode = str(nav_ctx_fail.runtime_mode or "COLD_START")
+                os.environ["CARDSCANR_RUNTIME_MODE"] = active_runtime_mode
+                os.environ["CARDSCANR_JOB_ID"] = str(job.id)
+                os.environ["CARDSCANR_PRICE_KEY_ID"] = str(price_key.id)
+                if getattr(price_key, "fingerprint", None):
+                    os.environ["CARDSCANR_FINGERPRINT"] = str(price_key.fingerprint)
+                try:
+                    (
+                        provider_request,
+                        provider_result,
+                        evaluated_comps,
+                        source_pricing_stats,
+                        pricing_stats,
+                        currency_conversion,
+                        fallback_attempts,
+                    ) = self.fetch_fallback_result(
+                        price_key=price_key,
+                        provider_marketplace=provider_marketplace,
+                        now=now,
+                    )
+                except Exception as retry_exc:
+                    exc = retry_exc
+                    error_message = str(retry_exc)
+                    owned_outcome = classify_exception_outcome(
+                        retry_exc,
+                        diagnostics=(
+                            retry_exc.diagnostics if isinstance(retry_exc, ProviderError) else None
+                        ),
+                    )
+                    if isinstance(retry_exc, ProviderError):
+                        provider_diagnostics = sanitize_provider_diagnostics(
+                            {
+                                "providerErrorCode": retry_exc.error_code,
+                                "retryable": retry_exc.retryable,
+                                "diagnostics": retry_exc.diagnostics,
+                            }
+                        )
+                else:
+                    try:
+                        return self._complete_live_job_from_provider_fetch(
+                            job=job,
+                            price_key=price_key,
+                            provider_request=provider_request,
+                            provider_result=provider_result,
+                            evaluated_comps=evaluated_comps,
+                            source_pricing_stats=source_pricing_stats,
+                            pricing_stats=pricing_stats,
+                            currency_conversion=currency_conversion,
+                            fallback_attempts=fallback_attempts,
+                            now=now,
+                            prior_cache=prior_cache,
+                            prior_price=prior_price,
+                            is_owned_daily=is_owned_daily,
+                            active_runtime_mode=active_runtime_mode,
+                            live_submission_reserved=live_submission_reserved,
+                            inter_card_self_heal_receipt=inter_self_heal_receipt,
+                        )
+                    finally:
+                        for _env_key in ("CARDSCANR_JOB_ID", "CARDSCANR_FINGERPRINT"):
+                            os.environ.pop(_env_key, None)
             if inter_latch:
                 provider_diagnostics = dict(provider_diagnostics or {})
                 provider_diagnostics["interCardMarketplaceLatch"] = inter_latch
@@ -1551,6 +1658,12 @@ class MarketPriceJobRunner:
             if provider_diagnostics:
                 result["providerDiagnostics"] = provider_diagnostics
                 result.update(_phase_fields_from_diagnostics(provider_diagnostics))
+                nested_cap = provider_diagnostics.get("diagnostics")
+                if not isinstance(nested_cap, dict):
+                    nested_cap = provider_diagnostics
+                result.update(
+                    cap_fields_from_provider_metadata(nested_cap if isinstance(nested_cap, dict) else None)
+                )
                 nested = provider_diagnostics.get("diagnostics")
                 if not isinstance(nested, dict):
                     nested = provider_diagnostics if isinstance(provider_diagnostics, dict) else {}
@@ -1567,6 +1680,7 @@ class MarketPriceJobRunner:
                     "childStderrSummary",
                     "expectedPriorTargetId",
                     "searchSubmissionStarted",
+                    "liveEbayNavigationConsumed",
                 ):
                     if nested.get(key) is not None:
                         result[key] = nested.get(key)
@@ -1576,6 +1690,12 @@ class MarketPriceJobRunner:
                     result["errorType"] = type(exc).__name__
             if fail_job_error:
                 result["failJobError"] = fail_job_error
+            if inter_self_heal_receipt:
+                result["interCardSelfHealReceipt"] = inter_self_heal_receipt
+                if inter_self_heal_receipt.get("status") == "CAP_EXCEEDED":
+                    from .inter_card_cdp_recovery import inter_card_self_heal_status
+
+                    result["interCardSelfHealStatus"] = inter_card_self_heal_status()
             if inter_latch:
                 result["interCardMarketplaceLatch"] = inter_latch
             if owned_outcome == NO_PRICE_EVER_FOUND and (

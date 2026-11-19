@@ -20,7 +20,11 @@ sys.path.insert(0, str(ROOT))
 from cardscanr_market_engine.canary_control_plane import parse_operation_mode
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.continuous_au_status import append_daily_metrics, write_continuous_status
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_safety import (
+    SAFETY_LEDGER_FAIL_CLOSED,
+    ContinuousSafetyBudget,
+)
+from cardscanr_market_engine.live_ebay_navigation_accounting import supplementary_submission_needs_cap
 from cardscanr_market_engine.continuous_worker_policy import (
     HARD_STOP_OUTCOMES,
     classify_continuous_gate,
@@ -57,11 +61,46 @@ def _ebay_pacing_enabled(config: MarketEngineConfig) -> bool:
     return str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
 
 
+def _safety_budget_enforced(config: MarketEngineConfig) -> bool:
+    """20/h and 60/24h caps default ON for ebay_browser (documented AU traffic limits)."""
+    raw = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return _ebay_pacing_enabled(config)
+
+
 def _should_classify_ebay_availability_gate(*, config: MarketEngineConfig, continuous: bool, operation_mode: str) -> bool:
     """Classify AU availability even when owned_daily is false (scheduled worker recovery)."""
     if continuous or operation_mode in {"PROBE", "CANARY"}:
         return True
     return _ebay_pacing_enabled(config)
+
+
+def _record_supplementary_submission(
+    budget: ContinuousSafetyBudget,
+    row: dict[str, Any],
+    *,
+    gate_market: str,
+) -> None:
+    """Count eBay navigations that were not reserved before search (fallback / cold-start extras)."""
+    if not supplementary_submission_needs_cap(row):
+        return
+    market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
+    # Canonical path is reserve-before-search in job_runner; this only runs when that did not happen.
+    # When the cap is already exhausted by reservations, reserve_live_submission returns a ceiling code
+    # and we must not invent another slot (no double-count).
+    blocked = budget.reserve_live_submission(market=market)
+    if blocked is not None:
+        assert blocked in {
+            "HOURLY_SUBMISSION_CEILING",
+            "DAILY_SUBMISSION_CEILING",
+            SAFETY_LEDGER_FAIL_CLOSED,
+            "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+            "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR",
+        } or bool(budget.last_hard_stop)
+        return
 
 
 def _counts_toward_marketplace_transient_latch(outcome: str | None, row: dict[str, Any]) -> bool:
@@ -263,8 +302,7 @@ def run_worker_loop(
 
     mint_nav_handoff_writer_run_id()
     budget = ContinuousSafetyBudget.from_env()
-    # t323u R0: enforce hourly/daily budget + transient auto-pause in staged (non-continuous) runs too.
-    enforce_budget = os.getenv("MARKET_WORKER_ENFORCE_SAFETY_BUDGET", "false").strip().lower() in {"1", "true", "yes", "on"}
+    enforce_budget = _safety_budget_enforced(config)
     min_spacing_seconds = max(0, int(os.getenv("MARKET_WORKER_MIN_JOB_SPACING_SECONDS", "0") or 0))
     last_success = None
     last_transient = None
@@ -292,6 +330,9 @@ def run_worker_loop(
                 maybe_resume_transient_halt(pacing_controller, gate_info)
             if continuous:
                 budget_reason = budget.budget_exhausted()
+            elif enforce_budget:
+                budget_reason = budget.budget_exhausted()
+            if continuous:
                 transient_stop = budget.transient_hard_stop()
                 hard = gate_info.get("hardStop") or transient_stop
                 if pacing_controller is not None and pacing_controller.state.halt_reason in HARD_STOP_OUTCOMES:
@@ -609,16 +650,12 @@ def run_worker_loop(
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
                     if continuous or enforce_budget:
                         budget.record_healthy()
+                        budget.persist()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-                    if (continuous or enforce_budget) and not row.get("liveSubmissionReserved"):
-                        consumed = bool(row.get("searchSubmissionStarted")) or str(
-                            row.get("status") or ""
-                        ) == "completed"
-                        if consumed:
-                            market = str(row.get("marketCountry") or "AU").upper()
-                            budget.record_submission(market=market)
-                    budget.persist()
+        if enforce_budget and results:
+            for row in results:
+                _record_supplementary_submission(budget, row, gate_market=gate_market)
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,

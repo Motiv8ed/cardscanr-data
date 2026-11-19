@@ -18,12 +18,17 @@ from cardscanr_market_engine.browser_lifecycle_policy import (
     evaluate_runtime_targets,
     is_challenge_url,
 )
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, HARD_STOP_SOURCE_SET_SWEEP
+from cardscanr_market_engine.continuous_safety import (
+    ContinuousSafetyBudget,
+    HARD_STOP_SOURCE_SET_SWEEP,
+    HARD_STOP_SOURCE_WORKER,
+)
 from cardscanr_market_engine.ebay_scale.set_sweep_safety import handle_set_sweep_marketplace_outcome
 from cardscanr_market_engine.inter_card_cdp_recovery import observe_inter_card_no_request_outcome
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.marketplace_gate_url import (
     is_ebay_marketplace_gate_url,
+    is_exact_marketplace_gate_page_title,
     is_pardon_interstitial_at_marketplace_url,
     normalized_gate_page_title,
 )
@@ -31,10 +36,16 @@ from cardscanr_market_engine.models import MarketPriceRefreshJob
 from cardscanr_market_engine.navigation_runtime_context import NavigationRuntimeContext, RUNTIME_INTER_CARD as NAV_IC
 from cardscanr_market_engine.owned_daily_outcomes import CHALLENGE_REQUIRED
 from cardscanr_market_engine.providers.ebay_browser_provider import (
+    EbayBrowserProviderConfig,
+    EbayBrowserSoldCompsProvider,
     classify_browser_page_state,
     raise_x11_capture_if_page_blocked,
 )
 from cardscanr_market_engine.providers.errors import ProviderBlockedError
+from cardscanr_market_engine.providers.linux_x11_ebay_nav import LinuxNavResult
+from cardscanr_market_engine.providers.post_sold_capture_process import CaptureProcessResult
+from cardscanr_market_engine.providers.query_builder import ProviderSearchQuery
+from tests.test_data63_reqa_r5_20261119 import _challenge_nav_result, _job_runner_patches
 from cardscanr_market_engine.providers.sold_page_health import (
     EBAY_CHALLENGE_PAGE,
     classify_marketplace_page_class,
@@ -207,7 +218,7 @@ class Data63ReQaRound8Tests(unittest.TestCase):
 
     def test_inter_card_observe_exact_security_measure_title_latches(self) -> None:
         ctx = NavigationRuntimeContext(runtime_mode=NAV_IC, expected_prior=None)
-        _, latch = observe_inter_card_no_request_outcome(
+        _, latch, _receipt = observe_inter_card_no_request_outcome(
             ctx,
             runtime_error="INTER_CARD_EXPECTED_TARGET_REJECTED",
             search_submission_started=False,
@@ -227,6 +238,158 @@ class Data63ReQaRound8Tests(unittest.TestCase):
 
     def test_www_ebay_au_signin_is_gate_url(self) -> None:
         self.assertTrue(is_challenge_url("https://www.ebay.com.au/signin/", "Sign in"))
+
+    def test_pardon_title_trailing_ellipsis_is_gate(self) -> None:
+        self.assertTrue(is_exact_marketplace_gate_page_title("Pardon Our Interruption…"))
+        self.assertTrue(is_exact_marketplace_gate_page_title("Pardon Our Interruption..."))
+
+    def test_blank_title_pardon_body_on_sch_url(self) -> None:
+        self.assertTrue(
+            is_pardon_interstitial_at_marketplace_url(
+                _SOLD_URL,
+                title="",
+                body="Pardon Our Interruption",
+            )
+        )
+        state = classify_browser_page_state(
+            title="",
+            body_text="Pardon Our Interruption",
+            url=_SOLD_URL,
+            x11_sold_state_verified=True,
+        )
+        self.assertEqual(state.get("outcome"), "challenge_detected")
+
+    def test_linux_x11_fetch_post_capture_calls_raise_x11_on_gate_title(self) -> None:
+        def _sold_nav_ok() -> LinuxNavResult:
+            return LinuxNavResult(
+                ok=True,
+                query="Charizard",
+                search_success=True,
+                sold_click_success=True,
+                sold_state_verified=True,
+                url=_SOLD_URL,
+                title="Charizard sold",
+                sorry=False,
+                challenge=False,
+                sold_date_lines=3,
+                error="",
+                diagnostics={
+                    "search": {
+                        "searchSubmissionStarted": True,
+                        "ok": True,
+                        "submitted": True,
+                    }
+                },
+            )
+
+        proc = CaptureProcessResult(
+            status="SUCCESS",
+            payload={
+                "body_text": "Security measure page",
+                "html": "<html><body>Security measure page</body></html>",
+                "target_url": _SOLD_URL,
+                "target_title": "Security Measure",
+                "canonical_itm_href_count": 2,
+                "candidates": [{"itemId": "123", "title": "x"}],
+            },
+        )
+        provider = EbayBrowserSoldCompsProvider(config=EbayBrowserProviderConfig.from_env())
+        request = mock.Mock(
+            price_key=mock.Mock(
+                id="pk",
+                market_country="AU",
+                currency="AUD",
+                fingerprint="fp",
+                card_name="Charizard",
+                set_name="Base",
+                set_code="BS",
+                collector_number="4",
+                language="en",
+            ),
+            provider_marketplace_id="EBAY_AU",
+        )
+        search_query = ProviderSearchQuery(
+            query_text="Charizard",
+            include_terms=(),
+            exclude_terms=(),
+            provider_domain="ebay.com.au",
+            provider_marketplace_id="EBAY_AU",
+            search_url="",
+            currency="AUD",
+            market_country="AU",
+        )
+        with (
+            mock.patch.object(provider, "_linux_x11_nav_mode_enabled", return_value=True),
+            mock.patch.object(provider, "_ensure_linux_chrome_cdp_ready", return_value=9444),
+            mock.patch(
+                "cardscanr_market_engine.providers.linux_x11_ebay_nav.navigate_query_to_sold",
+                return_value=_sold_nav_ok(),
+            ),
+            mock.patch(
+                "cardscanr_market_engine.providers.ebay_browser_provider.load_navigation_runtime_context",
+                return_value=mock.Mock(is_inter_card=lambda: False),
+            ),
+            mock.patch(
+                "cardscanr_market_engine.providers.ebay_browser_provider.pre_submit_only_requested",
+                return_value=False,
+            ),
+            mock.patch(
+                "cardscanr_market_engine.providers.post_sold_capture_process.run_capture_worker_process",
+                return_value=proc,
+            ),
+            mock.patch(
+                "cardscanr_market_engine.providers.post_sold_capture.persist_sold_capture_artifact",
+                return_value={"ok": True, "htmlPath": "/tmp/fake.html"},
+            ),
+            mock.patch(
+                "cardscanr_market_engine.providers.post_sold_capture.resolve_authoritative_capture_html_path",
+                return_value=Path("/tmp/fake_capture.html"),
+            ),
+            mock.patch(
+                "cardscanr_market_engine.finalize_deadline.run_with_finalize_deadline",
+                side_effect=lambda fn, *_a, **_kw: fn(),
+            ),
+        ):
+            with self.assertRaises(ProviderBlockedError):
+                provider._fetch_with_desktop_win32(request=request, search_query=search_query)
+
+    def test_run_job_challenge_uses_latch_hard_stop_locked_not_unlocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.json"
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+            budget.latch_hard_stop_locked = mock.Mock(wraps=budget.latch_hard_stop_locked)  # type: ignore[method-assign]
+            budget.latch_hard_stop = mock.Mock(wraps=budget.latch_hard_stop)  # type: ignore[method-assign]
+            runner = MarketPriceJobRunner(
+                client=mock.Mock(),
+                provider=mock.Mock(provider_name="ebay_browser"),
+                config=SimpleNamespace(provider_name="ebay_browser"),
+                logger=lambda *_a, **_k: None,
+            )
+            runner._safety_budget = budget
+            runner._continuous_worker = True
+            runner._enforce_safety_budget = True
+            exc = ProviderBlockedError(
+                "Desktop sold navigation failed: INTER_CARD_EXPECTED_TARGET_REJECTED",
+                diagnostics={
+                    "desktopNav": {"search": _challenge_nav_result().diagnostics["search"]},
+                },
+            )
+            job = MarketPriceRefreshJob(
+                id="job1",
+                price_key_id="pk1",
+                reason="force owned_daily stale",
+                priority=1,
+                status="running",
+                attempt_count=1,
+            )
+            with _job_runner_patches(runner, ledger):
+                with mock.patch.object(runner, "fetch_fallback_result", side_effect=exc):
+                    runner.run_job(job)
+            budget.latch_hard_stop_locked.assert_called_once_with(  # type: ignore[attr-defined]
+                CHALLENGE_REQUIRED,
+                hard_stop_source=HARD_STOP_SOURCE_WORKER,
+            )
+            budget.latch_hard_stop.assert_not_called()  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":
