@@ -623,28 +623,33 @@ class CapsAndProbeToolTests(unittest.TestCase):
     def test_au_caps_and_market_allowlist(self) -> None:
         au_cap_values = {
             "MAX_LIVE_SUBMISSIONS_PER_HOUR": "20",
-            "MAX_LIVE_SUBMISSIONS_PER_DAY": "200",
+            "MAX_LIVE_SUBMISSIONS_PER_DAY": "60",
             "OWNED_DAILY_ALLOWED_MARKETS": "AU",
             "MARKET_WORKER_CONCURRENCY": "1",
         }
         with tempfile.TemporaryDirectory() as tmp:
-            ledger = Path(tmp) / "budget.json"
+            hourly_ledger = Path(tmp) / "budget-hour.json"
+            daily_ledger = Path(tmp) / "budget-day.json"
             with mock.patch.dict(os.environ, au_cap_values, clear=False):
                 self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_HOUR"), "20")
-                self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_DAY"), "200")
+                self.assertEqual(os.environ.get("MAX_LIVE_SUBMISSIONS_PER_DAY"), "60")
                 self.assertEqual(os.environ.get("OWNED_DAILY_ALLOWED_MARKETS"), "AU")
-                budget = ContinuousSafetyBudget.from_env(path=ledger)
+                budget = ContinuousSafetyBudget.from_env(path=hourly_ledger)
                 self.assertEqual(budget.max_submissions_per_hour, 20)
-                self.assertEqual(budget.max_submissions_per_day, 200)
+                self.assertEqual(budget.max_submissions_per_day, 60)
             now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
             hour_anchor = now - timedelta(minutes=59)
             for i in range(20):
-                budget.record_submission(hour_anchor + timedelta(seconds=30 * i))
+                budget.record_submission(
+                    hour_anchor + timedelta(seconds=30 * i), path=hourly_ledger
+                )
             self.assertEqual(budget.budget_exhausted(now), "HOURLY_SUBMISSION_CEILING")
-            budget2 = ContinuousSafetyBudget.from_env(path=ledger)
-            for i in range(199):
-                budget2.record_submission(now - timedelta(hours=3) - timedelta(minutes=i))
-            budget2.record_submission(now)
+            budget2 = ContinuousSafetyBudget.from_env(path=daily_ledger)
+            for i in range(59):
+                budget2.record_submission(
+                    now - timedelta(hours=3) - timedelta(minutes=i), path=daily_ledger
+                )
+            budget2.record_submission(now, path=daily_ledger)
             self.assertEqual(budget2.budget_exhausted(now), "DAILY_SUBMISSION_CEILING")
         self.assertTrue(is_region_dispatchable(region_definition("AU").region))
         self.assertFalse(is_region_dispatchable(region_definition("JP").region))

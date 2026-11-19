@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.browser_lifecycle_policy import RUNTIME_INTER_CARD, evaluate_runtime_targets
+from cardscanr_market_engine import continuous_safety
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.ebay_scale.audit_report import summarise_sweeps
 from cardscanr_market_engine.ebay_scale.set_sweep_matcher import SetSweepCatalogueCard, match_sold_row_to_catalogue
@@ -190,13 +191,16 @@ class SetSweepWorkerHookTests(unittest.TestCase):
                 target={"set_id": "sv3", "set_name": "Obsidian Flames", "market_country": "AU"},
                 source="test",
             )
+            ledger = plan_dir / "budget-ledger.json"
             budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
             html = FIXTURE.read_text(encoding="utf-8")
-            result = try_set_sweep_worker_cycle(
-                client=FakeOwnedClient(self._targets()),
-                budget=budget,
-                fetch_html=lambda _q, _c, _n: html,
-            )
+            with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
+                result = try_set_sweep_worker_cycle(
+                    client=FakeOwnedClient(self._targets()),
+                    budget=budget,
+                    fetch_html=lambda _q, _c, _n: html,
+                )
+                budget.load(ledger)
             self.assertIsNotNone(result)
             assert result is not None
             self.assertTrue(result.ok)

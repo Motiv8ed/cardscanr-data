@@ -580,12 +580,11 @@ def run_worker_loop(
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-            if enforce_budget and results:
-                for row in results:
-                    if result_consumes_submission_cap(row):
-                        market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
-                        budget.record_submission(market=market)
-                budget.persist()
+        if enforce_budget and results:
+            for row in results:
+                if result_consumes_submission_cap(row):
+                    market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
+                    budget.record_submission(market=market)
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,

@@ -139,8 +139,12 @@ class ContinuousSafetyBudget:
         def mutator(data: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(data, dict) or not data:
                 data = dict(_LEDGER_DEFAULT)
-            # Merge in-memory submissions from this worker with on-disk (last-writer-wins safe).
-            merged_subs = sorted(set(_parse_submissions(data) + list(self.submissions)))
+            disk_subs = _parse_submissions(data)
+            mem_subs = list(self.submissions)
+            if len(mem_subs) >= len(disk_subs):
+                merged_subs = mem_subs
+            else:
+                merged_subs = sorted(disk_subs + mem_subs)
             merged_market = list(_parse_market_submissions(data)) + list(self.market_submissions)
             data["submissions"] = [utc_iso(x) for x in merged_subs[-400:]]
             data["transients"] = snapshot["transients"]
