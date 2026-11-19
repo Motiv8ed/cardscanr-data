@@ -66,6 +66,30 @@ jobs:
           assert d["production_writes"]==0
           print("PASS private data-layer canary; app and rights gates still open")
           PY
+      - name: Print safe per-language coverage counts for targeted source discovery
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("private-canary/SAFE-Private-Data-Layer-Canary.json").read_text())
+          print("PACK_IMAGE_AND_METADATA_GAPS_START")
+          for p in r["language_packs"]:
+              x=p["private_pack_completeness"]
+              missing=x["missing_metadata_field_counts"]
+              print(json.dumps({
+                  "language":p["pack_id"],
+                  "cards":x["card_records"],
+                  "sets":x["distinct_referenced_sets"],
+                  "missing_native_names":missing["missing_native_card_name"],
+                  "missing_native_set_names":missing["missing_native_set_name"],
+                  "missing_rarity":missing["missing_rarity"],
+                  "missing_release_dates":missing["missing_release_date"],
+                  "cards_with_image_url":x["cards_with_image_reference"],
+                  "cards_missing_image_url":x["cards_without_image_reference"],
+                  "source_mirror_status_approved":x["source_mirror_permission_approved_field_count"],
+              },sort_keys=True))
+          print("PACK_IMAGE_AND_METADATA_GAPS_END")
+          PY
       - name: Store private seven-day reports, never publish pack data
         if: always()
         uses: actions/upload-artifact@v4
