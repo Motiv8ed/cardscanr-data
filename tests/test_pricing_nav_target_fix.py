@@ -24,7 +24,14 @@ from cardscanr_market_engine.browser_lifecycle_policy import (
     evaluate_runtime_targets,
     url_matches_job_query,
 )
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, result_consumes_submission_cap
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.live_ebay_navigation_accounting import (
+    LIVE_EBAY_NAVIGATION_CONSUMED,
+    LIVE_SUBMISSION_RESERVED,
+    live_ebay_navigation_consumed_from_metadata,
+    result_consumes_submission_cap,
+    supplementary_submission_needs_cap,
+)
 from cardscanr_market_engine.live_ebay_navigation_accounting import (
     LIVE_EBAY_NAVIGATION_CONSUMED,
     live_ebay_navigation_consumed_from_metadata,
@@ -805,9 +812,13 @@ class EbayBrowserReferenceFreshnessTests(unittest.TestCase):
         self.assertIsInstance(budget, ContinuousSafetyBudget)
 
 class SubmissionCapAccountingTests(unittest.TestCase):
-    def test_completed_status_counts_without_extra_flags(self) -> None:
-        row = {"status": "completed", "ownedDailyOutcome": "UNCHANGED_FROM_EBAY"}
-        self.assertTrue(result_consumes_submission_cap(row))
+    def test_reserved_before_search_not_counted_again(self) -> None:
+        row = {
+            "status": "completed",
+            "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
+            LIVE_SUBMISSION_RESERVED: True,
+        }
+        self.assertFalse(supplementary_submission_needs_cap(row))
 
     def test_failed_provider_diag_shape_counts(self) -> None:
         meta = {
@@ -840,9 +851,15 @@ class SubmissionCapAccountingTests(unittest.TestCase):
             with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
                 budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
                 for i in range(19):
-                    budget.record_submission(stamp + timedelta(minutes=i), path=ledger)
+                    self.assertIsNone(
+                        budget.reserve_live_submission(
+                            path=ledger, market="AU", now=stamp + timedelta(minutes=i)
+                        )
+                    )
                 self.assertIsNone(budget.budget_exhausted(stamp + timedelta(minutes=18)))
-                budget.record_submission(stamp + timedelta(minutes=19), path=ledger)
+                self.assertIsNone(
+                    budget.reserve_live_submission(path=ledger, market="AU", now=stamp + timedelta(minutes=19))
+                )
                 self.assertEqual(
                     budget.budget_exhausted(stamp + timedelta(minutes=19)),
                     "HOURLY_SUBMISSION_CEILING",
@@ -859,9 +876,15 @@ class SubmissionCapAccountingTests(unittest.TestCase):
             with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
                 budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=60)
                 for i in range(59):
-                    budget.record_submission(stamp + timedelta(minutes=i * 5), path=ledger)
+                    self.assertIsNone(
+                        budget.reserve_live_submission(
+                            path=ledger, market="AU", now=stamp + timedelta(minutes=i * 5)
+                        )
+                    )
                 self.assertIsNone(budget.budget_exhausted(stamp + timedelta(hours=12)))
-                budget.record_submission(stamp + timedelta(hours=12), path=ledger)
+                self.assertIsNone(
+                    budget.reserve_live_submission(path=ledger, market="AU", now=stamp + timedelta(hours=12))
+                )
                 self.assertEqual(
                     budget.budget_exhausted(stamp + timedelta(hours=12)),
                     "DAILY_SUBMISSION_CEILING",

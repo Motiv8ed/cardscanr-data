@@ -166,6 +166,7 @@ class SetSweepWorkerHookTests(unittest.TestCase):
     def test_worker_hook_records_audit_with_mock_fetch(self) -> None:
         plan_dir = Path(self._tmp.name)
         plan_path = plan_dir / "plan.json"
+        ledger_path = plan_dir / "ledger.json"
         with (
             mock.patch.dict(
                 os.environ,
@@ -186,21 +187,28 @@ class SetSweepWorkerHookTests(unittest.TestCase):
                 "cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.SET_SWEEP_LAST_RUN_PATH",
                 plan_dir / "last.json",
             ),
+            mock.patch(
+                "cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH",
+                ledger_path,
+            ),
         ):
             record_set_sweep_plan_from_target(
                 target={"set_id": "sv3", "set_name": "Obsidian Flames", "market_country": "AU"},
                 source="test",
             )
-            ledger = plan_dir / "budget-ledger.json"
             budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
             html = FIXTURE.read_text(encoding="utf-8")
-            with mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger):
-                result = try_set_sweep_worker_cycle(
-                    client=FakeOwnedClient(self._targets()),
-                    budget=budget,
-                    fetch_html=lambda _q, _c, _n: html,
-                )
-                budget.load(ledger)
+            result = try_set_sweep_worker_cycle(
+                client=FakeOwnedClient(self._targets()),
+                budget=budget,
+                fetch_html=lambda _q, _c, _n: html,
+                attempt_paths={
+                    "ledger": ledger_path,
+                    "circuit": plan_dir / "circuit.json",
+                    "attempts": plan_dir / "attempts.jsonl",
+                },
+            )
+            budget.reload(ledger_path)
             self.assertIsNotNone(result)
             assert result is not None
             self.assertTrue(result.ok)

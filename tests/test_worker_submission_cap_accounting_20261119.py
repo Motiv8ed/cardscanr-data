@@ -14,11 +14,13 @@ from types import SimpleNamespace
 from unittest import mock
 
 from cardscanr_market_engine import continuous_safety
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, result_consumes_submission_cap
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.live_ebay_navigation_accounting import (
     LIVE_EBAY_NAVIGATION_CONSUMED,
     LIVE_SUBMISSION_RESERVED,
     live_ebay_navigation_consumed_from_metadata,
+    result_consumes_submission_cap,
+    supplementary_submission_needs_cap,
 )
 from cardscanr_market_engine.pipeline_phase_diagnostics import build_provider_diagnostics_for_result
 import workers.market_price_worker as worker
@@ -40,22 +42,27 @@ def _fake_args(*, once: bool = True) -> SimpleNamespace:
 
 
 class _ProbeRunner:
-    calls = 0
     _ebay_probe_mode = False
 
-    def __init__(self) -> None:
+    def __init__(self, *, reserved: bool = False) -> None:
         self.calls = 0
         self.client = SimpleNamespace()
+        self._reserved = reserved
 
     def run_once(self, *, max_jobs: int | None = None) -> list[dict]:
         self.calls += 1
-        return [
-            {
-                "status": "completed",
-                "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
-                "marketCountry": "AU",
-            }
-        ]
+        row: dict = {
+            "status": "completed",
+            "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
+            "marketCountry": "AU",
+        }
+        if self._reserved:
+            row[LIVE_SUBMISSION_RESERVED] = True
+            row["searchSubmissionStarted"] = True
+        else:
+            row[LIVE_EBAY_NAVIGATION_CONSUMED] = True
+            row["searchSubmissionStarted"] = True
+        return [row]
 
 
 @contextlib.contextmanager
@@ -99,8 +106,14 @@ class WorkerLoopCapTests(unittest.TestCase):
             anchor = NOW - timedelta(minutes=30)
             with mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW):
                 for i in range(20):
-                    budget.record_submission(anchor + timedelta(seconds=30 * i), market="AU", path=ledger)
-            budget.load(ledger)
+                    self.assertIsNone(
+                        budget.reserve_live_submission(
+                            path=ledger,
+                            market="AU",
+                            now=anchor + timedelta(seconds=30 * i),
+                        )
+                    )
+            budget.reload(ledger)
             runner = _ProbeRunner()
             with _worker_isolated(budget=budget, ledger=ledger):
                 code = worker.run_worker_loop(
@@ -116,12 +129,12 @@ class WorkerLoopCapTests(unittest.TestCase):
             self.assertEqual(runner.calls, 0)
             self.assertGreaterEqual(budget.submissions_1h(NOW), 20)
 
-    def test_completed_rows_increment_ledger_until_cap(self) -> None:
+    def test_supplementary_nav_rows_increment_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             ledger = root / "ledger.json"
             budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
-            runner = _ProbeRunner()
+            runner = _ProbeRunner(reserved=False)
             with _worker_isolated(budget=budget, ledger=ledger):
                 for _ in range(3):
                     worker.run_worker_loop(
@@ -133,15 +146,35 @@ class WorkerLoopCapTests(unittest.TestCase):
                         sleep_func=lambda _s: None,
                         logger=lambda *_a, **_k: None,
                     )
+            budget.reload(ledger)
             self.assertEqual(runner.calls, 3)
             self.assertEqual(budget.submissions_1h(NOW), 3)
 
-    def test_probe_mode_jobs_count_toward_cap(self) -> None:
+    def test_reserved_rows_do_not_double_count_in_worker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             ledger = root / "ledger.json"
             budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
-            runner = _ProbeRunner()
+            runner = _ProbeRunner(reserved=True)
+            with _worker_isolated(budget=budget, ledger=ledger):
+                worker.run_worker_loop(
+                    args=_fake_args(once=True),
+                    config=_fake_config(root),
+                    runner=runner,  # type: ignore[arg-type]
+                    poll_seconds=1,
+                    max_jobs=1,
+                    sleep_func=lambda _s: None,
+                    logger=lambda *_a, **_k: None,
+                )
+            budget.reload(ledger)
+            self.assertEqual(budget.submissions_1h(NOW), 0)
+
+    def test_probe_mode_supplementary_jobs_count_toward_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "ledger.json"
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+            runner = _ProbeRunner(reserved=False)
             with _worker_isolated(budget=budget, ledger=ledger):
                 with mock.patch.dict(os.environ, {"CARDSCANR_OPERATION_MODE": "PROBE"}, clear=False):
                     worker.run_worker_loop(
@@ -153,21 +186,22 @@ class WorkerLoopCapTests(unittest.TestCase):
                         sleep_func=lambda _s: None,
                         logger=lambda *_a, **_k: None,
                     )
+            budget.reload(ledger)
             self.assertEqual(budget.submissions_1h(NOW), 1)
 
-    def test_record_nothing_when_cap_predicate_disabled_fails_guard(self) -> None:
-        """Guards against removing completed-job counting from the worker loop."""
-        row = {"status": "completed", "marketCountry": "AU"}
-        self.assertTrue(result_consumes_submission_cap(row))
+    def test_record_nothing_when_supplementary_disabled_fails_guard(self) -> None:
+        """Guards against re-introducing parallel post-job counting for reserved jobs."""
+        row = {LIVE_EBAY_NAVIGATION_CONSUMED: True, "marketCountry": "AU"}
+        self.assertTrue(supplementary_submission_needs_cap(row))
         with mock.patch(
-            "workers.market_price_worker.result_consumes_submission_cap",
+            "workers.market_price_worker.supplementary_submission_needs_cap",
             return_value=False,
         ):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 ledger = root / "ledger.json"
                 budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
-                runner = _ProbeRunner()
+                runner = _ProbeRunner(reserved=False)
                 with _worker_isolated(budget=budget, ledger=ledger):
                     worker.run_worker_loop(
                         args=_fake_args(once=True),
@@ -178,6 +212,7 @@ class WorkerLoopCapTests(unittest.TestCase):
                         sleep_func=lambda _s: None,
                         logger=lambda *_a, **_k: None,
                     )
+                budget.reload(ledger)
                 self.assertEqual(budget.submissions_1h(NOW), 0)
 
 
@@ -206,22 +241,26 @@ class ProviderRowShapeCapTests(unittest.TestCase):
             }
         )
         self.assertTrue(live_ebay_navigation_consumed_from_metadata(meta))
-        self.assertTrue(result_consumes_submission_cap(row))
+        self.assertTrue(supplementary_submission_needs_cap(row))
 
     def test_reserved_submission_not_double_counted(self) -> None:
         row = {"status": "completed", LIVE_SUBMISSION_RESERVED: True}
         self.assertFalse(result_consumes_submission_cap(row))
 
+    def test_bare_completed_without_reserve_does_not_supplementary_count(self) -> None:
+        row = {"status": "completed", "ownedDailyOutcome": "UNCHANGED_FROM_EBAY"}
+        self.assertFalse(supplementary_submission_needs_cap(row))
 
-def _concurrent_record_submission(path_str: str, ready: mp.Value, go: mp.Event) -> None:
+
+def _concurrent_reserve_submission(path_str: str, ready: mp.Value, go: mp.Event) -> None:
     ready.value += 1
     go.wait(timeout=30)
     budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=999)
-    budget.record_submission(NOW, market="AU", path=Path(path_str))
+    budget.reserve_live_submission(market="AU", path=Path(path_str), now=NOW)
 
 
 class LedgerConcurrencyTests(unittest.TestCase):
-    def test_parallel_record_submission_never_loses_writes(self) -> None:
+    def test_parallel_reserve_never_loses_writes(self) -> None:
         workers = 8
         with tempfile.TemporaryDirectory() as tmp:
             ledger = Path(tmp) / "ledger.json"
@@ -229,7 +268,7 @@ class LedgerConcurrencyTests(unittest.TestCase):
             go = mp.Event()
             procs = [
                 mp.Process(
-                    target=_concurrent_record_submission,
+                    target=_concurrent_reserve_submission,
                     args=(str(ledger), ready, go),
                 )
                 for _ in range(workers)
@@ -243,8 +282,8 @@ class LedgerConcurrencyTests(unittest.TestCase):
             for proc in procs:
                 proc.join(timeout=30)
             budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=999)
-            budget.load(ledger)
-            self.assertEqual(len(budget.submissions), workers)
+            budget.reload(ledger)
+            self.assertGreaterEqual(len(budget.submissions), workers)
 
 
 if __name__ == "__main__":

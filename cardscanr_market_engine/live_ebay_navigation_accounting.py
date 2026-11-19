@@ -52,17 +52,15 @@ def cap_fields_from_provider_metadata(meta: dict[str, Any] | None) -> dict[str, 
     return out
 
 
-def result_consumes_submission_cap(row: dict[str, Any]) -> bool:
-    """Counted eBay load/submit against 20/h and 60/24h (excluding pre-reserved jobs)."""
+def supplementary_submission_needs_cap(row: dict[str, Any]) -> bool:
+    """Post-job cap for eBay navigations that were not reserved before search (#63)."""
     if not isinstance(row, dict):
         return False
     if row.get(LIVE_SUBMISSION_RESERVED):
         return False
-    if row.get(LIVE_EBAY_NAVIGATION_CONSUMED):
-        return True
-    if row.get("searchSubmissionStarted"):
-        return True
-    if str(row.get("status") or "").strip().lower() == "completed":
+    if row.get("budgetSubmissionCounted"):
+        return False
+    if row.get(LIVE_EBAY_NAVIGATION_CONSUMED) or row.get("searchSubmissionStarted"):
         return True
     diag = row.get("providerDiagnostics")
     if isinstance(diag, dict):
@@ -73,10 +71,16 @@ def result_consumes_submission_cap(row: dict[str, Any]) -> bool:
     return False
 
 
+# Back-compat name for tests; does not count bare completed jobs (reserve-before-search is canonical).
+def result_consumes_submission_cap(row: dict[str, Any]) -> bool:
+    return supplementary_submission_needs_cap(row)
+
+
 __all__ = [
     "LIVE_EBAY_NAVIGATION_CONSUMED",
     "LIVE_SUBMISSION_RESERVED",
     "cap_fields_from_provider_metadata",
     "live_ebay_navigation_consumed_from_metadata",
     "result_consumes_submission_cap",
+    "supplementary_submission_needs_cap",
 ]

@@ -1013,6 +1013,38 @@ class SupabaseMarketEngineClient:
             },
         )
 
+    def release_refresh_job(
+        self,
+        *,
+        job_id: str,
+        reason: str = "budget_deferred",
+    ) -> dict[str, Any]:
+        """Return a claimed running job to queued without failing the price row."""
+        try:
+            return self._rpc(
+                "release_market_price_refresh_job",
+                {
+                    "p_job_id": job_id,
+                    "p_reason": (reason or "released")[:1000],
+                },
+            )
+        except Exception:
+            rows = self._table_patch(
+                "market_price_refresh_jobs",
+                {
+                    "status": "queued",
+                    "worker_id": None,
+                    "locked_at": None,
+                    "started_at": None,
+                    "error_message": (reason or "released")[:1000],
+                    "updated_at": _iso_or_none(datetime.now(timezone.utc)),
+                },
+                params={"id": f"eq.{job_id}", "status": "eq.running", "select": "*"},
+            )
+            if not rows:
+                raise LookupError(f"running refresh job not found for id {job_id}") from None
+            return rows[0]
+
     def cancel_job(
         self,
         *,

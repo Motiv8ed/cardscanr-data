@@ -45,6 +45,50 @@ from ..playwright_persistent_lifecycle import (
 )
 
 
+CHALLENGE_POLICY_RESULT_CODES = frozenset(
+    {
+        "INTER_CARD_CHALLENGE_TARGET",
+        "CHALLENGE_REQUIRED",
+        "EBAY_CHALLENGE_REQUIRED",
+        "EBAY_CHALLENGE",
+    }
+)
+
+
+def _desktop_nav_policy_diagnostics(
+    *,
+    nav: Any,
+    search_diag: dict[str, Any],
+    stage_timings: Any,
+    nav_mode_label: str,
+    search_result_code: str,
+) -> dict[str, Any]:
+    target_policy = search_diag.get("targetPolicy")
+    if not isinstance(target_policy, dict):
+        inner = search_diag.get("diagnostics")
+        if isinstance(inner, dict):
+            target_policy = inner.get("targetPolicy")
+    return sanitize_provider_diagnostics(
+        {
+            "navMode": nav_mode_label,
+            "desktopNav": stage_timings.fields.get("desktopNav"),
+            "stageTimings": stage_timings.snapshot(),
+            "resultCode": search_result_code,
+            "urlBeforeSearch": search_diag.get("urlBeforeSearch") or nav.url,
+            "titleBeforeSearch": search_diag.get("titleBeforeSearch"),
+            "url": nav.url,
+            "targetPolicy": target_policy,
+        }
+    )
+
+
+def _desktop_nav_is_challenge_policy(search_diag: dict[str, Any], search_result_code: str) -> bool:
+    from ..inter_card_cdp_recovery import extract_policy_reason_codes
+
+    codes = {c.upper() for c in extract_policy_reason_codes(result_code=search_result_code, diagnostics=search_diag)}
+    return bool(codes & {c.upper() for c in CHALLENGE_POLICY_RESULT_CODES})
+
+
 # ACTIVE challenge: user-facing verification copy (never bare "captcha" alone).
 ACTIVE_CHALLENGE_VISIBLE_TEXT_MARKERS = (
     "verify you are human",
@@ -3217,6 +3261,7 @@ class EbayBrowserSoldCompsProvider:
                 "postNavigation": (search_diag.get("diagnostics") or {}).get("postNavigation")
                 if isinstance(search_diag.get("diagnostics"), dict)
                 else search_diag.get("postNavigation"),
+                "search": search_diag,
             }
             if isinstance(gui_timings, dict):
                 stage_timings.fields["guiAttemptTimings"] = gui_timings
@@ -3261,14 +3306,19 @@ class EbayBrowserSoldCompsProvider:
                 },
             )
         if nav.challenge:
+            fail_diag = _desktop_nav_policy_diagnostics(
+                nav=nav,
+                search_diag=search_diag,
+                stage_timings=stage_timings,
+                nav_mode_label=nav_mode_label,
+                search_result_code=search_result_code,
+            )
+            fail_diag["providerOutcome"] = "challenge_detected"
+            fail_diag["ownedDailyOutcome"] = "CHALLENGE_REQUIRED"
+            fail_diag["operationalStatus"] = "CHALLENGE_REQUIRED"
             raise ProviderBlockedError(
                 "eBay returned a verification challenge during desktop navigation; captcha bypass is not attempted",
-                diagnostics={
-                    "providerOutcome": "challenge_detected",
-                    "navMode": nav_mode_label,
-                    "desktopNav": stage_timings.fields.get("desktopNav"),
-                    "stageTimings": stage_timings.snapshot(),
-                },
+                diagnostics=fail_diag,
             )
         if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE":
             raise ProviderTemporaryError(
@@ -3321,15 +3371,32 @@ class EbayBrowserSoldCompsProvider:
                 },
             )
         if not nav.search_success or not nav.sold_click_success or not nav.sold_state_verified:
+            fail_diag = _desktop_nav_policy_diagnostics(
+                nav=nav,
+                search_diag=search_diag,
+                stage_timings=stage_timings,
+                nav_mode_label=nav_mode_label,
+                search_result_code=search_result_code,
+            )
+            if _desktop_nav_is_challenge_policy(search_diag, search_result_code):
+                fail_diag["ownedDailyOutcome"] = "CHALLENGE_REQUIRED"
+                fail_diag["operationalStatus"] = "CHALLENGE_REQUIRED"
+                fail_diag["providerOutcome"] = "inter_card_challenge_target"
+                raise ProviderBlockedError(
+                    f"Desktop sold navigation failed: {search_result_code or nav.error or 'unknown'}",
+                    diagnostics=fail_diag,
+                )
+            fail_diag.setdefault(
+                "liveEbayNavigationConsumed",
+                bool(stage_timings.fields.get("liveEbayNavigationConsumed")),
+            )
+            fail_diag.setdefault(
+                "searchSubmissionStarted",
+                bool(stage_timings.fields.get("searchSubmissionStarted")),
+            )
             raise ProviderTemporaryError(
                 f"Desktop sold navigation failed: {nav.error or 'unknown'}",
-                diagnostics={
-                    "navMode": nav_mode_label,
-                    "desktopNav": stage_timings.fields.get("desktopNav"),
-                    "stageTimings": stage_timings.snapshot(),
-                    "liveEbayNavigationConsumed": bool(stage_timings.fields.get("liveEbayNavigationConsumed")),
-                    "searchSubmissionStarted": bool(stage_timings.fields.get("searchSubmissionStarted")),
-                },
+                diagnostics=fail_diag,
             )
 
         from .post_sold_capture import resolve_authoritative_capture_html_path

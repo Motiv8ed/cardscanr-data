@@ -640,16 +640,27 @@ class CapsAndProbeToolTests(unittest.TestCase):
             now = datetime(2026, 11, 16, 12, 0, tzinfo=timezone.utc)
             hour_anchor = now - timedelta(minutes=59)
             for i in range(20):
-                budget.record_submission(
-                    hour_anchor + timedelta(seconds=30 * i), path=hourly_ledger
+                self.assertIsNone(
+                    budget.reserve_live_submission(
+                        path=hourly_ledger,
+                        market="AU",
+                        now=hour_anchor + timedelta(seconds=30 * i),
+                    )
                 )
             self.assertEqual(budget.budget_exhausted(now), "HOURLY_SUBMISSION_CEILING")
-            budget2 = ContinuousSafetyBudget.from_env(path=daily_ledger)
+            budget2 = ContinuousSafetyBudget(
+                max_submissions_per_hour=999,
+                max_submissions_per_day=60,
+            )
             for i in range(59):
-                budget2.record_submission(
-                    now - timedelta(hours=3) - timedelta(minutes=i), path=daily_ledger
+                self.assertIsNone(
+                    budget2.reserve_live_submission(
+                        path=daily_ledger,
+                        market="AU",
+                        now=now - timedelta(hours=20) + timedelta(minutes=i * 15),
+                    )
                 )
-            budget2.record_submission(now, path=daily_ledger)
+            self.assertIsNone(budget2.reserve_live_submission(path=daily_ledger, market="AU", now=now))
             self.assertEqual(budget2.budget_exhausted(now), "DAILY_SUBMISSION_CEILING")
         self.assertTrue(is_region_dispatchable(region_definition("AU").region))
         self.assertFalse(is_region_dispatchable(region_definition("JP").region))

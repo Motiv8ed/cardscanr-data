@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from ..config import REPORTS_DIR
+from ..owned_daily_enablement import BUDGET_LEDGER_PATH
 from ..models import MarketPriceKey
 from ..navigation_runtime_context import (
     RUNTIME_COLD_START,
@@ -30,6 +31,16 @@ from .config import (
 from .price_write_gate import apply_set_sweep_pricing_batch
 from .set_sweep import median_prices_by_card
 from .set_sweep_matcher import SetSweepCatalogueCard
+from .set_sweep_safety import (
+    append_set_sweep_attempt_receipt,
+    classify_set_sweep_fetch_failure,
+    classify_set_sweep_html,
+    handle_set_sweep_marketplace_outcome,
+    load_set_sweep_circuit,
+    record_set_sweep_circuit_failure,
+    record_set_sweep_circuit_success,
+    sweep_worker_gate_blocks,
+)
 from .shadow_audit import new_sweep_id
 
 if TYPE_CHECKING:
@@ -238,16 +249,32 @@ def should_attempt_set_sweep(
     plan: dict[str, Any] | None,
     budget: "ContinuousSafetyBudget",
     now: datetime | None = None,
+    worker_state: str | None = None,
+    availability_state: str | None = None,
+    hard_stop: str | None = None,
+    circuit_path: Path | None = None,
 ) -> tuple[bool, str]:
     if not set_sweep_worker_hook_enabled():
         return False, "flags_off"
+    blocked, gate_reason = sweep_worker_gate_blocks(
+        worker_state=worker_state,
+        availability_state=availability_state,
+        hard_stop=hard_stop,
+    )
+    if blocked:
+        return False, gate_reason
     if not plan or plan.get("consumed"):
         return False, "no_plan"
     if str(plan.get("marketCountry") or "").upper() != "AU":
         return False, "non_au"
     current = now or datetime.now(timezone.utc)
+    if budget.transient_hard_stop(current):
+        return False, "hard_stop"
     if budget.budget_exhausted(current):
         return False, "budget_exhausted"
+    circuit = load_set_sweep_circuit(circuit_path)
+    if circuit.backoff_active(current):
+        return False, "failure_backoff"
     set_code = str(plan.get("setCode") or "")
     min_hours = _parse_positive_float(MinSweepIntervalHoursEnv, 6.0)
     last = _last_run_for_set(set_code)
@@ -264,6 +291,80 @@ class SetSweepExecutionResult:
     audit: dict[str, Any] | None = None
     sweep_id: str | None = None
     medians_by_card: dict[str, float] | None = None
+    hard_stop_reason: str | None = None
+    marketplace_outcome: str | None = None
+    attempt_receipt_written: bool = False
+
+
+def _reserve_set_sweep_submission(
+    *,
+    budget: "ContinuousSafetyBudget",
+    market: str,
+    set_code: str,
+    now: datetime,
+    attempt_paths: dict[str, Path] | None = None,
+) -> tuple[bool, str | None]:
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
+    blocked = budget.reserve_live_submission(path=ledger_path, market=market, now=now)
+    if blocked:
+        return False, blocked
+    attempts_path = (attempt_paths or {}).get("attempts")
+    append_set_sweep_attempt_receipt(
+        {
+            "phase": "reserved",
+            "setCode": set_code,
+            "marketCountry": market,
+            "atUtc": utc_iso(now),
+        },
+        path=attempts_path,
+    )
+    return True, None
+
+
+def _finish_set_sweep_failure(
+    *,
+    budget: "ContinuousSafetyBudget",
+    plan: dict[str, Any],
+    set_code: str,
+    market: str,
+    reason: str,
+    marketplace_outcome: str | None,
+    now: datetime,
+    attempt_paths: dict[str, Path] | None = None,
+    logger: Callable[[str], None] | None = None,
+) -> SetSweepExecutionResult:
+    hard_stop: str | None = None
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
+    if marketplace_outcome:
+        hard_stop = handle_set_sweep_marketplace_outcome(marketplace_outcome, budget=budget, now=now)
+        budget.persist(ledger_path)
+    circuit_path = (attempt_paths or {}).get("circuit")
+    record_set_sweep_circuit_failure(load_set_sweep_circuit(circuit_path), now=now, path=circuit_path)
+    append_set_sweep_attempt_receipt(
+        {
+            "phase": "failed",
+            "setCode": set_code,
+            "marketCountry": market,
+            "reason": reason,
+            "marketplaceOutcome": marketplace_outcome,
+            "hardStop": hard_stop or budget.transient_hard_stop(now),
+            "atUtc": utc_iso(now),
+        },
+        path=(attempt_paths or {}).get("attempts"),
+    )
+    if logger:
+        logger(
+            f"[set-sweep] attempt_failed set={set_code} reason={reason} "
+            f"outcome={marketplace_outcome or 'none'} hardStop={hard_stop}"
+        )
+    return SetSweepExecutionResult(
+        ok=False,
+        reason=reason,
+        submission_consumed=True,
+        hard_stop_reason=hard_stop or budget.transient_hard_stop(now),
+        marketplace_outcome=marketplace_outcome,
+        attempt_receipt_written=True,
+    )
 
 
 def execute_set_sweep_shadow(
@@ -273,6 +374,7 @@ def execute_set_sweep_shadow(
     fetch_html: Callable[[str, str, str], str],
     budget: "ContinuousSafetyBudget | None" = None,
     logger: Callable[[str], None] | None = None,
+    attempt_paths: dict[str, Path] | None = None,
 ) -> SetSweepExecutionResult:
     """Run one set-level sold capture + local shadow audit (no live Supabase writes)."""
     if not ebay_scale_shadow_audit_enabled():
@@ -284,71 +386,145 @@ def execute_set_sweep_shadow(
         return SetSweepExecutionResult(ok=False, reason="au_only")
 
     now = datetime.now(timezone.utc)
-    if budget is not None:
-        exhausted = budget.budget_exhausted(now)
-        if exhausted:
-            return SetSweepExecutionResult(ok=False, reason=exhausted)
+    if budget is None:
+        return SetSweepExecutionResult(ok=False, reason="budget_required")
 
     targets = load_owned_targets_for_set(client, set_code=set_code, market_country=market)
     catalogue = _catalogue_from_targets(targets)
     if not catalogue:
         return SetSweepExecutionResult(ok=False, reason="empty_catalogue")
 
-    query = build_set_level_query_text(set_name=set_name, set_code=set_code)
-    ctx = load_navigation_runtime_context()
-    ctx = reconcile_navigation_context_for_browser_recycle(ctx)
-    ctx.runtime_mode = RUNTIME_COLD_START
-    ctx.expected_prior = None
-    apply_context_to_environ(ctx)
+    reserved, reserve_reason = _reserve_set_sweep_submission(
+        budget=budget,
+        market=market,
+        set_code=set_code,
+        now=now,
+        attempt_paths=attempt_paths,
+    )
+    if not reserved:
+        return SetSweepExecutionResult(ok=False, reason=str(reserve_reason or "budget_exhausted"))
+
+    ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
 
     try:
-        html = fetch_html(query, set_code, set_name)
+        query = build_set_level_query_text(set_name=set_name, set_code=set_code)
+        ctx = load_navigation_runtime_context()
+        ctx = reconcile_navigation_context_for_browser_recycle(ctx)
+        ctx.runtime_mode = RUNTIME_COLD_START
+        ctx.expected_prior = None
+        apply_context_to_environ(ctx)
+
+        try:
+            html = fetch_html(query, set_code, set_name)
+        except Exception as exc:
+            outcome = classify_set_sweep_fetch_failure(exc)
+            if logger:
+                logger(f"[set-sweep] fetch_failed set={set_code} error={type(exc).__name__}:{exc}")
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason="fetch_failed",
+                marketplace_outcome=outcome,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        marketplace_outcome = classify_set_sweep_html(html)
+        if marketplace_outcome:
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason="marketplace_unhealthy_html",
+                marketplace_outcome=marketplace_outcome,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        sweep_id = new_sweep_id(set_code, at=now)
+        per_card = _per_card_prices_from_targets(targets)
+        batch = apply_set_sweep_pricing_batch(
+            sweep_id=sweep_id,
+            set_code=set_code,
+            set_name=set_name,
+            html=html,
+            catalogue=catalogue,
+            per_card_prices=per_card,
+        )
+        audit = batch.get("audit") if isinstance(batch.get("audit"), dict) else {}
+        if not audit.get("recorded"):
+            return _finish_set_sweep_failure(
+                budget=budget,
+                plan=plan,
+                set_code=set_code,
+                market=market,
+                reason=str(audit.get("reason") or "audit_not_recorded"),
+                marketplace_outcome=None,
+                now=now,
+                attempt_paths=attempt_paths,
+                logger=logger,
+            )
+
+        from .set_sweep import run_set_sweep
+
+        sweep_stats, _ = run_set_sweep(html=html, catalogue=catalogue)
+        medians = median_prices_by_card(sweep_stats)
+        _ = audit.get("stats")
+
+        _record_set_sweep_run(set_code, sweep_id=sweep_id)
+        plan_update = dict(plan)
+        plan_update["consumed"] = True
+        plan_update["consumedAtUtc"] = utc_iso(now)
+        plan_update["sweepId"] = sweep_id
+        plan_update["mediansByCatalogueCardId"] = medians
+        write_json_atomic(SET_SWEEP_PLAN_PATH, plan_update)
+
+        circuit_path = (attempt_paths or {}).get("circuit")
+        record_set_sweep_circuit_success(load_set_sweep_circuit(circuit_path), path=circuit_path)
+        append_set_sweep_attempt_receipt(
+            {
+                "phase": "recorded",
+                "setCode": set_code,
+                "marketCountry": market,
+                "sweepId": sweep_id,
+                "atUtc": utc_iso(now),
+            },
+            path=(attempt_paths or {}).get("attempts"),
+        )
+
+        if logger:
+            logger(
+                f"[set-sweep] shadow_recorded set={set_code} sweep={sweep_id} "
+                f"rows={audit.get('rowCount')} liveWrite={batch.get('livePriceWrite')}"
+            )
+        return SetSweepExecutionResult(
+            ok=True,
+            reason="recorded",
+            submission_consumed=True,
+            audit=audit,
+            sweep_id=sweep_id,
+            medians_by_card=medians,
+            attempt_receipt_written=True,
+        )
     except Exception as exc:
         if logger:
-            logger(f"[set-sweep] fetch_failed set={set_code} error={type(exc).__name__}:{exc}")
-        return SetSweepExecutionResult(ok=False, reason="fetch_failed")
-
-    sweep_id = new_sweep_id(set_code, at=now)
-    per_card = _per_card_prices_from_targets(targets)
-    batch = apply_set_sweep_pricing_batch(
-        sweep_id=sweep_id,
-        set_code=set_code,
-        set_name=set_name,
-        html=html,
-        catalogue=catalogue,
-        per_card_prices=per_card,
-    )
-    audit = batch.get("audit") if isinstance(batch.get("audit"), dict) else {}
-    if not audit.get("recorded"):
-        return SetSweepExecutionResult(ok=False, reason=str(audit.get("reason") or "audit_not_recorded"))
-
-    from .set_sweep import run_set_sweep
-
-    sweep_stats, _ = run_set_sweep(html=html, catalogue=catalogue)
-    medians = median_prices_by_card(sweep_stats)
-    _ = audit.get("stats")
-
-    _record_set_sweep_run(set_code, sweep_id=sweep_id)
-    plan_update = dict(plan)
-    plan_update["consumed"] = True
-    plan_update["consumedAtUtc"] = utc_iso(now)
-    plan_update["sweepId"] = sweep_id
-    plan_update["mediansByCatalogueCardId"] = medians
-    write_json_atomic(SET_SWEEP_PLAN_PATH, plan_update)
-
-    if logger:
-        logger(
-            f"[set-sweep] shadow_recorded set={set_code} sweep={sweep_id} "
-            f"rows={audit.get('rowCount')} liveWrite={batch.get('livePriceWrite')}"
+            logger(f"[set-sweep] post_reserve_failed set={set_code} error={type(exc).__name__}:{exc}")
+        return _finish_set_sweep_failure(
+            budget=budget,
+            plan=plan,
+            set_code=set_code,
+            market=market,
+            reason="post_reserve_failed",
+            marketplace_outcome=classify_set_sweep_fetch_failure(exc),
+            now=now,
+            attempt_paths=attempt_paths,
+            logger=logger,
         )
-    return SetSweepExecutionResult(
-        ok=True,
-        reason="recorded",
-        submission_consumed=True,
-        audit=audit,
-        sweep_id=sweep_id,
-        medians_by_card=medians,
-    )
 
 
 def try_set_sweep_worker_cycle(
@@ -357,11 +533,23 @@ def try_set_sweep_worker_cycle(
     budget: "ContinuousSafetyBudget",
     fetch_html: Callable[[str, str, str], str] | None = None,
     logger: Callable[[str], None] | None = None,
+    worker_state: str | None = None,
+    availability_state: str | None = None,
+    hard_stop: str | None = None,
+    attempt_paths: dict[str, Path] | None = None,
 ) -> SetSweepExecutionResult | None:
     if not set_sweep_worker_hook_enabled():
         return None
+    circuit_path = (attempt_paths or {}).get("circuit")
     plan = read_set_sweep_plan()
-    ok, reason = should_attempt_set_sweep(plan=plan, budget=budget)
+    ok, reason = should_attempt_set_sweep(
+        plan=plan,
+        budget=budget,
+        worker_state=worker_state,
+        availability_state=availability_state,
+        hard_stop=hard_stop,
+        circuit_path=circuit_path,
+    )
     if not ok:
         if logger and reason not in {"flags_off", "no_plan"}:
             logger(f"[set-sweep] skip reason={reason}")
@@ -370,17 +558,14 @@ def try_set_sweep_worker_cycle(
     if fetch_html is None:
         fetch_html = _default_fetch_set_sweep_html
 
-    result = execute_set_sweep_shadow(
+    return execute_set_sweep_shadow(
         client=client,
         plan=plan or {},
         fetch_html=fetch_html,
         budget=budget,
         logger=logger,
+        attempt_paths=attempt_paths,
     )
-    if result.submission_consumed and budget is not None:
-        budget.record_submission(market=str(plan.get("marketCountry") or "AU"))
-        budget.persist()
-    return result
 
 
 def _default_fetch_set_sweep_html(query: str, set_code: str, set_name: str) -> str:
