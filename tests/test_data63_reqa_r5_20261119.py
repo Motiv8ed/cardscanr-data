@@ -302,6 +302,7 @@ class Data63ReQaRound5Tests(unittest.TestCase):
             )
             for i in range(3)
         ]
+        runner.client.release_refresh_job = mock.Mock()
         runner.claim_jobs = mock.Mock(return_value=jobs)  # type: ignore[method-assign]
         runner.run_job = mock.Mock(  # type: ignore[method-assign]
             side_effect=[
@@ -334,9 +335,9 @@ class Data63ReQaRound5Tests(unittest.TestCase):
         ):
             results = runner.run_once(max_jobs=3)
         self.assertEqual(len(results), 1)
-        cancel_calls = [c.kwargs.get("job_id") or c.args[0] for c in runner.client.cancel_job.call_args_list]
-        self.assertIn("j1", cancel_calls)
-        self.assertIn("j2", cancel_calls)
+        released = [c.kwargs.get("job_id") for c in runner.client.release_refresh_job.call_args_list]
+        self.assertIn("j1", released)
+        self.assertIn("j2", released)
 
     def test_record_healthy_does_not_clear_worker_challenge_latch(self) -> None:
         budget = ContinuousSafetyBudget()

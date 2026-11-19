@@ -318,6 +318,14 @@ class MarketPriceJobRunner:
         blocked = self._safety_budget.reserve_live_submission(market=str(market or "AU").upper())
         return True, blocked
 
+    def _release_claimed_job(self, job_id: str, reason: str) -> None:
+        release = getattr(self.client, "release_refresh_job", None)
+        if callable(release):
+            release(job_id=job_id, reason=reason)
+            return
+        if hasattr(self.client, "cancel_job"):
+            self.client.cancel_job(job_id=job_id, reason=reason)
+
     def _should_halt_job_batch(self, result: dict[str, Any]) -> bool:
         if self._inter_card_marketplace_halt:
             return True
@@ -1330,11 +1338,10 @@ class MarketPriceJobRunner:
                 if self._safety_budget is not None and inter_latch == CHALLENGE_REQUIRED:
                     from .continuous_safety import HARD_STOP_SOURCE_WORKER
 
-                    self._safety_budget.latch_hard_stop(
+                    self._safety_budget.latch_hard_stop_locked(
                         CHALLENGE_REQUIRED,
                         hard_stop_source=HARD_STOP_SOURCE_WORKER,
                     )
-                    self._safety_budget.persist()
             # Worker-wide eBay availability circuit (do not re-open on cooldown skip).
             try:
                 diag = (exc.diagnostics if isinstance(exc, ProviderError) else None) or {}
@@ -1606,8 +1613,7 @@ class MarketPriceJobRunner:
                 if results and gaming.should_block_new_jobs():
                     self.logger("[market-engine] gaming pause after card boundary; stopping claim batch")
                     for rem in jobs[index:]:
-                        if hasattr(self.client, "cancel_job"):
-                            self.client.cancel_job(job_id=rem.id, reason="gaming_pause_batch_halt")
+                        self._release_claimed_job(rem.id, "gaming_pause_batch_halt")
                     break
                 if self._inter_card_marketplace_halt:
                     self.logger(
@@ -1615,8 +1621,7 @@ class MarketPriceJobRunner:
                         f"releasing remaining {len(jobs) - index} claimed jobs"
                     )
                     for rem in jobs[index:]:
-                        if hasattr(self.client, "cancel_job"):
-                            self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
+                        self._release_claimed_job(rem.id, "inter_card_marketplace_halt")
                     break
                 gaming.mark_job_started(str(job.price_key_id))
                 try:
@@ -1626,8 +1631,7 @@ class MarketPriceJobRunner:
                 results.append(result)
                 if self._should_halt_job_batch(result):
                     for rem in jobs[index + 1 :]:
-                        if hasattr(self.client, "cancel_job"):
-                            self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
+                        self._release_claimed_job(rem.id, "inter_card_marketplace_halt")
                     break
             return results
 
@@ -1657,8 +1661,7 @@ class MarketPriceJobRunner:
             results.append(result)
             if self._should_halt_job_batch(result):
                 for rem in jobs[index + 1 :]:
-                    if hasattr(self.client, "cancel_job"):
-                        self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
+                    self._release_claimed_job(rem.id, "inter_card_marketplace_halt")
                 break
             if gaming.should_block_new_jobs():
                 self.logger("[market-engine] gaming pause after card; no further jobs this cycle")

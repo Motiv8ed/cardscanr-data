@@ -1020,30 +1020,38 @@ class SupabaseMarketEngineClient:
         reason: str = "budget_deferred",
     ) -> dict[str, Any]:
         """Return a claimed running job to queued without failing the price row."""
-        try:
-            return self._rpc(
-                "release_market_price_refresh_job",
-                {
-                    "p_job_id": job_id,
-                    "p_reason": (reason or "released")[:1000],
-                },
+        now = _iso_or_none(datetime.now(timezone.utc))
+        rows = self._table_get(
+            "market_price_refresh_jobs",
+            params={"id": f"eq.{job_id}", "status": "eq.running", "select": "*", "limit": 1},
+        )
+        if not rows:
+            raise LookupError(f"running refresh job not found for id {job_id}") from None
+        row = rows[0]
+        attempt = max(0, int(row.get("attempt_count") or 1) - 1)
+        price_key_id = str(row.get("price_key_id") or "").strip()
+        updated = self._table_patch(
+            "market_price_refresh_jobs",
+            {
+                "status": "queued",
+                "worker_id": None,
+                "locked_at": None,
+                "started_at": None,
+                "attempt_count": attempt,
+                "error_message": (reason or "released")[:1000],
+                "updated_at": now,
+            },
+            params={"id": f"eq.{job_id}", "status": "eq.running", "select": "*"},
+        )
+        if not updated:
+            raise LookupError(f"running refresh job not found for id {job_id}") from None
+        if price_key_id:
+            self._table_patch(
+                "market_price_cache",
+                {"refresh_status": "queued", "updated_at": now},
+                params={"price_key_id": f"eq.{price_key_id}", "select": "price_key_id"},
             )
-        except Exception:
-            rows = self._table_patch(
-                "market_price_refresh_jobs",
-                {
-                    "status": "queued",
-                    "worker_id": None,
-                    "locked_at": None,
-                    "started_at": None,
-                    "error_message": (reason or "released")[:1000],
-                    "updated_at": _iso_or_none(datetime.now(timezone.utc)),
-                },
-                params={"id": f"eq.{job_id}", "status": "eq.running", "select": "*"},
-            )
-            if not rows:
-                raise LookupError(f"running refresh job not found for id {job_id}") from None
-            return rows[0]
+        return updated[0]
 
     def cancel_job(
         self,
