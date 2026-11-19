@@ -66,15 +66,39 @@ class _ProbeRunner:
 
 
 @contextlib.contextmanager
-def _worker_isolated(*, budget: ContinuousSafetyBudget, ledger: Path):
+def _worker_isolated(
+    *,
+    budget: ContinuousSafetyBudget,
+    ledger: Path,
+    reload_budget_each_cycle: bool = False,
+    utc_now: Any | None = None,
+):
     with contextlib.ExitStack() as stack:
-        stack.enter_context(
-            mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW)
-        )
+        if utc_now is not None:
+            if callable(utc_now):
+                stack.enter_context(
+                    mock.patch("cardscanr_market_engine.continuous_safety.utc_now", side_effect=utc_now)
+                )
+            else:
+                stack.enter_context(
+                    mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=utc_now)
+                )
+        else:
+            stack.enter_context(
+                mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW)
+            )
         stack.enter_context(mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger))
-        stack.enter_context(
-            mock.patch.object(worker.ContinuousSafetyBudget, "from_env", return_value=budget)
-        )
+        if reload_budget_each_cycle:
+            _real_from_env = worker.ContinuousSafetyBudget.from_env
+
+            def _from_env(*, path: Path | None = None) -> ContinuousSafetyBudget:
+                return _real_from_env(path=path or ledger)
+
+            stack.enter_context(mock.patch.object(worker.ContinuousSafetyBudget, "from_env", _from_env))
+        else:
+            stack.enter_context(
+                mock.patch.object(worker.ContinuousSafetyBudget, "from_env", return_value=budget)
+            )
         stack.enter_context(mock.patch.object(worker, "ensure_continuous_au_safety_env"))
         stack.enter_context(
             mock.patch(
@@ -316,33 +340,73 @@ class _AlternatingFailSuccessRunner:
         ]
 
 
+def _reload_budget_from_ledger(ledger: Path, *, now: datetime) -> ContinuousSafetyBudget:
+    with mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=now):
+        return ContinuousSafetyBudget.from_env(path=ledger)
+
+
+def _run_fs_alternating_worker_cycles(
+    *,
+    root: Path,
+    ledger: Path,
+    cycle_times: list[datetime],
+) -> list[int]:
+    """Five worker cycles with F/S/F/S/F results; each call reloads budget from disk (owned_daily OFF)."""
+    runner = _AlternatingFailSuccessRunner()
+    exit_codes: list[int] = []
+    budget_seed = ContinuousSafetyBudget(
+        max_submissions_per_hour=20,
+        max_submissions_per_day=60,
+        max_consecutive_transient=3,
+    )
+    budget_seed.persist(ledger)
+    clock = {"now": cycle_times[0]}
+
+    def _utc_now() -> datetime:
+        return clock["now"]
+
+    with _worker_isolated(
+        budget=budget_seed,
+        ledger=ledger,
+        reload_budget_each_cycle=True,
+        utc_now=_utc_now,
+    ):
+        for when in cycle_times:
+            clock["now"] = when
+            code = worker.run_worker_loop(
+                args=_fake_args(once=True),
+                config=_fake_config(root),
+                runner=runner,  # type: ignore[arg-type]
+                poll_seconds=1,
+                max_jobs=1,
+                sleep_func=lambda _s: None,
+                logger=lambda *_a, **_k: None,
+            )
+            exit_codes.append(code)
+    return exit_codes
+
+
 class WorkerTransientHealthyPersistTests(unittest.TestCase):
     def test_alternating_fail_success_does_not_false_latch_hard_stop(self) -> None:
-        """owned_daily OFF: success must persist record_healthy() or consecutive transients accumulate."""
+        """owned_daily OFF: record_healthy() resets must hit disk or F/S stacks latch across cycles."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             ledger = root / "ledger.json"
-            budget = ContinuousSafetyBudget(
-                max_submissions_per_hour=20,
-                max_submissions_per_day=60,
-                max_consecutive_transient=3,
+            base = NOW
+            cycle_times = [base + timedelta(minutes=2 * i) for i in range(5)]
+            exit_codes = _run_fs_alternating_worker_cycles(
+                root=root,
+                ledger=ledger,
+                cycle_times=cycle_times,
             )
-            runner = _AlternatingFailSuccessRunner()
-            with _worker_isolated(budget=budget, ledger=ledger):
-                for _ in range(5):
-                    worker.run_worker_loop(
-                        args=_fake_args(once=True),
-                        config=_fake_config(root),
-                        runner=runner,  # type: ignore[arg-type]
-                        poll_seconds=1,
-                        max_jobs=1,
-                        sleep_func=lambda _s: None,
-                        logger=lambda *_a, **_k: None,
-                    )
-            budget.reload(ledger)
-            self.assertIsNone(budget.transient_hard_stop(NOW))
-            self.assertLessEqual(budget.consecutive_transient, 1)
-            self.assertIsNone(budget.last_hard_stop)
+            self.assertEqual(exit_codes, [0, 0, 0, 0, 0], msg="no HARD_STOP exit mid F/S/F/S/F")
+            final = _reload_budget_from_ledger(ledger, now=cycle_times[-1])
+            self.assertIsNone(
+                final.transient_hard_stop(cycle_times[-1]),
+                msg="ledger must not false-latch after alternating F/S",
+            )
+            self.assertEqual(final.consecutive_transient, 1)
+            self.assertIsNone(final.last_hard_stop)
 
 class SupplementaryCapAtCeilingTests(unittest.TestCase):
     def test_supplementary_at_hourly_cap_does_not_add_slots(self) -> None:
