@@ -1,0 +1,80 @@
+name: Private Six-Set Image Reference to Printing Crosswalk (Batch Two)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_image_crosswalk_batch2.py'
+      - 'tests/test_private_image_crosswalk_batch2.py'
+      - '.github/workflows/private-image-crosswalk-batch2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact source-to-printing identity joins, no artwork or account writes
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_image_crosswalk_batch2.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_crosswalk_batch2.py -v
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_identity_crosswalk.py -v
+  real-private-six-set:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify 3 immutable card packs, reconcile 6 source sets without publishing art
+        run: |
+          PYTHONPATH=. python tools/private_image_crosswalk_batch2.py --output private-crosswalk-batch2
+      - name: Assert rights, safety and identity checks
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('private-crosswalk-batch2/receipt.json').read_text())
+          assert d['classification']=='PRIVATE_IMAGE_REFERENCE_IDENTITY_CROSSWALK_BATCH_2'
+          assert d['pack_languages_sha256_verified']==3
+          assert d['source_set_count']==6
+          assert d['target_pack_missing_image_reference_rows']==1439
+          assert d['source_card_count']==1439
+          assert d['exact_unique_printing_matches']==1439
+          assert d['matching_status_counts']=={"exact_unique":1439}
+          assert d['exact_matches_missing_image_with_source_reference']==728
+          assert sum(s['exact_matched_missing_image_url_with_source_candidate'] for s in d['set_evidence'])==728
+          assert all(s['status_counts']=={'exact_unique':s['source_cards_evaluated']} for s in d['set_evidence'])
+          assert all(s['expected_pack_missing_image_ref_rows']==s['actual_pack_missing_image_ref_rows'] for s in d['set_evidence'])
+          assert d['provider_set_requests']==6
+          assert d['image_bodies_downloaded']==0
+          assert d['production_writes']==0
+          assert not d['customer_data_read']
+          assert not d['artwork_rights_cleared']
+          assert not d['canonical_identity_mutated']
+          assert not d['safe_to_publish']
+          print("SIX_SET_EXACT_SOURCE_CROSSWALK",json.dumps({
+            "source_cards":d["source_card_count"],
+            "exact_unique":d["exact_unique_printing_matches"],
+            "missing_image_with_source_ref":d["exact_matches_missing_image_with_source_reference"],
+            "statuses":d["matching_status_counts"],
+            "by_set":d["set_evidence"],
+          },ensure_ascii=False,sort_keys=True))
+          PY
+      - name: Keep source metadata and identity proof private for seven days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Exact-Image-Printing-Crosswalk-Batch-Two
+          path: private-crosswalk-batch2/
+          retention-days: 7
+          if-no-files-found: warn

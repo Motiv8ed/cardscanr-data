@@ -1,0 +1,38 @@
+name: Artwork candidate suppression and takedown controls
+on:
+  pull_request:
+    paths:
+      - 'tools/private_artwork_takedown_controls.py'
+      - 'tests/test_private_artwork_takedown_controls.py'
+      - '.github/workflows/private-artwork-takedown-controls.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate default global-off and immediate per-printing takedown
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_artwork_takedown_controls.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_artwork_takedown_controls.py -v
+      - name: Assert no production artwork deployment in this workflow
+        run: |
+          python - <<'PY'
+          from tools.private_artwork_takedown_controls import default_policy, resolve_candidate_images
+          p=default_policy()
+          assert p['global_kill_switch'] is True
+          result,proof=resolve_candidate_images([],p,explicitly_enabled=True)
+          assert result==[]
+          assert proof['production_writes']==0
+          assert not proof['copyright_permission_granted']
+          assert not proof['cdn_purge_performed']
+          print('PASS: artwork candidate links stay disabled until separately integrated')
+          PY
