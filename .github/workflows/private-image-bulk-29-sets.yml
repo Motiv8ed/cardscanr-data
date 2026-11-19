@@ -1,0 +1,92 @@
+name: Bulk 29-set exact image source match (private, no binaries)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_image_crosswalk_bulk_29.py'
+      - 'tests/test_private_image_crosswalk_bulk_29.py'
+      - '.github/workflows/private-image-bulk-29-sets.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate 29 target set IDs, exact native+collector identities and source URL safeguards
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_image_crosswalk_bulk_29.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_crosswalk_bulk_29.py -v
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_identity_crosswalk.py -v
+  private-bulk-real-source:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reconcile 29 exact set IDs with four original SHA-verified R2 packs and TCGdex metadata
+        run: |
+          PYTHONPATH=. python tools/private_image_crosswalk_bulk_29.py --pace-seconds 0.8 --output review-bulk-29
+      - name: Verify counts, uniqueness and production safety without hiding partial source errors
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("review-bulk-29/receipt.json").read_text())
+          assert r["classification"]=="PRIVATE_29_SET_IMAGE_REFERENCE_CROSSWALK"
+          assert r["source_target_count"]==29
+          assert r["audited_target_gap"]==4636
+          assert r["source_set_requests"]<=29
+          assert r["source_sets_succeeded"]==29
+          assert r["source_sets_failed"]==0
+          assert r["card_rows_reconciled"]==4669
+          assert r["exact_unique_printing_matches"]==4669
+          assert r["status_counts"]=={"exact_unique":4669}
+          assert r["valid_missing_image_ref_candidates"]==1295
+          assert sum(v["new_image_ref_candidates"] for v in r["per_language"].values())==1295
+          assert r["per_language"]["th"]["new_image_ref_candidates"]==487
+          assert r["per_language"]["id"]["new_image_ref_candidates"]==471
+          assert r["per_language"]["zh-tw"]["new_image_ref_candidates"]==337
+          assert r["exact_unique_printing_matches"]<=r["card_rows_reconciled"]
+          assert r["valid_missing_image_ref_candidates"]<=r["exact_unique_printing_matches"]
+          assert r["image_binaries_downloaded"]==0
+          assert r["production_writes"]==0
+          assert not r["customer_ownership_read"]
+          assert not r["canonical_id_changes"]
+          assert not r["artwork_rights_cleared"]
+          assert not r["safe_to_publish"]
+          assert len(r["sha_verified_language_packs"])>=1
+          f=Path("review-bulk-29/valid_image_candidates.jsonl")
+          candidates=[json.loads(l) for l in f.read_text().splitlines() if l.strip()]
+          assert len(candidates)==r["valid_missing_image_ref_candidates"]
+          assert len({c["canonical_printing_id"] for c in candidates})==len(candidates)
+          assert all(c["status"]=="exact_unique" and c["candidate_for_missing_pack_image_ref"] for c in candidates)
+          assert all(c["provider_low_webp_url"]==c["source_image_base_url"]+"/low.webp" for c in candidates)
+          print("CARD_SCANR_BULK_29_VERIFIED",json.dumps({
+              "source_sets_succeeded":r["source_sets_succeeded"],
+              "source_set_requests":r["source_set_requests"],
+              "exact_unique_printings":r["exact_unique_printing_matches"],
+              "valid_image_refs":r["valid_missing_image_ref_candidates"],
+              "by_language":r["per_language"],
+              "source_failures":r["source_failures"]
+          },sort_keys=True))
+          PY
+      - name: Keep private read-only candidate registry and receipts for seven days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Bulk-29-Set-Image-Reference-Matches
+          path: review-bulk-29/
+          retention-days: 7
+          if-no-files-found: warn

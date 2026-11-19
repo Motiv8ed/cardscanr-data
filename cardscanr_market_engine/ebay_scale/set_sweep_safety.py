@@ -10,7 +10,7 @@ from typing import Any
 
 from ..atomic_json_state import atomic_write_json
 from ..config import REPORTS_DIR
-from ..continuous_safety import HARD_STOP_SOURCE_SET_SWEEP
+from ..continuous_safety import BUDGET_LEDGER_PATH, HARD_STOP_SOURCE_SET_SWEEP
 from ..continuous_worker_policy import HARD_STOP_OUTCOMES
 from ..owned_daily_outcomes import (
     CHALLENGE_REQUIRED,
@@ -255,11 +255,17 @@ def handle_set_sweep_marketplace_outcome(
     *,
     budget: Any,
     now: datetime | None = None,
+    path: Path | None = None,
 ) -> str | None:
     """Apply transient/HARD_STOP latch to continuous safety budget; return latched reason if any."""
     immediate = sweep_immediate_hard_stop_outcome(outcome)
     if immediate:
-        return budget.latch_hard_stop(immediate, hard_stop_source=HARD_STOP_SOURCE_SET_SWEEP)
+        ledger = path or BUDGET_LEDGER_PATH
+        return budget.latch_hard_stop_locked(
+            immediate,
+            path=ledger,
+            hard_stop_source=HARD_STOP_SOURCE_SET_SWEEP,
+        )
     if sweep_outcome_counts_toward_transient_latch(outcome):
         return budget.record_transient(now, hard_stop_source=HARD_STOP_SOURCE_SET_SWEEP)
     return None

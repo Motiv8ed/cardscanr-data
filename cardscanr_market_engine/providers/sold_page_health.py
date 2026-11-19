@@ -14,6 +14,11 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
+from ..marketplace_gate_url import (
+    is_exact_marketplace_gate_page_title,
+    is_pardon_interstitial_at_marketplace_url,
+)
+
 # Canonical marketplace page classes (distinct from CAPTCHA / SORRY / 403).
 EBAY_ERROR_PAGE = "EBAY_ERROR_PAGE"
 MARKETPLACE_ERROR_PAGE = "MARKETPLACE_ERROR_PAGE"
@@ -111,7 +116,11 @@ def _is_challenge_blob(title: str | None, url: str | None, body: str | None) -> 
     t = (title or "").lower()
     u = (url or "").lower()
     b = (body or "").lower()
-    if "splashui/challenge" in u or "security measure" in t or "verify yourself" in t:
+    if is_exact_marketplace_gate_page_title(title):
+        return True
+    if is_pardon_interstitial_at_marketplace_url(url, title=title, body=body):
+        return True
+    if "splashui/challenge" in u or "verify yourself" in t:
         return True
     if "verification challenge" in f"{t}\n{b}":
         return True

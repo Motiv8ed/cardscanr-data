@@ -162,6 +162,7 @@ class Data63ReQaRound6Tests(unittest.TestCase):
             )
         )
         self.assertTrue(is_ebay_marketplace_gate_url("https://www.ebay.com.au/sorry.html"))
+        self.assertTrue(is_ebay_marketplace_gate_url("https://www.ebay.com.au/signin/"))
 
     def test_cold_start_keeps_splashui_captcha_tab(self) -> None:
         captcha_url = "https://www.ebay.com.au/splashui/captcha?ap=1"

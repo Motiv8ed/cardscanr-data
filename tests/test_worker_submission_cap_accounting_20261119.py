@@ -369,6 +369,21 @@ class SupplementaryCapAtCeilingTests(unittest.TestCase):
             self.assertEqual(len(budget.submission_events), 20)
 
 
+class SubmissionEventMergeTests(unittest.TestCase):
+    def test_identical_timestamp_submission_events_do_not_collapse(self) -> None:
+        from cardscanr_market_engine.continuous_safety import SubmissionEvent, merge_budget_payloads
+
+        disk = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+        local = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+        disk.submission_events.append(SubmissionEvent(id="evt-a", at=NOW, market="AU"))
+        local.submission_events.append(SubmissionEvent(id="evt-b", at=NOW, market="AU"))
+        merged = merge_budget_payloads(disk.to_payload(), local.to_payload())
+        events = merged.get("submissionEvents") or []
+        self.assertEqual(len(events), 2)
+        ids = {str(row.get("id")) for row in events}
+        self.assertEqual(ids, {"evt-a", "evt-b"})
+
+
 class RunJobLedgerFetchParityTests(unittest.TestCase):
     def test_run_job_one_submission_per_fetch_completed(self) -> None:
         from cardscanr_market_engine.job_runner import MarketPriceJobRunner

@@ -12,7 +12,7 @@ from .browser_lifecycle_policy import (
     PriorCardContext,
 )
 from .config import REPORTS_DIR
-from .marketplace_gate_url import is_ebay_marketplace_gate_url
+from .marketplace_gate_url import is_marketplace_gate_page
 from .navigation_runtime_context import (
     INTER_CARD_EXPECTED_TARGET_REJECTED,
     NavigationRuntimeContext,
@@ -182,7 +182,7 @@ def _marketplace_gate_blocks_progress(
     codes = {str(c).strip().upper() for c in (policy_reason_codes or []) if str(c).strip()}
     if codes & {c.upper() for c in MARKETPLACE_GATE_REASON_CODES}:
         return True
-    return is_ebay_marketplace_gate_url(page_url)
+    return is_marketplace_gate_page(page_url, title=page_title)
 
 
 def _is_stuck_tab_rejection(

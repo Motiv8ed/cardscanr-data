@@ -10,6 +10,8 @@ from typing import Any
 import re
 from urllib.parse import parse_qs, unquote, urlparse
 
+from .marketplace_gate_url import is_ebay_marketplace_gate_url, is_marketplace_gate_page
+
 RUNTIME_COLD_START = "COLD_START"
 RUNTIME_INTER_CARD = "INTER_CARD"
 
@@ -172,18 +174,8 @@ def is_ebay_marketplace_host(host: str) -> bool:
 
 
 def is_challenge_url(url: str, title: str = "") -> bool:
-    blob = f"{url} {title}".lower()
-    return any(
-        token in blob
-        for token in (
-            "splashui",
-            "/sorry",
-            "captcha",
-            "challenge",
-            "access denied",
-            "403",
-        )
-    )
+    """Gate pages (host/path) and exact whole-document titles; not card-name substrings."""
+    return is_marketplace_gate_page(url, title=title)
 
 
 def origin_class_for(url: str, *, cdp_type: str) -> str:

@@ -336,7 +336,12 @@ def _finish_set_sweep_failure(
     hard_stop: str | None = None
     ledger_path = (attempt_paths or {}).get("ledger") or BUDGET_LEDGER_PATH
     if marketplace_outcome:
-        hard_stop = handle_set_sweep_marketplace_outcome(marketplace_outcome, budget=budget, now=now)
+        hard_stop = handle_set_sweep_marketplace_outcome(
+            marketplace_outcome,
+            budget=budget,
+            now=now,
+            path=ledger_path,
+        )
         budget.persist(ledger_path)
     circuit_path = (attempt_paths or {}).get("circuit")
     record_set_sweep_circuit_failure(load_set_sweep_circuit(circuit_path), now=now, path=circuit_path)

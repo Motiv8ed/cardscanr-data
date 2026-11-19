@@ -370,6 +370,36 @@ class ContinuousSafetyBudget:
         self.hard_stop_source = hard_stop_source
         return self.last_hard_stop
 
+    def latch_hard_stop_locked(
+        self,
+        reason: str,
+        *,
+        path: Path | None = None,
+        hard_stop_source: str = HARD_STOP_SOURCE_WORKER,
+    ) -> str:
+        """Persist a latch under the ledger lock, bumping latchEpoch past disk (beats recovery overlap)."""
+        target = path or BUDGET_LEDGER_PATH
+        latched: list[str] = []
+
+        def _mutate(data: dict[str, Any]) -> dict[str, Any]:
+            disk_epoch = int(data.get("latchEpoch") or 0)
+            self.apply_payload(data)
+            self.latch_epoch = max(self.latch_epoch, disk_epoch) + 1
+            self.last_hard_stop = str(reason)
+            self.hard_stop_source = hard_stop_source
+            merged = merge_budget_payloads(data, self.to_payload())
+            merged["latchEpoch"] = self.latch_epoch
+            merged["lastHardStop"] = self.last_hard_stop
+            merged["hardStopSource"] = self.hard_stop_source
+            data.clear()
+            data.update(merged)
+            latched.append(self.last_hard_stop)
+            return data
+
+        mutate_json_state(target, _mutate, default={})
+        self.reload(target)
+        return latched[0] if latched else str(reason)
+
 
 def _merge_unique_datetimes(values: list[datetime]) -> list[datetime]:
     seen: set[str] = set()
