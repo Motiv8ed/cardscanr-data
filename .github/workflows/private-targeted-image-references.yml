@@ -1,0 +1,73 @@
+name: Targeted Image Reference Discovery (Private Only)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_targeted_image_references.py'
+      - 'tests/test_private_targeted_image_references.py'
+      - '.github/workflows/private-targeted-image-references.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test exact language/set identity and no artwork downloads
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_targeted_image_references.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_targeted_image_references.py -v
+  bounded-real-source:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read four exact mapped TCGdex sets, at most four full cards each
+        run: |
+          PYTHONPATH=. python tools/private_targeted_image_references.py \
+            --max-details-per-set 4 --output targeted-reference-review
+      - name: Fail closed on image rights, identity and request budget
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("targeted-reference-review/receipt.json").read_text())
+          assert r["classification"] == "REVIEW_ONLY_PROVIDER_IMAGE_REFERENCE_CANDIDATES"
+          assert r["total_target_gap_rows"] == 1051
+          assert r["requests"] <= r["max_requests"] <= 20
+          assert r["set_details"] > 0
+          assert r["brief_card_candidates"] > 0
+          assert r["image_binaries_downloaded"] == 0
+          assert r["production_writes"] == 0
+          assert not r["artwork_legal_rights_cleared"]
+          assert not r["canonical_identity_assigned"]
+          assert not r["public_release_allowed"]
+          print("Read-only TCGdex candidate counts:", json.dumps({
+            "set_details":r["set_details"],
+            "brief_cards":r["brief_card_candidates"],
+            "provider_image_url_references":r["provider_image_url_candidates"],
+            "full_card_details":r["full_card_details"],
+            "warnings":len(r["warnings"]),
+            "by_language":r["by_language"],
+          }, ensure_ascii=False, sort_keys=True))
+          PY
+      - name: Store seven-day private source records and receipts, no image binaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Priority-Four-Set-Image-Reference-Research
+          path: targeted-reference-review/
+          retention-days: 7
+          if-no-files-found: warn
