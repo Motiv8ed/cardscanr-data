@@ -300,6 +300,7 @@ class MarketPriceJobRunner:
         self._safety_budget: Any | None = None
         self._continuous_worker: bool = False
         self._enforce_safety_budget: bool = False
+        self._inter_card_marketplace_halt = False
 
     def _per_card_budget_active(self) -> bool:
         if getattr(self, "_ebay_probe_mode", False):
@@ -316,6 +317,14 @@ class MarketPriceJobRunner:
             return False, None
         blocked = self._safety_budget.reserve_live_submission(market=str(market or "AU").upper())
         return True, blocked
+
+    def _should_halt_job_batch(self, result: dict[str, Any]) -> bool:
+        if self._inter_card_marketplace_halt:
+            return True
+        outcome = str(result.get("ownedDailyOutcome") or result.get("outcomeClass") or "").strip()
+        if outcome == CHALLENGE_REQUIRED:
+            return True
+        return str(result.get("interCardMarketplaceLatch") or "") == CHALLENGE_REQUIRED
 
     def _assert_market_allowed_for_worker(self, price_key: MarketPriceKey) -> None:
         market = str(price_key.market_country or "").strip().upper()
@@ -1009,6 +1018,8 @@ class MarketPriceJobRunner:
             market_country = str(price_key.market_country or "AU").upper()
             reserved, blocked = self._reserve_per_card_submission(market_country)
             if blocked:
+                if hasattr(self.client, "cancel_job"):
+                    self.client.cancel_job(job_id=job.id, reason=f"budget_blocked:{blocked}")
                 return {
                     "jobId": job.id,
                     "priceKeyId": price_key.id,
@@ -1241,6 +1252,7 @@ class MarketPriceJobRunner:
             apply_context_to_environ(nav_ctx_ok)
             return completed_result
         except Exception as exc:
+            active_runtime_mode = locals().get("active_runtime_mode", "COLD_START")
             provider_diagnostics: dict[str, Any] | None = None
             if isinstance(exc, ProviderError):
                 provider_diagnostics = sanitize_provider_diagnostics(
@@ -1271,7 +1283,10 @@ class MarketPriceJobRunner:
                     now=now,
                 )
             self.logger(f"[market-engine] job failed job={job.id}: {exc}")
-            from .inter_card_cdp_recovery import observe_inter_card_no_request_outcome
+            from .inter_card_cdp_recovery import (
+                enrich_policy_diagnostics,
+                observe_inter_card_no_request_outcome,
+            )
             from .navigation_runtime_context import classify_pre_submit_runtime_error
 
             pre_submit_submitted = False
@@ -1279,7 +1294,7 @@ class MarketPriceJobRunner:
                 pre_submit_submitted = bool(provider_diagnostics.get("searchSubmissionStarted"))
             policy_diag: dict[str, Any] = {}
             if isinstance(exc, ProviderError) and isinstance(exc.diagnostics, dict):
-                policy_diag = exc.diagnostics
+                policy_diag = enrich_policy_diagnostics(exc.diagnostics)
             result_code = str(policy_diag.get("resultCode") or "")
             page_url = str(
                 policy_diag.get("urlBeforeSearch")
@@ -1306,6 +1321,9 @@ class MarketPriceJobRunner:
             if inter_latch:
                 provider_diagnostics = dict(provider_diagnostics or {})
                 provider_diagnostics["interCardMarketplaceLatch"] = inter_latch
+                if inter_latch == CHALLENGE_REQUIRED:
+                    self._inter_card_marketplace_halt = True
+                    owned_outcome = CHALLENGE_REQUIRED
                 if self._safety_budget is not None and inter_latch == CHALLENGE_REQUIRED:
                     from .continuous_safety import HARD_STOP_SOURCE_WORKER
 
@@ -1548,6 +1566,8 @@ class MarketPriceJobRunner:
                     result["errorType"] = type(exc).__name__
             if fail_job_error:
                 result["failJobError"] = fail_job_error
+            if inter_latch:
+                result["interCardMarketplaceLatch"] = inter_latch
             if owned_outcome == NO_PRICE_EVER_FOUND and (
                 result.get("x11SoldStateVerified")
                 or isinstance(result.get("currentJobCapture"), dict)
@@ -1578,16 +1598,34 @@ class MarketPriceJobRunner:
         provider_name = str(getattr(self.provider, "provider_name", "") or "").strip().lower()
         if provider_name != "ebay_browser" or len(jobs) <= 1:
             results: list[dict[str, Any]] = []
-            for job in jobs:
+            for index, job in enumerate(jobs):
                 # Already claimed before pause race — finish this card, then stop.
                 if results and gaming.should_block_new_jobs():
                     self.logger("[market-engine] gaming pause after card boundary; stopping claim batch")
+                    for rem in jobs[index:]:
+                        if hasattr(self.client, "cancel_job"):
+                            self.client.cancel_job(job_id=rem.id, reason="gaming_pause_batch_halt")
+                    break
+                if self._inter_card_marketplace_halt:
+                    self.logger(
+                        f"[market-engine] inter-card marketplace halt; "
+                        f"releasing remaining {len(jobs) - index} claimed jobs"
+                    )
+                    for rem in jobs[index:]:
+                        if hasattr(self.client, "cancel_job"):
+                            self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
                     break
                 gaming.mark_job_started(str(job.price_key_id))
                 try:
-                    results.append(self.run_job(job))
+                    result = self.run_job(job)
                 finally:
                     gaming.mark_job_finished()
+                results.append(result)
+                if self._should_halt_job_batch(result):
+                    for rem in jobs[index + 1 :]:
+                        if hasattr(self.client, "cancel_job"):
+                            self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
+                    break
             return results
 
         pacing = OwnedDailyPacingController()
@@ -1614,7 +1652,10 @@ class MarketPriceJobRunner:
             outcome = str(result.get("ownedDailyOutcome") or result.get("outcomeClass") or "").strip()
             pacing.observe_outcome(outcome, last_good_retained=bool(result.get("lastGoodRetained")))
             results.append(result)
-            if outcome == CHALLENGE_REQUIRED:
+            if self._should_halt_job_batch(result):
+                for rem in jobs[index + 1 :]:
+                    if hasattr(self.client, "cancel_job"):
+                        self.client.cancel_job(job_id=rem.id, reason="inter_card_marketplace_halt")
                 break
             if gaming.should_block_new_jobs():
                 self.logger("[market-engine] gaming pause after card; no further jobs this cycle")

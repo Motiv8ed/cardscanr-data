@@ -365,20 +365,9 @@ def cold_start_close_leftover_ebay_tabs(
         if ttype != "page" or not tid:
             continue
         host = hostname_of(url)
-        title = str(target.get("title") or "")
-        page_blob = f"{url} {title}".lower()
-        is_gate_page = any(
-            marker in page_blob
-            for marker in (
-                "splashui/challenge",
-                "challenge",
-                "captcha",
-                "/sorry",
-                "ebay sorry",
-                "signin.ebay",
-                "auth.ebay",
-            )
-        )
+        from .marketplace_gate_url import is_ebay_marketplace_gate_url
+
+        is_gate_page = is_ebay_marketplace_gate_url(url)
         is_ebay = (
             is_ebay_marketplace_host(host)
             or "signin.ebay" in url.lower()

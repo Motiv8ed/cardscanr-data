@@ -14,6 +14,7 @@ from .atomic_json_state import (
     read_json_object,
 )
 from .owned_daily_enablement import BUDGET_LEDGER_PATH
+from .owned_daily_outcomes import CHALLENGE_REQUIRED
 from .scheduler import _parse_positive_int, utc_iso, utc_now
 
 HARD_STOP_SOURCE_SET_SWEEP = "set_sweep"
@@ -157,6 +158,10 @@ class ContinuousSafetyBudget:
             if self.fail_closed:
                 blocked_reason.append(SAFETY_LEDGER_FAIL_CLOSED)
                 return data
+            latched = self.transient_hard_stop(current)
+            if latched:
+                blocked_reason.append(latched)
+                return data
             blocked = self.budget_exhausted(current)
             if blocked:
                 blocked_reason.append(blocked)
@@ -251,6 +256,10 @@ class ContinuousSafetyBudget:
             self.consecutive_transient = 0
             self.transients = []
             return
+        if self.last_hard_stop == CHALLENGE_REQUIRED:
+            self.consecutive_transient = 0
+            self.transients = []
+            return
         self.consecutive_transient = 0
         self.last_hard_stop = None
         self.hard_stop_source = None
@@ -317,7 +326,7 @@ def _merge_unique_market_submissions(
 
 
 def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
-    """Union submission history only; transient/latch fields follow the writer (local)."""
+    """Union submission history; latch fields are sticky (OR / max, never clear peer HARD_STOP)."""
     on_disk = ContinuousSafetyBudget()
     on_disk.apply_payload(disk)
     incoming = ContinuousSafetyBudget()
@@ -326,18 +335,14 @@ def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[s
     on_disk.market_submissions = _merge_unique_market_submissions(
         on_disk.market_submissions + incoming.market_submissions
     )[-400:]
-    on_disk.consecutive_transient = incoming.consecutive_transient
-    on_disk.transients = list(incoming.transients)[-200:]
-    on_disk.last_hard_stop = incoming.last_hard_stop
-    on_disk.hard_stop_source = incoming.hard_stop_source
+    on_disk.consecutive_transient = max(on_disk.consecutive_transient, incoming.consecutive_transient)
+    on_disk.transients = _merge_unique_datetimes(on_disk.transients + incoming.transients)[-200:]
     disk_latch = ContinuousSafetyBudget()
     disk_latch.apply_payload(disk)
-    if (
-        disk_latch.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP
-        and disk_latch.last_hard_stop
-        and incoming.last_hard_stop is None
-    ):
-        # A concurrent worker healthy-reset must not clear an active set-sweep latch.
+    if incoming.last_hard_stop:
+        on_disk.last_hard_stop = incoming.last_hard_stop
+        on_disk.hard_stop_source = incoming.hard_stop_source
+    elif disk_latch.last_hard_stop:
         on_disk.last_hard_stop = disk_latch.last_hard_stop
         on_disk.hard_stop_source = disk_latch.hard_stop_source
     on_disk.fail_closed = on_disk.fail_closed or incoming.fail_closed

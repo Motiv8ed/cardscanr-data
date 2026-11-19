@@ -185,17 +185,18 @@ class Data63ReQaRound4Tests(unittest.TestCase):
                 runner.run_job(job)
             self.assertEqual(budget.last_hard_stop, CHALLENGE_REQUIRED)
 
-    def test_merge_payload_keeps_healthy_reset(self) -> None:
+    def test_merge_payload_sticky_hard_stop_survives_peer_healthy_reset(self) -> None:
         now = datetime(2026, 11, 19, 8, 0, tzinfo=timezone.utc)
         disk = ContinuousSafetyBudget(max_consecutive_transient=3)
         for _ in range(3):
             disk.record_transient(now=now)
+        disk.latch_hard_stop(CHALLENGE_REQUIRED, hard_stop_source="worker")
         disk_payload = disk.to_payload()
         local = ContinuousSafetyBudget(max_consecutive_transient=3)
         local.record_healthy()
         merged = merge_budget_payloads(disk_payload, local.to_payload())
-        self.assertEqual(merged.get("consecutiveTransient"), 0)
-        self.assertIsNone(merged.get("lastHardStop"))
+        self.assertEqual(merged.get("lastHardStop"), CHALLENGE_REQUIRED)
+        self.assertGreaterEqual(int(merged.get("consecutiveTransient") or 0), 1)
 
     def test_two_process_reserve_never_exceeds_hourly_cap(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

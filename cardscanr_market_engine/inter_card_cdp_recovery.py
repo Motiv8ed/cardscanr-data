@@ -12,6 +12,7 @@ from .browser_lifecycle_policy import (
     PriorCardContext,
 )
 from .config import REPORTS_DIR
+from .marketplace_gate_url import is_ebay_marketplace_gate_url
 from .navigation_runtime_context import (
     INTER_CARD_EXPECTED_TARGET_REJECTED,
     NavigationRuntimeContext,
@@ -33,16 +34,26 @@ MARKETPLACE_GATE_REASON_CODES = frozenset(
     }
 )
 
-MARKETPLACE_GATE_URL_MARKERS = (
-    "splashui/challenge",
-    "challenge",
-    "captcha",
-    "ebay_sorry",
-    "/sorry",
-    "signin.ebay",
-    "signin",
-    "auth",
-)
+
+def enrich_policy_diagnostics(diagnostics: dict[str, Any] | None) -> dict[str, Any]:
+    """Flatten desktopNav.search policy fields for job_runner / inter-card observers."""
+    diag = dict(diagnostics or {})
+    for container_key in ("desktopNav",):
+        container = diag.get(container_key)
+        if not isinstance(container, dict):
+            continue
+        search = container.get("search")
+        if not isinstance(search, dict):
+            continue
+        for key in ("resultCode", "urlBeforeSearch", "titleBeforeSearch", "targetPolicy"):
+            if diag.get(key) in (None, "") and search.get(key) not in (None, ""):
+                diag[key] = search.get(key)
+    search = diag.get("search")
+    if isinstance(search, dict):
+        for key in ("resultCode", "urlBeforeSearch", "titleBeforeSearch", "targetPolicy"):
+            if diag.get(key) in (None, "") and search.get(key) not in (None, ""):
+                diag[key] = search.get(key)
+    return diag
 
 
 def extract_policy_reason_codes(
@@ -53,8 +64,12 @@ def extract_policy_reason_codes(
     codes: list[str] = []
     if result_code:
         codes.extend(part.strip() for part in str(result_code).split(",") if part.strip())
-    diag = diagnostics if isinstance(diagnostics, dict) else {}
+    diag = enrich_policy_diagnostics(diagnostics if isinstance(diagnostics, dict) else {})
     nested = diag.get("diagnostics") if isinstance(diag.get("diagnostics"), dict) else diag
+    for key in ("resultCode",):
+        rc = diag.get(key)
+        if rc:
+            codes.extend(part.strip() for part in str(rc).split(",") if part.strip())
     if isinstance(nested, dict):
         rc = nested.get("resultCode")
         if rc:
@@ -65,6 +80,12 @@ def extract_policy_reason_codes(
                 text = str(item or "").strip()
                 if text:
                     codes.append(text)
+    target_policy = diag.get("targetPolicy")
+    if isinstance(target_policy, dict):
+        for item in target_policy.get("reason_codes") or target_policy.get("reasonCodes") or []:
+            text = str(item or "").strip()
+            if text:
+                codes.append(text)
     return sorted(set(codes))
 
 
@@ -164,10 +185,7 @@ def _marketplace_gate_blocks_progress(
     blob = f"{runtime_error or ''} {raw_error or ''}".lower()
     if any(marker in blob for marker in ("inter_card_challenge_target", "challenge_required", "ebay_auth")):
         return True
-    page_blob = f"{page_url or ''} {page_title or ''}".lower()
-    if any(marker in page_blob for marker in MARKETPLACE_GATE_URL_MARKERS):
-        return True
-    return False
+    return is_ebay_marketplace_gate_url(page_url)
 
 
 def _is_stuck_tab_rejection(
