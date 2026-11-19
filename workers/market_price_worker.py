@@ -479,21 +479,64 @@ def run_worker_loop(
             or operation_mode == "PROBE"
             or str(gate_info.get("availabilityState") or "").upper() == "PROBE_REQUIRED"
         )
+        runner._safety_budget = budget  # noqa: SLF001
+        runner._continuous_worker = continuous  # noqa: SLF001
+        runner._enforce_safety_budget = enforce_budget  # noqa: SLF001
         cycle_max_jobs = min(max_jobs, 1) if getattr(runner, "_ebay_probe_mode", False) else max_jobs
-        if continuous and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser":
+        if (
+            continuous
+            and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
+            and worker_state not in {"PROBE_REQUIRED", "HARD_STOP"}
+            and not hard
+        ):
             try:
                 from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import try_set_sweep_worker_cycle
 
-                try_set_sweep_worker_cycle(
+                sweep_result = try_set_sweep_worker_cycle(
                     client=runner.client,
                     budget=budget,
                     logger=logger,
+                    worker_state=worker_state,
+                    availability_state=str(gate_info.get("availabilityState") or ""),
+                    hard_stop=str(hard) if hard else None,
                 )
+                stop_reason = sweep_result.hard_stop_reason if sweep_result is not None else None
+                if stop_reason:
+                    write_owned_daily_flag(False)
+                    write_continuous_status(
+                        {
+                            "enabled": False,
+                            "workerState": "HARD_STOP",
+                            "lastHardStopReason": stop_reason,
+                            "consecutiveTransientFailures": budget.consecutive_transient,
+                        }
+                    )
+                    budget.reload()
+                    budget.persist()
+                    logger(
+                        "[market-engine] "
+                        f"cycle={cycle} status=HARD_STOP reason={stop_reason} source=set_sweep"
+                    )
+                    _emit_gated_heartbeat(
+                        runner,
+                        config,
+                        cycle=cycle,
+                        started_at=started_at,
+                        state="hard_stop",
+                        reason=str(stop_reason),
+                        mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
+                        logger=logger,
+                    )
+                    if args.once:
+                        return 2
+                    sleep_func(max(poll_seconds, 60))
+                    continue
             except Exception as sweep_exc:
                 logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
         try:
             # eBay-sold freshness (not reference TTL) is enforced in MarketPriceJobRunner.run_job.
             results = runner.run_once(max_jobs=cycle_max_jobs)
+            budget.reload()
         except Exception as exc:
             if not is_transient_worker_error(exc):
                 raise
@@ -544,7 +587,7 @@ def run_worker_loop(
                     last_transient = utc_iso()
                     # No-op (no extra history) when already HARD_STOPPED; still
                     # returns the latched reason.
-                    stop_reason = budget.record_transient()
+                    stop_reason = budget.record_transient(hard_stop_source="worker")
                     budget.persist()
                     if stop_reason:
                         write_owned_daily_flag(False)
@@ -568,9 +611,13 @@ def run_worker_loop(
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-                    consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"
-                    if consumed:
-                        budget.record_submission()
+                    if (continuous or enforce_budget) and not row.get("liveSubmissionReserved"):
+                        consumed = bool(row.get("searchSubmissionStarted")) or str(
+                            row.get("status") or ""
+                        ) == "completed"
+                        if consumed:
+                            market = str(row.get("marketCountry") or "AU").upper()
+                            budget.record_submission(market=market)
                     budget.persist()
         summary = build_cycle_summary(
             config=config,

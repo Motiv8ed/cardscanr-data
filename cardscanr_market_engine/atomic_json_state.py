@@ -118,7 +118,10 @@ def atomic_write_json(path: Path, payload: dict[str, Any], *, indent: int = 2) -
     On failure, removes only the tempfile created by this call — never glob-cleans
     peer writers' temps. Windows sharing denials get bounded local retry then fail closed.
     """
+    from .runtime_write_guard import assert_safe_runtime_json_write
+
     path = Path(path)
+    assert_safe_runtime_json_write(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload, indent=indent, sort_keys=True) + "\n"
     fd, tmp_name = tempfile.mkstemp(

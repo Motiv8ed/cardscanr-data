@@ -439,7 +439,7 @@ def recover_au() -> dict[str, Any]:
     if before.state == "HEALTHY":
         # Do not COLD_START/restart Chrome — other markets may have a live INTER_CARD tab.
         budget = ContinuousSafetyBudget.from_env()
-        budget.record_healthy()
+        budget.record_operator_recovery()
         budget.persist()
         write_owned_daily_flag(True)
         apply_continuous_multi_region_env(markets="AU")
@@ -461,7 +461,7 @@ def recover_au() -> dict[str, Any]:
     if before.state == "HEALTHY":
         # Clear prior consecutive-transient hard-stop so continuous can resume.
         budget = ContinuousSafetyBudget.from_env()
-        budget.record_healthy()
+        budget.record_operator_recovery()
         budget.persist()
         write_owned_daily_flag(True)
         apply_continuous_multi_region_env(markets="AU")
@@ -520,7 +520,7 @@ def recover_au() -> dict[str, Any]:
         }
 
     budget = ContinuousSafetyBudget.from_env()
-    budget.record_healthy()
+    budget.record_operator_recovery()
     budget.persist()
     write_owned_daily_flag(True)
     apply_continuous_multi_region_env(markets="AU")

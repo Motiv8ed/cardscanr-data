@@ -165,6 +165,7 @@ class SetSweepWorkerHookTests(unittest.TestCase):
     def test_worker_hook_records_audit_with_mock_fetch(self) -> None:
         plan_dir = Path(self._tmp.name)
         plan_path = plan_dir / "plan.json"
+        ledger_path = plan_dir / "ledger.json"
         with (
             mock.patch.dict(
                 os.environ,
@@ -185,6 +186,10 @@ class SetSweepWorkerHookTests(unittest.TestCase):
                 "cardscanr_market_engine.ebay_scale.set_sweep_worker_hook.SET_SWEEP_LAST_RUN_PATH",
                 plan_dir / "last.json",
             ),
+            mock.patch(
+                "cardscanr_market_engine.continuous_safety.BUDGET_LEDGER_PATH",
+                ledger_path,
+            ),
         ):
             record_set_sweep_plan_from_target(
                 target={"set_id": "sv3", "set_name": "Obsidian Flames", "market_country": "AU"},
@@ -196,6 +201,11 @@ class SetSweepWorkerHookTests(unittest.TestCase):
                 client=FakeOwnedClient(self._targets()),
                 budget=budget,
                 fetch_html=lambda _q, _c, _n: html,
+                attempt_paths={
+                    "ledger": ledger_path,
+                    "circuit": plan_dir / "circuit.json",
+                    "attempts": plan_dir / "attempts.jsonl",
+                },
             )
             self.assertIsNotNone(result)
             assert result is not None

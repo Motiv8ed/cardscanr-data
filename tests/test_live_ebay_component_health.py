@@ -6,7 +6,13 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from cardscanr_market_engine.live_ebay_component_health import classify_live_ebay_worker_component_health
+from unittest import mock
+
+from cardscanr_market_engine.live_ebay_component_health import (
+    SCHEDULED_REPORT_MAX_AGE_MINUTES,
+    classify_live_ebay_worker_component_health,
+    scheduled_report_allows_ledger_fallback,
+)
 from cardscanr_market_engine.pricing_worker_runtime_gate import RUNTIME_EVIDENCE_STALE_MINUTES
 
 
@@ -234,6 +240,46 @@ class LiveEbayComponentHealthTests(unittest.TestCase):
                 status, ledger = _fresh_runtime_pair(self.tmp, now=self.now, worker_state=worker_state)
                 row = self._classify(status_path=status, ledger_path=ledger)
                 self.assertEqual(row.status, "healthy", msg=worker_state)
+
+    def test_stale_latest_report_does_not_synthesize_fresh_ledger(self) -> None:
+        status, ledger = _fresh_runtime_pair(self.tmp, now=self.now)
+        stale_report = {
+            "workerState": "SELECTING",
+            "startedAtUtc": _utc_iso(self.now - timedelta(minutes=SCHEDULED_REPORT_MAX_AGE_MINUTES + 15)),
+        }
+        with (
+            mock.patch(
+                "cardscanr_market_engine.live_ebay_component_health.owned_daily_full_enable",
+                return_value=False,
+            ),
+            mock.patch(
+                "cardscanr_market_engine.live_ebay_component_health._read_json",
+                side_effect=lambda path: stale_report if "latest" in str(path) else {},
+            ),
+        ):
+            row = self._classify(status_path=status, ledger_path=ledger)
+        self.assertEqual(row.status, "unknown_fail_closed")
+
+    def test_fresh_report_with_hard_stop_does_not_synthesize_ledger(self) -> None:
+        status, ledger = _fresh_runtime_pair(self.tmp, now=self.now)
+        report = {
+            "workerState": "HARD_STOP",
+            "startedAtUtc": _utc_iso(self.now),
+            "lastHardStopReason": "AU_THREE_TRANSIENT",
+        }
+        self.assertFalse(scheduled_report_allows_ledger_fallback(report, now=self.now))
+        with (
+            mock.patch(
+                "cardscanr_market_engine.live_ebay_component_health.owned_daily_full_enable",
+                return_value=False,
+            ),
+            mock.patch(
+                "cardscanr_market_engine.live_ebay_component_health._read_json",
+                side_effect=lambda path: report if "latest" in str(path) else {},
+            ),
+        ):
+            row = self._classify(status_path=status, ledger_path=ledger)
+        self.assertEqual(row.status, "unknown_fail_closed")
 
 
 if __name__ == "__main__":

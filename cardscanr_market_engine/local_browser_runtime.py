@@ -365,11 +365,17 @@ def cold_start_close_leftover_ebay_tabs(
         if ttype != "page" or not tid:
             continue
         host = hostname_of(url)
+        from .marketplace_gate_url import is_ebay_marketplace_gate_url
+
+        is_gate_page = is_ebay_marketplace_gate_url(url)
         is_ebay = (
             is_ebay_marketplace_host(host)
             or "signin.ebay" in url.lower()
             or "ebay." in url.lower()
         )
+        if is_ebay and is_gate_page:
+            kept_page_id = kept_page_id or tid
+            continue
         if is_ebay:
             remaining = [i for i in page_ids_alive if i != tid]
             if not remaining:
