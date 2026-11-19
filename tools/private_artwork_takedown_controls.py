@@ -42,7 +42,7 @@ def validate_candidate(row: dict) -> None:
     cid = row.get(CANONICAL_FIELD)
     if not isinstance(cid, str) or not (1 <= len(cid) <= 256):
         raise ValueError("invalid_canonical_printing_id")
-    if row.get("identity_match") not in ("exact_unique", None) and row.get("status") != "exact_unique":
+    if row.get("identity_match") != "exact_unique" and row.get("status") != "exact_unique":
         raise ValueError("unverified_printing_identity")
     base = row.get("source_image_base_url")
     if not _safe_image_base(base):
