@@ -48,7 +48,13 @@ jobs:
           assert d['pack_languages_sha256_verified']==3
           assert d['source_set_count']==6
           assert d['target_pack_missing_image_reference_rows']==1439
-          assert d['source_card_count']>0
+          assert d['source_card_count']==1439
+          assert d['exact_unique_printing_matches']==1439
+          assert d['matching_status_counts']=={"exact_unique":1439}
+          assert d['exact_matches_missing_image_with_source_reference']==728
+          assert sum(s['exact_matched_missing_image_url_with_source_candidate'] for s in d['set_evidence'])==728
+          assert all(s['status_counts']=={'exact_unique':s['source_cards_evaluated']} for s in d['set_evidence'])
+          assert all(s['expected_pack_missing_image_ref_rows']==s['actual_pack_missing_image_ref_rows'] for s in d['set_evidence'])
           assert d['provider_set_requests']==6
           assert d['image_bodies_downloaded']==0
           assert d['production_writes']==0
