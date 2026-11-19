@@ -190,5 +190,39 @@ class ContinuousSafetyBudget:
         return reason
 
 
+def result_consumes_submission_cap(row: dict[str, Any]) -> bool:
+    """True when a job performed a counted live eBay navigation (20/h, 60/24h ledger)."""
+    if not isinstance(row, dict):
+        return False
+    if row.get("searchSubmissionStarted") or row.get("liveEbayPageNavigation"):
+        return True
+    diag = row.get("providerDiagnostics")
+    if not isinstance(diag, dict):
+        return False
+    if diag.get("searchSubmissionStarted") or diag.get("liveEbayPageNavigation"):
+        return True
+    nested = diag.get("diagnostics")
+    if isinstance(nested, dict):
+        if nested.get("searchSubmissionStarted") or nested.get("liveEbayPageNavigation"):
+            return True
+    search = diag.get("search")
+    if isinstance(search, dict):
+        if search.get("searchSubmissionStarted"):
+            return True
+        sdiag = search.get("diagnostics")
+        if isinstance(sdiag, dict) and (sdiag.get("interCardColdFallback") or {}).get("attempted"):
+            return True
+    desktop = diag.get("desktopNav")
+    if not isinstance(desktop, dict) and isinstance(nested, dict):
+        desktop = nested.get("desktopNav")
+    if isinstance(desktop, dict):
+        search_blob = desktop.get("search") if isinstance(desktop.get("search"), dict) else {}
+        if search_blob.get("searchSubmissionStarted") or desktop.get("searchSubmissionStarted"):
+            return True
+        if (desktop.get("interCardColdFallback") or {}).get("attempted"):
+            return True
+    return False
+
+
 # Imported by tests that monkeypatch env after import.
 os.environ.setdefault("MAX_LIVE_SUBMISSIONS_PER_HOUR", "20")

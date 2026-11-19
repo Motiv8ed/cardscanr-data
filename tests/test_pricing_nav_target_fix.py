@@ -19,10 +19,12 @@ from cardscanr_market_engine.browser_lifecycle_policy import (
     REASON_UNKNOWN_EBAY,
     RUNTIME_INTER_CARD,
     PriorCardContext,
+    correlates_to_prior,
     ebay_au_sch_sold_query_contract_ok,
     evaluate_runtime_targets,
     url_matches_job_query,
 )
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, result_consumes_submission_cap
 from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification
 from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
@@ -139,11 +141,51 @@ class StaleInterCardTargetPolicyTests(unittest.TestCase):
         self.assertFalse(r.ok)
         self.assertIn("INTER_CARD_MULTIPLE_TOP_LEVEL_EBAY_TARGETS", r.reason_codes)
 
-    def test_fresh_healthy_prior_matching_tab_without_stale_handoff_rejected(self) -> None:
+    def test_production_non_www_cdp_url_fixture(self) -> None:
+        fx = json.loads((FIX / "ebay_au_non_www_sold_tab.json").read_text(encoding="utf-8"))
+        prior = PriorCardContext.from_dict(fx["prior"])
+        assert prior is not None
+        r = evaluate_runtime_targets(
+            fx["rawTargets"],
+            mode=RUNTIME_INTER_CARD,
+            prior=prior,
+            current_query=str(fx["currentQuery"]),
+            prior_handoff_stale=True,
+        )
+        self.assertTrue(r.ok, r.reason_codes)
+
+    def test_www_host_mismatch_still_correlates_to_prior(self) -> None:
+        prior = _stale_charizard_prior()
+        bare = (prior.final_url or "").replace("://www.", "://")
+        targets = [{"id": "TAB1", "type": "page", "url": bare, "title": "Charizard"}]
+        self.assertTrue(correlates_to_prior(targets[0], prior))
+        r = evaluate_runtime_targets(
+            targets,
+            mode=RUNTIME_INTER_CARD,
+            prior=prior,
+            current_query=DRIFLOON_QUERY,
+            prior_handoff_stale=True,
+        )
+        self.assertTrue(r.ok, r.reason_codes)
+
+    def test_fresh_handoff_continuation_when_tab_matches_current_query(self) -> None:
         prior = _stale_charizard_prior()
         targets = json.loads((FIX / "drifloon_continuation_targets.json").read_text(encoding="utf-8"))[
             "rawTargets"
         ]
+        r = evaluate_runtime_targets(
+            targets,
+            mode=RUNTIME_INTER_CARD,
+            prior=prior,
+            current_query=DRIFLOON_QUERY,
+            prior_handoff_stale=False,
+        )
+        self.assertTrue(r.ok, r.reason_codes)
+
+    def test_fresh_healthy_prior_wrong_tab_still_rejected(self) -> None:
+        prior = _stale_charizard_prior()
+        wrong_url = "https://www.ebay.com.au/sch/i.html?_nkw=Electivire+43+breakpoint+Pokemon&LH_Sold=1"
+        targets = [{"id": "TAB1", "type": "page", "url": wrong_url, "title": "Electivire"}]
         r = evaluate_runtime_targets(
             targets,
             mode=RUNTIME_INTER_CARD,
@@ -738,6 +780,103 @@ class EbayBrowserReferenceFreshnessTests(unittest.TestCase):
         """Safety budget env parsing is unchanged — freshness only touches early run_job gate."""
         budget = ContinuousSafetyBudget.from_env()
         self.assertIsInstance(budget, ContinuousSafetyBudget)
+
+class InterCardColdFallbackTests(unittest.TestCase):
+    def test_target_reject_retries_cold_start(self) -> None:
+        from unittest import mock
+
+        from cardscanr_market_engine.navigation_runtime_context import (
+            NavigationRuntimeContext,
+            apply_context_to_environ,
+        )
+        from cardscanr_market_engine.providers.linux_x11_ebay_nav import navigate_query_to_sold
+
+        run_id = mint_nav_handoff_writer_run_id()
+        ctx = NavigationRuntimeContext(
+            runtime_mode=RUNTIME_INTER_CARD,
+            expected_prior=_stale_charizard_prior(),
+        )
+        apply_context_to_environ(ctx)
+        calls: list[dict] = []
+
+        def _fake_search(**kwargs):
+            calls.append({"go_home": kwargs.get("go_home"), "mode": kwargs["ctx"].runtime_mode})
+            if len(calls) == 1:
+                return {
+                    "ok": False,
+                    "error": "INTER_CARD_EXPECTED_TARGET_REJECTED",
+                    "reason": "target_policy_rejected",
+                    "diagnostics": {"targetPolicy": {"mode": "INTER_CARD", "ok": False}},
+                }
+            return {
+                "ok": True,
+                "submitted": True,
+                "queryVisibleConfirmed": True,
+                "url": "https://www.ebay.com.au/sch/i.html?_nkw=Drifloon+89+scarlet+violet+Pokemon&LH_Sold=1",
+            }
+
+        with mock.patch(
+            "cardscanr_market_engine.providers.linux_x11_ebay_nav._run_linux_search",
+            side_effect=lambda **kw: _fake_search(**kw),
+        ):
+            with mock.patch(
+                "cardscanr_market_engine.providers.linux_x11_ebay_nav._wsl_python",
+                return_value={"SOLD_STATE_VERIFIED": True, "soldClickSuccess": True, "url": "x"},
+            ):
+                nav = navigate_query_to_sold(DRIFLOON_QUERY, reset_homepage=False)
+        self.assertEqual(len(calls), 2)
+        self.assertFalse(calls[0]["go_home"])
+        self.assertEqual(calls[1]["mode"], "COLD_START")
+        self.assertTrue(calls[1]["go_home"])
+        self.assertTrue(nav.search_success or nav.ok)
+
+
+class SubmissionCapAccountingTests(unittest.TestCase):
+    def test_failed_job_with_search_submission_counts(self) -> None:
+        row = {
+            "status": "failed",
+            "searchSubmissionStarted": True,
+            "marketCountry": "AU",
+        }
+        self.assertTrue(result_consumes_submission_cap(row))
+
+    def test_inter_card_policy_reject_without_submit_does_not_count(self) -> None:
+        row = {
+            "status": "failed",
+            "error": "INTER_CARD_EXPECTED_TARGET_REJECTED",
+            "providerDiagnostics": {"searchSubmissionStarted": False},
+        }
+        self.assertFalse(result_consumes_submission_cap(row))
+
+    def test_cold_fallback_page_load_counts(self) -> None:
+        row = {
+            "status": "failed",
+            "providerDiagnostics": {
+                "search": {
+                    "diagnostics": {"interCardColdFallback": {"attempted": True, "fallbackOk": False}},
+                },
+            },
+        }
+        self.assertTrue(result_consumes_submission_cap(row))
+
+    def test_hourly_cap_boundary(self) -> None:
+        budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+        stamp = NOW
+        for i in range(19):
+            budget.record_submission(stamp + timedelta(minutes=i))
+        self.assertIsNone(budget.budget_exhausted(stamp + timedelta(minutes=18)))
+        budget.record_submission(stamp + timedelta(minutes=19))
+        self.assertEqual(budget.budget_exhausted(stamp + timedelta(minutes=19)), "HOURLY_SUBMISSION_CEILING")
+
+    def test_daily_cap_boundary_at_sixty(self) -> None:
+        budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=60)
+        stamp = NOW
+        for i in range(59):
+            budget.record_submission(stamp + timedelta(minutes=i * 5))
+        self.assertIsNone(budget.budget_exhausted(stamp + timedelta(hours=12)))
+        budget.record_submission(stamp + timedelta(hours=12))
+        self.assertEqual(budget.budget_exhausted(stamp + timedelta(hours=12)), "DAILY_SUBMISSION_CEILING")
+
 
 class WriterRunPropagationTests(unittest.TestCase):
     """Writer run id must cross the explicit-export (WSL) boundary for same-run handoffs."""

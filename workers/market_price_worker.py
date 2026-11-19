@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 from cardscanr_market_engine.canary_control_plane import parse_operation_mode
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.continuous_au_status import append_daily_metrics, write_continuous_status
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, result_consumes_submission_cap
 from cardscanr_market_engine.continuous_worker_policy import (
     HARD_STOP_OUTCOMES,
     classify_continuous_gate,
@@ -568,10 +568,12 @@ def run_worker_loop(
                         budget.record_healthy()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
-                    consumed = bool(row.get("searchSubmissionStarted")) or str(row.get("status") or "") == "completed"
-                    if consumed:
-                        budget.record_submission()
-                    budget.persist()
+            if (continuous or enforce_budget) and results and not getattr(runner, "_ebay_probe_mode", False):
+                for row in results:
+                    if result_consumes_submission_cap(row):
+                        market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
+                        budget.record_submission(market=market)
+                budget.persist()
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,
