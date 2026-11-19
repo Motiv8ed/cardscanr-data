@@ -61,6 +61,9 @@ class _ProbeRunner:
 @contextlib.contextmanager
 def _worker_isolated(*, budget: ContinuousSafetyBudget, ledger: Path):
     with contextlib.ExitStack() as stack:
+        stack.enter_context(
+            mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW)
+        )
         stack.enter_context(mock.patch.object(continuous_safety, "BUDGET_LEDGER_PATH", ledger))
         stack.enter_context(
             mock.patch.object(worker.ContinuousSafetyBudget, "from_env", return_value=budget)
@@ -94,8 +97,9 @@ class WorkerLoopCapTests(unittest.TestCase):
             ledger = root / "ledger.json"
             budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
             anchor = NOW - timedelta(minutes=30)
-            for i in range(20):
-                budget.record_submission(anchor + timedelta(seconds=30 * i), market="AU", path=ledger)
+            with mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW):
+                for i in range(20):
+                    budget.record_submission(anchor + timedelta(seconds=30 * i), market="AU", path=ledger)
             budget.load(ledger)
             runner = _ProbeRunner()
             with _worker_isolated(budget=budget, ledger=ledger):
