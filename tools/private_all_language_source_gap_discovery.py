@@ -119,7 +119,11 @@ def select_batches(index: dict[str,list[dict]], local_keys: set[tuple[str,str]],
                 "possible_cross_provider_alias" if key in suffix
                 else "provider_set_id_not_in_pack")
             absent.append(candidate)
-        absent.sort(key=lambda r:r["index_position"],reverse=True)
+        # Prefer genuinely unrepresented set codes over likely cross-provider
+        # aliases, then newest source index entries within each group.
+        absent.sort(key=lambda r:(
+            not r["cross_provider_set_code_collision"], r["index_position"]
+        ),reverse=True)
         selected.extend(absent)
         counts[lang]={
             "source_index_sets":len(rows),
