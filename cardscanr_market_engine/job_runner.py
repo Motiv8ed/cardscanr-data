@@ -1018,12 +1018,15 @@ class MarketPriceJobRunner:
             market_country = str(price_key.market_country or "AU").upper()
             reserved, blocked = self._reserve_per_card_submission(market_country)
             if blocked:
-                if hasattr(self.client, "cancel_job"):
+                release = getattr(self.client, "release_refresh_job", None)
+                if callable(release):
+                    release(job_id=job.id, reason=f"budget_blocked:{blocked}")
+                elif hasattr(self.client, "cancel_job"):
                     self.client.cancel_job(job_id=job.id, reason=f"budget_blocked:{blocked}")
                 return {
                     "jobId": job.id,
                     "priceKeyId": price_key.id,
-                    "status": "failed",
+                    "status": "deferred",
                     "ownedDailyOutcome": blocked,
                     "outcomeClass": blocked,
                     "marketCountry": market_country,

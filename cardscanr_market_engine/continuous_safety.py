@@ -19,6 +19,7 @@ from .scheduler import _parse_positive_int, utc_iso, utc_now
 
 HARD_STOP_SOURCE_SET_SWEEP = "set_sweep"
 HARD_STOP_SOURCE_WORKER = "worker"
+HARD_STOP_SOURCE_OPERATOR = "operator_recovery"
 SAFETY_LEDGER_FAIL_CLOSED = "SAFETY_LEDGER_FAIL_CLOSED"
 
 
@@ -46,6 +47,8 @@ class ContinuousSafetyBudget:
     market_submissions: list[tuple[datetime, str]] = field(default_factory=list)
     fail_closed: bool = False
     ledger_initialized: bool = False
+    transient_epoch: int = 0
+    latch_epoch: int = 0
 
     @classmethod
     def from_env(cls, *, path: Path | None = None) -> "ContinuousSafetyBudget":
@@ -76,6 +79,8 @@ class ContinuousSafetyBudget:
             ],
             "updatedAtUtc": utc_iso(),
             "ledgerInitialized": True,
+            "transientEpoch": self.transient_epoch,
+            "latchEpoch": self.latch_epoch,
         }
         return payload
 
@@ -94,6 +99,8 @@ class ContinuousSafetyBudget:
                 if parsed is not None:
                     tagged.append((parsed, market))
         self.market_submissions = tagged
+        self.transient_epoch = int(data.get("transientEpoch") or 0)
+        self.latch_epoch = int(data.get("latchEpoch") or 0)
         self._reconcile_consecutive_with_history()
 
     def load(self, path: Path) -> None:
@@ -252,18 +259,25 @@ class ContinuousSafetyBudget:
 
     def record_healthy(self) -> None:
         """Owner-clear / healthy reset; never clears a set-sweep HARD_STOP latch."""
+        self.consecutive_transient = 0
+        self.transients = []
+        self.transient_epoch += 1
         if self.hard_stop_source == HARD_STOP_SOURCE_SET_SWEEP and self.last_hard_stop:
-            self.consecutive_transient = 0
-            self.transients = []
             return
         if self.last_hard_stop == CHALLENGE_REQUIRED:
-            self.consecutive_transient = 0
-            self.transients = []
             return
+        if self.last_hard_stop:
+            self.last_hard_stop = None
+            self.hard_stop_source = None
+
+    def record_operator_recovery(self) -> None:
+        """Explicit operator recovery: clear latch and transient history (recover_au, etc.)."""
         self.consecutive_transient = 0
+        self.transients = []
         self.last_hard_stop = None
         self.hard_stop_source = None
-        self.transients = []
+        self.transient_epoch += 1
+        self.latch_epoch += 1
 
     def record_transient(
         self,
@@ -326,7 +340,7 @@ def _merge_unique_market_submissions(
 
 
 def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
-    """Union submission history; latch fields are sticky (OR / max, never clear peer HARD_STOP)."""
+    """Union submissions; transient/latch epochs prevent stale writers from undoing recovery."""
     on_disk = ContinuousSafetyBudget()
     on_disk.apply_payload(disk)
     incoming = ContinuousSafetyBudget()
@@ -335,16 +349,31 @@ def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[s
     on_disk.market_submissions = _merge_unique_market_submissions(
         on_disk.market_submissions + incoming.market_submissions
     )[-400:]
-    on_disk.consecutive_transient = max(on_disk.consecutive_transient, incoming.consecutive_transient)
-    on_disk.transients = _merge_unique_datetimes(on_disk.transients + incoming.transients)[-200:]
-    disk_latch = ContinuousSafetyBudget()
-    disk_latch.apply_payload(disk)
-    if incoming.last_hard_stop:
+
+    disk_te = int(disk.get("transientEpoch") or 0)
+    local_te = int(local.get("transientEpoch") or 0)
+    if local_te > disk_te:
+        on_disk.consecutive_transient = incoming.consecutive_transient
+        on_disk.transients = list(incoming.transients)[-200:]
+    elif disk_te > local_te:
+        pass
+    else:
+        on_disk.consecutive_transient = max(on_disk.consecutive_transient, incoming.consecutive_transient)
+        on_disk.transients = _merge_unique_datetimes(on_disk.transients + incoming.transients)[-200:]
+
+    disk_le = int(disk.get("latchEpoch") or 0)
+    local_le = int(local.get("latchEpoch") or 0)
+    on_disk.transient_epoch = max(disk_te, local_te, on_disk.transient_epoch, incoming.transient_epoch)
+    on_disk.latch_epoch = max(disk_le, local_le, on_disk.latch_epoch, incoming.latch_epoch)
+    if local_le > disk_le:
         on_disk.last_hard_stop = incoming.last_hard_stop
         on_disk.hard_stop_source = incoming.hard_stop_source
-    elif disk_latch.last_hard_stop:
-        on_disk.last_hard_stop = disk_latch.last_hard_stop
-        on_disk.hard_stop_source = disk_latch.hard_stop_source
+    elif disk_le > local_le:
+        pass
+    elif incoming.last_hard_stop or on_disk.last_hard_stop:
+        if incoming.last_hard_stop:
+            on_disk.last_hard_stop = incoming.last_hard_stop
+            on_disk.hard_stop_source = incoming.hard_stop_source
     on_disk.fail_closed = on_disk.fail_closed or incoming.fail_closed
     on_disk.ledger_initialized = (
         on_disk.ledger_initialized or incoming.ledger_initialized or bool(on_disk.submissions)

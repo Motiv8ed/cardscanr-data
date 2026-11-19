@@ -18,13 +18,15 @@ def is_ebay_marketplace_gate_url(url: str | None) -> bool:
         return True
     if "signin.ebay" in host:
         return True
-    if "/splashui/" in path and "challenge" in path:
+    if "/splashui/" in path and ("challenge" in path or "captcha" in path):
         return True
     if path.startswith("/challenge"):
         return True
     if "captcha.ebay." in host:
         return True
     if path == "/sorry" or path.endswith("/sorry"):
+        return True
+    if path == "/sorry.html" or path.endswith("/sorry.html"):
         return True
     if "/srv/survey" in path:
         return True

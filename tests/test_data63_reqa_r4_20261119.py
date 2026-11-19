@@ -196,7 +196,7 @@ class Data63ReQaRound4Tests(unittest.TestCase):
         local.record_healthy()
         merged = merge_budget_payloads(disk_payload, local.to_payload())
         self.assertEqual(merged.get("lastHardStop"), CHALLENGE_REQUIRED)
-        self.assertGreaterEqual(int(merged.get("consecutiveTransient") or 0), 1)
+        self.assertEqual(int(merged.get("consecutiveTransient") or 0), 0)
 
     def test_two_process_reserve_never_exceeds_hourly_cap(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

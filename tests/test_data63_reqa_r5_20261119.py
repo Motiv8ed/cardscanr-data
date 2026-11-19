@@ -215,7 +215,11 @@ class Data63ReQaRound5Tests(unittest.TestCase):
                 with fetch as mocked_fetch:
                     result = runner.run_job(job)
                 mocked_fetch.assert_not_called()
-            runner.client.cancel_job.assert_called()
+            release = getattr(runner.client, "release_refresh_job", None)
+            if release is not None:
+                release.assert_called()
+            else:
+                runner.client.cancel_job.assert_called()
             self.assertTrue(result.get("budgetBlocked"))
 
     def test_run_job_respects_latched_hard_stop_without_fetch(self) -> None:
@@ -246,7 +250,10 @@ class Data63ReQaRound5Tests(unittest.TestCase):
                     result = runner.run_job(job)
                 mocked_fetch.assert_not_called()
             self.assertTrue(result.get("budgetBlocked"))
-            runner.client.cancel_job.assert_called()
+            if getattr(runner.client, "release_refresh_job", None) is not None:
+                runner.client.release_refresh_job.assert_called()
+            else:
+                runner.client.cancel_job.assert_called()
 
     def test_run_job_missing_ledger_fail_closed_via_run_job(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

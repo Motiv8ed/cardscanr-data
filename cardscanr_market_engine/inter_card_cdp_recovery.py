@@ -182,9 +182,6 @@ def _marketplace_gate_blocks_progress(
     codes = {str(c).strip().upper() for c in (policy_reason_codes or []) if str(c).strip()}
     if codes & {c.upper() for c in MARKETPLACE_GATE_REASON_CODES}:
         return True
-    blob = f"{runtime_error or ''} {raw_error or ''}".lower()
-    if any(marker in blob for marker in ("inter_card_challenge_target", "challenge_required", "ebay_auth")):
-        return True
     return is_ebay_marketplace_gate_url(page_url)
 
 
