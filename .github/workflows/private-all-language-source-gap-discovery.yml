@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       batch_index:
-        description: "Zero-based batch: 0..12 (40 source sets each, ordered JA/ZH-TW/KO/EN/TH/ID/ZH-CN)"
+        description: "Zero-based batch: 0..20 (40 source sets each, ordered JA/ZH-TW/KO/EN/TH/ID/ZH-CN)"
         required: true
         default: "0"
         type: string
@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           [[ "$BATCH_INDEX" =~ ^(0|[1-9][0-9]?)$ ]]
-          test "$BATCH_INDEX" -le 12
+          test "$BATCH_INDEX" -le 20
       - name: Verify 7 immutable language packs and query up to 40 unmatched source sets
         shell: bash
         run: |
@@ -68,6 +68,12 @@ jobs:
           assert doc["production_writes"]==0 and not doc["customer_data_read"]
           assert doc["image_binaries_downloaded"]==0
           assert not doc["safe_for_public_use"] and not doc["rights_granted"]
+          assert all(c["status"]=="quarantined_conflicting_provider_set_id"
+                     and c["occurrences"]>=2
+                     for c in doc["quarantined_provider_set_id_conflicts"])
+          assert (doc["possible_cross_provider_alias_codes"] +
+                  doc["source_set_codes_without_any_pack_suffix_match"] ==
+                  doc["total_source_unmatched_set_ids"])
           for filename in ("unmatched_source_sets.jsonl","unmatched_source_card_briefs.jsonl"):
             entry=doc[filename]
             raw=(root/filename).read_bytes()
