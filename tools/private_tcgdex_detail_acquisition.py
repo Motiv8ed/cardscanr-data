@@ -12,6 +12,7 @@ set/card offsets. Artifacts are private and short-lived pending staged import.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import re
@@ -66,6 +67,7 @@ def gather(
     errors: list[dict] = []
     receipts: list[dict] = []
     set_rosters: dict[str, list[dict]] = {}
+    set_id_conflicts: list[dict] = []
     by_language: dict[str, dict] = {
         lang: {"sets": 0, "full_cards": 0, "card_image_references": 0, "set_logo_references": 0}
         for lang in languages
@@ -97,7 +99,22 @@ def gather(
                 raise ValueError("invalid_set_index")
             set_rosters[lang] = [item for item in source_index
                                  if isinstance(item, dict) and _safe_provider_id(item.get("id"), SET_ID)]
-            selected = _choose_sets(source_index, set_offset + max_sets)[set_offset:]
+            frequencies = Counter(item["id"] for item in set_rosters[lang])
+            ambiguous = {sid for sid, count in frequencies.items() if count > 1}
+            for sid in sorted(ambiguous):
+                set_id_conflicts.append({
+                    "language": lang, "provider_set_id": sid,
+                    "count": frequencies[sid],
+                    "distinct_provider_names": sorted({
+                        str(item.get("name") or "")
+                        for item in set_rosters[lang] if item["id"] == sid
+                    }),
+                    "action": "quarantined_from_detail_capture",
+                })
+            selected = [
+                sid for sid in _choose_sets(source_index, set_offset + max_sets)[set_offset:]
+                if sid not in ambiguous
+            ]
         except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
             errors.append({"language": lang, "stage": "set_index", "error_type": type(exc).__name__})
             continue
@@ -183,12 +200,14 @@ def gather(
         "sets_saved": len(sets), "card_details_saved": len(cards),
         "by_language": by_language,
         "set_roster_entries": sum(len(items) for items in set_rosters.values()),
+        "set_roster_unique_ids": sum(len({item["id"] for item in items}) for items in set_rosters.values()),
+        "source_set_id_conflicts": set_id_conflicts,
         "source_set_rosters": set_rosters,
         "response_receipts": receipts, "warnings": errors,
         "image_files_downloaded": 0,
         "production_writes": 0, "canonical_identity_assigned": False,
         "artwork_rights_cleared": False, "safe_to_publish": False,
-        "status": "pass" if cards and not errors else ("partial" if sets or cards else "no_results"),
+        "status": "pass" if cards and not errors and not set_id_conflicts else ("partial" if sets or cards else "no_results"),
     }
     if requests > report["request_budget"]:
         raise AssertionError("source_request_budget_breached")
@@ -243,6 +262,7 @@ def main() -> int:
         "sets": len(sets), "full_card_details": len(cards),
         "image_references": sum(v["card_image_references"] for v in report["by_language"].values()),
         "set_roster_entries": report["set_roster_entries"],
+        "set_id_conflicts": len(report["source_set_id_conflicts"]),
         "image_files_downloaded": 0,
     }, sort_keys=True))
     return 0 if sets or cards else 2
