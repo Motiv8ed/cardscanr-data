@@ -204,7 +204,7 @@ def save_snapshot(out: Path, sets: list[dict], cards: list[dict], report: dict) 
     receipt = dict(report)
     rosters = receipt.pop("source_set_rosters", {})
     roster_bytes = (
-        json.dumps(rosters, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\\n"
+        json.dumps(rosters, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
     ).encode("utf-8")
     (out / "set_index_rosters.json").write_bytes(roster_bytes)
     receipt["set_index_rosters.json"] = {
@@ -218,7 +218,7 @@ def save_snapshot(out: Path, sets: list[dict], cards: list[dict], report: dict) 
         (out / key).write_bytes(data)
         receipt[key] = {"sha256": _digest(data), "bytes": len(data), "records": len(rows)}
     (out / "receipt.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return receipt
 
