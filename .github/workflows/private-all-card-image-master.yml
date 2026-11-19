@@ -1,10 +1,5 @@
 name: Master Artwork URL Index — ALL 158803 Cards (Private)
 on:
-  pull_request:
-    paths:
-      - 'tools/private_all_card_image_master.py'
-      - 'tests/test_private_all_card_image_master.py'
-      - '.github/workflows/private-all-card-image-master.yml'
   workflow_dispatch:
 permissions:
   contents: read
