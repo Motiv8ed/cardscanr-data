@@ -51,6 +51,10 @@ jobs:
           assert d["requests"] <= d["request_budget"]
           assert d["card_details_saved"] > 0
           assert d["set_index_rosters.json"]["entries"] > 0
+          assert d["set_roster_unique_ids"] <= d["set_roster_entries"]
+          assert d["set_index_rosters.json"]["entries"] == d["set_roster_entries"]
+          assert all(x["action"] == "quarantined_from_detail_capture" for x in d["source_set_id_conflicts"])
+          print("Ambiguous provider set IDs quarantined:", json.dumps(d["source_set_id_conflicts"], ensure_ascii=False))
           print("Source set index entries:", d["set_index_rosters.json"]["entries"])
           print("By-language detail coverage:", json.dumps(d["by_language"], sort_keys=True))
           assert d["sets_saved"] > 0
