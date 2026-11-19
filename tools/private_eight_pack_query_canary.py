@@ -13,6 +13,7 @@ from tools.build_review_68_set_core import audit_and_build, read_core_rows
 from tools.preflight_multilingual_crossrelease import ACTIVE_PACKS, ARCHIVE_PACKS, ACTIVE, CANARY, MAX_GZIP, get, inspect_pack
 from tools.preflight_legacy_korean_pack import pick
 from tools.private_shard_contract import validate_bounded_preview
+from tools.private_pack_completeness import inventory_pack
 
 
 def checked_canary(output: Path, fetch=get) -> dict:
@@ -75,6 +76,9 @@ def checked_canary(output: Path, fetch=get) -> dict:
                 query = "SELECT " + ",".join(names) + " FROM cards ORDER BY canonical_base_id LIMIT 3"
                 raw_preview=[dict(zip(names, row)) for row in db.execute(query)]
                 preview_proof=validate_bounded_preview(raw_preview,name)
+                completeness=inventory_pack(db)
+                if completeness['card_records'] != card_count:
+                    raise ValueError('pack_coverage_count_mismatch')
                 blocked = db.execute("""
                     SELECT COUNT(*) FROM cards
                     WHERE mirror_permission_status IS NULL OR
@@ -84,6 +88,7 @@ def checked_canary(output: Path, fetch=get) -> dict:
                     "pack_id":name,"card_rows":card_count,"fts_rows":fts_count,
                     "sample_identity_lookup_passed":len(examples),
                     "private_legacy_web_shard_contract":preview_proof,
+                    "private_pack_completeness":completeness,
                     "not_approved_for_mirroring":blocked,
                     "image_mirroring_performed":False,
                     "identity_hash_sample":[hashlib.sha256(str(r[1]).encode()).hexdigest() for r in examples]
