@@ -50,6 +50,9 @@ jobs:
           assert d["classification"] == "PRIVATE_SOURCE_METADATA_RESEARCH_ONLY"
           assert d["requests"] <= d["request_budget"]
           assert d["card_details_saved"] > 0
+          assert d["set_index_rosters.json"]["entries"] > 0
+          print("Source set index entries:", d["set_index_rosters.json"]["entries"])
+          print("By-language detail coverage:", json.dumps(d["by_language"], sort_keys=True))
           assert d["sets_saved"] > 0
           assert d["image_files_downloaded"] == 0
           assert d["production_writes"] == 0
