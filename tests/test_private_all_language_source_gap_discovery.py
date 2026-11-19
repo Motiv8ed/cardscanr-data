@@ -69,12 +69,13 @@ class GapDiscoveryTests(unittest.TestCase):
     def test_cross_provider_code_collision_is_quarantined_as_possible_alias(self):
         idx={l:[] for l in PRIORITY}
         idx["en"]=validate_index("en",[
-            {"id":"base1","cardCount":{"total":102}},
             {"id":"new1","cardCount":{"total":55}},
+            {"id":"base1","cardCount":{"total":102}},
         ])
         page,proof=select_batches(
             idx,set(),batch_index=0,batch_size=8,
             other_provider_suffix_keys={("en","base1")})
+        self.assertEqual([x["provider_set_id"] for x in page],["new1","base1"])
         self.assertEqual(proof["total_source_unmatched_set_ids"],2)
         self.assertEqual(proof["possible_cross_provider_alias_codes"],1)
         self.assertEqual(proof["source_set_codes_without_any_pack_suffix_match"],1)
