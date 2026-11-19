@@ -1,0 +1,88 @@
+name: Private 113-set card and artwork source refresh
+on:
+  pull_request:
+    paths:
+      - 'tools/private_113_set_artwork_refresh.py'
+      - 'tests/test_private_113_set_artwork_refresh.py'
+      - '.github/workflows/private-113-set-artwork-refresh.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate 113 set IDs and unique exact card matching rules
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_113_set_artwork_refresh.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_113_set_artwork_refresh.py -v
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_identity_crosswalk.py -v
+  real-113-set-sources:
+    runs-on: ubuntu-latest
+    needs: offline
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch five read-only SHA-checked R2 packs and up to 113 TCGdex JSON set sources
+        run: |
+          PYTHONPATH=. python tools/private_113_set_artwork_refresh.py --pace 0.75 --output private-113-refresh
+      - name: Verify provenance, exact identity and safety in result
+        run: |
+          python - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          p=Path("private-113-refresh")
+          r=json.loads((p/"receipt.json").read_text("utf-8"))
+          assert r["classification"]=="PRIVATE_113_SET_METADATA_AND_IMAGE_LINK_REFRESH"
+          assert r["source_target_count"]==113
+          assert r["owner_remaining_unlinked_gaps_in_target_sets"]==8077
+          assert r["source_requests"]<=113
+          assert r["source_sets_succeeded"]+r["source_sets_failed"]==r["source_requests"]
+          assert r["source_sets_succeeded"]>=20
+          assert len(r["pack_sha256_verified"])==5
+          assert r["exact_matched_cards"]<=r["matched_source_card_briefs"]
+          assert r["image_ref_candidates_for_original_pack_gaps"]<=r["exact_matched_cards"]
+          assert r["retrieved_image_binary_files"]==0
+          assert r["production_writes"]==0
+          assert not r["customer_data_read"]
+          assert not r["rights_granted"]
+          assert not r["safe_for_public_use"]
+          for filename in ("matching_results.jsonl","source_set_details.jsonl","image_reference_candidates.jsonl"):
+            evidence=r[filename]
+            body=(p/filename).read_bytes()
+            assert len(body)==evidence["bytes"]
+            assert hashlib.sha256(body).hexdigest()==evidence["sha256"]
+          matches=[json.loads(s) for s in (p/"matching_results.jsonl").read_text("utf-8").splitlines() if s]
+          valid=[m for m in matches if m.get("candidate_for_missing_pack_image_ref")]
+          assert len(valid)==r["image_ref_candidates_for_original_pack_gaps"]
+          assert len({m["canonical_printing_id"] for m in valid})==len(valid)
+          assert all(m["status"]=="exact_unique" and m.get("url_passes_host_allowlist") for m in valid)
+          assert all(m["provider_low_webp_url"]==m["source_image_base_url"]+"/low.webp" for m in valid)
+          print("CARDSCANR_113_SET_ACQUISITION_VERIFIED",json.dumps({
+             "sets":r["source_sets_succeeded"],"failed":r["source_sets_failed"],
+             "exact_cards":r["exact_matched_cards"],
+             "image_url_candidates":r["image_ref_candidates_for_original_pack_gaps"],
+             "languages":r["image_source_count_by_language"],
+             "failures":r["source_failures"],
+          },ensure_ascii=False,sort_keys=True))
+          PY
+      - name: Private seven-day source metadata, card printing matches and image links
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-113-Set-Card-And-Artwork-Source-Refresh
+          path: private-113-refresh/
+          retention-days: 7
+          if-no-files-found: warn
