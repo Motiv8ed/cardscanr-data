@@ -20,7 +20,10 @@ sys.path.insert(0, str(ROOT))
 from cardscanr_market_engine.canary_control_plane import parse_operation_mode
 from cardscanr_market_engine.config import MarketEngineConfig
 from cardscanr_market_engine.continuous_au_status import append_daily_metrics, write_continuous_status
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_safety import (
+    SAFETY_LEDGER_FAIL_CLOSED,
+    ContinuousSafetyBudget,
+)
 from cardscanr_market_engine.live_ebay_navigation_accounting import supplementary_submission_needs_cap
 from cardscanr_market_engine.continuous_worker_policy import (
     HARD_STOP_OUTCOMES,
@@ -85,9 +88,18 @@ def _record_supplementary_submission(
     if not supplementary_submission_needs_cap(row):
         return
     market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
-    # reserve_live_submission is the canonical locked increment (#63).
+    # Canonical path is reserve-before-search in job_runner; this only runs when that did not happen.
+    # When the cap is already exhausted by reservations, reserve_live_submission returns a ceiling code
+    # and we must not invent another slot (no double-count).
     blocked = budget.reserve_live_submission(market=market)
-    if blocked:
+    if blocked is not None:
+        assert blocked in {
+            "HOURLY_SUBMISSION_CEILING",
+            "DAILY_SUBMISSION_CEILING",
+            SAFETY_LEDGER_FAIL_CLOSED,
+            "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+            "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR",
+        } or bool(budget.last_hard_stop)
         return
 
 
@@ -638,6 +650,7 @@ def run_worker_loop(
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
                     if continuous or enforce_budget:
                         budget.record_healthy()
+                        budget.persist()
                     last_success = utc_iso()
                     healthy_times.append(last_success)
         if enforce_budget and results:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -23,6 +24,13 @@ HARD_STOP_SOURCE_OPERATOR = "operator_recovery"
 SAFETY_LEDGER_FAIL_CLOSED = "SAFETY_LEDGER_FAIL_CLOSED"
 
 
+@dataclass(frozen=True)
+class SubmissionEvent:
+    id: str
+    at: datetime
+    market: str | None = None
+
+
 def _parse_dt(value: Any) -> datetime | None:
     text = str(value or "").strip()
     if not text:
@@ -39,6 +47,7 @@ class ContinuousSafetyBudget:
     max_submissions_per_day: int = 60
     max_consecutive_transient: int = 3
     max_transient_per_hour: int = 5
+    submission_events: list[SubmissionEvent] = field(default_factory=list)
     submissions: list[datetime] = field(default_factory=list)
     transients: list[datetime] = field(default_factory=list)
     consecutive_transient: int = 0
@@ -66,16 +75,35 @@ class ContinuousSafetyBudget:
         budget.load(target)
         return budget
 
+    def _sync_submissions_from_events(self) -> None:
+        self.submissions = [event.at for event in self.submission_events]
+        self.market_submissions = [
+            (event.at, event.market)
+            for event in self.submission_events
+            if event.market
+        ]
+
     def to_payload(self) -> dict[str, Any]:
         self._reconcile_consecutive_with_history()
+        events = self.submission_events[-400:]
         payload: dict[str, Any] = {
-            "submissions": [utc_iso(x) for x in self.submissions[-400:]],
+            "submissionEvents": [
+                {
+                    "id": event.id,
+                    "at": utc_iso(event.at),
+                    **({"market": event.market} if event.market else {}),
+                }
+                for event in events
+            ],
+            "submissions": [utc_iso(event.at) for event in events],
             "transients": [utc_iso(x) for x in self.transients[-200:]],
             "consecutiveTransient": self.consecutive_transient,
             "lastHardStop": self.last_hard_stop,
             "hardStopSource": self.hard_stop_source,
             "marketSubmissions": [
-                {"at": utc_iso(at), "market": market} for at, market in self.market_submissions[-400:]
+                {"at": utc_iso(event.at), "market": event.market}
+                for event in events
+                if event.market
             ],
             "updatedAtUtc": utc_iso(),
             "ledgerInitialized": True,
@@ -85,20 +113,44 @@ class ContinuousSafetyBudget:
         return payload
 
     def apply_payload(self, data: dict[str, Any]) -> None:
-        self.submissions = [d for d in (_parse_dt(x) for x in data.get("submissions") or []) if d]
+        events: list[SubmissionEvent] = []
+        for row in data.get("submissionEvents") or []:
+            if not isinstance(row, dict):
+                continue
+            event_id = str(row.get("id") or "").strip()
+            parsed = _parse_dt(row.get("at"))
+            if not event_id or parsed is None:
+                continue
+            market_raw = row.get("market")
+            market = str(market_raw).upper() if market_raw else None
+            events.append(SubmissionEvent(id=event_id, at=parsed, market=market or None))
+        if not events:
+            for index, iso in enumerate(data.get("submissions") or []):
+                parsed = _parse_dt(iso)
+                if parsed is not None:
+                    events.append(
+                        SubmissionEvent(
+                            id=f"legacy-{utc_iso(parsed)}-{index}",
+                            at=parsed,
+                            market=None,
+                        )
+                    )
+        self.submission_events = events
+        self._sync_submissions_from_events()
         self.transients = [d for d in (_parse_dt(x) for x in data.get("transients") or []) if d]
         self.consecutive_transient = int(data.get("consecutiveTransient") or 0)
         self.last_hard_stop = str(data.get("lastHardStop") or "") or None
         self.hard_stop_source = str(data.get("hardStopSource") or "") or None
         self.ledger_initialized = bool(data.get("ledgerInitialized"))
-        tagged: list[tuple[datetime, str]] = []
-        for row in data.get("marketSubmissions") or []:
-            if isinstance(row, dict):
-                parsed = _parse_dt(row.get("at"))
-                market = str(row.get("market") or "").upper()
-                if parsed is not None:
-                    tagged.append((parsed, market))
-        self.market_submissions = tagged
+        if not self.market_submissions:
+            tagged: list[tuple[datetime, str]] = []
+            for row in data.get("marketSubmissions") or []:
+                if isinstance(row, dict):
+                    parsed = _parse_dt(row.get("at"))
+                    market = str(row.get("market") or "").upper()
+                    if parsed is not None:
+                        tagged.append((parsed, market))
+            self.market_submissions = tagged
         self.transient_epoch = int(data.get("transientEpoch") or 0)
         self.latch_epoch = int(data.get("latchEpoch") or 0)
         self._reconcile_consecutive_with_history()
@@ -196,32 +248,36 @@ class ContinuousSafetyBudget:
     def _prune(self, now: datetime) -> None:
         hour = now - timedelta(hours=1)
         day = now - timedelta(hours=24)
-        self.submissions = [t for t in self.submissions if t >= day]
+        self.submission_events = [event for event in self.submission_events if event.at >= day]
         self.transients = [t for t in self.transients if t >= hour]
-        self.market_submissions = [(t, m) for t, m in self.market_submissions if t >= day]
+        self._sync_submissions_from_events()
         self._reconcile_consecutive_with_history()
 
     def submissions_1h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
         hour = current - timedelta(hours=1)
-        return sum(1 for t in self.submissions if t >= hour)
+        return sum(1 for event in self.submission_events if event.at >= hour)
 
     def submissions_24h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
         day = current - timedelta(hours=24)
-        return sum(1 for t in self.submissions if t >= day)
+        return sum(1 for event in self.submission_events if event.at >= day)
 
     def submissions_1h_for_market(self, market: str, now: datetime | None = None) -> int:
         current = now or utc_now()
         hour = current - timedelta(hours=1)
         code = str(market or "").upper()
-        return sum(1 for t, m in self.market_submissions if t >= hour and m == code)
+        return sum(
+            1 for event in self.submission_events if event.at >= hour and event.market == code
+        )
 
     def submissions_24h_for_market(self, market: str, now: datetime | None = None) -> int:
         current = now or utc_now()
         day = current - timedelta(hours=24)
         code = str(market or "").upper()
-        return sum(1 for t, m in self.market_submissions if t >= day and m == code)
+        return sum(
+            1 for event in self.submission_events if event.at >= day and event.market == code
+        )
 
     def transients_1h(self, now: datetime | None = None) -> int:
         current = now or utc_now()
@@ -252,9 +308,11 @@ class ContinuousSafetyBudget:
 
     def record_submission(self, now: datetime | None = None, *, market: str | None = None) -> None:
         current = now or utc_now()
-        self.submissions.append(current)
-        if market:
-            self.market_submissions.append((current, str(market).upper()))
+        market_code = str(market).upper() if market else None
+        self.submission_events.append(
+            SubmissionEvent(id=uuid.uuid4().hex, at=current, market=market_code)
+        )
+        self._sync_submissions_from_events()
         self._prune(current)
 
     def record_healthy(self) -> None:
@@ -325,18 +383,14 @@ def _merge_unique_datetimes(values: list[datetime]) -> list[datetime]:
     return merged
 
 
-def _merge_unique_market_submissions(
-    rows: list[tuple[datetime, str]],
-) -> list[tuple[datetime, str]]:
-    seen: set[tuple[str, str]] = set()
-    merged: list[tuple[datetime, str]] = []
-    for at, market in sorted(rows, key=lambda pair: pair[0]):
-        key = (utc_iso(at), market)
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append((at, market))
-    return merged
+def _merge_submission_events(
+    disk_events: list[SubmissionEvent],
+    incoming_events: list[SubmissionEvent],
+) -> list[SubmissionEvent]:
+    by_id: dict[str, SubmissionEvent] = {event.id: event for event in disk_events}
+    for event in incoming_events:
+        by_id[event.id] = event
+    return sorted(by_id.values(), key=lambda event: event.at)[-400:]
 
 
 def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
@@ -345,10 +399,11 @@ def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[s
     on_disk.apply_payload(disk)
     incoming = ContinuousSafetyBudget()
     incoming.apply_payload(local)
-    on_disk.submissions = _merge_unique_datetimes(on_disk.submissions + incoming.submissions)[-400:]
-    on_disk.market_submissions = _merge_unique_market_submissions(
-        on_disk.market_submissions + incoming.market_submissions
-    )[-400:]
+    on_disk.submission_events = _merge_submission_events(
+        on_disk.submission_events,
+        incoming.submission_events,
+    )
+    on_disk._sync_submissions_from_events()
 
     disk_te = int(disk.get("transientEpoch") or 0)
     local_te = int(local.get("transientEpoch") or 0)
@@ -376,7 +431,9 @@ def merge_budget_payloads(disk: dict[str, Any], local: dict[str, Any]) -> dict[s
             on_disk.hard_stop_source = incoming.hard_stop_source
     on_disk.fail_closed = on_disk.fail_closed or incoming.fail_closed
     on_disk.ledger_initialized = (
-        on_disk.ledger_initialized or incoming.ledger_initialized or bool(on_disk.submissions)
+        on_disk.ledger_initialized
+        or incoming.ledger_initialized
+        or bool(on_disk.submission_events)
     )
     return on_disk.to_payload()
 

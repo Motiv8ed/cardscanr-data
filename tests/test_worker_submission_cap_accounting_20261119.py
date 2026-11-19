@@ -149,6 +149,7 @@ class WorkerLoopCapTests(unittest.TestCase):
             budget.reload(ledger)
             self.assertEqual(runner.calls, 3)
             self.assertEqual(budget.submissions_1h(NOW), 3)
+            self.assertEqual(len(budget.submission_events), 3)
 
     def test_reserved_rows_do_not_double_count_in_worker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -188,6 +189,7 @@ class WorkerLoopCapTests(unittest.TestCase):
                     )
             budget.reload(ledger)
             self.assertEqual(budget.submissions_1h(NOW), 1)
+            self.assertEqual(len(budget.submission_events), 1)
 
     def test_record_nothing_when_supplementary_disabled_fails_guard(self) -> None:
         """Guards against re-introducing parallel post-job counting for reserved jobs."""
@@ -283,7 +285,170 @@ class LedgerConcurrencyTests(unittest.TestCase):
                 proc.join(timeout=30)
             budget = ContinuousSafetyBudget(max_submissions_per_hour=999, max_submissions_per_day=999)
             budget.reload(ledger)
-            self.assertGreaterEqual(len(budget.submissions), workers)
+            self.assertEqual(len(budget.submission_events), workers)
+
+
+class _AlternatingFailSuccessRunner:
+    _ebay_probe_mode = False
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.client = SimpleNamespace()
+
+    def run_once(self, *, max_jobs: int | None = None) -> list[dict]:
+        self.calls += 1
+        if self.calls % 2 == 1:
+            from cardscanr_market_engine.owned_daily_outcomes import TEMPORARY_EBAY_SERVER_FAILURE
+
+            return [
+                {
+                    "status": "failed",
+                    "ownedDailyOutcome": TEMPORARY_EBAY_SERVER_FAILURE,
+                    "marketCountry": "AU",
+                }
+            ]
+        return [
+            {
+                "status": "completed",
+                "ownedDailyOutcome": "UNCHANGED_FROM_EBAY",
+                "marketCountry": "AU",
+            }
+        ]
+
+
+class WorkerTransientHealthyPersistTests(unittest.TestCase):
+    def test_alternating_fail_success_does_not_false_latch_hard_stop(self) -> None:
+        """owned_daily OFF: success must persist record_healthy() or consecutive transients accumulate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "ledger.json"
+            budget = ContinuousSafetyBudget(
+                max_submissions_per_hour=20,
+                max_submissions_per_day=60,
+                max_consecutive_transient=3,
+            )
+            runner = _AlternatingFailSuccessRunner()
+            with _worker_isolated(budget=budget, ledger=ledger):
+                for _ in range(5):
+                    worker.run_worker_loop(
+                        args=_fake_args(once=True),
+                        config=_fake_config(root),
+                        runner=runner,  # type: ignore[arg-type]
+                        poll_seconds=1,
+                        max_jobs=1,
+                        sleep_func=lambda _s: None,
+                        logger=lambda *_a, **_k: None,
+                    )
+            budget.reload(ledger)
+            self.assertIsNone(budget.transient_hard_stop(NOW))
+            self.assertLessEqual(budget.consecutive_transient, 1)
+            self.assertIsNone(budget.last_hard_stop)
+
+class SupplementaryCapAtCeilingTests(unittest.TestCase):
+    def test_supplementary_at_hourly_cap_does_not_add_slots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "ledger.json"
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+            with mock.patch("cardscanr_market_engine.continuous_safety.utc_now", return_value=NOW):
+                for _ in range(20):
+                    self.assertIsNone(budget.reserve_live_submission(path=ledger, market="AU", now=NOW))
+            runner = _ProbeRunner(reserved=False)
+            with _worker_isolated(budget=budget, ledger=ledger):
+                worker.run_worker_loop(
+                    args=_fake_args(once=True),
+                    config=_fake_config(root),
+                    runner=runner,  # type: ignore[arg-type]
+                    poll_seconds=1,
+                    max_jobs=1,
+                    sleep_func=lambda _s: None,
+                    logger=lambda *_a, **_k: None,
+                )
+            budget.reload(ledger)
+            self.assertEqual(budget.submissions_1h(NOW), 20)
+            self.assertEqual(len(budget.submission_events), 20)
+
+
+class RunJobLedgerFetchParityTests(unittest.TestCase):
+    def test_run_job_one_submission_per_fetch_completed(self) -> None:
+        from cardscanr_market_engine.job_runner import MarketPriceJobRunner
+        from cardscanr_market_engine.models import MarketPriceRefreshJob
+        from cardscanr_market_engine.providers.errors import ProviderTemporaryError
+        from tests.test_data63_reqa_r5_20261119 import _job_runner_patches
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.json"
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+            runner = MarketPriceJobRunner(
+                client=mock.Mock(),
+                provider=mock.Mock(provider_name="ebay_browser"),
+                config=SimpleNamespace(provider_name="ebay_browser"),
+                logger=lambda *_a, **_k: None,
+            )
+            runner._safety_budget = budget
+            runner._continuous_worker = False
+            runner._enforce_safety_budget = True
+            job = MarketPriceRefreshJob(
+                id="job-ok",
+                price_key_id="pk1",
+                reason="stale",
+                priority=1,
+                status="running",
+                attempt_count=1,
+            )
+            fetch_calls = 0
+
+            def _fetch(*_a, **_k):
+                nonlocal fetch_calls
+                fetch_calls += 1
+                raise ProviderTemporaryError("sim", diagnostics={"searchSubmissionStarted": True})
+
+            with _job_runner_patches(runner, ledger):
+                with mock.patch.object(runner, "fetch_fallback_result", side_effect=_fetch):
+                    runner.run_job(job)
+            budget.reload(ledger)
+            self.assertEqual(fetch_calls, 1)
+            self.assertEqual(len(budget.submission_events), 1)
+
+    def test_run_job_one_submission_per_fetch_failed(self) -> None:
+        from cardscanr_market_engine.job_runner import MarketPriceJobRunner
+        from cardscanr_market_engine.models import MarketPriceRefreshJob
+        from cardscanr_market_engine.providers.errors import ProviderError
+        from tests.test_data63_reqa_r5_20261119 import _job_runner_patches
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.json"
+            budget = ContinuousSafetyBudget(max_submissions_per_hour=20, max_submissions_per_day=60)
+            runner = MarketPriceJobRunner(
+                client=mock.Mock(),
+                provider=mock.Mock(provider_name="ebay_browser"),
+                config=SimpleNamespace(provider_name="ebay_browser"),
+                logger=lambda *_a, **_k: None,
+            )
+            runner._safety_budget = budget
+            runner._continuous_worker = False
+            runner._enforce_safety_budget = True
+            job = MarketPriceRefreshJob(
+                id="job-fail",
+                price_key_id="pk1",
+                reason="stale",
+                priority=1,
+                status="running",
+                attempt_count=1,
+            )
+            fetch_calls = 0
+
+            def _fetch(*_a, **_k):
+                nonlocal fetch_calls
+                fetch_calls += 1
+                raise ProviderError("sim")
+
+            with _job_runner_patches(runner, ledger):
+                with mock.patch.object(runner, "fetch_fallback_result", side_effect=_fetch):
+                    runner.run_job(job)
+            budget.reload(ledger)
+            self.assertEqual(fetch_calls, 1)
+            self.assertEqual(len(budget.submission_events), 1)
 
 
 if __name__ == "__main__":
