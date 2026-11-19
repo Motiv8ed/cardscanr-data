@@ -89,6 +89,9 @@ class TcgdexDetailAcquisitionTests(unittest.TestCase):
             saved = save_snapshot(out, sets, cards, proof)
             self.assertEqual(saved["card_details.jsonl"]["records"], 2)
             self.assertEqual(saved["set_details.jsonl"]["records"], 1)
+            self.assertEqual(saved["set_index_rosters.json"]["entries"], 1)
+            self.assertEqual(json.loads((out / "set_index_rosters.json").read_text())["ja"][0]["id"], "set-ja")
+            self.assertNotIn("source_set_rosters", json.loads((out / "receipt.json").read_text()))
             self.assertEqual(len((out / "card_details.jsonl").read_text().splitlines()), 2)
             self.assertEqual(json.loads((out / "receipt.json").read_text())["production_writes"], 0)
             with self.assertRaises(FileExistsError):
