@@ -64,7 +64,7 @@ def inventory_pack(db: sqlite3.Connection) -> dict[str, Any]:
         for set_id, total, image_missing in db.execute(
             "SELECT set_id, COUNT(*) AS total,"
             + count_if(missing_image)
-            + " FROM cards GROUP BY set_id"
+            + " AS no_image_reference FROM cards GROUP BY set_id"
             + " ORDER BY no_image_reference DESC, total DESC, set_id LIMIT 12"
         )
     ]
