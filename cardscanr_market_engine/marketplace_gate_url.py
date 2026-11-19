@@ -1,6 +1,7 @@
 """Detect real eBay captcha/sorry/sign-in surfaces (path/host only, not query text)."""
 from __future__ import annotations
 
+import re
 from urllib.parse import urlparse
 
 # Whole-document gate titles only (never substring match inside card listing titles).
@@ -12,7 +13,7 @@ EXACT_GATE_PAGE_TITLES = frozenset(
     }
 )
 
-_EBAY_AUTH_PATH_MARKERS = ("/signin/", "/signin", "/login/", "/login", "/identity/")
+_AUTH_PATH_SEGMENTS = frozenset({"signin", "login", "identity"})
 
 _TITLE_SUFFIXES = (
     " | ebay.com.au",
@@ -21,15 +22,33 @@ _TITLE_SUFFIXES = (
     " - ebay",
 )
 
+_TITLE_PREFIXES = (
+    "ebay.com.au | ",
+    "ebay.com.au - ",
+    "ebay | ",
+    "ebay - ",
+)
+
+_WHITESPACE_RE = re.compile(r"[\s\xa0\u00a0\u202f]+")
+
+PARDON_INTERRUPTION_INTERSTITIAL_MARKER = "pardon our interruption"
+
 
 def normalized_gate_page_title(title: str | None) -> str:
     text = str(title or "").strip()
     if not text:
         return ""
+    text = _WHITESPACE_RE.sub(" ", text).strip()
     lower = text.lower()
+    for prefix in _TITLE_PREFIXES:
+        if lower.startswith(prefix):
+            text = text[len(prefix) :].strip()
+            text = _WHITESPACE_RE.sub(" ", text).strip()
+            lower = text.lower()
     for suffix in _TITLE_SUFFIXES:
         if lower.endswith(suffix):
             text = text[: -len(suffix)].strip()
+            text = _WHITESPACE_RE.sub(" ", text).strip()
             lower = text.lower()
     return lower
 
@@ -55,6 +74,11 @@ def _ebay_host_ok(host: str) -> bool:
     return any(h == root or h.endswith("." + root) for root in roots)
 
 
+def _path_has_auth_gate_segment(path: str) -> bool:
+    segments = {seg.lower() for seg in (path or "").split("/") if seg}
+    return bool(segments & _AUTH_PATH_SEGMENTS)
+
+
 def is_ebay_marketplace_gate_url(url: str | None) -> bool:
     text = str(url or "").strip()
     if not text or "ebay." not in text.lower():
@@ -69,7 +93,7 @@ def is_ebay_marketplace_gate_url(url: str | None) -> bool:
         return True
     if "signin.ebay" in host:
         return True
-    if _ebay_host_ok(host) and any(marker in path for marker in _EBAY_AUTH_PATH_MARKERS):
+    if _ebay_host_ok(host) and _path_has_auth_gate_segment(path):
         return True
     if "/splashui/" in path and ("challenge" in path or "captcha" in path):
         return True
@@ -92,7 +116,7 @@ def is_pardon_interstitial_at_marketplace_url(
     title: str | None = None,
     body: str | None = None,
 ) -> bool:
-    """Incapsula-style interstitial body/title while URL still looks like ordinary eBay browsing."""
+    """Pardon only on exact interstitial title or a dedicated standalone interstitial body."""
     if not url or is_ebay_marketplace_gate_url(url):
         return False
     try:
@@ -102,9 +126,12 @@ def is_pardon_interstitial_at_marketplace_url(
     host = (parsed.hostname or "").lower()
     if not _ebay_host_ok(host):
         return False
-    if is_exact_marketplace_gate_page_title(title):
+    if normalized_gate_page_title(title) == PARDON_INTERRUPTION_INTERSTITIAL_MARKER:
         return True
-    return "pardon our interruption" in str(body or "").lower()
+    body_norm = normalized_gate_page_title(body)
+    if body_norm == PARDON_INTERRUPTION_INTERSTITIAL_MARKER:
+        return True
+    return False
 
 
 def is_marketplace_gate_page(

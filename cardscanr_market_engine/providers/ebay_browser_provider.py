@@ -608,6 +608,43 @@ def contains_block_marker(*, title: str = "", body_text: str = "") -> bool:
     return False
 
 
+X11_CAPTURE_BLOCKING_PAGE_OUTCOMES = frozenset(
+    {
+        "challenge_detected",
+        "access_blocked",
+        "authentication_required",
+        "ambiguous_security_state",
+    }
+)
+
+
+def page_state_blocks_x11_capture(page_state: dict[str, Any]) -> bool:
+    return str(page_state.get("outcome") or "") in X11_CAPTURE_BLOCKING_PAGE_OUTCOMES
+
+
+def raise_x11_capture_if_page_blocked(page_state: dict[str, Any], *, nav_mode_label: str) -> None:
+    """Same terminal gate as the X11 sold capture path (~page_state classify after persist)."""
+    if not page_state_blocks_x11_capture(page_state):
+        return
+    if page_state["outcome"] == "authentication_required":
+        raise ProviderAuthenticationRequiredError(
+            "eBay browser session requires sign-in before pricing can continue",
+            diagnostics={"providerOutcome": "authentication_required", "navMode": nav_mode_label},
+        )
+    raise ProviderBlockedError(
+        "eBay returned a block or verification page; captcha bypass is not attempted"
+        if page_state["outcome"] != "ambiguous_security_state"
+        else "eBay page security state is ambiguous; failing closed without captcha bypass",
+        diagnostics={
+            "providerOutcome": page_state["outcome"],
+            "browserPageState": page_state,
+            "navMode": nav_mode_label,
+            "SOLD_STATE_VERIFIED": True,
+            "x11SoldStateVerified": True,
+        },
+    )
+
+
 def classify_browser_page_state(
     *,
     title: str = "",
@@ -707,9 +744,35 @@ def classify_browser_page_state(
             **base_diag,
         }
 
+    # Exact whole-document gate titles (not card-name substrings) before interstitials.
+    if is_exact_marketplace_gate_page_title(title):
+        if exact_gate_title == "access denied":
+            return {
+                "outcome": "access_blocked",
+                "reason": "access denied",
+                "retryable": True,
+                **base_diag,
+            }
+        if exact_gate_title == "security measure":
+            return {
+                "outcome": "challenge_detected",
+                "reason": "visible_text:security measure",
+                "retryable": True,
+                "securityClass": "ACTIVE_CHALLENGE",
+                **base_diag,
+            }
+        if exact_gate_title == "pardon our interruption":
+            return {
+                "outcome": "challenge_detected",
+                "reason": "pardon_our_interruption",
+                "retryable": True,
+                "securityClass": "ACTIVE_CHALLENGE",
+                **base_diag,
+            }
+
     if is_pardon_interstitial_at_marketplace_url(url, title=title, body=visible_text):
         return {
-            "outcome": "provider_unavailable",
+            "outcome": "challenge_detected",
             "reason": "pardon_our_interruption",
             "retryable": True,
             "securityClass": "ACTIVE_CHALLENGE",
@@ -717,13 +780,6 @@ def classify_browser_page_state(
         }
 
     # SORRY / maintenance / auth / access — evaluate on visible text (and title), not CSS.
-    if is_exact_marketplace_gate_page_title(title) and exact_gate_title == "access denied":
-        return {
-            "outcome": "access_blocked",
-            "reason": "access denied",
-            "retryable": True,
-            **base_diag,
-        }
     if marker := matched_body(ACCESS_BLOCK_TEXT_MARKERS):
         return {"outcome": "access_blocked", "reason": marker, "retryable": True, **base_diag}
     if marker := matched_visible(AUTH_TEXT_MARKERS):
@@ -3707,29 +3763,7 @@ class EbayBrowserSoldCompsProvider:
                 x11_sold_state_verified=True,
             )
             stage_timings.fields["browserPageState"] = page_state
-            if page_state["outcome"] in {
-                "challenge_detected",
-                "access_blocked",
-                "authentication_required",
-                "ambiguous_security_state",
-            }:
-                if page_state["outcome"] == "authentication_required":
-                    raise ProviderAuthenticationRequiredError(
-                        "eBay browser session requires sign-in before pricing can continue",
-                        diagnostics={"providerOutcome": "authentication_required", "navMode": nav_mode_label},
-                    )
-                raise ProviderBlockedError(
-                    "eBay returned a block or verification page; captcha bypass is not attempted"
-                    if page_state["outcome"] != "ambiguous_security_state"
-                    else "eBay page security state is ambiguous; failing closed without captcha bypass",
-                    diagnostics={
-                        "providerOutcome": page_state["outcome"],
-                        "browserPageState": page_state,
-                        "navMode": nav_mode_label,
-                        "SOLD_STATE_VERIFIED": True,
-                        "x11SoldStateVerified": True,
-                    },
-                )
+            raise_x11_capture_if_page_blocked(page_state, nav_mode_label=nav_mode_label)
 
             gui_marks = stage_timings.fields.get("guiAttemptTimings")
             if not isinstance(gui_marks, dict):
