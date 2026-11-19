@@ -1,0 +1,63 @@
+name: Image URL HEAD Availability Canary (No Artwork Download)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_image_head_metadata_canary.py'
+      - 'tests/test_private_image_head_metadata_canary.py'
+      - '.github/workflows/private-image-head-availability.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify strict nine-asset HEAD-only probe guard
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_image_head_metadata_canary.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_image_head_metadata_canary.py -v
+  real-head-only:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: HEAD only the nine allowlisted low.webp URLs (no image bytes)
+        run: |
+          PYTHONPATH=. python tools/private_image_head_metadata_canary.py --output private-head-check/receipt.json
+      - name: Require zero downloads, public rights and production changes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("private-head-check/receipt.json").read_text())
+          assert d["classification"]=="PRIVATE_SOURCE_ASSET_HEAD_METADATA_ONLY"
+          assert 1 <= d["head_requests"] <= 9
+          assert d["image_bodies_downloaded"] == 0
+          assert d["binary_files_saved"] == 0
+          assert d["production_writes"] == 0
+          assert not d["artwork_rights_granted"]
+          assert not d["canonical_identity_assigned"]
+          assert not d["safe_to_publish"]
+          print("HEAD-only image response summary:", json.dumps(d["counts"], sort_keys=True))
+          PY
+      - name: Keep proof private for seven days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Image-HEAD-Metadata-Only
+          path: private-head-check/receipt.json
+          retention-days: 7
+          if-no-files-found: warn
