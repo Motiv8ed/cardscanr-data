@@ -65,6 +65,7 @@ def gather(
     cards: list[dict] = []
     errors: list[dict] = []
     receipts: list[dict] = []
+    set_rosters: dict[str, list[dict]] = {}
     by_language: dict[str, dict] = {
         lang: {"sets": 0, "full_cards": 0, "card_image_references": 0, "set_logo_references": 0}
         for lang in languages
@@ -94,6 +95,8 @@ def gather(
             source_index, _ = read(API + "/" + lang + "/sets", language=lang, stage="set_index")
             if not isinstance(source_index, list):
                 raise ValueError("invalid_set_index")
+            set_rosters[lang] = [item for item in source_index
+                                 if isinstance(item, dict) and _safe_provider_id(item.get("id"), SET_ID)]
             selected = _choose_sets(source_index, set_offset + max_sets)[set_offset:]
         except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
             errors.append({"language": lang, "stage": "set_index", "error_type": type(exc).__name__})
@@ -179,6 +182,8 @@ def gather(
         "request_budget": len(languages) * (1 + max_sets * (1 + cards_per_set)),
         "sets_saved": len(sets), "card_details_saved": len(cards),
         "by_language": by_language,
+        "set_roster_entries": sum(len(items) for items in set_rosters.values()),
+        "source_set_rosters": set_rosters,
         "response_receipts": receipts, "warnings": errors,
         "image_files_downloaded": 0,
         "production_writes": 0, "canonical_identity_assigned": False,
@@ -194,15 +199,28 @@ def save_snapshot(out: Path, sets: list[dict], cards: list[dict], report: dict) 
     if out.is_symlink() or (out.exists() and (not out.is_dir() or any(out.iterdir()))):
         raise FileExistsError("output_must_be_new_or_empty")
     out.mkdir(parents=True, exist_ok=True)
+    # Retain full public set index listings so future runs can target precise
+    # unvisited set IDs rather than repeatedly probing an empty set shell.
+    receipt = dict(report)
+    rosters = receipt.pop("source_set_rosters", {})
+    roster_bytes = (
+        json.dumps(rosters, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\\n"
+    ).encode("utf-8")
+    (out / "set_index_rosters.json").write_bytes(roster_bytes)
+    receipt["set_index_rosters.json"] = {
+        "sha256": _digest(roster_bytes), "bytes": len(roster_bytes),
+        "languages": sorted(rosters),
+        "entries": sum(len(v) for v in rosters.values()),
+    }
     for key, rows in (("set_details.jsonl", sets), ("card_details.jsonl", cards)):
         data = "".join(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
                        for row in rows).encode("utf-8")
         (out / key).write_bytes(data)
-        report[key] = {"sha256": _digest(data), "bytes": len(data), "records": len(rows)}
+        receipt[key] = {"sha256": _digest(data), "bytes": len(data), "records": len(rows)}
     (out / "receipt.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    return report
+    return receipt
 
 
 def main() -> int:
@@ -224,6 +242,7 @@ def main() -> int:
         "classification": report["classification"], "status": report["status"],
         "sets": len(sets), "full_card_details": len(cards),
         "image_references": sum(v["card_image_references"] for v in report["by_language"].values()),
+        "set_roster_entries": report["set_roster_entries"],
         "image_files_downloaded": 0,
     }, sort_keys=True))
     return 0 if sets or cards else 2
