@@ -7,6 +7,8 @@ on:
     paths:
       - 'tools/private_eight_pack_query_canary.py'
       - 'tools/private_shard_contract.py'
+      - 'tools/private_pack_completeness.py'
+      - 'tests/test_private_pack_completeness.py'
       - 'tests/test_private_shard_contract.py'
       - '.github/workflows/private-eight-pack-query-canary.yml'
   workflow_dispatch:
@@ -25,8 +27,9 @@ jobs:
           python-version: '3.12'
       - name: Compile and run existing core-preservation tests
         run: |
-          python -m py_compile tools/private_eight_pack_query_canary.py tools/private_shard_contract.py
+          python -m py_compile tools/private_eight_pack_query_canary.py tools/private_shard_contract.py tools/private_pack_completeness.py
           PYTHONPATH=. python -m unittest discover -s tests -p test_private_shard_contract.py -v
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_pack_completeness.py -v
           PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
   private-query-canary:
     needs: offline
@@ -56,9 +59,36 @@ jobs:
           assert all(p["private_legacy_web_shard_contract"]["no_images"] for p in d["language_packs"])
           assert all(p["private_legacy_web_shard_contract"]["sample_count"]==3 for p in d["language_packs"])
           assert all(not p["private_legacy_web_shard_contract"]["production_enabled"] for p in d["language_packs"])
+          assert all(p["private_pack_completeness"]["card_records"] == p["card_rows"] for p in d["language_packs"])
+          assert all(p["private_pack_completeness"]["cards_with_image_reference"] + p["private_pack_completeness"]["cards_without_image_reference"] == p["card_rows"] for p in d["language_packs"])
+          assert all(not p["private_pack_completeness"]["artwork_downloaded"] for p in d["language_packs"])
           assert not d["safe_to_publish"] and not d["artwork_mirroring_performed"]
           assert d["production_writes"]==0
           print("PASS private data-layer canary; app and rights gates still open")
+          PY
+      - name: Print safe per-language coverage counts for targeted source discovery
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("private-canary/SAFE-Private-Data-Layer-Canary.json").read_text())
+          print("PACK_IMAGE_AND_METADATA_GAPS_START")
+          for p in r["language_packs"]:
+              x=p["private_pack_completeness"]
+              missing=x["missing_metadata_field_counts"]
+              print(json.dumps({
+                  "language":p["pack_id"],
+                  "cards":x["card_records"],
+                  "sets":x["distinct_referenced_sets"],
+                  "missing_native_names":missing["missing_native_card_name"],
+                  "missing_native_set_names":missing["missing_native_set_name"],
+                  "missing_rarity":missing["missing_rarity"],
+                  "missing_release_dates":missing["missing_release_date"],
+                  "cards_with_image_url":x["cards_with_image_reference"],
+                  "cards_missing_image_url":x["cards_without_image_reference"],
+                  "source_mirror_status_approved":x["source_mirror_permission_approved_field_count"],
+              },sort_keys=True))
+          print("PACK_IMAGE_AND_METADATA_GAPS_END")
           PY
       - name: Store private seven-day reports, never publish pack data
         if: always()
