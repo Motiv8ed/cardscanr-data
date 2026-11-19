@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from cardscanr_market_engine.browser_lifecycle_policy import RUNTIME_INTER_CARD, evaluate_runtime_targets
 from cardscanr_market_engine import continuous_safety
-from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget
+from cardscanr_market_engine.continuous_safety import ContinuousSafetyBudget, SubmissionEvent
 from cardscanr_market_engine.ebay_scale.audit_report import summarise_sweeps
 from cardscanr_market_engine.ebay_scale.set_sweep_matcher import SetSweepCatalogueCard, match_sold_row_to_catalogue
 from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import (
@@ -134,7 +134,11 @@ class SetSweepWorkerHookTests(unittest.TestCase):
 
     def test_sweep_counts_against_submission_cap(self) -> None:
         budget = ContinuousSafetyBudget(max_submissions_per_hour=2, max_submissions_per_day=60)
-        budget.submissions = [datetime.now(timezone.utc)] * 2
+        stamp = datetime.now(timezone.utc)
+        budget.submission_events = [
+            SubmissionEvent(id=f"cap-{i}", at=stamp, market="AU") for i in range(2)
+        ]
+        budget._sync_submissions_from_events()
         plan = {"setCode": "sv3", "setName": "Obsidian Flames", "marketCountry": "AU", "consumed": False}
         with mock.patch.dict(
             os.environ,
