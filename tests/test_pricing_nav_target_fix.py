@@ -32,10 +32,6 @@ from cardscanr_market_engine.live_ebay_navigation_accounting import (
     result_consumes_submission_cap,
     supplementary_submission_needs_cap,
 )
-from cardscanr_market_engine.live_ebay_navigation_accounting import (
-    LIVE_EBAY_NAVIGATION_CONSUMED,
-    live_ebay_navigation_consumed_from_metadata,
-)
 from cardscanr_market_engine.pipeline_phase_diagnostics import build_provider_diagnostics_for_result
 from cardscanr_market_engine.providers.sold_page_health import evaluate_sold_verification
 from cardscanr_market_engine.job_runner import MarketPriceJobRunner
