@@ -1,0 +1,74 @@
+name: Source Discovery - TCGdex Full Card and Set Metadata (Review Only)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_tcgdex_detail_acquisition.py'
+      - 'tests/test_private_tcgdex_detail_acquisition.py'
+      - '.github/workflows/private-tcgdex-detail-acquisition.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and unit-test bounded source metadata reader
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_tcgdex_detail_acquisition.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_tcgdex_detail_acquisition.py -v
+          PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_metadata_batch.py -v
+  collect-source-details:
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Capture bounded seven-language source JSON; never image binaries
+        run: |
+          PYTHONPATH=. python tools/private_tcgdex_detail_acquisition.py \
+            --languages ja,zh-tw,ko,en,th,id,zh-cn \
+            --max-sets 1 --cards-per-set 4 --set-offset 0 --card-offset 0 \
+            --output tcgdex-review
+      - name: Verify no public release or artwork download
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("tcgdex-review/receipt.json").read_text())
+          assert d["classification"] == "PRIVATE_SOURCE_METADATA_RESEARCH_ONLY"
+          assert d["requests"] <= d["request_budget"]
+          assert d["card_details_saved"] > 0
+          assert d["set_index_rosters.json"]["entries"] > 0
+          assert d["set_roster_unique_ids"] <= d["set_roster_entries"]
+          assert d["set_index_rosters.json"]["entries"] == d["set_roster_entries"]
+          assert all(x["action"] == "quarantined_from_detail_capture" for x in d["source_set_id_conflicts"])
+          print("Ambiguous provider set IDs quarantined:", json.dumps(d["source_set_id_conflicts"], ensure_ascii=False))
+          print("Source set index entries:", d["set_index_rosters.json"]["entries"])
+          print("By-language detail coverage:", json.dumps(d["by_language"], sort_keys=True))
+          assert d["sets_saved"] > 0
+          assert d["image_files_downloaded"] == 0
+          assert d["production_writes"] == 0
+          assert not d["canonical_identity_assigned"]
+          assert not d["artwork_rights_cleared"] and not d["safe_to_publish"]
+          print("PASS source metadata receipts; still not cleared for public use")
+          PY
+      - name: Store review-only metadata receipts (not production data)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TCGdex-Full-Source-Details-Review
+          path: tcgdex-review/
+          retention-days: 7
+          if-no-files-found: warn
