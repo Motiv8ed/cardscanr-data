@@ -83,6 +83,13 @@ class InterCardCdpRecoveryTests(unittest.TestCase):
                     "cardscanr_market_engine.inter_card_cdp_recovery.bind_persisted_nav_context_path",
                     return_value=nav_path,
                 ),
+                mock.patch(
+                    "cardscanr_market_engine.inter_card_cdp_recovery._close_pricer_ebay_tabs_for_cold_start",
+                    return_value={"resetMethod": "cdp_close_ebay_tabs_same_process", "closedTargetIds": ["KABU"]},
+                ),
+                mock.patch(
+                    "cardscanr_market_engine.inter_card_cdp_recovery._append_self_heal_receipt",
+                ),
             ):
                 observe_inter_card_no_request_outcome(
                     ctx,
@@ -90,7 +97,7 @@ class InterCardCdpRecoveryTests(unittest.TestCase):
                     search_submission_started=False,
                     raw_error="Desktop sold navigation failed: INTER_CARD_EXPECTED_TARGET_REJECTED",
                 )
-                out, _latch = observe_inter_card_no_request_outcome(
+                out, _latch, receipt = observe_inter_card_no_request_outcome(
                     ctx,
                     runtime_error=INTER_CARD_EXPECTED_TARGET_REJECTED,
                     search_submission_started=False,
@@ -98,6 +105,8 @@ class InterCardCdpRecoveryTests(unittest.TestCase):
                 )
         self.assertEqual(out.runtime_mode, RUNTIME_COLD_START)
         self.assertIsNone(out.expected_prior)
+        self.assertIsNotNone(receipt)
+        self.assertEqual(receipt.get("status"), "EXECUTED")
 
 
 if __name__ == "__main__":

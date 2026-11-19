@@ -218,7 +218,7 @@ class Data63ReQaRound8Tests(unittest.TestCase):
 
     def test_inter_card_observe_exact_security_measure_title_latches(self) -> None:
         ctx = NavigationRuntimeContext(runtime_mode=NAV_IC, expected_prior=None)
-        _, latch = observe_inter_card_no_request_outcome(
+        _, latch, _receipt = observe_inter_card_no_request_outcome(
             ctx,
             runtime_error="INTER_CARD_EXPECTED_TARGET_REJECTED",
             search_submission_started=False,

@@ -91,7 +91,7 @@ class Data63ReQaRound4Tests(unittest.TestCase):
                 "cardscanr_market_engine.inter_card_cdp_recovery.CDP_RECOVERY_STATE_PATH",
                 state_path,
             ):
-                out, latch = observe_inter_card_no_request_outcome(
+                out, latch, _receipt = observe_inter_card_no_request_outcome(
                     ctx,
                     runtime_error="INTER_CARD_EXPECTED_TARGET_REJECTED",
                     search_submission_started=False,

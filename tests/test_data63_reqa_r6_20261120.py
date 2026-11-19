@@ -197,7 +197,7 @@ class Data63ReQaRound6Tests(unittest.TestCase):
     def test_promo_title_and_query_do_not_latch_challenge(self) -> None:
         ctx = NavigationRuntimeContext(runtime_mode=RUNTIME_INTER_CARD, expected_prior=None)
         sold_url = "https://www.ebay.com.au/sch/i.html?_nkw=pokemon+league+challenge+promo&LH_Sold=1"
-        _, latch = observe_inter_card_no_request_outcome(
+        _, latch, _receipt = observe_inter_card_no_request_outcome(
             ctx,
             runtime_error="INTER_CARD_EXPECTED_TARGET_REJECTED",
             search_submission_started=False,

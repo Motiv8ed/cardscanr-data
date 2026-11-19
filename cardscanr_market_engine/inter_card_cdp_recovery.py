@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import json
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +24,16 @@ from .navigation_runtime_context import (
 )
 
 CDP_RECOVERY_STATE_PATH = REPORTS_DIR / "runtime" / "nav_cdp_recovery_state.json"
+INTER_CARD_SELF_HEAL_RECEIPTS_PATH = REPORTS_DIR / "runtime" / "inter_card_self_heal_receipts.jsonl"
 INTER_CARD_NO_REQUEST_STUCK_ALERT_HOURS = 2
+INTER_CARD_NO_REQUEST_REJECTIONS_BEFORE_SELF_HEAL = max(
+    1,
+    int(os.getenv("INTER_CARD_NO_REQUEST_REJECTIONS_BEFORE_SELF_HEAL", "2")),
+)
+INTER_CARD_SELF_HEAL_MAX_PER_HOUR = max(
+    1,
+    int(os.getenv("INTER_CARD_SELF_HEAL_MAX_PER_HOUR", "3")),
+)
 
 MARKETPLACE_GATE_REASON_CODES = frozenset(
     {
@@ -31,8 +43,11 @@ MARKETPLACE_GATE_REASON_CODES = frozenset(
         "EBAY_CHALLENGE_REQUIRED",
         "EBAY_AUTH_REQUIRED",
         "INTER_CARD_CHALLENGE",
+        "EBAY_RATE_LIMITED",
     }
 )
+
+_SELF_HEAL_RATE_LIMIT_MARKERS = frozenset({"429", "RATE_LIMIT", "TOO_MANY_REQUESTS"})
 
 
 def enrich_policy_diagnostics(diagnostics: dict[str, Any] | None) -> dict[str, Any]:
@@ -171,6 +186,46 @@ def reconcile_nav_context_for_cdp_change(ctx: NavigationRuntimeContext) -> Navig
     return ctx
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _utc_iso(dt: datetime | None = None) -> str:
+    when = dt or _utc_now()
+    return when.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _parse_utc_iso(value: str | None) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _self_heals_in_last_hour(state: dict[str, Any], *, now: datetime) -> int:
+    window_start = now - timedelta(hours=1)
+    count = 0
+    for row in state.get("selfHealReceipts") or []:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("status") or "") != "EXECUTED":
+            continue
+        at = _parse_utc_iso(str(row.get("atUtc") or ""))
+        if at is not None and at >= window_start:
+            count += 1
+    return count
+
+
+def _append_self_heal_receipt(payload: dict[str, Any]) -> None:
+    from .smoke_utils import append_jsonl
+
+    INTER_CARD_SELF_HEAL_RECEIPTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    append_jsonl(INTER_CARD_SELF_HEAL_RECEIPTS_PATH, payload)
+
+
 def _marketplace_gate_blocks_progress(
     *,
     runtime_error: str | None,
@@ -181,6 +236,12 @@ def _marketplace_gate_blocks_progress(
 ) -> bool:
     codes = {str(c).strip().upper() for c in (policy_reason_codes or []) if str(c).strip()}
     if codes & {c.upper() for c in MARKETPLACE_GATE_REASON_CODES}:
+        return True
+    err = str(runtime_error or "").strip().upper()
+    if err in {"EBAY_RATE_LIMITED", "CHALLENGE_REQUIRED"}:
+        return True
+    blob = f"{raw_error or ''} {page_url or ''} {page_title or ''}".upper()
+    if any(marker in blob for marker in _SELF_HEAL_RATE_LIMIT_MARKERS):
         return True
     return is_marketplace_gate_page(page_url, title=page_title)
 
@@ -208,6 +269,103 @@ def _is_stuck_tab_rejection(
     return "inter_card_expected_target_rejected" in blob
 
 
+def _persist_cold_start_nav_context(ctx: NavigationRuntimeContext) -> None:
+    ctx.runtime_mode = RUNTIME_COLD_START
+    ctx.expected_prior = None
+    ctx.prior_handoff_stale = True
+    dest = bind_persisted_nav_context_path()
+    payload = ctx.to_dict()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _close_pricer_ebay_tabs_for_cold_start() -> dict[str, Any]:
+    """Close eBay pages only on the CardScanR pricer CDP endpoint (single profile/port)."""
+    from .local_browser_runtime import DEFAULT_CDP_PORT, cold_start_close_leftover_ebay_tabs
+
+    cdp_port = int(os.getenv("EBAY_BROWSER_CDP_PORT", str(DEFAULT_CDP_PORT)))
+    return cold_start_close_leftover_ebay_tabs(cdp_port=cdp_port)
+
+
+def execute_inter_card_leftover_tab_self_heal(
+    ctx: NavigationRuntimeContext,
+    *,
+    state: dict[str, Any],
+    trigger: str = INTER_CARD_EXPECTED_TARGET_REJECTED,
+) -> dict[str, Any] | None:
+    """Close pricer eBay tabs, persist COLD_START, emit a durable receipt (hourly cap)."""
+    now = _utc_now()
+    now_iso = _utc_iso(now)
+    heals_1h = _self_heals_in_last_hour(state, now=now)
+    job_id = str(ctx.current_job_id or "").strip() or None
+    idempotency_key = str(state.get("lastSelfHealIdempotencyKey") or "")
+    fingerprint = "unknown"
+    try:
+        from .local_browser_runtime import DEFAULT_CDP_PORT, probe_local_browser_runtime
+
+        cdp_port = int(os.getenv("EBAY_BROWSER_CDP_PORT", str(DEFAULT_CDP_PORT)))
+        browser = probe_local_browser_runtime(cdp_port=cdp_port)
+        fingerprint = _fingerprint_cdp_targets(list(browser.raw_targets or []))
+    except Exception:
+        fingerprint = "unknown"
+    new_key = f"{trigger}:{job_id}:{fingerprint}"
+    if idempotency_key == new_key:
+        return None
+    if heals_1h >= INTER_CARD_SELF_HEAL_MAX_PER_HOUR:
+        capped = {
+            "receiptId": f"inter-card-self-heal-cap-{uuid.uuid4().hex[:12]}",
+            "kind": "INTER_CARD_LEFTOVER_TAB_SELF_HEAL",
+            "status": "CAP_EXCEEDED",
+            "atUtc": now_iso,
+            "jobId": job_id,
+            "healsInLastHour": heals_1h,
+            "maxPerHour": INTER_CARD_SELF_HEAL_MAX_PER_HOUR,
+            "trigger": trigger,
+        }
+        state.setdefault("selfHealReceipts", [])
+        if isinstance(state["selfHealReceipts"], list):
+            state["selfHealReceipts"].append(capped)
+        state["interCardSelfHealStatus"] = "CAP_EXCEEDED"
+        state["interCardSelfHealCapExceededAtUtc"] = now_iso
+        _append_self_heal_receipt(capped)
+        return capped
+    cleanup = _close_pricer_ebay_tabs_for_cold_start()
+    _persist_cold_start_nav_context(ctx)
+    receipt = {
+        "receiptId": f"inter-card-self-heal-{uuid.uuid4().hex[:12]}",
+        "kind": "INTER_CARD_LEFTOVER_TAB_SELF_HEAL",
+        "status": "EXECUTED",
+        "atUtc": now_iso,
+        "jobId": job_id,
+        "trigger": trigger,
+        "resetMethod": cleanup.get("resetMethod"),
+        "closedTargetIds": list(cleanup.get("closedTargetIds") or []),
+        "closeErrors": list(cleanup.get("closeErrors") or []),
+        "coldStartPolicyOk": bool((cleanup.get("coldStartPolicy") or {}).get("ok")),
+        "healsInLastHour": heals_1h + 1,
+        "maxPerHour": INTER_CARD_SELF_HEAL_MAX_PER_HOUR,
+    }
+    state.setdefault("selfHealReceipts", [])
+    if isinstance(state["selfHealReceipts"], list):
+        state["selfHealReceipts"].append(receipt)
+    state["lastSelfHealIdempotencyKey"] = new_key
+    state["interCardSelfHealStatus"] = "EXECUTED"
+    state.pop("interCardSelfHealCapExceededAtUtc", None)
+    _append_self_heal_receipt(receipt)
+    return receipt
+
+
+def inter_card_self_heal_status() -> dict[str, Any]:
+    state = _load_state()
+    return {
+        "status": str(state.get("interCardSelfHealStatus") or "IDLE"),
+        "capExceededAtUtc": state.get("interCardSelfHealCapExceededAtUtc"),
+        "healsInLastHour": _self_heals_in_last_hour(state, now=_utc_now()),
+        "maxPerHour": INTER_CARD_SELF_HEAL_MAX_PER_HOUR,
+        "consecutiveNoRequestRejections": int(state.get("consecutiveInterCardNoRequestRejections") or 0),
+    }
+
+
 def observe_inter_card_no_request_outcome(
     ctx: NavigationRuntimeContext,
     *,
@@ -218,15 +376,15 @@ def observe_inter_card_no_request_outcome(
     diagnostics: dict[str, Any] | None = None,
     page_url: str | None = None,
     page_title: str | None = None,
-) -> tuple[NavigationRuntimeContext, str | None]:
-    """Track no-request rejections; force COLD_START after two stuck-tab rejections in a row."""
+) -> tuple[NavigationRuntimeContext, str | None, dict[str, Any] | None]:
+    """Track no-request rejections; self-heal after consecutive stuck-tab rejections."""
     policy_codes = extract_policy_reason_codes(result_code=result_code, diagnostics=diagnostics)
     state = _load_state()
     if search_submission_started:
         state["consecutiveInterCardNoRequestRejections"] = 0
         state.pop("stuckNoRequestSinceUtc", None)
         _save_state(state)
-        return ctx, None
+        return ctx, None, None
     if _marketplace_gate_blocks_progress(
         runtime_error=runtime_error,
         raw_error=raw_error,
@@ -235,7 +393,7 @@ def observe_inter_card_no_request_outcome(
         page_title=page_title,
     ):
         _save_state(state)
-        return ctx, "CHALLENGE_REQUIRED"
+        return ctx, "CHALLENGE_REQUIRED", None
     if not _is_stuck_tab_rejection(
         runtime_error=runtime_error,
         raw_error=raw_error,
@@ -243,21 +401,22 @@ def observe_inter_card_no_request_outcome(
         page_url=page_url,
         page_title=page_title,
     ):
-        return ctx, None
+        return ctx, None, None
     count = int(state.get("consecutiveInterCardNoRequestRejections") or 0) + 1
     state["consecutiveInterCardNoRequestRejections"] = count
     latch: str | None = None
-    if count >= 2:
-        ctx.runtime_mode = RUNTIME_COLD_START
-        ctx.expected_prior = None
-        ctx.prior_handoff_stale = True
+    self_heal_receipt: dict[str, Any] | None = None
+    if count >= INTER_CARD_NO_REQUEST_REJECTIONS_BEFORE_SELF_HEAL:
         state["consecutiveInterCardNoRequestRejections"] = 0
-        dest = bind_persisted_nav_context_path()
-        payload = ctx.to_dict()
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        self_heal_receipt = execute_inter_card_leftover_tab_self_heal(
+            ctx,
+            state=state,
+            trigger=INTER_CARD_EXPECTED_TARGET_REJECTED,
+        )
+        if self_heal_receipt and self_heal_receipt.get("status") == "CAP_EXCEEDED":
+            _persist_cold_start_nav_context(ctx)
     _save_state(state)
-    return ctx, latch
+    return ctx, latch, self_heal_receipt
 
 
 def inter_card_stuck_no_request_alert(*, now_iso: str, submissions_1h: int) -> dict[str, Any] | None:
