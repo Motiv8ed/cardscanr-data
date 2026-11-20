@@ -1,0 +1,76 @@
+name: Private exact official TH ID source URL VaultSync stage artifact
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_official_asia_th_id_vault_stage.py'
+      - '.github/workflows/private-official-asia-th-id-vault-stage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reviewed-archive-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run fixed source identity and image URL safety tests
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_vault_stage.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_vault_stage.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44713423734
+          github-token: ${{ github.token }}
+          name: CardScanR-TH-ID-Archived-Exact-Image-Sources
+          path: pinned-exact-crosswalk
+      - name: Build one exact-ID official TH-ID source-only batch
+        run: |
+          PYTHONPATH=. python tools/private_official_asia_th_id_vault_stage.py \
+            --source pinned-exact-crosswalk --out private-official-thid-bridge
+      - name: Validate hash and immutable IDs; no rights or live vault changes
+        run: |
+          python - <<'PY'
+          import hashlib,gzip,json
+          from pathlib import Path
+          root=Path('private-official-thid-bridge')
+          r=json.loads((root/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_VAULT_STAGE_READY_NOT_LIVE'
+          assert r['batch_id']=='offthid20261120_00'
+          assert r['image_url_candidates']==r['card_candidates']==40
+          assert r['set_count']==2
+          assert r['live_vault_writes']==r['image_binaries_downloaded']==r['verified_new_canonical_cards']==0
+          assert not r['right_to_reuse_artwork'] and not r['safe_for_public_artwork']
+          assert r['requires_exact_live_identity_check'] and r['requires_worker_official_th_id_pattern']
+          raw=(root/r['gzip_file']).read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['gzip_sha256']
+          assert len(raw)==r['compressed_bytes'] and 0<len(raw)<=72000
+          payload=json.loads(gzip.decompress(raw))
+          assert payload['schema_version']==1 and payload['source']=='official_crosswalk'
+          assert len(payload['cards'])==len(payload['images'])==40
+          assert len({x['canonical_printing_id'] for x in payload['cards']})==40
+          assert all(x['status']=='exact_unique' and x['native_card_name'] and x['printed_collector_number']
+                     for x in payload['cards'])
+          assert all(x['image_url'].startswith('https://asia.pokemon-card.com/')
+                     for x in payload['images'])
+          assert payload['artwork_rights_verified'] is False and payload['image_binaries_downloaded']==0
+          print('OFFICIAL_TH_ID_ONE_CHUNK_STAGE_VERIFIED',json.dumps({
+            'cards':40,'sets':2,'gzip_sha256':r['gzip_sha256'],
+            'live_vault_writes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-Exact-40-Source-Only-VaultSync-Stage
+          path: private-official-thid-bridge/
+          retention-days: 14
+          if-no-files-found: error
