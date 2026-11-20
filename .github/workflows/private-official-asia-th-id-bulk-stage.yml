@@ -1,0 +1,81 @@
+name: Private official TH ID 160-card SHA stage packs
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_official_asia_th_id_bulk_stage.py'
+      - '.github/workflows/private-official-asia-th-id-bulk-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pack-official-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44715060862
+          name: CardScanR-Official-TH-ID-Additional-160-Exact-Source-Evidence
+          github-token: ${{ github.token }}
+          path: verified-exact-sources
+      - name: Convert SHA-verified exact official sources into four private source-only batches
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_bulk_stage.py
+          python -m py_compile tools/private_official_asia_th_id_vault_stage.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_vault_stage.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_bulk_stage.py \
+            --source verified-exact-sources --out official-source-stage-packs
+      - name: Refuse invalid source metadata or artwork rights claims
+        run: |
+          python - <<'PY'
+          import hashlib,gzip,json
+          from pathlib import Path
+          d=Path('official-source-stage-packs')
+          r=json.loads((d/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_MULTIBATCH_STAGE_NOT_LIVE'
+          assert r['total_candidates']==160 and r['total_batches']==4
+          assert [x['batch_id'] for x in r['batches']]==[
+            'offthid20261120_01','offthid20261120_02',
+            'offthid20261120_03','offthid20261120_04']
+          assert r['new_canonical_card_records']==r['live_vault_writes']==r['image_binaries_downloaded']==0
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          assert r['live_exact_card_identity_still_required']
+          total=0
+          seen=set()
+          for rec in r['batches']:
+              b=(d/rec['file']).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==rec['sha256']
+              assert len(b)==rec['bytes']<=72000
+              obj=json.loads(gzip.decompress(b))
+              assert obj['schema_version']==1 and obj['source']=='official_crosswalk'
+              assert not obj['artwork_rights_verified'] and obj['image_binaries_downloaded']==0
+              assert len(obj['cards'])==len(obj['images'])==rec['cards']==rec['image_sources']==40
+              assert len(obj['sets'])==rec['sets']
+              ids={i['canonical_printing_id'] for i in obj['cards']}
+              assert len(ids)==40 and seen.isdisjoint(ids)
+              seen.update(ids)
+              assert ids=={i['canonical_printing_id'] for i in obj['images']}
+              assert all(x['status']=='exact_unique' and x['native_card_name'] and x['printed_collector_number']
+                         for x in obj['cards'])
+              total+=len(obj['cards'])
+          assert total==len(seen)==160
+          print('PRIVATE_FOUR_TH_ID_STAGING_BATCHES_PASS',json.dumps({
+              'batches':4,'source_links':160,
+              'sha256':[x['sha256'] for x in r['batches']],
+              'live_changes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-160-Source-Only-VaultSync-Packs
+          path: official-source-stage-packs/
+          retention-days: 14
+          if-no-files-found: error
