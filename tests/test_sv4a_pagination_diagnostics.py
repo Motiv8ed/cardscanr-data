@@ -48,6 +48,16 @@ class PaginationGuardTests(unittest.TestCase):
                     self.assertEqual(len(FakeCollector.requests), 1, "no detail requests on invalid list count")
                     self.assertFalse(out.exists(), "no artifact on invalid list count")
 
+    def test_duplicate_detail_ids_rejected_without_side_effects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "not-created"
+            ids = ["100", "100", "101"]
+            with patch.object(mod, "Collector", FakeCollector), patch.object(mod, "parse_card_list", return_value=(ids, None)), patch.object(mod, "parse_card_detail", side_effect=AssertionError("detail must not be fetched")):
+                with self.assertRaisesRegex(ValueError, r"duplicate_source_detail_ids: page=19 parsed=3 unique=2$"):
+                    mod.run(out, limit=3, page=19)
+                self.assertEqual(len(FakeCollector.requests), 1)
+                self.assertFalse(out.exists())
+
     def test_zero_rejected(self):
         self.check_count(0, False)
 
