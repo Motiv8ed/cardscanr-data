@@ -244,6 +244,68 @@ def _heartbeat_gate_mode(*, continuous: bool, operation_mode: str) -> str:
     return "continuous" if continuous else "staged"
 
 
+def _ebay_browser_provider(config: MarketEngineConfig) -> bool:
+    return str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
+
+
+def _set_sweep_pre_job_gate_ok(*, worker_state: str, hard: Any) -> bool:
+    return worker_state not in {"PROBE_REQUIRED", "HARD_STOP"} and not hard
+
+
+def _set_sweep_cycle_stop_requested(sweep_result: Any) -> str | None:
+    if sweep_result is None:
+        return None
+    return sweep_result.hard_stop_reason if getattr(sweep_result, "hard_stop_reason", None) else None
+
+
+def _handle_set_sweep_hard_stop_in_cycle(
+    *,
+    cycle: int,
+    stop_reason: str,
+    budget: ContinuousSafetyBudget,
+    runner: InternationalMarketPriceJobRunner,
+    config: MarketEngineConfig,
+    args: argparse.Namespace,
+    started_at: str,
+    continuous: bool,
+    operation_mode: str,
+    sleep_func: Any,
+    poll_seconds: int,
+    logger: Any,
+) -> bool:
+    """Apply HARD_STOP from set-sweep; return True when the worker should start the next cycle."""
+    if continuous:
+        write_owned_daily_flag(False)
+        write_continuous_status(
+            {
+                "enabled": False,
+                "workerState": "HARD_STOP",
+                "lastHardStopReason": stop_reason,
+                "consecutiveTransientFailures": budget.consecutive_transient,
+            }
+        )
+    budget.reload()
+    budget.persist()
+    logger(
+        "[market-engine] "
+        f"cycle={cycle} status=HARD_STOP reason={stop_reason} source=set_sweep"
+    )
+    _emit_gated_heartbeat(
+        runner,
+        config,
+        cycle=cycle,
+        started_at=started_at,
+        state="hard_stop",
+        reason=stop_reason,
+        mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
+        logger=logger,
+    )
+    if args.once:
+        return True
+    sleep_func(max(poll_seconds, 60))
+    return True
+
+
 def _emit_gated_heartbeat(
     runner: InternationalMarketPriceJobRunner,
     config: MarketEngineConfig,
@@ -304,6 +366,7 @@ def run_worker_loop(
     last_success = None
     last_transient = None
     healthy_times: list[str] = []
+    per_card_submissions_since_sweep = 0
 
     while True:
         cycle += 1
@@ -523,9 +586,8 @@ def run_worker_loop(
         cycle_max_jobs = min(max_jobs, 1) if getattr(runner, "_ebay_probe_mode", False) else max_jobs
         if (
             continuous
-            and str(getattr(config, "provider_name", "") or "").strip().lower() == "ebay_browser"
-            and worker_state not in {"PROBE_REQUIRED", "HARD_STOP"}
-            and not hard
+            and _ebay_browser_provider(config)
+            and _set_sweep_pre_job_gate_ok(worker_state=worker_state, hard=hard)
         ):
             try:
                 from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import try_set_sweep_worker_cycle
@@ -538,37 +600,25 @@ def run_worker_loop(
                     availability_state=str(gate_info.get("availabilityState") or ""),
                     hard_stop=str(hard) if hard else None,
                 )
-                stop_reason = sweep_result.hard_stop_reason if sweep_result is not None else None
+                stop_reason = _set_sweep_cycle_stop_requested(sweep_result)
                 if stop_reason:
-                    write_owned_daily_flag(False)
-                    write_continuous_status(
-                        {
-                            "enabled": False,
-                            "workerState": "HARD_STOP",
-                            "lastHardStopReason": stop_reason,
-                            "consecutiveTransientFailures": budget.consecutive_transient,
-                        }
-                    )
-                    budget.reload()
-                    budget.persist()
-                    logger(
-                        "[market-engine] "
-                        f"cycle={cycle} status=HARD_STOP reason={stop_reason} source=set_sweep"
-                    )
-                    _emit_gated_heartbeat(
-                        runner,
-                        config,
+                    if _handle_set_sweep_hard_stop_in_cycle(
                         cycle=cycle,
+                        stop_reason=str(stop_reason),
+                        budget=budget,
+                        runner=runner,
+                        config=config,
+                        args=args,
                         started_at=started_at,
-                        state="hard_stop",
-                        reason=str(stop_reason),
-                        mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
+                        continuous=continuous,
+                        operation_mode=operation_mode,
+                        sleep_func=sleep_func,
+                        poll_seconds=poll_seconds,
                         logger=logger,
-                    )
-                    if args.once:
-                        return 2
-                    sleep_func(max(poll_seconds, 60))
-                    continue
+                    ):
+                        if args.once:
+                            return 2
+                        continue
             except Exception as sweep_exc:
                 logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
         try:
@@ -653,6 +703,61 @@ def run_worker_loop(
         if enforce_budget and results:
             for row in results:
                 _record_supplementary_submission(budget, row, gate_market=gate_market)
+
+        per_card_submissions_this_cycle = sum(
+            1 for row in results if bool(row.get("searchSubmissionStarted"))
+        )
+        if (
+            not continuous
+            and enforce_budget
+            and _ebay_browser_provider(config)
+            and _set_sweep_pre_job_gate_ok(worker_state=worker_state, hard=hard)
+        ):
+            try:
+                from cardscanr_market_engine.ebay_scale.set_sweep_worker_hook import (
+                    live_au_set_sweep_interleave_due,
+                    live_au_set_sweep_shadow_hook_enabled,
+                    try_set_sweep_worker_cycle,
+                )
+
+                queue_idle = len(results) == 0
+                if live_au_set_sweep_shadow_hook_enabled() and live_au_set_sweep_interleave_due(
+                    queue_idle=queue_idle,
+                    per_card_submissions_since_last_sweep=per_card_submissions_since_sweep,
+                ):
+                    sweep_result = try_set_sweep_worker_cycle(
+                        client=runner.client,
+                        budget=budget,
+                        logger=logger,
+                        worker_state=worker_state,
+                        availability_state=str(gate_info.get("availabilityState") or ""),
+                        hard_stop=str(hard) if hard else None,
+                    )
+                    if sweep_result is not None and bool(sweep_result.submission_consumed):
+                        per_card_submissions_since_sweep = 0
+                    stop_reason = _set_sweep_cycle_stop_requested(sweep_result)
+                    if stop_reason:
+                        if _handle_set_sweep_hard_stop_in_cycle(
+                            cycle=cycle,
+                            stop_reason=str(stop_reason),
+                            budget=budget,
+                            runner=runner,
+                            config=config,
+                            args=args,
+                            started_at=started_at,
+                            continuous=False,
+                            operation_mode=operation_mode,
+                            sleep_func=sleep_func,
+                            poll_seconds=poll_seconds,
+                            logger=logger,
+                        ):
+                            if args.once:
+                                return 2
+                            continue
+            except Exception as sweep_exc:
+                logger(f"[market-engine] set_sweep_cycle_warning={sweep_exc.__class__.__name__}:{sweep_exc}")
+        per_card_submissions_since_sweep += per_card_submissions_this_cycle
+
         summary = build_cycle_summary(
             config=config,
             cycle=cycle,
