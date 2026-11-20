@@ -37,9 +37,11 @@ def accept_url(url,locale):
     except ValueError:
         return False
 
-def run(out:Path,limit:int=20,delay:float=1.5):
+def run(out:Path,limit:int=20,delay:float=1.5,page:int=1):
     if not 1<=limit<=MAX_PER_LOCALE:
         raise ValueError("unbounded_card_detail_limit")
+    if type(page) is not int or not 1<=page<=12:
+        raise ValueError("unbounded_official_source_page")
     if not 0.5<=delay<=5:
         raise ValueError("unsafe_collection_pacing")
     if out.exists() or out.is_symlink():
@@ -51,6 +53,8 @@ def run(out:Path,limit:int=20,delay:float=1.5):
             collector=Collector(lang,Path(temp),delay)
             try:
                 listurl=f"{BASE_URL}/{lang}/card-search/list/?expansionCodes={code}"
+                if page>1:
+                    listurl+="&pageNo="+str(page)
                 fetched=collector.fetch(listurl)
                 if fetched.status!=200 or len(fetched.content)>3_000_000:
                     raise ValueError("source_list_http_or_size_drift")
@@ -90,6 +94,7 @@ def run(out:Path,limit:int=20,delay:float=1.5):
                       "provider":"pokemon-card-asia","language":lang,
                       "source_product_code":code,
                       "official_detail_id":card_id,
+                      "source_list_page":page,
                       "official_detail_url":url,
                       "source_name_native":name,
                       "source_collector_number":number,
@@ -105,7 +110,7 @@ def run(out:Path,limit:int=20,delay:float=1.5):
                     })
                     got+=1
                 stats.append({
-                  "locale":lang,"set":code,"list_cards":len(ids),
+                  "locale":lang,"set":code,"source_list_page":page,"list_cards":len(ids),
                   "details_scrutinized":got,
                   "list_html_image_urls":len(listing_image_urls),
                   "list_image_refs_retrieved_without_detail_fetch":False,
@@ -124,6 +129,7 @@ def run(out:Path,limit:int=20,delay:float=1.5):
       "generated_utc":datetime.now(timezone.utc).isoformat(),
       "sources":stats,
       "source_cards":len(rows),
+      "source_list_page":page,
       "image_url_references":sum(bool(x["source_image_url_reference"]) for x in rows),
       "source_url_manifest_sha256":hashlib.sha256(raw).hexdigest(),
       "source_request_budget":(limit+1)*len(TARGETS),
@@ -150,12 +156,13 @@ if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--out",type=Path)
     p.add_argument("--limit",type=int,default=20)
+    p.add_argument("--page",type=int,default=1)
     p.add_argument("--self-test",action="store_true")
     a=p.parse_args()
     if a.self_test:self_test()
     else:
         if not a.out:p.error("--out required")
-        result=run(a.out,a.limit)
+        result=run(a.out,a.limit,page=a.page)
         print("OFFICIAL_ASIA_SOURCE_URL_PILOT",json.dumps({
           "cards":result["source_cards"],
           "image_url_references":result["image_url_references"],
