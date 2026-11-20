@@ -29,10 +29,10 @@ jobs:
         run: |
           python -m py_compile tools/private_official_asia_th_id_url_pilot.py
           PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py --self-test
-      - name: Retrieve robots-allowed official HTML metadata only, 12 pages maximum
+      - name: Retrieve robots-allowed official HTML metadata only, 42 HTML requests maximum
         run: |
           PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py \
-            --out private-official-asia-urls --limit 5
+            --out private-official-asia-urls --limit 20
       - name: Verify exactly scoped research receipt and source-only privacy
         run: |
           python - <<'PY'
@@ -41,7 +41,7 @@ jobs:
           root=Path('private-official-asia-urls')
           r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
           assert r['classification']=='PRIVATE_OFFICIAL_ASIA_CARD_URL_RESEARCH_ONLY'
-          assert r['source_cards']==10 and r['source_request_budget']==12
+          assert r['source_cards']==40 and r['source_request_budget']==42
           assert len(r['sources'])==2
           assert {x['locale'] for x in r['sources']}=={'th','id'}
           assert r['image_binaries_downloaded']==r['live_vault_writes']==0
@@ -50,7 +50,7 @@ jobs:
           raw=(root/'official_asia_card_source_urls.jsonl').read_bytes()
           assert hashlib.sha256(raw).hexdigest()==r['source_url_manifest_sha256']
           rows=[json.loads(line) for line in raw.splitlines()]
-          assert len(rows)==10
+          assert len(rows)==40
           assert all(not x['image_downloaded'] and not x['artwork_rights_cleared']
                      and not x['exact_vault_match_proven'] for x in rows)
           assert all(x['official_detail_url'].startswith('https://asia.pokemon-card.com/')
