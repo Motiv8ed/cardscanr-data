@@ -37,6 +37,19 @@ PHASE_PAGE_HEALTH_VERIFICATION = "PAGE_HEALTH_VERIFICATION"
 CDP_TARGET_ATTACH_FAILURE = "CDP_TARGET_ATTACH_FAILURE"
 
 
+def is_tiny_ebay_generic_error_body(body: str | None) -> bool:
+    """Short generic marketplace failure body (~154 chars, no sold structure)."""
+    text = str(body or "").strip()
+    if not text or len(text) > 220:
+        return False
+    low = text.lower()
+    if "something went wrong" in low and ("our end" in low or "on our end" in low):
+        return True
+    if "error page" in low and "ebay" in low:
+        return True
+    return False
+
+
 def is_ebay_error_page(
     title: str | None = None,
     url: str | None = None,
@@ -195,6 +208,8 @@ def classify_sold_page_health(
     top_level = bool(str(url or "").strip()) and not str(url or "").lower().startswith("about:blank")
     title_l = str(title or "").strip().lower()
     title_ok = bool(title_l) and "error page" not in title_l and "untitled" not in title_l
+    if body is not None and is_tiny_ebay_generic_error_body(body):
+        title_ok = False
 
     reasons: list[str] = []
     if not top_level:

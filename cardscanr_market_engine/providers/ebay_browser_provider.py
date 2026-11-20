@@ -913,7 +913,16 @@ def verify_sold_result_state(
     sold_listings_label = "sold listings" in body_l or "sold items" in body_l
     # Result-level sold evidence: dated sold lines are the strongest page signal.
     result_level_sold = sold_date_lines >= 1
-    verified = bool(sold_url and (result_level_sold or (sold_listings_label and complete_url)))
+    from .au_ebay_variant_resilience import sold_state_verification_blocked
+
+    blocked = sold_state_verification_blocked(
+        title=title, url=url, body=body_text, http_status=None
+    )
+    verified = bool(
+        sold_url
+        and not blocked
+        and (result_level_sold or (sold_listings_label and complete_url))
+    )
     return {
         "SOLD_STATE_VERIFIED": verified,
         "soldUrlParam": sold_url,
@@ -2553,6 +2562,7 @@ class EbayBrowserSoldCompsProvider:
         self._session_locale: str | None = None
         self._desktop_cdp_browser: Any | None = None
         self._desktop_nav_ready: bool = False
+        self._live_ebay_navigation_count: int = 0
 
     def _wait_for_request_slot(self) -> None:
         min_wait = max(self.config.cooldown_seconds, self.config.min_seconds_between_requests)
@@ -2699,6 +2709,21 @@ class EbayBrowserSoldCompsProvider:
                 ENGLISH_MARKET_IDENTITY_UNAVAILABLE,
                 diagnostics=identity_guard.diagnostics,
             )
+        from .au_ebay_variant_resilience import (
+            LIVE_EBAY_NAVIGATION_COUNT,
+            annotate_variant_fallback_metadata,
+            attempt_has_healthy_verified_sold_capture,
+            au_variant_resilience_enabled,
+            comparable_included_count,
+            generic_error_page_retry_delay_seconds,
+            is_generic_error_page_failure,
+            min_comparable_count_for_variant_stop,
+            should_stop_query_variants_after_healthy_capture,
+            variant_inter_attempt_delay_seconds,
+        )
+
+        self._live_ebay_navigation_count = 0
+        au_resilience = au_variant_resilience_enabled(market_country=request.market_country)
         search_queries = build_provider_search_queries(request, max_attempts=_max_query_attempts())
         attempts: list[tuple[ProviderSearchQuery, ProviderResult]] = []
         failed_attempts: list[dict[str, Any]] = []
@@ -2706,10 +2731,27 @@ class EbayBrowserSoldCompsProvider:
         early_stop_progress: list[dict[str, Any]] = []
         low_confidence_sparse_market_reason: str | None = None
         stop_reason = "all_query_attempts_exhausted"
+        last_healthy_attempt: tuple[ProviderSearchQuery, ProviderResult] | None = None
+        last_failed_variant_query: str | None = None
+        generic_error_retried: set[int] = set()
         try:
             query_cursor = 0
             while query_cursor < len(search_queries):
                 search_query = search_queries[query_cursor]
+                if au_resilience and should_stop_query_variants_after_healthy_capture(
+                    last_healthy=last_healthy_attempt,
+                    request=request,
+                ):
+                    stop_reason = "au_stop_after_healthy_sold_capture"
+                    break
+                if (
+                    au_resilience
+                    and query_cursor > 0
+                    and last_healthy_attempt is not None
+                    and comparable_included_count(last_healthy_attempt[1], request)
+                    < min_comparable_count_for_variant_stop()
+                ):
+                    time.sleep(variant_inter_attempt_delay_seconds())
                 attempt_stage = f"run_query_attempt_{search_query.query_index + 1}"
                 try:
                     with _StageTimer(lookup_timings, attempt_stage):
@@ -2735,6 +2777,15 @@ class EbayBrowserSoldCompsProvider:
                     if diagnostics.get("preSoldSorry") == "PRE_SOLD_SORRY":
                         attempt_failure["preSoldSorry"] = "PRE_SOLD_SORRY"
                     failed_attempts.append(attempt_failure)
+                    if au_resilience and is_generic_error_page_failure(exc):
+                        if search_query.query_index not in generic_error_retried:
+                            generic_error_retried.add(search_query.query_index)
+                            time.sleep(generic_error_page_retry_delay_seconds())
+                            continue
+                        if last_healthy_attempt is not None:
+                            last_failed_variant_query = search_query.query_text
+                            stop_reason = "au_variant_generic_error_fallback"
+                            break
                     sold_filter_miss = "sold items filter control" in str(exc).lower()
                     page_state = diagnostics.get("browserPageState") or {}
                     pre_sold_sorry = (
@@ -2771,6 +2822,8 @@ class EbayBrowserSoldCompsProvider:
                     raw_metadata=result.raw_metadata,
                 )
                 attempts.append((search_query, result))
+                if au_resilience and attempt_has_healthy_verified_sold_capture(result):
+                    last_healthy_attempt = (search_query, result)
                 aggregate_comps = dedupe_sold_comps([comp for _query, attempt in attempts for comp in attempt.comps])
                 stop_decision = _early_stop_decision(
                     request=request,
@@ -2787,6 +2840,15 @@ class EbayBrowserSoldCompsProvider:
                     query_cursor = next_query_index
                 else:
                     query_cursor += 1
+            if stop_reason == "au_variant_generic_error_fallback" and last_healthy_attempt is not None:
+                hq, hr = last_healthy_attempt
+                hr = annotate_variant_fallback_metadata(
+                    hr,
+                    failed_query_text=str(last_failed_variant_query or ""),
+                    failure_reason="generic_error_page_after_healthy_capture",
+                )
+                attempts = [(hq, hr)]
+                aggregate_comps = dedupe_sold_comps(list(hr.comps))
             return self._build_aggregate_result(
                 request=request,
                 attempts=attempts,
@@ -2848,6 +2910,7 @@ class EbayBrowserSoldCompsProvider:
         low_confidence_sparse_market_reason: str | None = None,
     ) -> ProviderResult:
         from ..filters import filter_comps
+        from .au_ebay_variant_resilience import LIVE_EBAY_NAVIGATION_COUNT
 
         if not attempts:
             raise ProviderParseError(
@@ -2972,6 +3035,7 @@ class EbayBrowserSoldCompsProvider:
                 "queryAttemptsUsed": len(attempts),
                 "queryAttemptLimit": query_attempt_limit,
                 "queryStopReason": stop_reason,
+                LIVE_EBAY_NAVIGATION_COUNT: max(0, int(self._live_ebay_navigation_count)),
                 "providerOutcome": "success" if comps else "no_results",
                 "diagnosticStages": DIAGNOSTIC_STAGES if comps else (*DIAGNOSTIC_STAGES[:-2], "no_price", "complete"),
                 "earlyStopApplied": stop_reason != "all_query_attempts_exhausted",
@@ -3291,13 +3355,44 @@ class EbayBrowserSoldCompsProvider:
             stage_timings.fields["searchEntryMode"] = SEARCH_ENTRY_MODE_RENDERED_UI_X11
             stage_timings.fields["directSearchUrlNavigation"] = False
             stage_timings.fields["auSearchEntry"] = "rendered_ui_x11"
-            nav = navigate_query_to_sold(
-                search_query.query_text,
-                reset_homepage=not ctx.is_inter_card(),
-                attempt_id=attempt_id,
-                price_key_id=str(getattr(request.price_key, "id", None) or "") or None,
-                pre_submit_only=pre_submit,
+            from .au_ebay_variant_resilience import (
+                au_variant_resilience_enabled,
+                generic_error_page_retry_delay_seconds,
+                is_generic_error_page_nav,
             )
+
+            def _run_desktop_nav() -> Any:
+                return navigate_query_to_sold(
+                    search_query.query_text,
+                    reset_homepage=not ctx.is_inter_card(),
+                    attempt_id=attempt_id,
+                    price_key_id=str(getattr(request.price_key, "id", None) or "") or None,
+                    pre_submit_only=pre_submit,
+                )
+
+            nav = _run_desktop_nav()
+            self._live_ebay_navigation_count += 1
+            if au_variant_resilience_enabled(market_country=request.market_country):
+                nav_diag_pre = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
+                sold_pre = (
+                    nav_diag_pre.get("sold") if isinstance(nav_diag_pre.get("sold"), dict) else {}
+                )
+                search_pre = (
+                    nav_diag_pre.get("search") if isinstance(nav_diag_pre.get("search"), dict) else {}
+                )
+                body_pre = str(sold_pre.get("body") or sold_pre.get("bodyChars") or "")
+                if is_generic_error_page_nav(
+                    title=nav.title,
+                    url=nav.url,
+                    body=body_pre,
+                    error=nav.error,
+                    sorry=bool(nav.sorry),
+                    challenge=bool(nav.challenge),
+                    reason=str(nav.error or search_pre.get("resultCode") or ""),
+                ):
+                    time.sleep(generic_error_page_retry_delay_seconds())
+                    nav = _run_desktop_nav()
+                    self._live_ebay_navigation_count += 1
             nav_diag = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
             search_diag = nav_diag.get("search") if isinstance(nav_diag.get("search"), dict) else {}
             gui_timings = search_diag.get("guiAttemptTimings") or (nav_diag.get("guiAttemptTimings"))

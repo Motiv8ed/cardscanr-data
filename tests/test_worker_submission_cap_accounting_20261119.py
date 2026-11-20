@@ -220,8 +220,8 @@ class WorkerLoopCapTests(unittest.TestCase):
         row = {LIVE_EBAY_NAVIGATION_CONSUMED: True, "marketCountry": "AU"}
         self.assertTrue(supplementary_submission_needs_cap(row))
         with mock.patch(
-            "workers.market_price_worker.supplementary_submission_needs_cap",
-            return_value=False,
+            "workers.market_price_worker.row_needs_supplementary_cap_slots",
+            return_value=0,
         ):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)

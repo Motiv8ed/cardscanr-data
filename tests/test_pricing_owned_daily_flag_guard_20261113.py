@@ -52,13 +52,13 @@ class OwnedDailyReleaseHoldTests(TestCase):
             with patch.dict(os.environ, {"OWNED_DAILY_FULL_ENABLE": "false"}):
                 self.assertFalse(owned_daily_enablement.owned_daily_full_enable(flag_path=missing))
 
-    def test_continuous_au_config_daily_cap_remains_60(self) -> None:
+    def test_continuous_au_config_daily_cap_remains_300(self) -> None:
         with patch.dict(os.environ, {}, clear=False):
             values = owned_daily_enablement.apply_continuous_au_env()
             self.assertEqual(values["MARKET_WORKER_CONCURRENCY"], "1")
-            self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "20")
-            self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
-            self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
+            self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "60")
+            self.assertEqual(values["MAX_LIVE_SUBMISSIONS_PER_DAY"], "300")
+            self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "300")
 
     def test_directory_at_flag_path_fails_closed_ignoring_true_environment(self) -> None:
         with TemporaryDirectory() as temp:
@@ -91,6 +91,6 @@ class OwnedDailyReleaseHoldTests(TestCase):
                 patch.object(owned_daily_enablement, "FLAG_PATH", flag),
             ):
                 self.assertTrue(owned_daily_enablement.ensure_continuous_au_safety_env())
-                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "60")
-                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "20")
+                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_DAY"], "300")
+                self.assertEqual(os.environ["MAX_LIVE_SUBMISSIONS_PER_HOUR"], "60")
                 self.assertEqual(os.environ["MARKET_WORKER_CONCURRENCY"], "1")

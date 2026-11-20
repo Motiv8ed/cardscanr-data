@@ -61,6 +61,10 @@ from cardscanr_market_engine.providers.sold_control_identity import (  # noqa: E
     content_origin_from_viewport_metrics,
     prove_sold_control_identity,
 )
+from cardscanr_market_engine.providers.sold_page_health import (  # noqa: E402
+    evaluate_sold_verification,
+    is_ebay_error_page,
+)
 from cardscanr_market_engine.providers.sold_navigation_phases import (  # noqa: E402
     DEFAULT_SOLD_TIMEOUT_POLICY,
     PHASE_SOLD_CONTROL_DISCOVERY,
@@ -361,12 +365,18 @@ def gui_sold(*, tag: str) -> dict:
 
     if "LH_Sold=1" in url0:
         body = copy_body()
-        gate = on_sold_terminal(gate, verified=True)
+        ev = evaluate_sold_verification(url=url0, title=t0, body=body)
+        verified = bool(ev.get("verified"))
+        gate = on_sold_terminal(gate, verified=verified)
+        if ev.get("terminal") == "EBAY_ERROR_PAGE" or (
+            not verified and is_ebay_error_page(title=t0, url=url0, body=body)
+        ):
+            gate = on_sold_terminal(gate, sorry=True)
         out = {
-            "ok": True,
+            "ok": verified,
             "alreadySold": True,
             "soldClickSuccess": False,
-            "SOLD_STATE_VERIFIED": True,
+            "SOLD_STATE_VERIFIED": verified,
             "url": url0,
             "title": t0,
             "aboutBlank": False,
