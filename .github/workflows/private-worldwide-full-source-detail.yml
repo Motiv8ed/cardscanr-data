@@ -1,0 +1,102 @@
+name: CardScanR worldwide full detail source archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_cardcorpus_all_rich_archive.py'
+      - '.github/workflows/private-worldwide-full-source-detail.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worldwide-cardcorpus-full-archive
+  cancel-in-progress: false
+
+jobs:
+  collect-full-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout CardScanR pinned collector
+        uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - name: Checkout CardCorpus exact upstream source revision
+        uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          path: source
+          persist-credentials: false
+          sparse-checkout: |
+            v1/cards.json
+            v1/sets.json
+            v1/sets
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact source Git commit and offline source guards
+        shell: bash
+        run: |
+          test "$(git -C source rev-parse HEAD)" = 'c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6'
+          python -m py_compile cardscanr/tools/private_cardcorpus_all_rich_archive.py
+          python cardscanr/tools/private_cardcorpus_all_rich_archive.py --self-test
+      - name: Extract all 67243 source cards and all 916 set detail records
+        shell: bash
+        run: |
+          python cardscanr/tools/private_cardcorpus_all_rich_archive.py \
+            --upstream source --output private-worldwide-full-detail
+      - name: Audit compressed SHA receipts, cardinalities, non-publishing guarantees
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          folder=Path('private-worldwide-full-detail')
+          report=json.loads((folder/'receipt.json').read_text(encoding='utf8'))
+          assert report['classification']=='PRIVATE_SOURCE_ONLY_NO_CANONICAL_IMPORT'
+          assert report['source_card_records']==67243
+          assert report['source_set_records']==916
+          assert report['source_cards_with_picture_ids']<=67243
+          assert report['validated_rich_card_details']<=67243
+          assert report['new_canonical_card_records']==0
+          assert report['image_binaries_downloaded']==0
+          assert report['vault_writes']==report['production_writes']==0
+          assert report['all_provider_ids_provisional'] is True
+          assert report['public_artwork_publication_allowed'] is False
+          for name,meta in report['file_hashes'].items():
+              b=(folder/name).read_bytes()
+              assert len(b)==meta['compressed_bytes']
+              assert hashlib.sha256(b).hexdigest()==meta['compressed_sha256']
+              raw=gzip.decompress(b)
+              assert hashlib.sha256(raw).hexdigest()==meta['uncompressed_sha256']
+              assert len(raw.splitlines())==meta['records']
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write("### Full private worldwide source archive\n\n")
+              f.write(f"Source cards: **{report['source_card_records']:,}** across **{report['source_set_records']:,}** sets\n\n")
+              f.write(f"Validated rich card details: **{report['validated_rich_card_details']:,}**\n\n")
+              f.write(f"Card picture IDs: **{report['source_cards_with_picture_ids']:,}**\n\n")
+              f.write(f"Source variants: **{report['source_variant_rows']:,}**\n\n")
+              f.write(f"Quarantined detail mismatches: **{report['quarantined_source_detail_rows']:,}**\n\n")
+              f.write("No image files downloaded, no new CardScanR canonical cards, no live vault changes.\n")
+          print('PASS_PRIVATE_SOURCE_RESEARCH',json.dumps({
+              'cards':report['source_card_records'],
+              'rich_details':report['validated_rich_card_details'],
+              'picture_ids':report['source_cards_with_picture_ids'],
+              'quarantined':report['quarantined_source_detail_rows'],
+              'new_live_cards':0,
+          }))
+          PY
+      - name: Upload verified, attributed source metadata, not artwork binaries
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Worldwide-All-67243-Source-Rich-Details
+          path: private-worldwide-full-detail/
+          retention-days: 14
+          if-no-files-found: error
