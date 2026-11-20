@@ -276,14 +276,14 @@ def _handle_set_sweep_hard_stop_in_cycle(
     """Apply HARD_STOP from set-sweep; return True when the worker should start the next cycle."""
     if continuous:
         write_owned_daily_flag(False)
-        write_continuous_status(
-            {
-                "enabled": False,
-                "workerState": "HARD_STOP",
-                "lastHardStopReason": stop_reason,
-                "consecutiveTransientFailures": budget.consecutive_transient,
-            }
-        )
+    write_continuous_status(
+        {
+            "enabled": False,
+            "workerState": "HARD_STOP",
+            "lastHardStopReason": stop_reason,
+            "consecutiveTransientFailures": budget.consecutive_transient,
+        }
+    )
     budget.reload()
     budget.persist()
     logger(

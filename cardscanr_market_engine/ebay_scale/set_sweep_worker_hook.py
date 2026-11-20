@@ -594,7 +594,9 @@ def try_set_sweep_worker_cycle(
         return SetSweepExecutionResult(ok=False, reason=reason)
 
     if fetch_html is None:
-        fetch_html = _default_fetch_set_sweep_html
+
+        def fetch_html(query: str, set_code: str, set_name: str) -> str:
+            return _default_fetch_set_sweep_html(query, set_code, set_name, budget=budget)
 
     return execute_set_sweep_shadow(
         client=client,
@@ -606,7 +608,13 @@ def try_set_sweep_worker_cycle(
     )
 
 
-def _default_fetch_set_sweep_html(query: str, set_code: str, set_name: str) -> str:
+def _default_fetch_set_sweep_html(
+    query: str,
+    set_code: str,
+    set_name: str,
+    *,
+    budget: "ContinuousSafetyBudget | None" = None,
+) -> str:
     """Live PC path: X11 sold navigation + authoritative HTML capture."""
     del set_code, set_name
     from ..providers.ebay_browser_provider import EbayBrowserProvider
@@ -614,7 +622,13 @@ def _default_fetch_set_sweep_html(query: str, set_code: str, set_name: str) -> s
 
     config = MarketEngineConfig.from_env(require_supabase=False)
     provider = EbayBrowserProvider(config=config)
-    return provider.fetch_set_sweep_results_html(query_text=query)
+    if budget is not None and hasattr(provider, "bind_live_submission_budget"):
+        provider.bind_live_submission_budget(budget, first_slot_pre_reserved=True)
+    try:
+        return provider.fetch_set_sweep_results_html(query_text=query)
+    finally:
+        if hasattr(provider, "clear_live_submission_budget"):
+            provider.clear_live_submission_budget()
 
 
 def live_set_sweep_median_for_price_key(price_key: MarketPriceKey) -> float | None:

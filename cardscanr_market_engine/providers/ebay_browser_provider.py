@@ -3175,6 +3175,13 @@ class EbayBrowserSoldCompsProvider:
                 diagnostics={},
             )
         from ..navigation_runtime_context import RUNTIME_COLD_START, apply_context_to_environ, load_navigation_runtime_context
+        from .au_ebay_variant_resilience import (
+            LIVE_EBAY_NAVIGATION_COUNT,
+            au_variant_resilience_enabled,
+            generic_error_page_retry_delay_seconds,
+            is_generic_error_page_nav,
+            merge_live_navigation_into_diagnostics,
+        )
         from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
         from .linux_x11_ebay_nav import navigate_query_to_sold
         from .post_sold_capture import resolve_authoritative_capture_html_path
@@ -3189,16 +3196,101 @@ class EbayBrowserSoldCompsProvider:
         ctx.expected_prior = None
         apply_context_to_environ(ctx)
         port = self._ensure_linux_chrome_cdp_ready()
-        nav = navigate_query_to_sold(
-            query_text,
-            reset_homepage=True,
-            attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
-            price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
-        )
+        self._live_ebay_navigation_count = 0
+        au_resilience = au_variant_resilience_enabled(market_country="AU")
+        desktop_generic_retried = False
+
+        def _run_set_sweep_nav():
+            blocked = self._reserve_live_navigation_slot(market_country="AU")
+            if blocked:
+                raise ProviderTemporaryError(
+                    f"Live submission budget blocked before set-sweep navigation: {blocked}",
+                    diagnostics=merge_live_navigation_into_diagnostics(
+                        {"budgetBlocked": blocked, "marketCountry": "AU"},
+                        navigation_count=self._live_ebay_navigation_count,
+                    ),
+                )
+            self._live_ebay_navigation_count += 1
+            return navigate_query_to_sold(
+                query_text,
+                reset_homepage=True,
+                attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
+            )
+
+        nav = _run_set_sweep_nav()
+        if au_resilience:
+            nav_diag_pre = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
+            sold_pre = (
+                nav_diag_pre.get("sold") if isinstance(nav_diag_pre.get("sold"), dict) else {}
+            )
+            search_pre = (
+                nav_diag_pre.get("search") if isinstance(nav_diag_pre.get("search"), dict) else {}
+            )
+            body_pre = str(sold_pre.get("body") or sold_pre.get("bodySample") or "")
+            if (
+                not desktop_generic_retried
+                and is_generic_error_page_nav(
+                    title=nav.title,
+                    url=nav.url,
+                    body=body_pre,
+                    error=nav.error,
+                    sorry=bool(nav.sorry),
+                    challenge=bool(nav.challenge),
+                    reason=str(nav.error or sold_pre.get("error") or search_pre.get("resultCode") or ""),
+                )
+            ):
+                desktop_generic_retried = True
+                time.sleep(generic_error_page_retry_delay_seconds())
+                nav = _run_set_sweep_nav()
+        if nav.challenge:
+            raise ProviderBlockedError(
+                "eBay returned a verification challenge during set-sweep navigation",
+                diagnostics=merge_live_navigation_into_diagnostics(
+                    {
+                        "providerOutcome": "challenge_detected",
+                        "ownedDailyOutcome": "CHALLENGE_REQUIRED",
+                        "desktopNav": nav.diagnostics if isinstance(nav.diagnostics, dict) else {},
+                    },
+                    navigation_count=self._live_ebay_navigation_count,
+                ),
+            )
         if not nav.ok or not nav.sold_state_verified:
+            nav_diag = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
+            sold_diag = nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else {}
+            body_for_class = str(sold_diag.get("body") or sold_diag.get("bodySample") or "")
+            generic_error = is_generic_error_page_nav(
+                title=nav.title,
+                url=nav.url,
+                body=body_for_class,
+                error=str(nav.error or sold_diag.get("error") or ""),
+                sorry=bool(nav.sorry),
+                challenge=bool(nav.challenge),
+                reason=str(sold_diag.get("error") or nav.error or ""),
+            )
+            reason = "ebay_error_page" if generic_error else "ebay_sorry_error_page"
+            if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE" or not nav.sold_state_verified:
+                raise ProviderTemporaryError(
+                    f"Set sweep navigation failed: {nav.error or 'sold_not_verified'}",
+                    diagnostics=merge_live_navigation_into_diagnostics(
+                        {
+                            "reason": reason,
+                            "title": nav.title,
+                            "url": nav.url,
+                            "body": body_for_class,
+                            "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                            "desktopNav": nav_diag,
+                            LIVE_EBAY_NAVIGATION_COUNT: self._live_ebay_navigation_count,
+                        },
+                        navigation_count=self._live_ebay_navigation_count,
+                    ),
+                )
             raise ProviderTemporaryError(
                 f"Set sweep navigation failed: {nav.error or 'unknown'}",
-                diagnostics={"desktopNav": nav.diagnostics if isinstance(nav.diagnostics, dict) else {}},
+                diagnostics=merge_live_navigation_into_diagnostics(
+                    {"desktopNav": nav_diag, LIVE_EBAY_NAVIGATION_COUNT: self._live_ebay_navigation_count},
+                    navigation_count=self._live_ebay_navigation_count,
+                ),
             )
         artifact_path = resolve_authoritative_capture_html_path(
             job_id=os.environ.get("CARDSCANR_JOB_ID"),
