@@ -1,0 +1,105 @@
+name: CardScanR eleven-language source image URL and card metadata harvest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_type_null_metadata_archive.py'
+      - '.github/workflows/private-eleven-language-source-harvest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cardscanr-type-null-11-language-harvest
+  cancel-in-progress: false
+
+jobs:
+  archive-external-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout CardScanR source harvester
+        uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - name: Checkout immutable source dataset, not image binaries
+        uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: source
+          persist-credentials: false
+          sparse-checkout: |
+            data_de
+            data_en
+            data_es
+            data_fr
+            data_it
+            data_jp
+            data_ko
+            data_pocket
+            data_pt
+            data_sc
+            data_tc
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source commit and no-network, no-public-release invariants
+        shell: bash
+        run: |
+          test "$(git -C source rev-parse HEAD)" = '18e0de2feb7a35ebe4296ede0ba6cc768961489b'
+          python -m py_compile cardscanr/tools/private_type_null_metadata_archive.py
+          python cardscanr/tools/private_type_null_metadata_archive.py --self-test
+      - name: Read 172361 source JSON cards with referenced image URLs, never download pictures
+        shell: bash
+        run: |
+          python cardscanr/tools/private_type_null_metadata_archive.py \
+            --source-root source --output private-multilingual-source-only
+      - name: Verify records, source receipts, copyright and image URL policy
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path('private-multilingual-source-only')
+          receipt=json.loads((root/'receipt.json').read_text('utf8'))
+          assert receipt['classification']=='PRIVATE_THIRD_PARTY_RESEARCH_ONLY'
+          assert receipt['total_provider_card_records']==172361
+          assert sum(receipt['source_language_counts'].values())==172361
+          assert len(receipt['source_language_counts'])==11
+          assert 0<=receipt['valid_https_image_url_references']<=172361
+          assert receipt['images_downloaded']==receipt['vault_writes']==receipt['production_writes']==0
+          assert receipt['cardscanr_new_canonical_cards']==receipt['cardscanr_new_verified_image_links']==0
+          assert receipt['all_source_identity_matches_provisional']
+          assert receipt['image_rights_unverified']
+          for name,meta in receipt['sha256_manifest'].items():
+              raw=(root/name).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==meta['sha256_compressed']
+              assert len(raw)==meta['bytes_compressed']
+              data=gzip.decompress(raw)
+              assert hashlib.sha256(data).hexdigest()==meta['sha256_uncompressed']
+              assert len(data.splitlines())==meta['rows']
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### CardScanR private source archive, eleven languages\n\n')
+              f.write(f"Source card records: **{receipt['total_provider_card_records']:,}**\n\n")
+              f.write(f"Source image URL references: **{receipt['valid_https_image_url_references']:,}**\n\n")
+              f.write(f"Languages: **{len(receipt['source_language_counts'])}**\n\n")
+              f.write('No copyrighted image binaries downloaded, no live vault additions, all identity matches provisional.\n')
+          print('PASS_PRIVATE_METADATA_ONLY',json.dumps({
+              'cards':receipt['total_provider_card_records'],
+              'image_url_references':receipt['valid_https_image_url_references'],
+              'counts':receipt['source_language_counts'],
+          },sort_keys=True))
+          PY
+      - name: Upload private source evidence and provenance receipts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-11Language-172361-Source-Cards-And-Image-URLs
+          path: private-multilingual-source-only/
+          retention-days: 14
+          if-no-files-found: error
