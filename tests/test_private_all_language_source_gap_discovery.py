@@ -4,10 +4,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from tools.private_all_language_source_gap_discovery import (
     PRIORITY, MAX_SETS_PER_BATCH, validate_index, select_batches,
-    summarize_set, save,
+    summarize_set, save, resilient_provider_fetch,
 )
 
 
@@ -16,18 +18,21 @@ class GapDiscoveryTests(unittest.TestCase):
         self.assertEqual(PRIORITY,("ja","zh-tw","ko","en","th","id","zh-cn"))
         self.assertEqual(len(set(PRIORITY)),7)
 
-    def test_index_validation_rejects_duplicate_and_unsafe_provider_ids(self):
+    def test_index_validation_quarantines_duplicate_and_unsafe_provider_ids(self):
         valid=[{"id":"S12a","name":"set","cardCount":{"total":250}},
                {"id":"SV4a","cardCount":{"total":314}}]
         rows=validate_index("zh-tw",valid)
         self.assertEqual(rows[0]["index_card_count_total"],250)
         self.assertEqual(rows[1]["provider_set_id"],"SV4a")
         self.assertEqual(rows[1]["index_position"],1)
-        for bad in ([{"id":"../../x"}],
-                    [{"id":"x","cardCount":7}],
-                    [None]):
+        unsafe=[]
+        self.assertEqual(validate_index("zh-tw",[{"id":"../../x"}],quarantined=unsafe),[])
+        self.assertEqual(unsafe[0]["status"],"quarantined_invalid_provider_set_id")
+        self.assertNotIn("../../x",str(unsafe))
+        for bad in ([{"id":"x","cardCount":7}], [None]):
             with self.assertRaises(ValueError):
                 validate_index("zh-tw",bad)
+        self.assertEqual(validate_index("ja",[{"id":"SM1+","cardCount":{"total":80}}])[0]["provider_set_id"],"SM1+")
         conflicts=[]
         self.assertEqual(
             validate_index("zh-cn",[
@@ -109,6 +114,34 @@ class GapDiscoveryTests(unittest.TestCase):
         self.assertTrue(all(r["canonical_printing_id"] is None and
                             not r["exact_match_verified"] and
                             not r["image_binary_downloaded"] for r in cards))
+
+    def test_plus_set_ids_keep_identity_and_encode_url(self):
+        data={"id":"SM1+","cards":[{"id":"SM1+-001","localId":"001","name":"Sample"}]}
+        set_info,cards=summarize_set("ja","SM1+",data,b"example")
+        self.assertEqual(set_info["source_url"],"https://api.tcgdex.net/v2/ja/sets/SM1%2B")
+        self.assertEqual(cards[0]["provider_card_id"],"SM1+-001")
+
+    def test_transient_503_retry_but_never_retry_429(self):
+        calls=[]
+        def flaky(url):
+            calls.append(url)
+            if len(calls)==1:
+                raise HTTPError(url,503,"Service Unavailable",None,None)
+            return [],b"[]"
+        with patch("tools.private_all_language_source_gap_discovery.time.sleep") as sleep:
+            value=resilient_provider_fetch(flaky,"https://api.tcgdex.net/v2/ja/sets")
+        self.assertEqual(value,([],b"[]"))
+        self.assertEqual(len(calls),2)
+        sleep.assert_called_once_with(3.0)
+        calls.clear()
+        def limited(url):
+            calls.append(url)
+            raise HTTPError(url,429,"Too Many Requests",None,None)
+        with patch("tools.private_all_language_source_gap_discovery.time.sleep") as sleep:
+            with self.assertRaises(HTTPError):
+                resilient_provider_fetch(limited,"https://api.tcgdex.net/v2/ja/sets")
+        self.assertEqual(len(calls),1)
+        sleep.assert_not_called()
 
     def test_source_duplicate_or_foreign_card_ids_refused(self):
         good={"id":"SI","cards":[{"id":"SI-001","name":"One","localId":"001"}]}
