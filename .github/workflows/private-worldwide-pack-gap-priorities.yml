@@ -33,12 +33,12 @@ jobs:
           PYTHONPATH=. python tools/private_worldwide_pack_gap_inventory.py --self-test
       - name: Inspect SHA256 verified source pack and aggregate image gaps
         env:
-          PACK_ID: \${{ matrix.pack }}
+          PACK_ID: ${{ matrix.pack }}
         run: |
           PYTHONPATH=. python tools/private_worldwide_pack_gap_inventory.py --pack "$PACK_ID" --output private-pack-gap
       - name: Assert no card or image-body writes and valid cardinalities
         env:
-          PACK_ID: \${{ matrix.pack }}
+          PACK_ID: ${{ matrix.pack }}
         run: |
           python - <<'PY'
           import json,os
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: CardScanR-Pack-Gap-\${{ matrix.pack }}
+          name: CardScanR-Pack-Gap-${{ matrix.pack }}
           path: private-pack-gap/receipt.json
           retention-days: 14
           if-no-files-found: error
