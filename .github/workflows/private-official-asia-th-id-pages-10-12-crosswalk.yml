@@ -1,0 +1,69 @@
+name: Private exact archived crosswalk official TH ID pages 10-12
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-pages-10-12-crosswalk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  archive-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44719110192
+          pattern: CardScanR-Official-TH-ID-Page-*
+          github-token: ${{ github.token }}
+          path: official-pages-10-12
+          merge-multiple: false
+      - name: Exact source language, native card name, set and number only
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_pages_10_12_crosswalk.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_exact_crosswalk.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_pages_10_12_crosswalk.py \
+            --source-root official-pages-10-12 \
+            --output verified-official-10-12
+      - name: Verify immutable sources, unique identities, zero art permission or DB writes
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('verified-official-10-12')
+          r=json.loads((root/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_TH_ID_OFFICIAL_PAGES_10_12_ARCHIVE_CROSSWALK'
+          assert r['official_source_pages']==[10,11,12]
+          assert r['source_records']==109 and len(r['source_page_sha256'])==3
+          assert set(r['archived_pack_sha256'])=={'th','id'}
+          assert 0<=r['candidate_records']<=r['matched_records']<=109
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          assert r['live_vault_writes']==r['image_binaries_downloaded']==r['new_verified_live_canonical_records']==0
+          b=(root/'exact_source_url_candidates.jsonl').read_bytes()
+          assert hashlib.sha256(b).hexdigest()==r['crosswalk_sha256']
+          rows=[json.loads(x) for x in b.splitlines()]
+          assert len(rows)==r['matched_records']
+          assert len({x['canonical_printing_id_archived'] for x in rows})==len(rows)
+          assert all(not x['actual_live_vault_id_verified'] and not x['artwork_rights_verified']
+                     and not x['safe_to_publish'] for x in rows)
+          print('OFFICIAL_TH_ID_PAGES_10_12_RESULT',json.dumps({
+            'source_cards':r['source_records'],
+            'exact_missing_archive_image_refs':r['candidate_records'],
+            'reason_counts':r['reasons'],
+            'artwork_downloads':0,'live_writes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-Official-Pages-10-12-Exact-Source-Card-Matches
+          path: verified-official-10-12/
+          if-no-files-found: error
+          retention-days: 14
