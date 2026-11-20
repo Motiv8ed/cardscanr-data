@@ -14,7 +14,8 @@ import tempfile
 from collections import Counter
 from datetime import datetime,timezone
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit,urljoin
+from bs4 import BeautifulSoup
 from cardscanr_worldwide.collectors.pokemon_asia import (
   BASE_URL, Collector, parse_card_list, parse_card_detail
 )
@@ -53,7 +54,18 @@ def run(out:Path,limit:int=5,delay:float=1.5):
                 fetched=collector.fetch(listurl)
                 if fetched.status!=200 or len(fetched.content)>3_000_000:
                     raise ValueError("source_list_http_or_size_drift")
-                ids,_=parse_card_list(fetched.content.decode("utf8"),lang)
+                html=fetched.content.decode("utf8")
+                ids,_=parse_card_list(html,lang)
+                soup=BeautifulSoup(html,"html.parser")
+                listing_image_urls={}
+                for anchor in soup.find_all("a",href=True):
+                    if not re.fullmatch(rf"/{lang}/card-search/detail/([0-9]{{1,10}})/",anchor["href"]):
+                        continue
+                    image=anchor.find("img",src=True)
+                    if image:
+                        full=urljoin(listurl,image["src"])
+                        if accept_url(full,lang):
+                            listing_image_urls[anchor["href"]]=full
                 if not 1<=len(ids)<=50:
                     raise ValueError("unexpected_source_list_count")
                 dig=hashlib.sha256(fetched.content).hexdigest()
@@ -95,6 +107,8 @@ def run(out:Path,limit:int=5,delay:float=1.5):
                 stats.append({
                   "locale":lang,"set":code,"list_cards":len(ids),
                   "details_scrutinized":got,
+                  "list_html_image_urls":len(listing_image_urls),
+                  "list_image_refs_retrieved_without_detail_fetch":False,
                   "official_url_refs":sum(bool(r["source_image_url_reference"]) for r in rows if r["language"]==lang),
                   "source_list_sha256":dig,
                 })
