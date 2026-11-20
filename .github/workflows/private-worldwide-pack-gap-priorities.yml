@@ -1,0 +1,65 @@
+name: CardScanR worldwide archived pack gap priorities
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_worldwide_pack_gap_inventory.py'
+      - '.github/workflows/private-worldwide-pack-gap-priorities.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-gap-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        pack: [core, en, ja, ko, zh-tw, th, id, zh-cn]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline aggregation regression tests
+        run: |
+          python -m py_compile tools/private_worldwide_pack_gap_inventory.py
+          PYTHONPATH=. python tools/private_worldwide_pack_gap_inventory.py --self-test
+      - name: Inspect SHA256 verified source pack and aggregate image gaps
+        env:
+          PACK_ID: \${{ matrix.pack }}
+        run: |
+          PYTHONPATH=. python tools/private_worldwide_pack_gap_inventory.py --pack "$PACK_ID" --output private-pack-gap
+      - name: Assert no card or image-body writes and valid cardinalities
+        env:
+          PACK_ID: \${{ matrix.pack }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          d=json.loads(Path("private-pack-gap/receipt.json").read_text(encoding="utf8"))
+          assert d["classification"]=="READ_ONLY_ARCHIVED_PACK_GAPS_NOT_LIVE_VAULT"
+          assert d["pack_id"]==os.environ["PACK_ID"]
+          assert d["source_pack_integrity_check"]=="ok"
+          assert sum(row["records"] for row in d["pack_languages"])==d["pack_record_count"]
+          assert sum(row["no_image_reference"] for row in d["pack_languages"])==d["pack_records_missing_image_reference"]
+          assert d["image_binaries_downloaded"]==d["live_vault_writes"]==d["production_writes"]==0
+          assert d["new_canonical_card_records"]==0
+          assert d["not_a_live_vault_card_inventory"] and not d["safe_to_publish_images"]
+          print("PACK_GAP_VERIFIED",json.dumps({
+            "pack":d["pack_id"],"cards":d["pack_record_count"],
+            "missing":d["pack_records_missing_image_reference"],"langs":d["pack_languages"]}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: CardScanR-Pack-Gap-\${{ matrix.pack }}
+          path: private-pack-gap/receipt.json
+          retention-days: 14
+          if-no-files-found: error
