@@ -71,7 +71,9 @@ def run(out:Path,limit:int=20,delay:float=1.5,page:int=1):
                         if accept_url(full,lang):
                             listing_image_urls[anchor["href"]]=full
                 if not 1<=len(ids)<=50:
-                    raise ValueError("unexpected_source_list_count")
+                    # Fail closed, but retain the observed count for source-drift triage.
+                    # No detail pages are fetched or artifact emitted on this path.
+                    raise ValueError(f"unexpected_source_list_count: page={page} parsed={len(ids)}")
                 dig=hashlib.sha256(fetched.content).hexdigest()
                 got=0
                 for card_id in ids[:limit]:
