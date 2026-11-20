@@ -79,7 +79,7 @@ def stage(upstream:Path,crosswalk:Path,out:Path):
         folder="data_tc" if lang=="zh-tw" else "data_ko" if lang=="ko" else None
         if (not folder or rel.parts[0]!=folder or len(rel.parts)!=3
             or not rel.name.endswith(".json") or
-            not SET.fullmatch(sid) or rel.parts[1]!=sid
+            not SET.fullmatch(sid) or rel.parts[1].casefold()!=sid.casefold()
             or not PRINTING.fullmatch(cand["canonical_printing_id"])
             or not SOURCEPRINT.fullmatch(cand["source_print_key"])
             or cand.get("status")!="exact_unique_pack_identity_source_url_candidate"
