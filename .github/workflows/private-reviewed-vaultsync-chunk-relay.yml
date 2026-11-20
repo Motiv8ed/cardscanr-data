@@ -1,0 +1,77 @@
+name: CardScanR reviewed VaultSync source-only chunk relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-reviewed-vaultsync-chunk-relay.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  pack-staging-chunks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: ["01", "02", "03", "04", "05", "06", "07", "08", "09"]
+    timeout-minutes: 15
+    steps:
+      - name: Obtain pinned previously independently audited source-only archive
+        uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44669021289
+          github-token: ${{ github.token }}
+          name: CardScanR-TW-KR-7112-Reviewed-Source-Only-VaultSync-Batches
+          path: source_evidence
+      - name: Validate exact source SHA and emit limited staging transport only
+        shell: bash
+        env:
+          BATCH_INDEX: ${{ matrix.batch }}
+        run: |
+          python - <<'PY'
+          import base64,hashlib,gzip,json,os
+          from pathlib import Path
+          base=Path('source_evidence')
+          report=json.loads((base/'receipt.json').read_text(encoding='utf8'))
+          assert report['classification']=='PRIVATE_EXACT_OFFICIAL_SOURCE_BATCHES_NOT_APPLIED'
+          assert report['live_vault_source_links_added']==0
+          assert report['source_urls_not_licensed_for_public_display'] is True
+          assert report['artwork_images_downloaded']==0
+          assert sum(x['cards'] for x in report['batches'])==7112
+          index=int(os.environ['BATCH_INDEX'])
+          assert 1<=index<=9
+          record=report['batches'][index-1]
+          original=base/record['file']
+          assert original.is_file() and not original.is_symlink()
+          b=original.read_bytes()
+          assert len(b)==record['payload_bytes']<=72000
+          assert hashlib.sha256(b).hexdigest()==record['sha256']
+          raw=gzip.decompress(b)
+          assert hashlib.sha256(raw).hexdigest()==record['uncompressed_sha256']
+          data=json.loads(raw)
+          assert data['schema_version']==1 and data['source']=='official_crosswalk'
+          assert len(data['cards'])==len(data['images'])==record['cards']
+          assert len(data['sets'])==record['sets']
+          assert len({x['canonical_printing_id'] for x in data['cards']})==len(data['cards'])
+          assert len({x['canonical_printing_id'] for x in data['images']})==len(data['images'])
+          assert {x['canonical_printing_id'] for x in data['images']}=={x['canonical_printing_id'] for x in data['cards']}
+          assert all(x['status']=='exact_unique' for x in data['cards'])
+          assert all(x['language'] in ('ko','zh-tw') for x in data['cards'])
+          # Nothing is installed, applied or downloaded. This output is only
+          # base64 for the already-public source metadata; the PC Bridge later
+          # enforces the exact SHA, source-specific URLs and live card identity.
+          encoded=base64.b64encode(b).decode('ascii')
+          chunk_size=3000
+          pieces=[encoded[i:i+chunk_size] for i in range(0,len(encoded),chunk_size)]
+          print(f'CARDSCANR_STAGING_META {index:02d} {record["batch_id"]} {record["sha256"]} {len(pieces)} {record["cards"]}')
+          for n,piece in enumerate(pieces):
+              print(f'CARDSCANR_STAGING_PART {index:02d} {n} {piece}')
+          print(f'CARDSCANR_STAGING_COMPLETE {index:02d} {len(pieces)} sha256={record["sha256"]}')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as s:
+              s.write(f'Verified source-only batch {index:02d}: {record["cards"]} cards, gzip SHA256 {record["sha256"]}. No live changes or image binaries.\n')
+          PY
