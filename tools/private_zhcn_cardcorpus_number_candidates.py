@@ -109,17 +109,22 @@ def analysis(rows,sets,source_cards):
 
 def source_details(zipped:Path):
     from zipfile import ZipFile
-    with ZipFile(zipped) as z:
-        receipt=json.loads(z.read("receipt.json"))
-        if receipt.get("source_commit")!=PINNED or receipt.get("validated_rich_card_details")!=67243:
-            raise ValueError("source_receipt_identity_drift")
-        payload=z.read("rich_card_details.jsonl.gz")
-        if hashlib.sha256(payload).hexdigest()!=SOURCE_GZIP_SHA:raise ValueError("source_gzip_hash")
-        raw=gzip.decompress(payload)
-        if hashlib.sha256(raw).hexdigest()!=SOURCE_SHA:raise ValueError("source_raw_hash")
-        rows=[json.loads(x) for x in raw.splitlines()]
-        if len(rows)!=67243:raise ValueError("source_row_count_drift")
-        return rows
+    if zipped.is_dir():
+        receipt_bytes=(zipped/"receipt.json").read_bytes()
+        payload=(zipped/"rich_card_details.jsonl.gz").read_bytes()
+    else:
+        with ZipFile(zipped) as z:
+            receipt_bytes=z.read("receipt.json")
+            payload=z.read("rich_card_details.jsonl.gz")
+    receipt=json.loads(receipt_bytes)
+    if receipt.get("source_commit")!=PINNED or receipt.get("validated_rich_card_details")!=67243:
+        raise ValueError("source_receipt_identity_drift")
+    if hashlib.sha256(payload).hexdigest()!=SOURCE_GZIP_SHA:raise ValueError("source_gzip_hash")
+    raw=gzip.decompress(payload)
+    if hashlib.sha256(raw).hexdigest()!=SOURCE_SHA:raise ValueError("source_raw_hash")
+    rows=[json.loads(x) for x in raw.splitlines()]
+    if len(rows)!=67243:raise ValueError("source_row_count_drift")
+    return rows
 
 def collect(corpus:Path,source_zip:Path,output:Path):
     if output.exists() or output.is_symlink():raise FileExistsError("output_must_be_new")
