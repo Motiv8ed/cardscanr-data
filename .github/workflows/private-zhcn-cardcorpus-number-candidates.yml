@@ -1,0 +1,90 @@
+name: Private Chinese image-link set-number source comparison
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_zhcn_cardcorpus_number_candidates.py'
+      - '.github/workflows/private-zhcn-cardcorpus-number-candidates.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  private-source-candidate-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Guarded offline matching tests
+        shell: bash
+        run: |
+          cd cardscanr
+          PYTHONPATH=. python -m py_compile tools/private_zhcn_cardcorpus_number_candidates.py
+          PYTHONPATH=. python tools/private_zhcn_cardcorpus_number_candidates.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44663250882
+          name: CardScanR-Worldwide-All-67243-Source-Rich-Details
+          github-token: ${{ github.token }}
+          path: pinned-source
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          persist-credentials: false
+          path: cardcorpus
+          sparse-checkout: |
+            v1/sets/zh-hans
+          sparse-checkout-cone-mode: false
+      - name: Verify pinned source Git commit and research 41k archived Chinese records
+        shell: bash
+        run: |
+          test "$(git -C cardcorpus rev-parse HEAD)" = c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          PYTHONPATH=cardscanr python cardscanr/tools/private_zhcn_cardcorpus_number_candidates.py \
+            --corpus cardcorpus \
+            --source-zip pinned-source \
+            --output private-chinese-number-review
+      - name: Verify candidate hashes and hard exclude image publication
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path('private-chinese-number-review')
+          r=json.loads((d/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_ZH_CN_PICTURE_SOURCE_SET_NUMBER_PROVISIONAL'
+          assert r['source_cards_examined']==67243 and r['archived_chinese_pack_rows']==41185
+          assert r['image_binaries_downloaded']==r['new_canonical_cards']==r['live_vault_writes']==0
+          assert r['verified_live_printing_matches']==0
+          assert not r['rights_granted'] and not r['public_artwork_safe']
+          b=(d/'candidates.jsonl').read_bytes()
+          assert hashlib.sha256(b).hexdigest()==r['candidates_jsonl_sha256']
+          rows=[json.loads(line) for line in b.splitlines()]
+          assert len(rows)==r['provisional_candidates']
+          assert all(x['exact_native_name_verified'] is False and
+                     x['live_vault_identity_verified'] is False and
+                     x['safe_for_vault_apply'] is False for x in rows)
+          print('CHINESE_SOURCE_CANDIDATES_VERIFIED',json.dumps({
+            'candidates':len(rows),'sets':r['matching_source_sets'],
+            'reasons':r['reasons'],'live_writes':0},ensure_ascii=False,sort_keys=True))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### Chinese source-only card picture URL matching\n\n')
+              f.write(f"Set-code and collector-number provisional matches: **{len(rows):,}**\n\n")
+              f.write('These are not verified canonical identities, not image licences and not live imports.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-Chinese-Set-Number-Source-Only-Candidates
+          path: private-chinese-number-review/
+          retention-days: 14
+          if-no-files-found: error
