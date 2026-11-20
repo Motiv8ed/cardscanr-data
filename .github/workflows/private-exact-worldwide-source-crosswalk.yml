@@ -1,0 +1,97 @@
+name: CardScanR exact official-source image link crosswalk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_type_null_exact_crosswalk.py'
+      - '.github/workflows/private-exact-worldwide-source-crosswalk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  match-safe-printing-identities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout strict CardScanR matcher
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          path: cardscanr
+      - name: Checkout exact third-party source evidence
+        uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          persist-credentials: false
+          path: source
+          sparse-checkout: |
+            data_jp
+            data_tc
+            data_ko
+            data_sc
+            data_en
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source checkout and exact-match regression guards
+        shell: bash
+        run: |
+          test "$(git -C source rev-parse HEAD)" = '18e0de2feb7a35ebe4296ede0ba6cc768961489b'
+          cd cardscanr
+          python -m py_compile tools/private_type_null_exact_crosswalk.py
+          PYTHONPATH=. python tools/private_type_null_exact_crosswalk.py --self-test
+      - name: Verify CardScanR public pack SHA digests and produce a private crosswalk
+        shell: bash
+        run: |
+          cd cardscanr
+          PYTHONPATH=. python tools/private_type_null_exact_crosswalk.py \
+            --source-root ../source --output ../private-exact-source-crosswalk
+      - name: Check exact-printing evidence and zero publication rights/writes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path('private-exact-source-crosswalk')
+          doc=json.loads((root/'receipt.json').read_text('utf8'))
+          assert doc['classification']=='PRIVATE_EXACT_SOURCE_URL_RESEARCH_ONLY'
+          assert doc['artwork_rights_granted'] is False
+          assert doc['live_vault_gap_still_requires_direct_verification'] is True
+          assert doc['vault_writes']==doc['production_writes']==0
+          assert doc['artwork_downloaded']==doc['exact_canonical_card_insertions']==0
+          assert len(doc['pack_provenance_sha256'])==5
+          raw=(root/'exact_source_url_candidates.jsonl.gz').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==doc['candidate_compressed_sha256']
+          decoded=gzip.decompress(raw)
+          assert hashlib.sha256(decoded).hexdigest()==doc['candidate_uncompressed_sha256']
+          records=[json.loads(line) for line in decoded.splitlines()]
+          assert len(records)==doc['unique_matched_missing_pack_image_reference_candidates']
+          assert len({x['canonical_printing_id'] for x in records})==len(records)
+          assert all(x['status']=='exact_unique_pack_identity_source_url_candidate'
+                     and x['existing_pack_image_was_missing']
+                     and not x['artwork_rights_verified']
+                     and not x['image_downloaded']
+                     and not x['public_release_allowed'] for x in records)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### Exact printing crosswalk (read-only)\n\n')
+              f.write(f"Unique missing-pack-image source URL candidates: **{len(records):,}**\n\n")
+              f.write('All source set/language/collector/native-name joins exact, URL host allowlisted. No live vault changes, no copyrighted image downloads.\n')
+          print('PASS_EXACT_CROSSWALK_SOURCE_ONLY',json.dumps({
+            'unique_candidates':len(records),
+            'by_language':{k:v['exact_missing_pack_reference_candidates'] for k,v in doc['by_language'].items()},
+            'vault_writes':0
+          },sort_keys=True))
+          PY
+      - name: Upload read-only SHA-provenance crosswalk receipt
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Worldwide-Exact-Existing-Cards-Image-URL-Candidates
+          path: private-exact-source-crosswalk/
+          retention-days: 14
+          if-no-files-found: error
