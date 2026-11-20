@@ -54,7 +54,7 @@ jobs:
           test "$(git -C source rev-parse HEAD)" = '18e0de2feb7a35ebe4296ede0ba6cc768961489b'
           python -m py_compile cardscanr/tools/private_type_null_metadata_archive.py
           python cardscanr/tools/private_type_null_metadata_archive.py --self-test
-      - name: Read 172361 source JSON cards with referenced image URLs, never download pictures
+      - name: Read 172552 source JSON cards with referenced image URLs, never download pictures
         shell: bash
         run: |
           python cardscanr/tools/private_type_null_metadata_archive.py \
@@ -68,10 +68,10 @@ jobs:
           root=Path('private-multilingual-source-only')
           receipt=json.loads((root/'receipt.json').read_text('utf8'))
           assert receipt['classification']=='PRIVATE_THIRD_PARTY_RESEARCH_ONLY'
-          assert receipt['total_provider_card_records']==172361
-          assert sum(receipt['source_language_counts'].values())==172361
+          assert receipt['total_provider_card_records']==172552
+          assert sum(receipt['source_language_counts'].values())==172552
           assert len(receipt['source_language_counts'])==11
-          assert 0<=receipt['valid_https_image_url_references']<=172361
+          assert 0<=receipt['valid_https_image_url_references']<=172552
           assert receipt['images_downloaded']==receipt['vault_writes']==receipt['production_writes']==0
           assert receipt['cardscanr_new_canonical_cards']==receipt['cardscanr_new_verified_image_links']==0
           assert receipt['all_source_identity_matches_provisional']
@@ -99,7 +99,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: CardScanR-11Language-172361-Source-Cards-And-Image-URLs
+          name: CardScanR-11Language-172552-Source-Cards-And-Image-URLs
           path: private-multilingual-source-only/
           retention-days: 14
           if-no-files-found: error
