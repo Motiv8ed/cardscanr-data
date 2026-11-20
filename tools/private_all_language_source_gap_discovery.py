@@ -27,7 +27,7 @@ from urllib.parse import quote
 
 from tools.preflight_multilingual_crossrelease import CANARY, MAX_GZIP, get, inspect_pack
 from tools.preflight_legacy_korean_pack import pick
-from tools.tcgdex_metadata_batch import API, LANGUAGES, fetch_json, SET_ID, CARD_ID
+from tools.tcgdex_metadata_batch import API, LANGUAGES, fetch_json
 from tools.private_artwork_takedown_controls import _safe_image_base
 
 # User preference order: Japanese, Traditional Chinese, Korean, English, Thai,
@@ -39,6 +39,26 @@ MAX_SOURCE_REQUESTS=80
 MAX_SETS_PER_BATCH=60
 MIN_PACING_SECONDS=1.0
 MAX_PACING_SECONDS=5.0
+# TCGdex uses literal '+' in Japanese identifiers (e.g. SM1+). Escape only
+# when constructing URLs; retain the exact source identity in receipts.
+SET_ID=re.compile(r"^[A-Za-z0-9_.+\-]{1,48}$")
+CARD_ID=re.compile(r"^[A-Za-z0-9_.+\-]{1,100}$")
+MAX_INVALID_INDEX_IDS=100
+
+
+def resilient_provider_fetch(provider_fetch, url: str):
+    """Retry bounded upstream 5xx/network glitches; never retry 429 rate limits."""
+    for attempt in range(3):
+        try:
+            return provider_fetch(url)
+        except HTTPError as exc:
+            if exc.code not in (500,502,503,504) or attempt == 2:
+                raise
+        except (URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+        time.sleep((3.0, 6.0)[attempt])
+    raise RuntimeError("unreachable_provider_retry_state")
 
 
 def _integer(value, maximum=10000):
@@ -59,15 +79,25 @@ def validate_index(lang: str, payload, *, quarantined=None) -> list[dict]:
         if not isinstance(item,dict):
             raise ValueError("provider_index_nonobject")
         sid=item.get("id")
-        if not isinstance(sid,str) or not SET_ID.fullmatch(sid):
-            raise ValueError("invalid_provider_set_id")
-        counts[sid]+=1
+        if isinstance(sid,str) and SET_ID.fullmatch(sid):
+            counts[sid]+=1
     if quarantined is None:
         quarantined=[]
     results=[]
     duplicate_noted=set()
     for offset,item in enumerate(payload):
-        sid=item["id"]
+        sid=item.get("id")
+        if not isinstance(sid,str) or not SET_ID.fullmatch(sid):
+            if len(quarantined)>=MAX_INVALID_INDEX_IDS:
+                raise ValueError("too_many_quarantined_provider_set_ids")
+            quarantined.append({
+                "language":lang,"index_position":offset,
+                "id_sha256":hashlib.sha256(
+                    json.dumps(sid,ensure_ascii=False,sort_keys=True).encode("utf-8")
+                ).hexdigest(),
+                "status":"quarantined_invalid_provider_set_id",
+            })
+            continue
         if counts[sid]>1:
             if sid not in duplicate_noted:
                 quarantined.append({
@@ -198,7 +228,7 @@ def summarize_set(lang: str, sid: str, payload, raw: bytes) -> tuple[dict,list[d
         "provider_reported_card_total":_integer(card_count.get("total")),
         "provider_reported_card_official":_integer(card_count.get("official")),
         "image_base_references":art_count,
-        "source_url":API+"/"+lang+"/sets/"+sid,
+        "source_url":API+"/"+lang+"/sets/"+quote(sid,safe=""),
         "source_response_sha256":source_sha,
         "exact_pack_set_id_match":False,
         "candidate_for_alias_or_new_set_review":True,
@@ -252,7 +282,9 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
                 "distinct_pack_source_sets":len(keys),
             })
         for lang in PRIORITY:
-            payload,raw=provider_fetch(API+"/"+lang+"/sets")
+            if index_evidence:
+                time.sleep(pace)
+            payload,raw=resilient_provider_fetch(provider_fetch,API+"/"+lang+"/sets")
             if not isinstance(raw,bytes) or len(raw)>2_000_000:
                 raise ValueError("index_source_response_too_large")
             indexes[lang]=validate_index(lang,payload,quarantined=quarantined_source_set_ids)
@@ -272,7 +304,7 @@ def collect(*, batch_index:int, batch_size:int=40, pace:float=1.25,
             lang,sid=target["language"],target["provider_set_id"]
             requests+=1
             try:
-                payload,raw=provider_fetch(API+"/"+lang+"/sets/"+sid)
+                payload,raw=resilient_provider_fetch(provider_fetch,API+"/"+lang+"/sets/"+quote(sid,safe=""))
                 if not isinstance(raw,bytes) or len(raw)>2_000_000:
                     raise ValueError("set_source_response_too_large")
                 item,cards=summarize_set(lang,sid,payload,raw)
