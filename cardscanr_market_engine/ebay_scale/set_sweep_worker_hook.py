@@ -617,18 +617,15 @@ def _default_fetch_set_sweep_html(
 ) -> str:
     """Live PC path: X11 sold navigation + authoritative HTML capture."""
     del set_code, set_name
-    from ..providers.ebay_browser_provider import EbayBrowserProvider
-    from ..config import MarketEngineConfig
+    from ..providers.ebay_browser_provider import EbayBrowserSoldCompsProvider
 
-    config = MarketEngineConfig.from_env(require_supabase=False)
-    provider = EbayBrowserProvider(config=config)
-    if budget is not None and hasattr(provider, "bind_live_submission_budget"):
+    provider = EbayBrowserSoldCompsProvider()
+    if budget is not None:
         provider.bind_live_submission_budget(budget, first_slot_pre_reserved=True)
     try:
         return provider.fetch_set_sweep_results_html(query_text=query)
     finally:
-        if hasattr(provider, "clear_live_submission_budget"):
-            provider.clear_live_submission_budget()
+        provider.clear_live_submission_budget()
 
 
 def live_set_sweep_median_for_price_key(price_key: MarketPriceKey) -> float | None:
