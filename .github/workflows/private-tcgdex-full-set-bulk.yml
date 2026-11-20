@@ -37,22 +37,22 @@ jobs:
           PYTHONPATH=. python tools/private_tcgdex_full_set_bulk_source.py --self-test
       - name: Fetch at most 180 set-level provider JSON payloads (not card detail or art)
         env:
-          SOURCE_${{ matrix.language }}: ${{ matrix.language }}
-          SOURCE_${{ matrix.offset }}: ${{ matrix.offset }}
+          SOURCE_LANG: ${{ matrix.language }}
+          SOURCE_OFFSET: ${{ matrix.offset }}
         run: |
           PYTHONPATH=. python tools/private_tcgdex_full_set_bulk_source.py \
-            --language "$SOURCE_${{ matrix.language }}" --offset "$SOURCE_${{ matrix.offset }}" \
-            --max-sets 180 --pace 1.1 --output "bulk-$SOURCE_${{ matrix.language }}-$SOURCE_${{ matrix.offset }}"
+            --language "$SOURCE_LANG" --offset "$SOURCE_OFFSET" \
+            --max-sets 180 --pace 1.1 --output "bulk-$SOURCE_LANG-$SOURCE_OFFSET"
       - name: Check exact printing uniqueness, source hash and no production writes
         env:
-          SOURCE_${{ matrix.language }}: ${{ matrix.language }}
-          SOURCE_${{ matrix.offset }}: ${{ matrix.offset }}
+          SOURCE_LANG: ${{ matrix.language }}
+          SOURCE_OFFSET: ${{ matrix.offset }}
         run: |
           python - <<'PY'
           import hashlib,json,os
           from pathlib import Path
-          lang=os.environ['SOURCE_${{ matrix.language }}']
-          offset=int(os.environ['SOURCE_${{ matrix.offset }}'])
+          lang=os.environ['SOURCE_LANG']
+          offset=int(os.environ['SOURCE_OFFSET'])
           folder=Path(f"bulk-{lang}-{offset}")
           r=json.loads((folder/'receipt.json').read_text(encoding='utf8'))
           assert r['classification']=='BULK_TCGDEX_FULL_SET_EXACT_SOURCE_URLS_NOT_LIVE'
