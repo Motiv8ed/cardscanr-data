@@ -1,0 +1,93 @@
+name: CardScanR private official source VaultSync batches
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/private_official_source_vaultsync_stage.py
+      - .github/workflows/private-official-source-vaultsync-batches.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-reverify-and-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: CardScanR-Worldwide-Exact-Existing-Cards-Image-URL-Candidates
+          run-id: 44664424074
+          github-token: ${{ github.token }}
+          path: exact-source-crosswalk
+      - uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            data_tc
+            data_ko
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify immutable source checkout, syntax and safety guards
+        run: |
+          test "$(git -C upstream rev-parse HEAD)" = '18e0de2feb7a35ebe4296ede0ba6cc768961489b'
+          python -m py_compile cardscanr/tools/private_official_source_vaultsync_stage.py
+          python cardscanr/tools/private_official_source_vaultsync_stage.py --self-test
+      - name: Reverify all candidate source JSON, create source-only bundles
+        run: |
+          python cardscanr/tools/private_official_source_vaultsync_stage.py \
+            --source-root upstream \
+            --crosswalk-root exact-source-crosswalk \
+            --output private-vaultsync-candidates
+      - name: Audit full candidate count, SHA receipts and no live writes
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path('private-vaultsync-candidates')
+          r=json.loads((root/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_EXACT_OFFICIAL_SOURCE_BATCHES_NOT_APPLIED'
+          assert r['cards_verified_against_exact_source_files']==7112
+          assert r['language_counts']=={'ko':196,'zh-tw':6916}
+          assert r['live_vault_identity_check_still_required']
+          assert r['source_urls_not_licensed_for_public_display']
+          assert r['live_vault_source_links_added']==r['artwork_images_downloaded']==r['canonical_card_ids_modified']==0
+          seen=set();total=0
+          for b in r['batches']:
+              raw=(root/b['file']).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==b['sha256']
+              assert len(raw)==b['payload_bytes']<=20_000_000
+              inflated=gzip.decompress(raw)
+              assert hashlib.sha256(inflated).hexdigest()==b['uncompressed_sha256']
+              doc=json.loads(inflated)
+              assert doc['schema_version']==1 and doc['source']=='official_crosswalk'
+              assert len(doc['cards'])==len(doc['images'])==b['cards']<=900
+              assert len(doc['sets'])==b['sets']
+              for x in doc['cards']:
+                  assert x['status']=='exact_unique'
+                  assert x['canonical_printing_id'] not in seen
+                  seen.add(x['canonical_printing_id'])
+              total+=b['cards']
+          assert total==len(seen)==7112
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('### Private verified source-only TW/KR VaultSync batches\n\n')
+              f.write(f"Source-only exact candidates: **{total:,}**, batches: **{len(r['batches'])}**, sets: **{r['sets']}**.\n\n")
+              f.write('Artwork rights unverified. No image binaries, downloads, PC reads or live writes.\n')
+          print('PASS_7112_SOURCE_ONLY',json.dumps({'cards':total,'batches':len(r['batches']),'sets':r['sets'],'live_writes':0}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: CardScanR-TW-KR-7112-Reviewed-Source-Only-VaultSync-Batches
+          path: private-vaultsync-candidates/
+          retention-days: 14
+          if-no-files-found: error
