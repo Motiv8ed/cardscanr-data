@@ -1,0 +1,71 @@
+name: Private exact 160-card official TH ID URL crosswalk
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-pages-crosswalk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  exact-paged-source-crosswalk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44713807563
+          pattern: CardScanR-Official-TH-ID-Page-*
+          github-token: ${{ github.token }}
+          path: four-source-pages
+          merge-multiple: false
+      - name: Read only strict source 160 identity proof
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_pages_crosswalk.py
+          python -m py_compile tools/private_official_asia_th_id_exact_crosswalk.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_exact_crosswalk.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_pages_crosswalk.py \
+            --source-root four-source-pages --output private-exact-160
+      - name: Verify all four upstream pages and zero live changes
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          folder=Path('private-exact-160')
+          r=json.loads((folder/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_TH_ID_OFFICIAL_PAGED_EXACT_ARCHIVE_CROSSWALK'
+          assert r['source_records']==160 and r['official_source_pages']==[2,3,4,5]
+          assert len(r['source_page_sha256'])==4 and len(r['archived_pack_sha256'])==2
+          assert r['candidate_records']<=r['matched_records']<=160
+          assert r['new_verified_live_canonical_records']==0
+          assert r['live_vault_writes']==r['image_binaries_downloaded']==0
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          raw=(folder/'exact_source_url_candidates.jsonl').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['crosswalk_sha256']
+          rows=[json.loads(x) for x in raw.splitlines()]
+          assert len(rows)==r['matched_records']
+          assert len({x['canonical_printing_id_archived'] for x in rows})==len(rows)
+          assert all(not x['actual_live_vault_id_verified'] and
+                     not x['artwork_rights_verified'] and not x['safe_to_publish'] for x in rows)
+          print('VERIFIED_160_TH_ID_CROSSWALK',json.dumps({
+            'source_cards':160,'exact_archive_matches':r['matched_records'],
+            'missing_archive_image':r['candidate_records'],
+            'reasons':r['reasons'],'live_changes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-Additional-160-Exact-Source-Evidence
+          path: private-exact-160/
+          retention-days: 14
+          if-no-files-found: error
