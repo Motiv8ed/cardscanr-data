@@ -1,0 +1,99 @@
+name: Private worldwide 10k source-card acquisition
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-worldwide-10k-source-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-worldwide-10k-source-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  archive-source-pages:
+    name: Source-only page ${{ matrix.page }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        page: [0, 1, 2, 3]
+    steps:
+      - name: Checkout exact repository code without retained credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Confirm bounded source collector safety tests
+        shell: bash
+        run: |
+          python -m py_compile tools/private_all_language_source_gap_discovery.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_all_language_source_gap_discovery.py -v
+      - name: Acquire one SHA-provenance source-only page (no canonical or image downloads)
+        shell: bash
+        env:
+          PAGE: ${{ matrix.page }}
+        run: |
+          PYTHONPATH=. python tools/private_all_language_source_gap_discovery.py \
+            --batch-index "$PAGE" --batch-size 40 --pace 1.25 \
+            --output "private-source-page-$PAGE"
+      - name: Verify receipts, output integrity and report counts
+        shell: bash
+        env:
+          PAGE: ${{ matrix.page }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          page=int(os.environ["PAGE"])
+          base=Path(f"private-source-page-{page}")
+          receipt=json.loads((base/"receipt.json").read_text("utf-8"))
+          assert receipt["classification"]=="PRIVATE_SOURCE_SET_GAP_EVIDENCE_ONLY"
+          assert receipt["batch_index"]==page and receipt["batch_size"]==40
+          assert len(receipt["packs_sha256_verified"])==7
+          assert len(receipt["provider_index_sha256_verified"])==7
+          assert 0 < receipt["source_requests"] <= 40
+          assert receipt["source_requests"] == receipt["source_sets_succeeded"] + receipt["source_sets_failed"]
+          assert receipt["production_writes"]==0 and receipt["verified_new_canonical_cards"]==0
+          assert receipt["image_binaries_downloaded"]==0 and not receipt["rights_granted"]
+          assert receipt["customer_data_read"] is False and receipt["safe_for_public_use"] is False
+          for name in ("unmatched_source_sets.jsonl","unmatched_source_card_briefs.jsonl"):
+              info=receipt[name]
+              b=(base/name).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==info["sha256"] and len(b)==info["bytes"]
+              assert sum(bool(x) for x in b.splitlines())==info["records"]
+          assert receipt["unmatched_source_card_briefs.jsonl"]["records"] == receipt["card_briefs_captured"]
+          print("CARDSCANR_10K_SOURCE_PAGE_VERIFIED",json.dumps({
+              "page":page,
+              "sets":receipt["source_sets_succeeded"],
+              "candidate_card_briefs":receipt["card_briefs_captured"],
+              "source_image_url_bases":receipt["source_image_url_bases_found"],
+              "failed":receipt["source_sets_failed"],
+              "conflicts_quarantined":len(receipt["quarantined_provider_set_id_conflicts"]),
+              "verified_new_canonical_cards":0,
+              "production_writes":0
+          },sort_keys=True))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write(f"### Source-only page {page}\n\n")
+              f.write(f"- Card briefs captured: **{receipt['card_briefs_captured']:,}**\n")
+              f.write(f"- Source image URL bases: **{receipt['source_image_url_bases_found']:,}**\n")
+              f.write(f"- Successfully read sets: **{receipt['source_sets_succeeded']}**\n")
+              f.write("- Canonical card inserts, image downloads and production writes: **0**\n")
+          PY
+      - name: Upload seven-day source-only research evidence
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-worldwide-source-page-${{ matrix.page }}
+          path: private-source-page-${{ matrix.page }}/
+          retention-days: 7
+          if-no-files-found: error
