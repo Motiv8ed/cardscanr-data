@@ -1,0 +1,75 @@
+name: Private official Thai Indonesian source pages 6-9
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-pages-6-9.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: private-th-id-new-6-9
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        page: [6,7,8,9]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+          python -m py_compile tools/private_official_asia_th_id_url_pilot.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py --self-test
+      - name: Collect bounded official card HTML source detail metadata
+        env:
+          PAGE_INDEX: ${{ matrix.page }}
+        run: |
+          PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py \
+             --out "private-page-$PAGE_INDEX" --limit 20 --page "$PAGE_INDEX"
+      - name: Verify source SHA, exact page, zero artwork bodies/live writes
+        env:
+          PAGE_INDEX: ${{ matrix.page }}
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          page=int(os.environ['PAGE_INDEX'])
+          root=Path(f'private-page-{page}')
+          r=json.loads((root/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_ASIA_CARD_URL_RESEARCH_ONLY'
+          assert r['source_list_page']==page
+          assert 0<r['source_cards']<=40 and r['source_request_budget']==42
+          assert r['image_url_references']<=r['source_cards']
+          assert {x['locale'] for x in r['sources']}=={'th','id'}
+          assert r['image_binaries_downloaded']==r['live_vault_writes']==0
+          assert not r['artwork_rights_granted'] and not r['public_artwork_enabled']
+          assert r['exact_live_canonical_ids_verified']==r['verified_new_canonical_cards']==0
+          data=(root/'official_asia_card_source_urls.jsonl').read_bytes()
+          assert hashlib.sha256(data).hexdigest()==r['source_url_manifest_sha256']
+          rows=[json.loads(x) for x in data.splitlines()]
+          assert len(rows)==r['source_cards']
+          assert all(x['source_list_page']==page and
+                     not x['exact_vault_match_proven'] and
+                     not x['artwork_rights_cleared'] and
+                     not x['image_downloaded'] for x in rows)
+          print('VERIFIED_OFFICIAL_ASIA_NEXT_SOURCE_PAGE',json.dumps({
+            'page':page,'source_card_details':len(rows),
+            'image_source_refs':r['image_url_references'],
+            'canonical_card_imports':0,'image_binary_downloads':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-Page-${{ matrix.page }}
+          path: private-page-${{ matrix.page }}/
+          retention-days: 14
+          if-no-files-found: error
