@@ -9,24 +9,15 @@ from typing import Any
 from ..models import ProviderRequest, ProviderResult
 from .errors import ProviderTemporaryError
 from .sold_page_health import (
-    EBAY_ACCESS_DENIED_403,
     EBAY_ERROR_PAGE,
-    EBAY_SORRY_PAGE,
+    _is_challenge_blob,
+    _is_classic_sorry_blob,
     classify_marketplace_page_class,
     is_ebay_error_page,
     is_tiny_ebay_generic_error_body,
 )
 
 LIVE_EBAY_NAVIGATION_COUNT = "liveEbayNavigationCount"
-
-_GENERIC_SORRY_MARKERS = (
-    "sorry",
-    "challenge",
-    "captcha",
-    "verify yourself",
-    "429",
-    "too many requests",
-)
 
 
 def au_variant_resilience_enabled(*, market_country: str | None) -> bool:
@@ -76,11 +67,57 @@ def min_comparable_count_for_variant_stop() -> int:
     return max(1, int(os.getenv("AU_EBAY_MIN_COMPARABLE_COUNT", "2")))
 
 
-def _blob_has_disallowed_markers(*parts: str | None) -> bool:
-    blob = "\n".join(str(p or "") for p in parts).lower()
-    if re.search(r"\b429\b", blob):
+def _has_hard_stop_markers(
+    *,
+    title: str | None,
+    url: str | None,
+    body: str | None = None,
+    challenge: bool = False,
+    http_status: int | None = None,
+) -> bool:
+    """Classic sorry/challenge/captcha/429 — never generic-error retry/fallback."""
+    if challenge:
         return True
-    return any(marker in blob for marker in _GENERIC_SORRY_MARKERS if marker != "429")
+    t = str(title or "").lower()
+    u = str(url or "").lower()
+    b = str(body or "").lower()
+    blob = f"{t}\n{u}\n{b}"
+    if re.search(r"\b429\b", blob) or "too many requests" in blob:
+        return True
+    if _is_challenge_blob(title=title, url=url, body=body):
+        return True
+    if "splashui/challenge" in u:
+        return True
+    if "verify yourself" in t or "security measure" in t:
+        return True
+    # Error Page | eBay + tiny "something went wrong" body is generic even if the headline says Sorry.
+    if _is_classic_sorry_blob(title=title, url=url, body=body):
+        return True
+    if is_ebay_error_page(title=title, url=url, body=body):
+        return False
+    return False
+
+
+def _has_positive_generic_error_markers(
+    *,
+    title: str | None,
+    url: str | None,
+    body: str | None = None,
+    http_status: int | None = None,
+    reason: str | None = None,
+) -> bool:
+    if is_ebay_error_page(title=title, url=url, body=body):
+        return True
+    if is_tiny_ebay_generic_error_body(body):
+        return True
+    if http_status == 403 and is_tiny_ebay_generic_error_body(body):
+        return True
+    if str(reason or "").strip().lower() in {"ebay_error_page", "marketplace_error_page"}:
+        return True
+    page_class = classify_marketplace_page_class(
+        url=url, title=title, body=body, http_status=http_status
+    )
+    return page_class == EBAY_ERROR_PAGE
 
 
 def is_generic_error_page_nav(
@@ -94,38 +131,23 @@ def is_generic_error_page_nav(
     http_status: int | None = None,
     reason: str | None = None,
 ) -> bool:
-    """Generic Error Page only — not classic SORRY/challenge/captcha/429."""
-    if challenge:
-        return False
-    if _blob_has_disallowed_markers(title, body, error, reason) and not is_ebay_error_page(
-        title=title, url=url, body=body
+    """Generic Error Page: positive title/body markers; not classic sorry/challenge."""
+    _ = (error, sorry)
+    if _has_hard_stop_markers(
+        title=title,
+        url=url,
+        body=body,
+        challenge=challenge,
+        http_status=http_status,
     ):
-        # Classic SORRY body still present — not generic error-only retry class.
-        if EBAY_SORRY_PAGE == classify_marketplace_page_class(
-            url=url, title=title, body=body, http_status=http_status
-        ):
-            return False
-    page_class = classify_marketplace_page_class(
-        url=url, title=title, body=body, http_status=http_status
+        return False
+    return _has_positive_generic_error_markers(
+        title=title,
+        url=url,
+        body=body,
+        http_status=http_status,
+        reason=reason,
     )
-    if page_class == EBAY_ACCESS_DENIED_403 and is_tiny_ebay_generic_error_body(body):
-        if not _blob_has_disallowed_markers(title, body, error):
-            return True
-    if page_class == EBAY_ERROR_PAGE:
-        if sorry and not is_ebay_error_page(title=title, url=url, body=body):
-            return False
-        if _blob_has_disallowed_markers(title, body, error, reason):
-            # Error-page title with explicit sorry/challenge text → no generic-only retry.
-            if "sorry" in str(title or "").lower() or "sorry" in str(body or "").lower():
-                return False
-            if "captcha" in str(title or "").lower() or "challenge" in str(body or "").lower():
-                return False
-        return True
-    if str(reason or "").strip().lower() in {"ebay_error_page", "marketplace_error_page"}:
-        return not _blob_has_disallowed_markers(title, body, error, reason)
-    if is_ebay_error_page(title=title, url=url, body=body):
-        return not _blob_has_disallowed_markers(title, body, error, reason)
-    return False
 
 
 def is_generic_error_page_failure(exc: ProviderTemporaryError) -> bool:
@@ -150,6 +172,7 @@ def is_generic_error_page_failure(exc: ProviderTemporaryError) -> bool:
         error=str(nested.get("error") or sold.get("error") or reason or exc),
         sorry=bool(nested.get("sorry") or sold.get("sorry") or search.get("sorry")),
         challenge=bool(nested.get("challenge") or sold.get("challenge") or search.get("challenge")),
+        http_status=diag.get("httpStatus") if isinstance(diag.get("httpStatus"), int) else None,
         reason=reason,
     )
 
