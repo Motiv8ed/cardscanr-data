@@ -24,7 +24,7 @@ from cardscanr_market_engine.continuous_safety import (
     SAFETY_LEDGER_FAIL_CLOSED,
     ContinuousSafetyBudget,
 )
-from cardscanr_market_engine.live_ebay_navigation_accounting import row_needs_supplementary_cap_slots
+from cardscanr_market_engine.live_ebay_navigation_accounting import supplementary_submission_needs_cap
 from cardscanr_market_engine.continuous_worker_policy import (
     HARD_STOP_OUTCOMES,
     classify_continuous_gate,
@@ -84,23 +84,20 @@ def _record_supplementary_submission(
     *,
     gate_market: str,
 ) -> None:
-    """Count live navigations not covered by the single reserve-at-job-start (extras + unreserved)."""
-    slots = row_needs_supplementary_cap_slots(row)
-    if slots <= 0:
+    """Count eBay navigations that were not reserved before search (fallback / cold-start extras)."""
+    if not supplementary_submission_needs_cap(row):
         return
     market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
-    # Canonical path is reserve-before-search in job_runner; extras include query variants and retries.
-    for _slot in range(slots):
-        blocked = budget.reserve_live_submission(market=market)
-        if blocked is not None:
-            assert blocked in {
-                "HOURLY_SUBMISSION_CEILING",
-                "DAILY_SUBMISSION_CEILING",
-                SAFETY_LEDGER_FAIL_CLOSED,
-                "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
-                "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR",
-            } or bool(budget.last_hard_stop)
-            return
+    blocked = budget.reserve_live_submission(market=market)
+    if blocked is not None:
+        assert blocked in {
+            "HOURLY_SUBMISSION_CEILING",
+            "DAILY_SUBMISSION_CEILING",
+            SAFETY_LEDGER_FAIL_CLOSED,
+            "MAX_CONSECUTIVE_TRANSIENT_MARKETPLACE_FAILURES",
+            "MAX_TRANSIENT_MARKETPLACE_FAILURES_PER_HOUR",
+        } or bool(budget.last_hard_stop)
+        return
 
 
 def _counts_toward_marketplace_transient_latch(outcome: str | None, row: dict[str, Any]) -> bool:

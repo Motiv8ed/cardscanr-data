@@ -82,6 +82,10 @@ def _desktop_nav_policy_diagnostics(
             "urlBeforeSearch": search_diag.get("urlBeforeSearch") or nav.url,
             "titleBeforeSearch": search_diag.get("titleBeforeSearch"),
             "url": nav.url,
+            "title": nav.title,
+            "sorry": bool(nav.sorry),
+            "challenge": bool(nav.challenge),
+            "error": nav.error,
             "targetPolicy": target_policy,
         }
     )
@@ -2563,6 +2567,28 @@ class EbayBrowserSoldCompsProvider:
         self._desktop_cdp_browser: Any | None = None
         self._desktop_nav_ready: bool = False
         self._live_ebay_navigation_count: int = 0
+        self._live_submission_budget: Any | None = None
+        self._job_first_nav_pre_reserved: bool = False
+
+    def bind_live_submission_budget(self, budget: Any | None, *, first_slot_pre_reserved: bool) -> None:
+        self._live_submission_budget = budget
+        self._job_first_nav_pre_reserved = bool(first_slot_pre_reserved)
+
+    def clear_live_submission_budget(self) -> None:
+        self._live_submission_budget = None
+        self._job_first_nav_pre_reserved = False
+
+    def _reserve_live_navigation_slot(self, *, market_country: str) -> str | None:
+        if self._live_ebay_navigation_count == 0 and self._job_first_nav_pre_reserved:
+            return None
+        budget = self._live_submission_budget
+        if budget is None:
+            return None
+        market = str(market_country or "AU").upper()
+        blocked = budget.budget_exhausted()
+        if blocked:
+            return blocked
+        return budget.reserve_live_submission(market=market)
 
     def _wait_for_request_slot(self) -> None:
         min_wait = max(self.config.cooldown_seconds, self.config.min_seconds_between_requests)
@@ -2715,8 +2741,8 @@ class EbayBrowserSoldCompsProvider:
             attempt_has_healthy_verified_sold_capture,
             au_variant_resilience_enabled,
             comparable_included_count,
-            generic_error_page_retry_delay_seconds,
             is_generic_error_page_failure,
+            merge_live_navigation_into_diagnostics,
             min_comparable_count_for_variant_stop,
             should_stop_query_variants_after_healthy_capture,
             variant_inter_attempt_delay_seconds,
@@ -2733,7 +2759,6 @@ class EbayBrowserSoldCompsProvider:
         stop_reason = "all_query_attempts_exhausted"
         last_healthy_attempt: tuple[ProviderSearchQuery, ProviderResult] | None = None
         last_failed_variant_query: str | None = None
-        generic_error_retried: set[int] = set()
         try:
             query_cursor = 0
             while query_cursor < len(search_queries):
@@ -2777,11 +2802,11 @@ class EbayBrowserSoldCompsProvider:
                     if diagnostics.get("preSoldSorry") == "PRE_SOLD_SORRY":
                         attempt_failure["preSoldSorry"] = "PRE_SOLD_SORRY"
                     failed_attempts.append(attempt_failure)
+                    budget_blocked = str(diagnostics.get("budgetBlocked") or "")
+                    if budget_blocked and last_healthy_attempt is not None:
+                        stop_reason = "au_variant_cap_fallback"
+                        break
                     if au_resilience and is_generic_error_page_failure(exc):
-                        if search_query.query_index not in generic_error_retried:
-                            generic_error_retried.add(search_query.query_index)
-                            time.sleep(generic_error_page_retry_delay_seconds())
-                            continue
                         if last_healthy_attempt is not None:
                             last_failed_variant_query = search_query.query_text
                             stop_reason = "au_variant_generic_error_fallback"
@@ -2811,7 +2836,13 @@ class EbayBrowserSoldCompsProvider:
                     ):
                         query_cursor += 1
                         continue
-                    raise
+                    raise ProviderTemporaryError(
+                        str(exc),
+                        diagnostics=merge_live_navigation_into_diagnostics(
+                            dict(getattr(exc, "diagnostics", {}) or {}),
+                            navigation_count=self._live_ebay_navigation_count,
+                        ),
+                    ) from exc
                 tagged_comps = [_tag_comp_with_query(comp, search_query) for comp in result.comps]
                 result = ProviderResult(
                     provider_name=result.provider_name,
@@ -2840,12 +2871,20 @@ class EbayBrowserSoldCompsProvider:
                     query_cursor = next_query_index
                 else:
                     query_cursor += 1
-            if stop_reason == "au_variant_generic_error_fallback" and last_healthy_attempt is not None:
+            if stop_reason in {
+                "au_variant_generic_error_fallback",
+                "au_variant_cap_fallback",
+            } and last_healthy_attempt is not None:
                 hq, hr = last_healthy_attempt
+                failure_reason = (
+                    "submission_cap_after_healthy_capture"
+                    if stop_reason == "au_variant_cap_fallback"
+                    else "generic_error_page_after_healthy_capture"
+                )
                 hr = annotate_variant_fallback_metadata(
                     hr,
                     failed_query_text=str(last_failed_variant_query or ""),
-                    failure_reason="generic_error_page_after_healthy_capture",
+                    failure_reason=failure_reason,
                 )
                 attempts = [(hq, hr)]
                 aggregate_comps = dedupe_sold_comps(list(hr.comps))
@@ -2860,6 +2899,12 @@ class EbayBrowserSoldCompsProvider:
                 early_stop_progress=early_stop_progress,
                 low_confidence_sparse_market_reason=low_confidence_sparse_market_reason,
             )
+        except ProviderTemporaryError as exc:
+            diag = merge_live_navigation_into_diagnostics(
+                dict(getattr(exc, "diagnostics", {}) or {}),
+                navigation_count=self._live_ebay_navigation_count,
+            )
+            raise ProviderTemporaryError(str(exc), diagnostics=diag) from exc
         except ProviderError:
             if failed_attempts and self.config.debug_artifact_dir is not None:
                 self._write_timeout_debug_summary(
@@ -3017,6 +3062,15 @@ class EbayBrowserSoldCompsProvider:
                 )
                 if stage_from_attempt.get(k) is not None
             }
+        au_fallback_meta = {
+            key: last_attempt_meta.get(key)
+            for key in (
+                "auVariantGenericErrorFallback",
+                "auVariantFallbackFromQuery",
+                "auVariantFallbackReason",
+            )
+            if last_attempt_meta.get(key) is not None
+        }
         metadata = sanitize_provider_diagnostics(
             {
                 "providerDomain": first_query.provider_domain,
@@ -3024,6 +3078,7 @@ class EbayBrowserSoldCompsProvider:
                 "marketCountry": first_query.market_country,
                 "currency": first_query.currency,
                 "resultCount": len(comps),
+                **au_fallback_meta,
                 "rawResultCountBeforeDedupe": sum(len(result.comps) for _query, result in attempts),
                 "dedupedResultCount": len(comps),
                 "duplicateCount": max(0, sum(len(result.comps) for _query, result in attempts) - len(comps)),
@@ -3361,7 +3416,26 @@ class EbayBrowserSoldCompsProvider:
                 is_generic_error_page_nav,
             )
 
-            def _run_desktop_nav() -> Any:
+            au_resilience = au_variant_resilience_enabled(market_country=request.market_country)
+            desktop_generic_retried = False
+
+            def _run_desktop_nav_with_budget() -> Any:
+                blocked = self._reserve_live_navigation_slot(market_country=request.market_country)
+                if blocked:
+                    from .au_ebay_variant_resilience import LIVE_EBAY_NAVIGATION_COUNT, merge_live_navigation_into_diagnostics
+
+                    raise ProviderTemporaryError(
+                        f"Live submission budget blocked before eBay navigation: {blocked}",
+                        diagnostics=merge_live_navigation_into_diagnostics(
+                            {
+                                "budgetBlocked": blocked,
+                                "ownedDailyOutcome": blocked,
+                                "marketCountry": request.market_country,
+                            },
+                            navigation_count=self._live_ebay_navigation_count,
+                        ),
+                    )
+                self._live_ebay_navigation_count += 1
                 return navigate_query_to_sold(
                     search_query.query_text,
                     reset_homepage=not ctx.is_inter_card(),
@@ -3370,9 +3444,8 @@ class EbayBrowserSoldCompsProvider:
                     pre_submit_only=pre_submit,
                 )
 
-            nav = _run_desktop_nav()
-            self._live_ebay_navigation_count += 1
-            if au_variant_resilience_enabled(market_country=request.market_country):
+            nav = _run_desktop_nav_with_budget()
+            if au_resilience:
                 nav_diag_pre = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
                 sold_pre = (
                     nav_diag_pre.get("sold") if isinstance(nav_diag_pre.get("sold"), dict) else {}
@@ -3380,19 +3453,22 @@ class EbayBrowserSoldCompsProvider:
                 search_pre = (
                     nav_diag_pre.get("search") if isinstance(nav_diag_pre.get("search"), dict) else {}
                 )
-                body_pre = str(sold_pre.get("body") or sold_pre.get("bodyChars") or "")
-                if is_generic_error_page_nav(
-                    title=nav.title,
-                    url=nav.url,
-                    body=body_pre,
-                    error=nav.error,
-                    sorry=bool(nav.sorry),
-                    challenge=bool(nav.challenge),
-                    reason=str(nav.error or search_pre.get("resultCode") or ""),
+                body_pre = str(sold_pre.get("body") or sold_pre.get("bodySample") or "")
+                if (
+                    not desktop_generic_retried
+                    and is_generic_error_page_nav(
+                        title=nav.title,
+                        url=nav.url,
+                        body=body_pre,
+                        error=nav.error,
+                        sorry=bool(nav.sorry),
+                        challenge=bool(nav.challenge),
+                        reason=str(nav.error or sold_pre.get("error") or search_pre.get("resultCode") or ""),
+                    )
                 ):
+                    desktop_generic_retried = True
                     time.sleep(generic_error_page_retry_delay_seconds())
-                    nav = _run_desktop_nav()
-                    self._live_ebay_navigation_count += 1
+                    nav = _run_desktop_nav_with_budget()
             nav_diag = nav.diagnostics if isinstance(nav.diagnostics, dict) else {}
             search_diag = nav_diag.get("search") if isinstance(nav_diag.get("search"), dict) else {}
             gui_timings = search_diag.get("guiAttemptTimings") or (nav_diag.get("guiAttemptTimings"))
@@ -3430,10 +3506,12 @@ class EbayBrowserSoldCompsProvider:
                 "soldClickSuccess": nav.sold_click_success,
                 "SOLD_STATE_VERIFIED": nav.sold_state_verified,
                 "url": nav.url,
+                "title": nav.title,
                 "sorry": nav.sorry,
                 "challenge": nav.challenge,
                 "soldDateLines": nav.sold_date_lines,
                 "error": nav.error,
+                "sold": nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else None,
                 "navMode": nav_mode_label,
                 LIVE_EBAY_NAVIGATION_CONSUMED: live_nav_consumed,
                 "searchSubmissionStarted": bool(submission_event),
@@ -3504,16 +3582,39 @@ class EbayBrowserSoldCompsProvider:
                 diagnostics=fail_diag,
             )
         if nav.sorry or str(nav.error or "") == "TEMPORARY_EBAY_SERVER_FAILURE":
+            sold_diag = nav_diag.get("sold") if isinstance(nav_diag.get("sold"), dict) else {}
+            body_for_class = str(sold_diag.get("body") or sold_diag.get("bodySample") or "")
+            from .au_ebay_variant_resilience import (
+                is_generic_error_page_nav,
+                merge_live_navigation_into_diagnostics,
+            )
+
+            generic_error = is_generic_error_page_nav(
+                title=nav.title,
+                url=nav.url,
+                body=body_for_class,
+                error=str(nav.error or sold_diag.get("error") or ""),
+                sorry=bool(nav.sorry),
+                challenge=bool(nav.challenge),
+                reason=str(sold_diag.get("error") or nav.error or ""),
+            )
+            reason = "ebay_error_page" if generic_error else "ebay_sorry_error_page"
             raise ProviderTemporaryError(
                 "TEMPORARY_EBAY_SERVER_FAILURE: eBay SORRY/error page during desktop navigation",
-                diagnostics={
-                    "reason": "ebay_sorry_error_page",
-                    "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
-                    "preSoldSorry": "PRE_SOLD_SORRY" if not nav.sold_click_success else None,
-                    "navMode": nav_mode_label,
-                    "desktopNav": stage_timings.fields.get("desktopNav"),
-                    "stageTimings": stage_timings.snapshot(),
-                },
+                diagnostics=merge_live_navigation_into_diagnostics(
+                    {
+                        "reason": reason,
+                        "title": nav.title,
+                        "url": nav.url,
+                        "body": body_for_class,
+                        "ownedDailyOutcome": "TEMPORARY_EBAY_SERVER_FAILURE",
+                        "preSoldSorry": "PRE_SOLD_SORRY" if not nav.sold_click_success else None,
+                        "navMode": nav_mode_label,
+                        "desktopNav": stage_timings.fields.get("desktopNav"),
+                        "stageTimings": stage_timings.snapshot(),
+                    },
+                    navigation_count=self._live_ebay_navigation_count,
+                ),
             )
         if str(nav.error or "") in {
             "ALTERNATE_EBAY_SURFACE",
@@ -3923,6 +4024,11 @@ class EbayBrowserSoldCompsProvider:
             marks["T13_db_cache_snapshot_write_complete"] = time.time()
             marks["T14_job_finalized"] = time.time()
             stage_timings.fields["finalizeTerminal"] = FINALIZE_SUCCESS
+            from ..filters import filter_comps
+            from .au_ebay_variant_resilience import LIVE_EBAY_NAVIGATION_COUNT
+
+            evaluated_row = filter_comps(request.price_key, comps)
+            clean_included_count = sum(1 for item in evaluated_row if item.included_in_estimate)
             return ProviderResult(
                 provider_name=self.provider_name,
                 marketplace=search_query.provider_marketplace_id,
@@ -3939,7 +4045,9 @@ class EbayBrowserSoldCompsProvider:
                         "queryIndex": search_query.query_index,
                         "querySource": search_query.query_source,
                         "resultCount": len(comps),
+                        "cleanIncludedCount": clean_included_count,
                         "providerOutcome": "success" if comps else "no_results",
+                        LIVE_EBAY_NAVIGATION_COUNT: max(0, int(self._live_ebay_navigation_count)),
                         "browserPageState": page_state,
                         "navMode": nav_mode_label,
                         "desktopNav": stage_timings.fields.get("desktopNav"),

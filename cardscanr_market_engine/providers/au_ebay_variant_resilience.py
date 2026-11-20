@@ -134,22 +134,23 @@ def is_generic_error_page_failure(exc: ProviderTemporaryError) -> bool:
     search = nested.get("search") if isinstance(nested.get("search"), dict) else {}
     sold = nested.get("sold") if isinstance(nested.get("sold"), dict) else {}
     title = str(
-        nested.get("title")
+        diag.get("title")
+        or nested.get("title")
         or sold.get("title")
         or search.get("title")
-        or diag.get("title")
         or ""
     )
-    url = str(nested.get("url") or sold.get("url") or search.get("url") or diag.get("url") or "")
-    body = str(diag.get("body") or sold.get("body") or "")
+    url = str(diag.get("url") or nested.get("url") or sold.get("url") or search.get("url") or "")
+    body = str(diag.get("body") or sold.get("body") or sold.get("bodySample") or "")
+    reason = str(diag.get("reason") or diag.get("failureClass") or nested.get("error") or "")
     return is_generic_error_page_nav(
         title=title,
         url=url,
         body=body,
-        error=str(diag.get("reason") or exc),
-        sorry=bool(nested.get("sorry") or search.get("sorry")),
-        challenge=bool(nested.get("challenge") or search.get("challenge")),
-        reason=str(diag.get("reason") or diag.get("failureClass") or ""),
+        error=str(nested.get("error") or sold.get("error") or reason or exc),
+        sorry=bool(nested.get("sorry") or sold.get("sorry") or search.get("sorry")),
+        challenge=bool(nested.get("challenge") or sold.get("challenge") or search.get("challenge")),
+        reason=reason,
     )
 
 
@@ -193,7 +194,17 @@ def comparable_included_count(result: ProviderResult, request: ProviderRequest) 
             return max(0, int(progress[-1].get("cleanIncludedCount") or 0))
         except (TypeError, ValueError, AttributeError):
             pass
-    return max(0, len(result.comps))
+    return 0
+
+
+def merge_live_navigation_into_diagnostics(
+    diagnostics: dict[str, Any] | None,
+    *,
+    navigation_count: int,
+) -> dict[str, Any]:
+    merged = dict(diagnostics or {})
+    merged[LIVE_EBAY_NAVIGATION_COUNT] = max(0, int(navigation_count))
+    return merged
 
 
 def should_stop_query_variants_after_healthy_capture(
@@ -252,6 +263,7 @@ __all__ = [
     "comparable_included_count",
     "extra_live_navigations_from_metadata",
     "generic_error_page_retry_delay_seconds",
+    "merge_live_navigation_into_diagnostics",
     "is_generic_error_page_failure",
     "is_generic_error_page_nav",
     "is_tiny_ebay_generic_error_body",

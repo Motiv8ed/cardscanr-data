@@ -1264,6 +1264,9 @@ class MarketPriceJobRunner:
                     "runtimeMode": active_runtime_mode,
                 }
             live_submission_reserved = reserved
+            bind_budget = getattr(self.provider, "bind_live_submission_budget", None)
+            if callable(bind_budget) and self._per_card_budget_active():
+                bind_budget(self._safety_budget, first_slot_pre_reserved=live_submission_reserved)
             try:
                 (
                     provider_request,
@@ -1279,6 +1282,9 @@ class MarketPriceJobRunner:
                     now=now,
                 )
             finally:
+                clear_budget = getattr(self.provider, "clear_live_submission_budget", None)
+                if callable(clear_budget):
+                    clear_budget()
                 for _env_key in ("CARDSCANR_JOB_ID", "CARDSCANR_FINGERPRINT"):
                     os.environ.pop(_env_key, None)
             return self._complete_live_job_from_provider_fetch(

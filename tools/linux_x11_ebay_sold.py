@@ -368,9 +368,10 @@ def gui_sold(*, tag: str) -> dict:
         ev = evaluate_sold_verification(url=url0, title=t0, body=body)
         verified = bool(ev.get("verified"))
         gate = on_sold_terminal(gate, verified=verified)
-        if ev.get("terminal") == "EBAY_ERROR_PAGE" or (
+        error_page = ev.get("terminal") == "EBAY_ERROR_PAGE" or (
             not verified and is_ebay_error_page(title=t0, url=url0, body=body)
-        ):
+        )
+        if error_page:
             gate = on_sold_terminal(gate, sorry=True)
         out = {
             "ok": verified,
@@ -379,6 +380,12 @@ def gui_sold(*, tag: str) -> dict:
             "SOLD_STATE_VERIFIED": verified,
             "url": url0,
             "title": t0,
+            "sorry": bool(error_page),
+            "challenge": False,
+            "error": "ebay_error_page" if error_page else (None if verified else "sold_not_verified"),
+            "body": body,
+            "bodySample": body[:400],
+            "marketplacePageClass": ev.get("terminal") or ev.get("marketplacePageClass"),
             "aboutBlank": False,
             "phase": gate.phase.value,
             "bodyChars": len(body),
