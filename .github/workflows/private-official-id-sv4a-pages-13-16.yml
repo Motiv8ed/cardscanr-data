@@ -35,21 +35,21 @@ jobs:
           PYTHONPATH=. python tools/private_official_indonesian_sv4a_next_urls.py --self-test
       - name: Read maximum one list page plus twenty card-details (HTML only)
         env:
-          ${{ matrix.page }}_INDEX: ${{ matrix.page }}
+          PAGE_INDEX: ${{ matrix.page }}
         run: |
           PYTHONPATH=. python tools/private_official_indonesian_sv4a_next_urls.py \
-            --out "official-id-$${{ matrix.page }}_INDEX" --limit 20 --page "$${{ matrix.page }}_INDEX"
+            --out "official-id-$PAGE_INDEX" --limit 20 --page "$PAGE_INDEX"
       - name: Assert SHA provenance and prohibit image binaries and live edits
         env:
-          ${{ matrix.page }}_INDEX: ${{ matrix.page }}
+          PAGE_INDEX: ${{ matrix.page }}
         run: |
           python - <<'PY'
           import hashlib,json,os
           from pathlib import Path
-          page=int(os.environ['${{ matrix.page }}_INDEX'])
+          page=int(os.environ['PAGE_INDEX'])
           folder=Path(f"official-id-{page}")
           r=json.loads((folder/'receipt.json').read_text('utf8'))
-          assert r['classification']=='PRIVATE_OFFICIAL_ID_SV4A_NEXT_${{ matrix.page }}_RESEARCH_ONLY'
+          assert r['classification']=='PRIVATE_OFFICIAL_ID_SV4A_NEXT_PAGE_RESEARCH_ONLY'
           assert r['source_list_page']==page
           assert 1<=r['source_cards']<=20
           assert r['image_url_references']==r['source_cards']
@@ -67,7 +67,7 @@ jobs:
                      and x['source_product_code']=='SV4a'
                      and not x['exact_vault_match_proven'] and not x['image_downloaded']
                      and not x['artwork_rights_cleared'] for x in rows)
-          print('OFFICIAL_ID_SV4A_NEXT_SOURCE_${{ matrix.page }}_PASS',json.dumps({
+          print('OFFICIAL_ID_SV4A_NEXT_SOURCE_PAGE_PASS',json.dumps({
             'page':page,'source_card_details':len(rows),
             'image_url_refs':r['image_url_references'],
             'artwork_files':0,'live_card_changes':0},sort_keys=True))
