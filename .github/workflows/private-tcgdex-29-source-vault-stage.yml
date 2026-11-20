@@ -1,0 +1,78 @@
+name: Private TCGdex 29-set image URL source-only VaultSync stage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-tcgdex-29-source-vault-stage.yml'
+      - 'tools/private_tcgdex_29_source_vault_stage.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  stage-reviewed-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline strict allowlist and source-only tests
+        run: |
+          python -m py_compile tools/private_tcgdex_29_source_vault_stage.py
+          PYTHONPATH=. python tools/private_tcgdex_29_source_vault_stage.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44834411048
+          name: CardScanR-Bulk-29-Set-Image-Reference-Matches
+          github-token: ${{ github.token }}
+          path: exact-source-evidence
+      - name: Build SHA-checked exact canonical TCGdex private source URL batches
+        run: |
+          PYTHONPATH=. python tools/private_tcgdex_29_source_vault_stage.py \
+            --source exact-source-evidence --output tcgdex-private-vault-stage
+      - name: Assert source metadata identity and prohibit card/image publication
+        run: |
+          python - <<'PY'
+          import hashlib,gzip,json
+          from pathlib import Path
+          d=Path('tcgdex-private-vault-stage')
+          r=json.loads((d/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_TCGDEX_29_SET_EXACT_VAULT_BATCH_STAGE_ONLY'
+          assert 100<=r['total_candidate_urls']<=5000
+          assert r['new_canonical_cards']==r['image_downloads']==r['live_vault_writes']==0
+          assert not r['public_artwork_permission']
+          ids=set()
+          for batch in r['batches']:
+              blob=(d/batch['filename']).read_bytes()
+              assert hashlib.sha256(blob).hexdigest()==batch['sha256']
+              assert 0<len(blob)==batch['bytes']<=72000
+              obj=json.loads(gzip.decompress(blob))
+              assert obj['schema_version']==1 and obj['source']=='tcgdex'
+              assert obj['image_binaries_downloaded']==0 and not obj['artwork_rights_verified']
+              assert len(obj['cards'])==len(obj['images'])==batch['cards']
+              cardids={x['canonical_printing_id'] for x in obj['cards']}
+              assert len(cardids)==batch['cards'] and ids.isdisjoint(cardids)
+              assert cardids=={x['canonical_printing_id'] for x in obj['images']}
+              assert all(x['status']=='exact_unique' for x in obj['cards'])
+              assert all(x['image_url'].startswith('https://assets.tcgdex.net/') for x in obj['images'])
+              ids.update(cardids)
+          assert len(ids)==r['total_candidate_urls']
+          print('PASS_VERIFIED_29_SET_BULK_IMAGE_SOURCES',json.dumps({
+            'source_references':len(ids),'batches':len(r['batches']),
+            'digests':[x['sha256'] for x in r['batches']],
+            'live_imports':0,'image_binaries':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TCGdex-29-Set-Private-Exact-URL-Batches
+          path: tcgdex-private-vault-stage/
+          retention-days: 7
+          if-no-files-found: error
