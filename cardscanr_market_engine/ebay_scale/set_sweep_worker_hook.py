@@ -2,6 +2,14 @@
 
 All behaviour is behind EBAY_SCALE_* flags (default off). Set-level browser fetches
 count as one live submission against the continuous safety budget.
+
+Live AU worker (owned_daily off): when EBAY_SCALE shadow flags are on and
+EBAY_SCALE_SET_SWEEP_LIVE is off, the market worker may run one set-level navigation
+after per-card work. Interleaving rule (does not starve per-card jobs): attempt at most
+one sweep when the job queue is idle for the cycle, or after every
+EBAY_SCALE_SET_SWEEP_EVERY_N_PER_CARD_JOBS per-card submissions (default 5) since the
+last sweep attempt that reserved budget. Owned_daily (continuous) behaviour still runs
+the hook before per-card jobs when enabled — unchanged.
 """
 from __future__ import annotations
 
@@ -50,6 +58,7 @@ SET_SWEEP_PLAN_PATH = REPORTS_DIR / "runtime" / "ebay_scale_set_sweep_plan.json"
 SET_SWEEP_LAST_RUN_PATH = REPORTS_DIR / "runtime" / "ebay_scale_set_sweep_last_run.json"
 
 MinSweepIntervalHoursEnv = "EBAY_SCALE_SET_SWEEP_MIN_INTERVAL_HOURS"
+LiveAuSweepEveryNPerCardEnv = "EBAY_SCALE_SET_SWEEP_EVERY_N_PER_CARD_JOBS"
 
 
 def _parse_positive_float(name: str, default: float) -> float:
@@ -64,6 +73,30 @@ def _parse_positive_float(name: str, default: float) -> float:
 def set_sweep_worker_hook_enabled() -> bool:
     flags = EbayScaleFlags.from_env()
     return bool(flags.enabled and flags.set_sweep_mode and flags.shadow_audit)
+
+
+def live_au_set_sweep_shadow_hook_enabled() -> bool:
+    """Shadow set-sweep on the normal live AU worker path (owned_daily off, SET_SWEEP_LIVE off)."""
+    flags = EbayScaleFlags.from_env()
+    return bool(
+        flags.enabled and flags.set_sweep_mode and flags.shadow_audit and not flags.set_sweep_live
+    )
+
+
+def live_au_set_sweep_interleave_due(
+    *,
+    queue_idle: bool,
+    per_card_submissions_since_last_sweep: int,
+) -> bool:
+    """Return True when the live-AU shadow hook may run without starving per-card work."""
+    if queue_idle:
+        return True
+    raw = os.getenv(LiveAuSweepEveryNPerCardEnv, "5").strip() or "5"
+    try:
+        every_n = max(1, int(raw))
+    except ValueError:
+        every_n = 5
+    return per_card_submissions_since_last_sweep >= every_n
 
 
 def build_set_level_query_text(*, set_name: str, set_code: str) -> str:
@@ -561,7 +594,9 @@ def try_set_sweep_worker_cycle(
         return SetSweepExecutionResult(ok=False, reason=reason)
 
     if fetch_html is None:
-        fetch_html = _default_fetch_set_sweep_html
+
+        def fetch_html(query: str, set_code: str, set_name: str) -> str:
+            return _default_fetch_set_sweep_html(query, set_code, set_name, budget=budget)
 
     return execute_set_sweep_shadow(
         client=client,
@@ -573,7 +608,13 @@ def try_set_sweep_worker_cycle(
     )
 
 
-def _default_fetch_set_sweep_html(query: str, set_code: str, set_name: str) -> str:
+def _default_fetch_set_sweep_html(
+    query: str,
+    set_code: str,
+    set_name: str,
+    *,
+    budget: "ContinuousSafetyBudget | None" = None,
+) -> str:
     """Live PC path: X11 sold navigation + authoritative HTML capture."""
     del set_code, set_name
     from ..providers.ebay_browser_provider import EbayBrowserProvider
@@ -581,7 +622,13 @@ def _default_fetch_set_sweep_html(query: str, set_code: str, set_name: str) -> s
 
     config = MarketEngineConfig.from_env(require_supabase=False)
     provider = EbayBrowserProvider(config=config)
-    return provider.fetch_set_sweep_results_html(query_text=query)
+    if budget is not None and hasattr(provider, "bind_live_submission_budget"):
+        provider.bind_live_submission_budget(budget, first_slot_pre_reserved=True)
+    try:
+        return provider.fetch_set_sweep_results_html(query_text=query)
+    finally:
+        if hasattr(provider, "clear_live_submission_budget"):
+            provider.clear_live_submission_budget()
 
 
 def live_set_sweep_median_for_price_key(price_key: MarketPriceKey) -> float | None:

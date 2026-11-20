@@ -36,6 +36,9 @@ from ..scheduler import utc_iso
 SET_SWEEP_ATTEMPTS_JSONL = REPORTS_DIR / "runtime" / "ebay_scale_set_sweep_attempts.jsonl"
 SET_SWEEP_CIRCUIT_PATH = REPORTS_DIR / "runtime" / "ebay_scale_set_sweep_circuit.json"
 
+# Generic Error Page | eBay (#86): circuit/backoff only; not transient HARD_STOP latch.
+MARKETPLACE_GENERIC_ERROR_PAGE = "MARKETPLACE_GENERIC_ERROR_PAGE"
+
 MinFailureBackoffSecondsEnv = "EBAY_SCALE_SET_SWEEP_MIN_FAILURE_BACKOFF_SECONDS"
 MaxFailureBackoffSecondsEnv = "EBAY_SCALE_SET_SWEEP_MAX_FAILURE_BACKOFF_SECONDS"
 MinFailureBackoffFloorSeconds = 30.0
@@ -89,12 +92,33 @@ def sweep_immediate_hard_stop_outcome(outcome: str | None) -> str | None:
     return None
 
 
+def _title_from_html(html: str) -> str | None:
+    import re
+
+    match = re.search(r"<title[^>]*>([^<]+)</title>", str(html or ""), flags=re.IGNORECASE)
+    if not match:
+        return None
+    return str(match.group(1)).strip() or None
+
+
 def classify_set_sweep_html(html: str) -> str | None:
     body = str(html or "")
     lowered = body.lower()
     if "http 429" in lowered or "status code 429" in lowered or "too many requests" in lowered:
         return EBAY_RATE_LIMITED
-    page_class = classify_marketplace_page_class(url=None, title=None, body=body)
+    title = _title_from_html(body)
+    from ..providers.au_ebay_variant_resilience import is_generic_error_page_nav
+
+    if is_generic_error_page_nav(
+        title=title,
+        url=None,
+        body=body,
+        error=None,
+        sorry=is_ebay_sorry_page(body=body),
+        challenge=False,
+    ):
+        return MARKETPLACE_GENERIC_ERROR_PAGE
+    page_class = classify_marketplace_page_class(url=None, title=title, body=body)
     if page_class in {EBAY_SORRY_PAGE, EBAY_ERROR_PAGE} or is_ebay_sorry_page(body=body):
         return TEMPORARY_EBAY_SERVER_FAILURE
     if page_class == PAGE_403:
@@ -112,6 +136,10 @@ def classify_set_sweep_fetch_failure(exc: BaseException) -> str:
         raw_diag = getattr(exc, "diagnostics", None)
         if isinstance(raw_diag, dict):
             diagnostics = raw_diag
+        from ..providers.au_ebay_variant_resilience import is_generic_error_page_failure
+
+        if is_generic_error_page_failure(exc):
+            return MARKETPLACE_GENERIC_ERROR_PAGE
     return classify_exception_outcome(exc, diagnostics=diagnostics)
 
 
