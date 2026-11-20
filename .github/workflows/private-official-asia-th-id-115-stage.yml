@@ -1,0 +1,76 @@
+name: Private 115 exact Thai Indonesian source-only VaultSync packs
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_official_asia_th_id_6_9_bulk_stage.py'
+      - '.github/workflows/private-official-asia-th-id-115-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  fixed-reviewed-packs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44718982104
+          name: CardScanR-Official-TH-ID-Pages-6-9-Exact-Archived-Matches
+          github-token: ${{ github.token }}
+          path: verified-115-crosswalk
+      - name: Build private source-only gzip packs without PC data changes
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_6_9_bulk_stage.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_vault_stage.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_6_9_bulk_stage.py \
+            --source verified-115-crosswalk --out private-approved-stage
+      - name: Assert identity uniqueness, Sha and private-only source references
+        run: |
+          python - <<'PY'
+          import json,gzip,hashlib
+          from pathlib import Path
+          root=Path('private-approved-stage')
+          r=json.loads((root/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_6_9_STAGE_NOT_LIVE'
+          assert r['total_candidates']==115 and r['total_batches']==3
+          assert [x['batch_id'] for x in r['batches']]==[
+            'offthid20261120_05','offthid20261120_06','offthid20261120_07']
+          assert [x['cards'] for x in r['batches']]==[40,40,35]
+          assert r['new_canonical_card_records']==r['live_vault_writes']==r['image_binaries_downloaded']==0
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          assert r['live_exact_card_identity_still_required']
+          ids=set()
+          for item in r['batches']:
+              b=(root/item['file']).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==item['sha256']
+              assert len(b)==item['bytes']<=72000
+              doc=json.loads(gzip.decompress(b))
+              assert doc['source']=='official_crosswalk' and doc['schema_version']==1
+              assert len(doc['cards'])==len(doc['images'])==item['cards']
+              assert not doc['artwork_rights_verified'] and doc['image_binaries_downloaded']==0
+              new={x['canonical_printing_id'] for x in doc['cards']}
+              assert len(new)==item['cards'] and new.isdisjoint(ids)
+              ids.update(new)
+              assert new=={x['canonical_printing_id'] for x in doc['images']}
+              assert all(x['status']=='exact_unique' and x['native_card_name'] and x['printed_collector_number'] for x in doc['cards'])
+          assert len(ids)==115
+          print('OFFICIAL_THID_115_BATCHES_READY',json.dumps({
+            'source_only':True,'links':115,'batches':3,
+            'sha256':[x['sha256'] for x in r['batches']],
+            'live_changes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-Extra-115-Source-Only-VaultSync-Packs
+          path: private-approved-stage/
+          retention-days: 14
+          if-no-files-found: error
