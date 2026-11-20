@@ -1,0 +1,70 @@
+name: CardScanR TH and ID official source-only image reference pilot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-th-id-official-source-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Probe just two official list pages, no image-body requests
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,html,json,re,time,urllib.request
+          from datetime import datetime,timezone
+          from urllib.parse import urlsplit, urljoin
+          from pathlib import Path
+          pages={
+              "th":"https://asia.pokemon-card.com/th/card-search/list/?expansionCodes=SV7s",
+              "id":"https://asia.pokemon-card.com/id/card-search/list/?expansionCodes=SV4a",
+          }
+          report={"classification":"PRIVATE_OFFICIAL_LIST_SOURCE_ONLY",
+                  "generated_utc":datetime.now(timezone.utc).isoformat(),
+                  "image_files_downloaded":0,
+                  "vault_writes":0,
+                  "public_artwork_permission_granted":False,
+                  "pages":[]}
+          for index,(lang,url) in enumerate(pages.items()):
+              if index: time.sleep(3)
+              req=urllib.request.Request(url,headers={
+                  "User-Agent":"CardScanR-SourceResearch/1.0 (+https://cardscanr.com; official-set-metadata-only)",
+                  "Accept":"text/html"})
+              try:
+                  with urllib.request.urlopen(req,timeout=20) as resp:
+                      final=resp.url
+                      if urlsplit(final).hostname!="asia.pokemon-card.com" or not urlsplit(final).path.startswith("/"+lang+"/card-search/"):
+                          raise ValueError("unexpected_official_redirect")
+                      data=resp.read(800001)
+                      if len(data)>800000:raise ValueError("source_response_over_budget")
+                  source=data.decode("utf8","replace")
+                  hrefs=[html.unescape(x) for x in re.findall(
+                     r'href\s*=\s*["\x27]([^"\x27]+)["\x27]',source,re.IGNORECASE)]
+                  detail_links=sorted(set(urljoin(url,x) for x in hrefs if re.match(
+                     r'^(?:https://asia\.pokemon-card\.com)?/'+lang+r'/card-search/detail/[0-9]+/?',x)))
+                  row={"lang":lang,"url":url,"response_sha256":hashlib.sha256(data).hexdigest(),
+                       "bytes":len(data),"source_detail_link_count_page_1":len(detail_links),
+                       "verified_detail_url_samples":detail_links[:5],
+                       "safe_to_publish_images":False}
+              except Exception as exc:
+                  row={"lang":lang,"url":url,"failure":type(exc).__name__,
+                       "safe_to_publish_images":False}
+              report["pages"].append(row)
+          Path("source-pilot.json").write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n")
+          print("SOURCE_ONLY_PROBE",json.dumps(report,ensure_ascii=False))
+          PY
+      - name: Upload no-image source probe receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-Official-List-Probe
+          path: source-pilot.json
+          retention-days: 7
+          if-no-files-found: error
