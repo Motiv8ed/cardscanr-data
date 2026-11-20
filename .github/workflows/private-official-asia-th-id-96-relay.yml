@@ -1,0 +1,66 @@
+name: Private official TH ID 96 source-only VaultSync relay
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-96-relay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  checksum-approved-source-text-relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44724166792
+          name: CardScanR-Official-TH-ID-96-Reviewed-Source-Only-Packs
+          github-token: ${{ github.token }}
+          path: verified-96-source-batches
+      - name: Check immutable identity and emit bounded source-only staging chunks
+        run: |
+          python - <<'PY'
+          import base64,gzip,hashlib,json,re
+          from pathlib import Path
+          folder=Path('verified-96-source-batches')
+          r=json.loads((folder/'receipt.json').read_text('utf8'))
+          pins=[
+            ('offthid20261120_08','11e02cb9bf509448798f6e17d4c2466d3ec32fc27054cfd5392afcdcf4330ec5',40),
+            ('offthid20261120_09','bc31688bb92a7c8dae8f8590d3b1a6bb8318d84efe6ee64ce5fb745551ac3759',40),
+            ('offthid20261120_10','bb150f99ae59be2fbee9b7551babf5248a8f8b67fe2c3c9adeacec12d5654733',16)]
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_10_12_STAGE_NOT_LIVE'
+          assert r['total_batches']==3 and r['total_candidates']==96
+          assert r['live_vault_writes']==r['image_binaries_downloaded']==r['new_canonical_card_records']==0
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          assert r['live_exact_card_identity_still_required']
+          seen=set()
+          for pin,rec in zip(pins,r['batches']):
+              bid,sha,count=pin
+              assert rec['batch_id']==bid and rec['sha256']==sha
+              assert rec['file']==bid+'.gz' and rec['cards']==rec['image_sources']==count
+              path=folder/rec['file']
+              assert path.is_file() and not path.is_symlink()
+              b=path.read_bytes()
+              assert len(b)==rec['bytes']<=72000
+              assert hashlib.sha256(b).hexdigest()==sha
+              doc=json.loads(gzip.decompress(b))
+              assert doc['schema_version']==1 and doc['source']=='official_crosswalk'
+              assert not doc['artwork_rights_verified'] and doc['image_binaries_downloaded']==0
+              assert len(doc['cards'])==len(doc['images'])==count
+              cids={x['canonical_printing_id'] for x in doc['cards']}
+              assert len(cids)==count and seen.isdisjoint(cids)
+              assert cids=={x['canonical_printing_id'] for x in doc['images']}
+              assert all(c['status']=='exact_unique' and c['native_card_name'] and c['printed_collector_number'] for c in doc['cards'])
+              assert all(re.fullmatch(r'https://asia\.pokemon-card\.com/(th/card-img/th|id/card-img/id)[0-9]{8}\.png',x['image_url']) for x in doc['images'])
+              seen.update(cids)
+              enc=base64.b64encode(b).decode('ascii')
+              parts=[enc[i:i+2800] for i in range(0,len(enc),2800)]
+              print('CARDSCANR_THID_96_META',bid,sha,len(parts),count)
+              for i,part in enumerate(parts):
+                  print('CARDSCANR_THID_96_PART',bid,i,part)
+              print('CARDSCANR_THID_96_COMPLETE',bid,sha)
+          assert len(seen)==96
+          PY
