@@ -1,0 +1,70 @@
+name: Private reviewed bulk 3227 TCGdex source URL staging relay
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-tcgdex-bulk3227-relay.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-source-only-chunk-relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44836408251
+          name: CardScanR-Bulk3227-TCGdex-Preflight-Required-Source-Packs
+          github-token: ${{ github.token }}
+          path: pinned-3227
+      - name: Verify all source SHA receipts before emitting pure metadata transport
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,base64,re
+          from pathlib import Path
+          path=Path('pinned-3227')
+          r=json.loads((path/'receipt.json').read_text('utf8'))
+          digests=[
+          'fe5ace7d166c47c93bfa2c734d0f3a98920d12c27be950a2eb514f1022c65219',
+          '50268dbc7d350a06e4be1cbf3c5df47cffeb1806f6c5a862987c5e7829df46ab',
+          '4b51df06e06e664c02fb79cbf6f7185d6af7a445997762fe9ede24eb900d2259',
+          '53db4a576f2e96fe3ed2200e32479a55094f009301870249efdb1dbf54c0ca64',
+          '90e4c78ae9187e450ef00a8c94a3ef9d67deccde31aa31fbc7313be769736def',
+          'd3530fec633817209e9ea8756c4227a1eac201090ca49f41f57f6cb6ab03bba5',
+          '95ec5546f5a68c527aac5d5be4a681c87ae9d74773013bccba085ceedd893f1b']
+          assert r['classification']=='PRIVATE_BULK_3227_TCGDEX_EXACT_ARCHIVED_SOURCE_STAGE_ONLY'
+          assert r['total_source_candidates']==3227 and len(r['batches'])==7
+          assert r['live_vault_writes']==r['new_canonical_cards']==r['image_binaries_downloaded']==0
+          assert r['artwork_rights_verified'] is False and r['public_artwork_enabled'] is False
+          assert r['live_identity_verified'] is False and r['ready_to_apply_without_live_preflight'] is False
+          assert [j['sha256'] for j in r['batches']]==digests
+          all_ids=set()
+          for i,rec in enumerate(r['batches']):
+              bid=f'tcgset20261121_{i:02d}'
+              count=500 if i<6 else 227
+              assert rec['batch_id']==bid and rec['file']==bid+'.gz' and rec['source_candidates']==count
+              file=path/rec['file']
+              assert file.is_file() and not file.is_symlink()
+              b=file.read_bytes()
+              assert len(b)==rec['compressed_bytes']<=72000 and hashlib.sha256(b).hexdigest()==digests[i]
+              payload=json.loads(gzip.decompress(b))
+              assert payload['schema_version']==1 and payload['source']=='tcgdex'
+              assert payload['artwork_rights_verified'] is False and payload['image_binaries_downloaded']==0
+              assert len(payload['cards'])==len(payload['images'])==count
+              ids={x['canonical_printing_id'] for x in payload['cards']}
+              assert len(ids)==count and all_ids.isdisjoint(ids)
+              assert ids=={x['canonical_printing_id'] for x in payload['images']}
+              assert all(x['status']=='exact_unique' for x in payload['cards'])
+              assert all(re.fullmatch(r'https://assets[.]tcgdex[.]net/[A-Za-z0-9-]+/[A-Za-z0-9-]+/[A-Za-z0-9-]+/[A-Za-z0-9-]+/low[.]webp',x['image_url']) for x in payload['images'])
+              all_ids.update(ids)
+              encoded=base64.b64encode(b).decode('ascii')
+              chunks=[encoded[x:x+2800] for x in range(0,len(encoded),2800)]
+              print('CARDSCANR_BULK3227_META',bid,digests[i],len(chunks),count)
+              for j,data in enumerate(chunks):
+                  print('CARDSCANR_BULK3227_PART',bid,j,data)
+              print('CARDSCANR_BULK3227_COMPLETE',bid,digests[i])
+          assert len(all_ids)==3227
+          PY
