@@ -8,6 +8,8 @@ on:
       - 'config/catalogue_source_feed.json'
       - 'tests/test_auto_acquisition.py'
       - 'tests/test_catalogue_source_feed.py'
+      - 'tools/private_all_language_source_gap_discovery.py'
+      - 'tests/test_private_all_language_source_gap_discovery.py'
       - 'tools/auto_acquire_catalogue.py'
       - 'tools/catalogue_source_feed.py'
       - 'requirements-catalogue-source-feed.txt'
@@ -38,3 +40,7 @@ jobs:
         run: |
           PYTHONPATH=. python -m unittest discover -s tests -p 'test_auto_acquisition.py' -v
           PYTHONPATH=. python -m pytest -q tests/test_catalogue_source_feed.py
+      - name: Test worldwide provider-only set intake without network or vault writes
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_all_language_source_gap_discovery.py
+          PYTHONPATH=. python -m unittest discover -s tests -p 'test_private_all_language_source_gap_discovery.py' -v
