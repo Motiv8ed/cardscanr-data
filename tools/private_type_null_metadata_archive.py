@@ -20,11 +20,13 @@ LANGUAGE_FOLDERS={
     "de":"de","fr":"fr","es":"es","it":"it","pt":"pt","pocket":"pocket",
 }
 PUBLISHED_COUNTS={
-    "de":20247,"en":21086,"es":15510,"fr":22169,
+    "de":20247,"en":21277,"es":15510,"fr":22169,
     "it":15741,"jp":24039,"ko":20323,"pocket":3879,
     "pt":13907,"sc":877,"tc":14583,
 }
-EXPECTED_SUM=172361
+# The pinned Sept 29 upstream commit has 191 English card records beyond the
+# stale readme number. Exact pinned source tree audit was 172552, no skips.
+EXPECTED_SUM=172552
 LIMIT_FILE_BYTES=240_000
 FIELDS=("name","card_type","lang","regulation","set_name","set_full_name",
     "number","set_total","rarity","author","pokedex_number","pokemon_category",
