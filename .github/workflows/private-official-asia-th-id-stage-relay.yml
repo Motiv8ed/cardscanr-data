@@ -1,0 +1,56 @@
+name: Private reviewed TH ID VaultSync 40-card chunk transport
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-stage-relay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-only-relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44714243234
+          name: CardScanR-TH-ID-Exact-40-Source-Only-VaultSync-Stage
+          github-token: ${{ github.token }}
+          path: source-verified-stage
+      - name: Verify pinned exact official data and print base64 source-only metadata
+        run: |
+          python - <<'PY'
+          import base64,gzip,hashlib,json
+          from pathlib import Path
+          d=Path('source-verified-stage')
+          r=json.loads((d/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_VAULT_STAGE_READY_NOT_LIVE'
+          assert r['batch_id']=='offthid20261120_00'
+          assert r['image_url_candidates']==r['card_candidates']==40
+          assert r['set_count']==2
+          assert r['live_vault_writes']==r['image_binaries_downloaded']==r['verified_new_canonical_cards']==0
+          assert not r['right_to_reuse_artwork'] and not r['safe_for_public_artwork']
+          b=(d/r['gzip_file']).read_bytes()
+          assert len(b)==r['compressed_bytes']<=72000
+          assert hashlib.sha256(b).hexdigest()==r['gzip_sha256']
+          data=json.loads(gzip.decompress(b))
+          assert data['source']=='official_crosswalk' and data['schema_version']==1
+          assert len(data['cards'])==len(data['images'])==40
+          assert {c['canonical_printing_id'] for c in data['cards']}=={x['canonical_printing_id'] for x in data['images']}
+          assert {c['language'] for c in data['cards']}=={'th','id'}
+          assert all(c['status']=='exact_unique' and c['native_card_name'] and c['printed_collector_number'] for c in data['cards'])
+          assert all(x['image_url'].startswith('https://asia.pokemon-card.com/') for x in data['images'])
+          assert not data['artwork_rights_verified'] and data['image_binaries_downloaded']==0
+          enc=base64.b64encode(b).decode('ascii')
+          parts=[enc[i:i+2800] for i in range(0,len(enc),2800)]
+          print('CARDSCANR_OFFICIAL_THID_META',r['batch_id'],r['gzip_sha256'],len(parts),r['card_candidates'])
+          for i,chunk in enumerate(parts):
+              print('CARDSCANR_OFFICIAL_THID_PART',i,chunk)
+          print('CARDSCANR_OFFICIAL_THID_COMPLETE',r['batch_id'],r['gzip_sha256'])
+          PY
