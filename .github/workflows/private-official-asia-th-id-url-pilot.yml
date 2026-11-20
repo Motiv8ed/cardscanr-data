@@ -1,0 +1,68 @@
+name: Private official Pokémon Asia TH ID source-only image URLs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_official_asia_th_id_url_pilot.py'
+      - '.github/workflows/private-official-asia-th-id-url-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  official-source-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned official HTML-only parser dependencies
+        run: |
+          python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+      - name: Offline URL allowlist and input cap tests
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_url_pilot.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py --self-test
+      - name: Retrieve robots-allowed official HTML metadata only, 12 pages maximum
+        run: |
+          PYTHONPATH=. python tools/private_official_asia_th_id_url_pilot.py \
+            --out private-official-asia-urls --limit 5
+      - name: Verify exactly scoped research receipt and source-only privacy
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('private-official-asia-urls')
+          r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_ASIA_CARD_URL_RESEARCH_ONLY'
+          assert r['source_cards']==10 and r['source_request_budget']==12
+          assert len(r['sources'])==2
+          assert {x['locale'] for x in r['sources']}=={'th','id'}
+          assert r['image_binaries_downloaded']==r['live_vault_writes']==0
+          assert r['verified_new_canonical_cards']==r['exact_live_canonical_ids_verified']==0
+          assert not r['artwork_rights_granted'] and not r['public_artwork_enabled']
+          raw=(root/'official_asia_card_source_urls.jsonl').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['source_url_manifest_sha256']
+          rows=[json.loads(line) for line in raw.splitlines()]
+          assert len(rows)==10
+          assert all(not x['image_downloaded'] and not x['artwork_rights_cleared']
+                     and not x['exact_vault_match_proven'] for x in rows)
+          assert all(x['official_detail_url'].startswith('https://asia.pokemon-card.com/')
+                     for x in rows)
+          print('PASS_OFFICIAL_TH_ID_SOURCE_PILOT',json.dumps({
+            'cards':len(rows),'image_link_source_refs':r['image_url_references'],
+            'source_counts':r['sources'],'production_writes':0,
+          },ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-Pilot-Research
+          path: private-official-asia-urls/
+          retention-days: 14
+          if-no-files-found: error
