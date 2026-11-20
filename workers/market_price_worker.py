@@ -88,9 +88,6 @@ def _record_supplementary_submission(
     if not supplementary_submission_needs_cap(row):
         return
     market = str(row.get("marketCountry") or row.get("market") or gate_market or "AU").upper()
-    # Canonical path is reserve-before-search in job_runner; this only runs when that did not happen.
-    # When the cap is already exhausted by reservations, reserve_live_submission returns a ceiling code
-    # and we must not invent another slot (no double-count).
     blocked = budget.reserve_live_submission(market=market)
     if blocked is not None:
         assert blocked in {
