@@ -1,5 +1,10 @@
 name: Bulk 29-set exact image source match (private, no binaries)
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_image_crosswalk_bulk_29.py'
+      - '.github/workflows/private-image-bulk-29-sets.yml'
   pull_request:
     paths:
       - 'tools/private_image_crosswalk_bulk_29.py'
