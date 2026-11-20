@@ -1,0 +1,72 @@
+name: Private exact official TH ID pages 6-9 source URL crosswalk
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-pages-6-9-crosswalk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-source-printings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44715942135
+          pattern: CardScanR-Official-TH-ID-Page-*
+          github-token: ${{ github.token }}
+          path: official-page-evidence
+          merge-multiple: false
+      - name: Verify official Thai Indonesian images against canonical archive printings
+        shell: bash
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_pages_6_9_crosswalk.py
+          python -m py_compile tools/private_official_asia_th_id_exact_crosswalk.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_exact_crosswalk.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_pages_6_9_crosswalk.py \
+            --source-root official-page-evidence \
+            --output private-exact-sources-6-9
+      - name: Verify source SHA, unique identities and no art/DB writes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path('private-exact-sources-6-9')
+          r=json.loads((p/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_TH_ID_OFFICIAL_PAGES_6_9_ARCHIVE_CROSSWALK'
+          assert r['official_source_pages']==[6,7,8,9]
+          assert 40<=r['source_records']<=160 and len(r['source_page_sha256'])==4
+          assert len(r['archived_pack_sha256'])==2
+          assert r['candidate_records']<=r['matched_records']<=r['source_records']
+          assert r['new_verified_live_canonical_records']==r['live_vault_writes']==r['image_binaries_downloaded']==0
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          raw=(p/'exact_source_url_candidates.jsonl').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['crosswalk_sha256']
+          rows=[json.loads(x) for x in raw.splitlines()]
+          assert len(rows)==r['matched_records']
+          assert len({x['canonical_printing_id_archived'] for x in rows})==len(rows)
+          assert all(not x['actual_live_vault_id_verified'] and not x['artwork_rights_verified'] for x in rows)
+          print('PASS_OFFICIAL_TH_ID_SOURCE_6_9',json.dumps({
+            'source_details':r['source_records'],
+            'unique_exact_archive_matches':r['matched_records'],
+            'missing_archive_image_candidates':r['candidate_records'],
+            'reasons':r['reasons'],'live_card_changes':0,
+          },sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-Pages-6-9-Exact-Archived-Matches
+          path: private-exact-sources-6-9/
+          retention-days: 14
+          if-no-files-found: error
