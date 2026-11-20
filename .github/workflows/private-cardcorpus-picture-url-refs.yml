@@ -1,0 +1,102 @@
+name: CardScanR pinned 67k-card picture URL source research
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_cardcorpus_picture_url_refs.py'
+      - '.github/workflows/private-cardcorpus-picture-url-refs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-picture-references:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout reviewed CardScanR research script
+        uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - name: Download already SHA-verified 67243-source metadata evidence
+        uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44663250882
+          github-token: ${{ github.token }}
+          name: CardScanR-Worldwide-All-67243-Source-Rich-Details
+          path: pinned-67243-source
+      - name: Checkout immutable CardCorpus index for image template (not images)
+        uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          persist-credentials: false
+          path: cardcorpus
+          sparse-checkout: |
+            v1/index.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate exact pinned git and source-only unit tests
+        shell: bash
+        run: |
+          test "$(git -C cardcorpus rev-parse HEAD)" = c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          python -m py_compile cardscanr/tools/private_cardcorpus_picture_url_refs.py
+          python cardscanr/tools/private_cardcorpus_picture_url_refs.py --self-test
+      - name: Convert picture hashes to provider URLs, including unique variants
+        shell: bash
+        run: |
+          python cardscanr/tools/private_cardcorpus_picture_url_refs.py \
+            --input-dir pinned-67243-source \
+            --index cardcorpus/v1/index.json \
+            --output private-picture-url-research
+      - name: Assert provenance SHA, exact counts, no copyrighted image downloads
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path('private-picture-url-research')
+          r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_SOURCE_PICTURE_URL_REFERENCES_ONLY'
+          assert r['card_records_examined']==67243
+          assert r['default_card_picture_references']==67085
+          assert r['card_picture_references']>=67085
+          assert r['card_picture_references']==sum(r['source_picture_refs_by_language'].values())
+          assert r['images_downloaded']==r['vault_writes']==r['production_writes']==0
+          assert not r['safe_to_publish'] and not r['artwork_rights_cleared']
+          assert not r['exact_cardscanr_printing_match_verified']
+          raw=(root/'cardcorpus_picture_url_references.jsonl.gz').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['compressed_file_sha256']
+          refs=[json.loads(x) for x in gzip.decompress(raw).splitlines()]
+          assert len(refs)==r['card_picture_references']
+          assert all(not x['public_artwork_allowed'] and not x['image_downloaded']
+                     and x['exact_cardscanr_canonical_identity'] is None for x in refs)
+          assert all(x['original_image_url_reference'].startswith('https://img.cardcorpus.com/m/')
+                     and x['sized_480_avif_url_reference'].startswith('https://img.cardcorpus.com/s1/480/')
+                     for x in refs)
+          print('CARD_SCANR_VARIANT_IMAGE_SOURCE_RESEARCH_PASS',json.dumps({
+            'cards':r['card_records_examined'],
+            'picture_links':r['card_picture_references'],
+            'variant_picture_links':r['additional_variant_picture_references'],
+            'languages':r['source_picture_refs_by_language']
+          },ensure_ascii=False,sort_keys=True))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write(f"### Private CardCorpus image URL research\n\n")
+              f.write(f"Card metadata records: **{r['card_records_examined']:,}**\n\n")
+              f.write(f"Source picture URL references: **{r['card_picture_references']:,}** including variants\n\n")
+              f.write(f"Simplified Chinese source references: **{r['source_picture_refs_by_language'].get('zh-Hans',0):,}**\n\n")
+              f.write('No image files downloaded, no live CardScanR writes. Copyright and canonical identity require separate review.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-67243-CardCorpus-Default-Variant-Image-URLs
+          path: private-picture-url-research/
+          retention-days: 14
+          if-no-files-found: error
