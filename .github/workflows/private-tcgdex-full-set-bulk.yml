@@ -1,0 +1,84 @@
+name: Bulk 4-language set-level exact image URL harvest (source only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-tcgdex-full-set-bulk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cardscanr-private-bulk-source-asia
+  cancel-in-progress: false
+
+jobs:
+  exact-source-gaps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        language: [zh-tw, ko, th, id]
+        offset: [0, 180]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Sanity-check source-only API and immutable archive identity matching
+        run: |
+          python -m py_compile tools/private_tcgdex_full_set_bulk_source.py
+          PYTHONPATH=. python tools/private_tcgdex_full_set_bulk_source.py --self-test
+      - name: Fetch at most 180 set-level provider JSON payloads (not card detail or art)
+        env:
+          SOURCE_${{ matrix.language }}: ${{ matrix.language }}
+          SOURCE_${{ matrix.offset }}: ${{ matrix.offset }}
+        run: |
+          PYTHONPATH=. python tools/private_tcgdex_full_set_bulk_source.py \
+            --language "$SOURCE_${{ matrix.language }}" --offset "$SOURCE_${{ matrix.offset }}" \
+            --max-sets 180 --pace 1.1 --output "bulk-$SOURCE_${{ matrix.language }}-$SOURCE_${{ matrix.offset }}"
+      - name: Check exact printing uniqueness, source hash and no production writes
+        env:
+          SOURCE_${{ matrix.language }}: ${{ matrix.language }}
+          SOURCE_${{ matrix.offset }}: ${{ matrix.offset }}
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          lang=os.environ['SOURCE_${{ matrix.language }}']
+          offset=int(os.environ['SOURCE_${{ matrix.offset }}'])
+          folder=Path(f"bulk-{lang}-{offset}")
+          r=json.loads((folder/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='BULK_TCGDEX_FULL_SET_EXACT_SOURCE_URLS_NOT_LIVE'
+          assert r['language']==lang and r['offset']==offset
+          assert 0<=r['targeted_sets']<=180 and r['request_cap']==180
+          assert r['source_sets_succeeded']+r['source_sets_failed']<=180
+          assert len(r['verified_archive_pack_sha256'])==64
+          assert r['new_canonical_records']==r['image_files_downloaded']==r['live_vault_writes']==0
+          assert r['source_url_rights_unverified'] and not r['published_artwork']
+          raw=(folder/'image_source_candidates.jsonl').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['candidate_rows_sha256']
+          rows=[json.loads(z) for z in raw.splitlines()]
+          assert len(rows)==r['source_url_candidates']
+          assert len({z['canonical_printing_id'] for z in rows})==len(rows)
+          assert all(z['language']==lang and z['classification']=='TCGDEX_SOURCE_ONLY_EXACT_UNIQUE_ARCHIVED_PRINTING'
+                     and z['source_image_url'].startswith('https://assets.tcgdex.net/')
+                     and not z['live_vault_match_verified'] and not z['rights_granted']
+                     and not z['artwork_downloaded'] for z in rows)
+          print('BULK_TCGDEX_SET_RESEARCH_VERIFIED',json.dumps({
+             'lang':lang,'offset':offset,
+             'sets':r['source_sets_succeeded'],'missing_image_source_candidates':len(rows),
+             'errors':r['source_sets_failed'],'artwork_files':0,'live_writes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-BulkTCGdex-${{ matrix.language }}-${{ matrix.offset }}-Exact-Source-URLs
+          path: bulk-${{ matrix.language }}-${{ matrix.offset }}/
+          retention-days: 7
+          if-no-files-found: error
