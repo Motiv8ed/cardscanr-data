@@ -8,6 +8,9 @@ on:
       - 'config/catalogue_source_feed.json'
       - 'tests/test_auto_acquisition.py'
       - 'tests/test_catalogue_source_feed.py'
+      - 'private/catalogue/2026-11-20/**'
+      - 'tools/verify_private_upstream_candidate_ledger.py'
+      - 'tests/test_verify_private_upstream_candidate_ledger.py'
       - 'tools/auto_acquire_catalogue.py'
       - 'tools/catalogue_source_feed.py'
       - 'requirements-catalogue-source-feed.txt'
@@ -38,3 +41,16 @@ jobs:
         run: |
           PYTHONPATH=. python -m unittest discover -s tests -p 'test_auto_acquisition.py' -v
           PYTHONPATH=. python -m pytest -q tests/test_catalogue_source_feed.py
+      - name: Validate eleven-thousand pinned upstream source candidates only
+        run: |
+          PYTHONPATH=. python -m py_compile tools/verify_private_upstream_candidate_ledger.py
+          PYTHONPATH=. python -m unittest discover -s tests -p 'test_verify_private_upstream_candidate_ledger.py' -v
+          PYTHONPATH=. python tools/verify_private_upstream_candidate_ledger.py --root private/catalogue/2026-11-20 --min-records 10000
+      - name: Retain research-only source ledger in review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-11k-GitSource-Candidate-Ledger-ResearchOnly
+          path: private/catalogue/2026-11-20/
+          retention-days: 7
+          if-no-files-found: error
+
