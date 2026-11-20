@@ -1,0 +1,29 @@
+{
+  "classification": "SOURCE_IDENTITY_OVERLAP_AUDIT_ONLY",
+  "tested_utc": "2026-11-20T01:50:35.007990+00:00",
+  "audited_candidates": 11378,
+  "japanese": 6744,
+  "english": 4634,
+  "distinct_candidate_source_sets": 91,
+  "source_evidence_zip_sha256": "923f498d70b9a95fdc1ec84919dad5d0eee424c972f9a94adc10c5befc6a8360",
+  "updated_uploaded_vault_test_copy_sha256": "62b669ccc480ff566c659b20c80892789c4670aae8f2aef55b6902b0020fba44",
+  "saved_master_checks": {
+    "canonical_cards": 158803,
+    "image_source_rows": 210243,
+    "quick_check": "ok"
+  },
+  "existing_provider_id_keys": 42976,
+  "existing_language_set_number_keys": 113451,
+  "exact_provider_id_collisions": 0,
+  "exact_language_set_number_collisions": 0,
+  "source_new_canonical_cards_confirmed": 0,
+  "remaining_alias_name_reconciliation_required": true,
+  "sample_verified_git_blobs": 9,
+  "sample_looks_like_card": 9,
+  "sample_has_source_language_name": 9,
+  "sample_scope": "One pinned Git object fetched from each of nine evidence shards; 9/9 contained Card object and target-language name. This is spot-check, NOT all 11,378.",
+  "artwork_files_downloaded": 0,
+  "production_writes": 0,
+  "live_user_pc_modified": false,
+  "notes": "Offline audit on actual uploaded updated owner vault TEST COPY. Live PC vault was independently verified by Bridge to share 158803 canonical cards / 210243 source image links. No direct provider ID or language/set/number overlap does NOT prove new canonical printings, names/aliases/variants remain unverified."
+}
