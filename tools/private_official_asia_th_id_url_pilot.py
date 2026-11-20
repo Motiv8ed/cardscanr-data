@@ -21,7 +21,7 @@ from cardscanr_worldwide.collectors.pokemon_asia import (
 )
 
 TARGETS=(("th","SV7s"),("id","SV4a"))
-MAX_PER_LOCALE=5
+MAX_PER_LOCALE=20
 SAFE_CARD=re.compile(r"^[0-9]{1,10}$")
 
 def accept_url(url,locale):
@@ -37,7 +37,7 @@ def accept_url(url,locale):
     except ValueError:
         return False
 
-def run(out:Path,limit:int=5,delay:float=1.5):
+def run(out:Path,limit:int=20,delay:float=1.5):
     if not 1<=limit<=MAX_PER_LOCALE:
         raise ValueError("unbounded_card_detail_limit")
     if not 0.5<=delay<=5:
@@ -149,7 +149,7 @@ def self_test():
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--out",type=Path)
-    p.add_argument("--limit",type=int,default=5)
+    p.add_argument("--limit",type=int,default=20)
     p.add_argument("--self-test",action="store_true")
     a=p.parse_args()
     if a.self_test:self_test()
