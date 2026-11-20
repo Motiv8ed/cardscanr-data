@@ -1,0 +1,78 @@
+name: Private bulk 3227 TCGdex source-only SHA stage
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_tcgdex_full_set_vault_stage.py'
+      - '.github/workflows/private-tcgdex-full-set-vault-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-and-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44834733445
+          pattern: CardScanR-BulkTCGdex-*-0-Exact-Source-URLs
+          github-token: ${{ github.token }}
+          path: verified-source-set-candidates
+          merge-multiple: false
+      - name: Prepare seven immutable exact-id 500-reference source-only batches
+        run: |
+          python -m py_compile tools/private_tcgdex_full_set_vault_stage.py
+          PYTHONPATH=. python tools/private_tcgdex_29_source_vault_stage.py --self-test
+          PYTHONPATH=. python tools/private_tcgdex_full_set_vault_stage.py \
+            --source verified-source-set-candidates --output staged-source-only-batches
+      - name: Verify 3227 unique source printing candidates, SHA-pinned and no image licence
+        run: |
+          python - <<'PY'
+          import hashlib,gzip,json
+          from pathlib import Path
+          root=Path('staged-source-only-batches')
+          r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_BULK_3227_TCGDEX_EXACT_ARCHIVED_SOURCE_STAGE_ONLY'
+          assert r['total_source_candidates']==3227 and len(r['batches'])==7
+          assert [x['source_candidates'] for x in r['batches']]==[500]*6+[227]
+          assert set(r['languages'])=={'zh-tw','th','id'}
+          assert [r['languages'][k]['source_candidate_rows'] for k in ('zh-tw','th','id')]==[1809,737,681]
+          assert r['new_canonical_cards']==r['image_binaries_downloaded']==r['live_vault_writes']==0
+          assert r['artwork_rights_verified'] is False and r['public_artwork_enabled'] is False
+          assert not r['live_identity_verified'] and not r['ready_to_apply_without_live_preflight']
+          ids=set()
+          for batch in r['batches']:
+              raw=(root/batch['file']).read_bytes()
+              assert len(raw)==batch['compressed_bytes']<=72000
+              assert hashlib.sha256(raw).hexdigest()==batch['sha256']
+              doc=json.loads(gzip.decompress(raw))
+              assert doc['source']=='tcgdex' and doc['schema_version']==1
+              assert not doc['artwork_rights_verified'] and doc['image_binaries_downloaded']==0
+              assert len(doc['cards'])==len(doc['images'])==batch['source_candidates']
+              cids={x['canonical_printing_id'] for x in doc['cards']}
+              assert len(cids)==batch['source_candidates'] and ids.isdisjoint(cids)
+              assert cids=={x['canonical_printing_id'] for x in doc['images']}
+              assert all(x['status']=='exact_unique' for x in doc['cards'])
+              ids.update(cids)
+          assert len(ids)==3227
+          print('PASS_PRIVATE_SOURCE_URL_PACKS',json.dumps({
+              'stage_only':True,'source_refs':3227,
+              'batches':len(r['batches']),
+              'digests':[x['sha256'] for x in r['batches']],
+              'db_writes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Bulk3227-TCGdex-Preflight-Required-Source-Packs
+          path: staged-source-only-batches/
+          retention-days: 7
+          if-no-files-found: error
