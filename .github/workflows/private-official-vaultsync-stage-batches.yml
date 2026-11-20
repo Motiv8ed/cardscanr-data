@@ -1,0 +1,93 @@
+name: Prepare private exact VaultSync official reference stage batches
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_official_crosswalk_bridge_batches.py'
+      - '.github/workflows/private-official-vaultsync-stage-batches.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  package-exact-source-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download independently checked strict crosswalk source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CardScanR-Worldwide-Exact-Existing-Cards-Image-URL-Candidates
+          run-id: 44664424074
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: exact-source-evidence
+      - name: Compile and generate SHA-verified bounded gzip stage packs
+        run: |
+          python -m py_compile tools/private_official_crosswalk_bridge_batches.py
+          python tools/private_official_crosswalk_bridge_batches.py \
+            --source exact-source-evidence --output official-vault-stage-packs
+      - name: Verify all source candidate counts, SHA digests and no-public-artwork guarantee
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          folder=Path('official-vault-stage-packs')
+          proof=json.loads((folder/'receipt.json').read_text('utf8'))
+          assert proof['classification']=='PRIVATE_STAGED_SOURCE_CANDIDATES_NOT_LIVE'
+          assert proof['total_source_candidates']==7112
+          assert proof['source_rights_unverified'] and proof['live_card_identity_not_yet_verified']
+          assert proof['vault_database_writes']==proof['image_downloads']==0
+          assert proof['total_batches']<=48
+          total=0
+          canonical=set()
+          for item in proof['batches']:
+              raw=(folder/item['file']).read_bytes()
+              assert len(raw)==item['compressed_bytes']<=64000
+              assert hashlib.sha256(raw).hexdigest()==item['sha256']
+              source=json.loads(gzip.decompress(raw))
+              assert source['source']=='official_crosswalk'
+              assert len(source['cards'])==len(source['images'])==item['cards']==item['images']
+              assert source['artwork_rights_verified']==False
+              for c in source['cards']:
+                  assert c['status']=='exact_unique'
+                  assert c['canonical_printing_id'] not in canonical
+                  canonical.add(c['canonical_printing_id'])
+              total+=len(source['cards'])
+          assert total==len(canonical)==7112
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write("### Bridge source staging batch receipts\n\n")
+              f.write(f"**{total:,} source URL candidates** in **{len(proof['batches'])}** separate exact-source gzip packs.\n\n")
+              f.write("Zero image binaries or live writes. Each candidate must pass live-vault identity checks before apply.\n")
+          print('PRIVATE_BRIDGE_PACKS_VERIFIED',json.dumps({'source_candidates':total,'batches':len(proof['batches']),'live_vault_writes':0}))
+          PY
+      - name: Expose exact source metadata stage envelopes (no secrets, no customer data)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64,json
+          from pathlib import Path
+          root=Path('official-vault-stage-packs')
+          doc=json.loads((root/'receipt.json').read_text('utf8'))
+          for entry in doc['batches']:
+              print('CARDSCANR_BRIDGE_STAGE '+json.dumps({
+                  'draft_id':entry['batch_id'],
+                  'expected_sha256':entry['sha256'],
+                  'chunk_index':0,
+                  'limit':1,
+                  'content':base64.b64encode((root/entry['file']).read_bytes()).decode('ascii')
+              },separators=(',',':')))
+          PY
+      - name: Preserve private staging evidence and source SHA receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Exact-7112-Official-Bridge-Stage-Packs
+          path: official-vault-stage-packs/
+          retention-days: 14
+          if-no-files-found: error
