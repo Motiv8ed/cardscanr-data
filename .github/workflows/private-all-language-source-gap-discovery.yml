@@ -1,5 +1,12 @@
 name: Private All-Language Provider Set Gap Discovery
 on:
+  # Daily 19:17 Brisbane: bounded source-only evidence, no live PC or art files.
+  schedule:
+    - cron: "17 9 * * *"
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-all-language-source-gap-discovery.yml'
   workflow_dispatch:
     inputs:
       batch_index:
@@ -29,7 +36,7 @@ jobs:
     needs: offline-safety
     timeout-minutes: 35
     env:
-      BATCH_INDEX: ${{ inputs.batch_index }}
+      BATCH_INDEX: ${{ github.event_name == 'workflow_dispatch' && inputs.batch_index || 'auto' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,11 +44,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate numeric bounded page, never evaluate untrusted shell
+      - name: Resolve rotating daily source page and validate bounded index
         shell: bash
         run: |
+          if [[ "$BATCH_INDEX" == "auto" ]]; then
+            day_of_year="$(date -u +%j)"
+            numeric_day="$((10#$day_of_year))"
+            BATCH_INDEX="$(( (numeric_day - 1) % 7 ))"
+          fi
           [[ "$BATCH_INDEX" =~ ^(0|[1-9][0-9]?)$ ]]
           test "$BATCH_INDEX" -le 20
+          echo "BATCH_INDEX=$BATCH_INDEX" >> "$GITHUB_ENV"
+          echo "PRIVATE_SCHEDULED_SOURCE_PAGE=$BATCH_INDEX"
+
       - name: Verify 7 immutable language packs and query up to 40 unmatched source sets
         shell: bash
         run: |
