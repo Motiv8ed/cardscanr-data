@@ -1,0 +1,87 @@
+name: Private CardCorpus 10k source evidence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/private_cardcorpus_10k_source_archive.py'
+      - 'tests/test_private_cardcorpus_10k_source_archive.py'
+      - '.github/workflows/private-cardcorpus-10k-source-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cardscanr-private-cardcorpus-10k
+  cancel-in-progress: false
+
+jobs:
+  source-only-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate source quarantine and evidence invariants offline
+        shell: bash
+        run: |
+          python -m py_compile tools/private_cardcorpus_10k_source_archive.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_cardcorpus_10k_source_archive.py -v
+      - name: Fetch exact immutable CC BY metadata snapshot only
+        shell: bash
+        run: |
+          PYTHONPATH=. python tools/private_cardcorpus_10k_source_archive.py --output private-cardcorpus-10k
+      - name: Audit exact count, SHA receipts and release restrictions
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from collections import Counter
+          from pathlib import Path
+          root=Path("private-cardcorpus-10k")
+          proof=json.loads((root/"receipt.json").read_text("utf8"))
+          data=(root/"source_card_briefs_10000.jsonl").read_bytes()
+          records=[json.loads(line) for line in data.splitlines()]
+          assert proof["classification"]=="PRIVATE_EXTERNAL_SOURCE_CARD_EVIDENCE_ONLY"
+          assert proof["provider_card_briefs_collected"]==len(records)==10000
+          assert proof["source_published_card_count"]==67243
+          assert proof["source_json_bytes"]==16789547
+          assert hashlib.sha256(data).hexdigest()==proof["briefs_sha256"]
+          assert proof["briefs_bytes"]==len(data)
+          assert len({(x["language"],x["provider_set_id"],x["provider_card_id"]) for x in records})==10000
+          assert all(x["provider"]=="cardcorpus" and x["canonical_printing_id"] is None
+                     and not x["exact_match_verified"] and not x["verified_new_card"]
+                     and not x["artwork_rights_verified"] and not x["image_binary_downloaded"]
+                     and not x["public_release_allowed"] for x in records)
+          assert proof["exact_new_card_additions"]==proof["production_writes"]==proof["vault_writes"]==0
+          assert proof["image_binaries_downloaded"]==0
+          assert proof["existing_CardScanR_overlap_not_yet_determined"] is True
+          assert proof["safe_for_public_release"] is False
+          assert proof["rights_granted_for_artwork"] is False
+          assert (root/"NOTICE.txt").is_file()
+          counts=dict(sorted(Counter(x["language"] for x in records).items()))
+          print("CARDSCANR_SOURCE_10K_PRIVATE_PASS",json.dumps({
+              "records":len(records),"language_counts":counts,
+              "picture_ids_only":proof["records_with_picture_id_only"],
+              "source_sha256":proof["source_json_sha256"],
+              "verified_new_card_additions":0,"artwork_downloads":0,"production_writes":0
+          },sort_keys=True))
+          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as fp:
+              fp.write("### 10,000 source records captured for CardScanR identity reconciliation\n\n")
+              fp.write(f"**{len(records):,} distinct provider identities**; source SHA-verified and attributed to CardCorpus (CC BY 4.0).\n\n")
+              fp.write("No canonical CardScanR additions, no image binaries, no public artwork rights and no production/customer writes.\n\n")
+              fp.write("Source identities are provisional and may overlap CardScanR records.\n")
+          PY
+      - name: Upload immutable private evidence bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-CardCorpus-10000-Provisional-Source-Cards
+          path: private-cardcorpus-10k/
+          retention-days: 14
+          if-no-files-found: error
