@@ -30,7 +30,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           repository: Motiv8ed/cardscanr-data
-          run-id: 44712180657
+          run-id: 44712992018
           name: CardScanR-Official-TH-ID-Pilot-Research
           github-token: ${{ github.token }}
           path: verified-official-source
@@ -46,9 +46,9 @@ jobs:
           root=Path('private-official-crosswalk')
           r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
           assert r['classification']=='OFFICIAL_TH_ID_ARCHIVED_EXACT_SOURCE_IMAGE_CROSSWALK_ONLY'
-          assert r['source_card_rows']==10
+          assert r['source_card_rows']==40
           assert len(r['archive_sha256_by_locale'])==2
-          assert r['exact_candidate_records']<=r['exact_crosswalk_rows']<=10
+          assert r['exact_candidate_records']<=r['exact_crosswalk_rows']<=40
           assert r['artwork_binaries_downloaded']==r['live_vault_writes']==r['new_canonical_cards']==0
           assert r['verified_live_id_and_image_missing']==0
           assert not r['artwork_rights_verified'] and not r['safe_for_publication']
