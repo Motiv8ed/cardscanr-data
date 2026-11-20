@@ -86,14 +86,14 @@ def audit(pilot:Path,out:Path):
     if out.exists() or out.is_symlink():raise FileExistsError("output_must_be_new")
     p=json.loads((pilot/"receipt.json").read_text("utf8"))
     if (p.get("classification")!="PRIVATE_OFFICIAL_ASIA_CARD_URL_RESEARCH_ONLY"
-        or p.get("source_cards")!=10 or p.get("source_request_budget")!=12
+        or p.get("source_cards")!=40 or p.get("source_request_budget")!=42
         or p.get("image_binaries_downloaded")!=0):
         raise ValueError("pilot_receipt_drift")
     raw=(pilot/"official_asia_card_source_urls.jsonl").read_bytes()
     if hashlib.sha256(raw).hexdigest()!=p["source_url_manifest_sha256"]:
         raise ValueError("pilot_data_sha256_drift")
     src=[json.loads(x) for x in raw.splitlines()]
-    if len(src)!=10:raise ValueError("pilot_count_drift")
+    if len(src)!=40:raise ValueError("pilot_count_drift")
     manifest=json.loads(get(CANARY,2000000))
     packs=[]
     pack_shas={}
