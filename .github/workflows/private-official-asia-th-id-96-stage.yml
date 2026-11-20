@@ -1,0 +1,76 @@
+name: Private official Thai Indonesian 96 exact source-only staging packs
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/private-official-asia-th-id-96-stage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44723907047
+          name: CardScanR-TH-ID-Official-Pages-10-12-Exact-Source-Card-Matches
+          github-token: ${{ github.token }}
+          path: reviewed-crosswalk
+      - name: Generate three bounded source-only batches from immutable 96 printed identities
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_10_12_bulk_stage.py
+          PYTHONPATH=. python tools/private_official_asia_th_id_vault_stage.py --self-test
+          PYTHONPATH=. python tools/private_official_asia_th_id_10_12_bulk_stage.py \
+            --source reviewed-crosswalk \
+            --out exact-staged-packs
+      - name: Validate SHA, 96 unique card IDs, zero downloaded images and no live writes
+        run: |
+          python - <<'PY'
+          import hashlib,gzip,json
+          from pathlib import Path
+          d=Path('exact-staged-packs')
+          r=json.loads((d/'receipt.json').read_text('utf8'))
+          assert r['classification']=='PRIVATE_OFFICIAL_TH_ID_10_12_STAGE_NOT_LIVE'
+          assert r['total_candidates']==96 and r['total_batches']==3
+          assert [x['batch_id'] for x in r['batches']]==[
+            'offthid20261120_08','offthid20261120_09','offthid20261120_10']
+          assert [x['cards'] for x in r['batches']]==[40,40,16]
+          assert not r['artwork_rights_verified'] and not r['safe_for_public_artwork']
+          assert r['new_canonical_card_records']==r['live_vault_writes']==r['image_binaries_downloaded']==0
+          ids=set()
+          for item in r['batches']:
+              payload=(d/item['file']).read_bytes()
+              assert hashlib.sha256(payload).hexdigest()==item['sha256']
+              assert 0<len(payload)==item['bytes']<=72000
+              p=json.loads(gzip.decompress(payload))
+              assert p['source']=='official_crosswalk' and p['schema_version']==1
+              assert p['artwork_rights_verified'] is False and p['image_binaries_downloaded']==0
+              assert len(p['cards'])==len(p['images'])==item['cards']
+              cardids={x['canonical_printing_id'] for x in p['cards']}
+              assert len(cardids)==item['cards'] and ids.isdisjoint(cardids)
+              assert cardids=={x['canonical_printing_id'] for x in p['images']}
+              assert all(x['status']=='exact_unique' and x['native_card_name'] and x['printed_collector_number'] for x in p['cards'])
+              ids.update(cardids)
+          assert len(ids)==96
+          print('OFFICIAL_TH_ID_96_SHA_VERIFIED',json.dumps({
+            'source_only_links':96,
+            'batches':3,
+            'digests':[x['sha256'] for x in r['batches']],
+            'live_writes':0},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-ID-96-Reviewed-Source-Only-Packs
+          path: exact-staged-packs/
+          if-no-files-found: error
+          retention-days: 14
