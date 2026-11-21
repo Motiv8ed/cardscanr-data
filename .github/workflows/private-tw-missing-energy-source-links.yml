@@ -46,6 +46,18 @@ jobs:
           data=(d/"tw_live_gap_source_urls.jsonl").read_bytes()
           rows=[json.loads(s) for s in data.splitlines()]
           assert len(rows)==r["source_cards_exact_match"]==20
+          assert r["stage_receipt"]["classification"]=="PRIVATE_UNAPPLIED_OFFICIAL_URL_SOURCE_PAYLOAD"
+          assert r["stage_receipt"]["cards"]==20 and r["stage_receipt"]["images"]==20
+          import gzip
+          archive=(d/"tw_20_official_stage.gz").read_bytes()
+          assert hashlib.sha256(archive).hexdigest()==r["stage_receipt"]["gzip_sha256"]
+          staged=json.loads(gzip.decompress(archive))
+          assert staged["source"]=="official_crosswalk"
+          assert len(staged["sets"])==3 and len(staged["cards"])==20 and len(staged["images"])==20
+          assert staged["artwork_rights_verified"] is False and staged["image_binaries_downloaded"]==0
+          assert all(x["language"]=="zh-tw" for x in staged["cards"])
+          assert not r["stage_receipt"]["live_vault_apply_finished"]
+
           assert r["source_distinct_image_urls"]==20
           assert hashlib.sha256(data).hexdigest()==r["source_manifest_sha256"]
           assert r["current_live_snapshot_identities_verified"] is False
