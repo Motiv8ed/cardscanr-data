@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "tools/private_official_asia_th_id_newset_url_pilot.py"
+      - "tools/private_official_asia_th_id_newset_crosswalk.py"
       - ".github/workflows/private-official-th-id-newsets-source.yml"
   workflow_dispatch:
 permissions:
@@ -10,7 +11,7 @@ permissions:
 jobs:
   source-identity:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,9 +58,45 @@ jobs:
               f.write("### 40 exact official Thai SV4K / Indonesian SV6s native card source images\n")
               f.write("Source-only, 0 live imports; native card name and number found for each official image URL.\n")
           PY
+      - name: Verify new official card references against SHA-pinned Thai Indonesian R2 canonicals
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_newset_crosswalk.py
+          python -m tools.private_official_asia_th_id_newset_crosswalk --self-test
+          python -m tools.private_official_asia_th_id_newset_crosswalk \
+            --pilot th-id-newset-official-source \
+            --out th-id-newset-archived-exact
+      - name: Count exact source matches only, quarantine ambiguous printings
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path("th-id-newset-archived-exact")
+          r=json.loads((root/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="OFFICIAL_TH_ID_ARCHIVED_EXACT_SOURCE_IMAGE_CROSSWALK_ONLY"
+          assert r["source_card_rows"]==40
+          assert r["source_card_rows"]>=r["exact_crosswalk_rows"]>=r["exact_candidate_records"]>=0
+          data=(root/"archived_exact_crosswalk.jsonl").read_bytes()
+          assert hashlib.sha256(data).hexdigest()==r["crosswalk_sha256"]
+          assert len(data.splitlines())==r["exact_crosswalk_rows"]
+          assert r["live_vault_writes"]==r["new_canonical_cards"]==r["artwork_binaries_downloaded"]==0
+          assert not r["artwork_rights_verified"] and not r["safe_for_publication"]
+          print("NEW_TH_ID_SOURCE_ARCHIVE_CROSSWALK_VERIFIED",{
+              "official_source_cards":r["source_card_rows"],
+              "archive_exact_source_matches":r["exact_crosswalk_rows"],
+              "archive_missing_image_candidates":r["exact_candidate_records"],
+              "reasons":r["matching_results"],
+              "live_writes":0
+          })
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### Official Thai SV4K / Indonesian SV6s new source card identities\n")
+              f.write(f"**{r['exact_crosswalk_rows']}** archived exact source matches out of 40 official source cards; ")
+              f.write("independent CURRENT live vault preflight required before private inserts.\n")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: CardScanR-TH-SV4K-ID-SV6s-40-Official-Source-Images-Private
-          path: th-id-newset-official-source/
+          path: |
+            th-id-newset-official-source/
+            th-id-newset-archived-exact/
           retention-days: 21
           if-no-files-found: error
