@@ -1,0 +1,78 @@
+name: Master Artwork URL Index — ALL 158803 Cards (Private)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate full card metadata, set metadata and image URL overlay guard
+        run: |
+          PYTHONPATH=. python -m py_compile tools/private_all_card_image_master.py
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_all_card_image_master.py -v
+  private-eight-pack-source:
+    needs: offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build immutable source card/set metadata and artwork URL index (no image bytes)
+        run: |
+          PYTHONPATH=. python tools/private_all_card_image_master.py build --output master-index-review
+      - name: Assert counts, no artwork copies, no production writes and SHA receipts
+        run: |
+          python - <<'PY'
+          import json,sqlite3,hashlib
+          from pathlib import Path
+          p=Path("master-index-review")
+          r=json.loads((p/"build_receipt.json").read_text())
+          db=p/"CardScanR_Master_Catalogue.sqlite"
+          assert r["classification"]=="PRIVATE_CARD_IMAGE_MASTER_DATABASE"
+          assert r["card_rows"]==158803
+          assert r["language_packs"]==7
+          assert r["core_plus_language_packs"]==8
+          assert r["original_cards_with_image_link"]==102912
+          assert r["original_cards_without_image_link"]==55891
+          assert len(r["packs"])==8
+          assert r["image_binary_files_downloaded"]==0
+          assert r["production_writes"]==0
+          assert not r["external_rights_granted"]
+          assert not r["safe_to_publish"]
+          with db.open("rb") as f:
+            assert hashlib.file_digest(f,"sha256").hexdigest()==r["master_sqlite_sha256"]
+          with sqlite3.connect(db) as c:
+            assert c.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+            assert c.execute("SELECT COUNT(*) FROM cards").fetchone()[0]==158803
+            assert c.execute("SELECT COUNT(DISTINCT canonical_printing_id) FROM image_sources").fetchone()[0]==102912
+            assert c.execute("SELECT COUNT(*) FROM image_sources WHERE rights_status != 'unverified' OR local_download_status != 'not_downloaded'").fetchone()[0]==0
+            assert c.execute("SELECT COUNT(*) FROM sets").fetchone()[0]==r["sets_materialized"]
+          print("MASTER_ARTWORK_URL_INDEX_VERIFIED",json.dumps({
+             "cards":r["card_rows"],"cards_with_existing_image_url":r["original_cards_with_image_link"],
+             "cards_without_image_url":r["original_cards_without_image_link"],
+             "url_rows":r["original_image_source_url_records"],
+             "sets":r["sets_materialized"],"bytes":r["master_sqlite_bytes"],
+             "sqlite_sha256":r["master_sqlite_sha256"]
+          },sort_keys=True))
+          PY
+      - name: Seven-day private master database and SHA audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-All-158803-Card-Image-Master-Index
+          path: master-index-review/
+          retention-days: 7
+          compression-level: 6
+          if-no-files-found: warn
