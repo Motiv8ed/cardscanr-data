@@ -1,0 +1,34 @@
+name: KO Pocket source-only bulk acquisition
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research/ko-pocket-bulk-source-20261121
+    paths:
+      - 'tools/research_ko_pocket_bulk.py'
+      - '.github/workflows/ko-pocket-source-bulk.yml'
+permissions:
+  contents: read
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bulk per-set Korean Pocket briefs (source-only)
+        run: python3 tools/research_ko_pocket_bulk.py --out source-research/ko-pocket
+      - name: Verify source-only receipt
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          p=pathlib.Path('source-research/ko-pocket')
+          r=json.loads((p/'receipt.json').read_text())
+          assert hashlib.sha256((p/'cards.jsonl').read_bytes()).hexdigest()==r['cards_sha256']
+          assert r['source_rows']>=0
+          print('Verified source-only rows',r['source_rows'],'upstream image bases',r['source_declared_image_bases'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ko-pocket-source-only
+          path: source-research/ko-pocket/
+          retention-days: 14
