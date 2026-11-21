@@ -185,15 +185,15 @@ class CrosswalkTests(unittest.TestCase):
         row = json.loads(lines[0])
         row["finish"] = "normal"
         lines[0] = json.dumps(row)
-        first.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
         for invalid in ("https://[invalid", "https://user:pass@example.org/art.png",
-                        "https://example.org/bad\\npath", "http://example.org/art.png"):
+                        "https://example.org/bad\npath", "http://example.org/art.png"):
             with self.subTest(invalid=invalid):
                 self.source.write_text(json.dumps(dict(
                     language="ko", set_id="set-ko", native_card_name="Card 0",
                     printed_collector_number="1", printed_denominator="1131",
                     finish="normal", image_url=invalid,
-                    artwork_commercial_rights_verified=False)) + "\\n", encoding="utf-8")
+                    artwork_commercial_rights_verified=False)) + "\n", encoding="utf-8")
                 if self.output.exists():
                     self.output.unlink()
                 result = reconcile(self.live, self.source, self.output)
