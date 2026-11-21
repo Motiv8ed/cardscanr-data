@@ -1,0 +1,63 @@
+name: CardScanR Thai Indonesian 130-Set Bulk Source Acquisition
+on:
+  pull_request:
+    paths:
+      - "tools/private_th_id_tcgdex_set_image_source.py"
+      - "tools/private_th_id_tcgdex_broad_sets.py"
+      - ".github/workflows/private-th-id-large-source-sweep.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-bulk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate source host, request scopes and card image base safety offline
+        run: |
+          python -m py_compile tools/private_th_id_tcgdex_broad_sets.py \
+            tools/private_th_id_tcgdex_set_image_source.py
+          python tools/private_th_id_tcgdex_set_image_source.py --self-test
+          python -m tools.private_th_id_tcgdex_broad_sets --self-test
+      - name: Acquire source-declared Thai and Indonesian card image refs from 130 top sets
+        run: |
+          python -m tools.private_th_id_tcgdex_broad_sets \
+            --limit 65 --out private-large-th-id-native-set-source
+      - name: Reconcile source SHA and ensure zero live/download/public rights claims
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path("private-large-th-id-native-set-source")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="PRIVATE_LARGE_TH_ID_PROVIDER_DECLARED_IMAGE_URL_SOURCES_NO_LIVE_IMPORT"
+          assert r["requested_per_language"]==65
+          assert r["set_details_succeeded"]+r["set_details_failed"]==r["requested_set_details"]
+          b=(d/"native_card_source_urls.jsonl").read_bytes()
+          assert hashlib.sha256(b).hexdigest()==r["source_metadata_sha256"]
+          assert len(b.splitlines())==r["source_card_details"]
+          assert r["provider_declared_image_url_bases"]+r["without_provider_declared_image"]==r["source_card_details"]
+          assert r["new_live_canonical_cards"]==r["new_live_image_links"]==r["artwork_images_downloaded"]==0
+          assert not r["public_artwork_rights_verified"]
+          print("LARGE_NATIVE_TH_ID_BULK_SOURCE_SHA_PASS",
+             r["source_card_details"],r["provider_declared_image_url_bases"],
+             "set_errors",r["set_details_failed"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### Thai/Indonesian authentic native provider image references\n")
+              f.write(f"**{r['source_card_details']}** source card briefs from ")
+              f.write(f"**{r['set_details_succeeded']}** native-language sets, ")
+              f.write(f"**{r['provider_declared_image_url_bases']}** source-declared image bases. ")
+              f.write("No live inserts, copyrighted downloads or commercial art rights.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Th-Id-130Sets-Actual-Image-URL-Source-Candidates
+          path: private-large-th-id-native-set-source/
+          retention-days: 21
+          if-no-files-found: error
