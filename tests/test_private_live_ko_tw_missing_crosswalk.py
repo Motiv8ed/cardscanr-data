@@ -97,5 +97,25 @@ class CrosswalkTests(unittest.TestCase):
         self.assertEqual(result["outcomes"]["quarantine_artwork_rights"], 1)
 
 
+    def test_repeated_page_path_rejected(self):
+        with self.assertRaisesRegex(ValueError, "duplicate_live_page_path"):
+            reconcile([self.live[0]] * 6, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
+    def test_rights_claim_requires_evidence(self):
+        self.source.write_text(json.dumps(dict(
+            language="ko", set_id="set-ko", native_card_name="Card 0",
+            printed_collector_number="1", printed_denominator="1131",
+            finish="normal", artwork_commercial_rights_verified=True,
+            image_url="https://example.org/card.png")) + "\n", encoding="utf-8")
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[0])
+        row["finish"] = "normal"
+        lines[0] = json.dumps(row)
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = reconcile(self.live, self.source, self.output)
+        self.assertEqual(result["outcomes"]["quarantine_missing_rights_evidence"], 1)
+
 if __name__ == "__main__":
     unittest.main()
