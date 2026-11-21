@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Read-only exact live KO/TW missing identity join against official-source review rows.
+
+Never outputs importable batches. Source artwork rights and finish/variant must
+be independently verified. Only unique literal joins are review candidates.
+"""
+from __future__ import annotations
+import argparse, collections, hashlib, json, pathlib, unicodedata
+
+def nfc(v):
+    return unicodedata.normalize("NFC", v) if isinstance(v, str) else ""
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def rows(path):
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if line.strip():
+            obj = json.loads(line)
+            if not isinstance(obj, dict):
+                raise ValueError(f"non-object:{path}:{number}")
+            yield obj
+
+def key(row):
+    return (row.get("language"), row.get("set_id"),
+            nfc(row.get("native_card_name")),
+            str(row.get("printed_collector_number") or ""),
+            str(row.get("printed_denominator") or ""))
+
+def reconcile(live_paths, source_path, output):
+    if output.exists():
+        raise FileExistsError("output_exists")
+    live = list(x for path in live_paths for x in rows(path))
+    if len(live) != 1528 or collections.Counter(x.get("language") for x in live) != {"ko":1131,"zh-tw":397}:
+        raise ValueError("live_snapshot_count_drift")
+    ids = [x.get("canonical_printing_id") for x in live]
+    if len(set(ids)) != len(ids) or any(not isinstance(x,str) or not x for x in ids):
+        raise ValueError("duplicate_or_missing_live_id")
+    if any(x.get("has_image_link") is not False for x in live):
+        raise ValueError("live_record_not_missing")
+    by_key = collections.defaultdict(list)
+    for x in live:
+        by_key[key(x)].append(x)
+    source = list(rows(source_path))
+    src_key = collections.defaultdict(list)
+    for x in source:
+        if x.get("language") in ("ko","zh-tw"):
+            src_key[key(x)].append(x)
+    outcomes = collections.Counter()
+    reviews = []
+    for target in live:
+        k = key(target)
+        matches = src_key.get(k, [])
+        if len(by_key[k]) != 1:
+            state = "quarantine_multiple_live_printings"
+        elif not matches:
+            state = "no_exact_source"
+        elif len(matches) != 1:
+            state = "quarantine_multiple_source_printings"
+        elif not target.get("finish") or not matches[0].get("finish"):
+            state = "quarantine_finish_not_proven"
+        elif target["finish"] != matches[0]["finish"]:
+            state = "quarantine_finish_conflict"
+        elif not matches[0].get("artwork_commercial_rights_verified"):
+            state = "quarantine_artwork_rights"
+        else:
+            state = "review_unique_identity_and_rights_claim"
+        outcomes[state] += 1
+        reviews.append({"canonical_printing_id":target["canonical_printing_id"],
+                        "language":target["language"],"classification":state,
+                        "source_matches":len(matches),
+                        "safe_for_vault_apply":False,
+                        "public_artwork_allowed":False})
+    result = {"classification":"PRIVATE_READ_ONLY_LIVE_IDENTITY_REVIEW",
+              "live_rows":len(live),"source_rows":len(source),
+              "new_live_image_links":0,"new_canonical_cards":0,
+              "rights_granted":False,"production_writes":False,
+              "input_sha256":{str(p):digest(p) for p in [*live_paths,source_path]},
+              "outcomes":dict(sorted(outcomes.items())),"reviews":reviews}
+    output.write_text(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf-8")
+    return result
+
+def main():
+    p=argparse.ArgumentParser()
+    p.add_argument("--live",type=pathlib.Path,nargs=6,required=True)
+    p.add_argument("--source",type=pathlib.Path,required=True)
+    p.add_argument("--output",type=pathlib.Path,required=True)
+    a=p.parse_args()
+    r=reconcile(a.live,a.source,a.output)
+    print(json.dumps({"live_rows":r["live_rows"],"outcomes":r["outcomes"]},sort_keys=True))
+
+if __name__=="__main__":
+    main()
