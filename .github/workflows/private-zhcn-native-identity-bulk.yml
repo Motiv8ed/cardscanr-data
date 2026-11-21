@@ -45,7 +45,12 @@ jobs:
           r=json.loads((p/'receipt.json').read_text())
           raw=(p/'native_identity.jsonl').read_bytes()
           assert hashlib.sha256(raw).hexdigest()==r['native_identity_jsonl_sha256']
-          assert r['source_card_rows']==r['unique_native_identity_rows']+r['quarantined_duplicate_identity_rows']
+          assert r['source_card_rows']==(r['unique_native_identity_rows']
+                 +r['quarantined_duplicate_identity_rows']
+                 +r['quarantined_source_set_mismatch_rows'])
+          assert r['quarantined_identity_rows']==(
+                 r['quarantined_duplicate_identity_rows']
+                 +r['quarantined_source_set_mismatch_rows'])
           assert r['source_set_count']>=100 and r['source_card_rows']>=10000
           assert r['image_binaries_downloaded']==r['artwork_url_count']==r['live_vault_writes']==0
           assert r['verified_live_printing_matches']==0 and r['safe_for_publication'] is False
