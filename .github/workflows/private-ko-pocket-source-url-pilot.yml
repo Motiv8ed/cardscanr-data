@@ -1,60 +1,45 @@
-name: Private Korean Pocket Card Image URL Pilot
+name: Korean Pocket Source Collection Policy and URL Safety
 on:
   pull_request:
     paths:
-      - "tools/private_ko_pocket_source_link_probe.py"
-      - "tools/private_pockettrades_ko_source_url_pilot.py"
-      - ".github/workflows/private-ko-pocket-source-url-pilot.yml"
+      - 'tools/private_ko_pocket_source_link_probe.py'
+      - 'tools/private_pockettrades_ko_source_url_pilot.py'
+      - 'research/confirmed-ko-pocket-source-url-samples-20261121.json'
+      - '.github/workflows/private-ko-pocket-source-url-pilot.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  korean-pocket-source-only:
+  no-crawl-source-policy:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Offline bounded URL and language guards for both providers
+          python-version: '3.12'
+      - name: Compile and test exact Korean URL safety without source network calls
         run: |
           python -m py_compile tools/private_ko_pocket_source_link_probe.py \
             tools/private_pockettrades_ko_source_url_pilot.py
           python tools/private_ko_pocket_source_link_probe.py --self-test
           python tools/private_pockettrades_ko_source_url_pilot.py --self-test
-      - name: Acquire actual Korean card image URL references from independently robots-allowed source
-        run: |
-          python tools/private_pockettrades_ko_source_url_pilot.py \
-            --set A1 --out source-only-ko-pocket-pilot.json
-      - name: Verify real observed source URLs and no artwork binary or live changes
+      - name: Verify explicit research-only evidence and no automated source crawl
         run: |
           python - <<'PY'
-          import hashlib,json
+          import json
           from pathlib import Path
-          p=Path("source-only-ko-pocket-pilot.json")
-          doc=json.loads(p.read_text(encoding="utf8"))
-          assert doc["classification"]=="PRIVATE_KO_POCKET_EXTERNAL_URLS_ONLY"
-          assert doc["source_pages"]==1
-          assert doc["production_writes"]==0
-          assert doc["image_binaries_downloaded"]==0
-          assert doc["artwork_rights_granted"] is False
-          assert doc["exact_live_card_matches_verified"]==0
-          for item in doc["pages"]:
-              for url in item["observed_korean_image_urls"]:
-                  assert url.startswith("https://tcgpocket-card-art-a.pages.dev/images/game-cards/v2/")
-                  assert "/ko." in url
-          print("KO_POCKET_REAL_SOURCE_PILOT_PASS",{
-              "actual_ko_source_image_refs":doc["observed_korean_image_url_refs"],
-              "sha256":hashlib.sha256(p.read_bytes()).hexdigest(),
-              "new_live_links":0
-          })
+          p=Path("research/confirmed-ko-pocket-source-url-samples-20261121.json")
+          x=json.loads(p.read_text(encoding="utf8"))
+          assert x["classification"]=="PRIVATE_SOURCE_URL_EVIDENCE_ONLY_NOT_LIVE"
+          assert x["distinct_source_urls"]==2
+          assert x["controls"]["artwork_files_downloaded"]==0
+          assert x["controls"]["actual_live_image_link_written"] is False
+          assert x["controls"]["commercial_reuse_rights_verified"] is False
+          assert x["new_live_image_links"]==0
+          assert all(y["canonical_printing_id"]=="tcgdex_international_A1_001:ko:KR" for y in x["image_urls"])
+          assert x["image_urls"][0]["safe_to_crawl"] is False
+          print("KO_POCKET_POLICY_PASS: 2 manual references, 1 card, zero automated crawls")
           PY
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CardScanR-Korean-Pocket-Actual-Image-URLs-Source-Only
-          path: source-only-ko-pocket-pilot.json
-          retention-days: 21
-          if-no-files-found: error
