@@ -61,8 +61,13 @@ def examine(root: Path):
             if not files: continue
             counters[lang]["sets_with_card_data"] += 1
             for f in files:
-                if f.is_symlink() or not TOKEN.fullmatch(f.stem) or f.stat().st_size > 150000:
-                    raise ValueError("unsafe_source_card_file")
+                # Some official card files have punctuation in their stem.
+                # glob() only yields direct children of an already verified set
+                # folder, so allow those filenames while rejecting links,
+                # nonfiles and unexpectedly large source blobs.
+                if (f.is_symlink() or not f.is_file() or not 1 <= len(f.stem) <= 128
+                        or f.stat().st_size > 1_000_000):
+                    raise ValueError("unsafe_source_card_file:" + f.relative_to(root).as_posix())
                 blob = f.read_bytes()
                 doc = json.loads(blob)
                 if not isinstance(doc, dict) or doc.get("lang") != source_lang:
