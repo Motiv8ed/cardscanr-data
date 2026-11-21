@@ -1,0 +1,30 @@
+{
+  "classification": "PINNED_AUTHENTIC_LIVE_UNLINKED_TW_IDENTITY_ROWS_SOURCE_ONLY",
+  "source_repo": "Motiv8ed/cardscanr-workbench",
+  "source_ref": "research/live-ko-tw-missing-identity-20261121",
+  "total_missing_tw": 397,
+  "target_exact_set_counts": {
+    "SV2a": 187,
+    "SV3": 118
+  },
+  "files": [
+    {
+      "source_ref": "research/live-ko-tw-missing-identity-20261121",
+      "source_file": "research/live-vault-gap-20261121/zh-tw_chunk_00.jsonl",
+      "source_git_blob_sha": "49ffab9a6c6e875c6a3cbe041acfcc53cbdedf05",
+      "lines": 300,
+      "target_file": "research/live-gap-20261122/zh-tw_chunk_00.jsonl"
+    },
+    {
+      "source_ref": "research/live-ko-tw-missing-identity-20261121",
+      "source_file": "research/live-vault-gap-20261121/zh-tw_chunk_01.jsonl",
+      "source_git_blob_sha": "08816cb4daaa97912e9c4657da3dec3057023c8e",
+      "lines": 97,
+      "target_file": "research/live-gap-20261122/zh-tw_chunk_01.jsonl"
+    }
+  ],
+  "rights_verified": false,
+  "new_live_links": 0,
+  "production_writes": 0,
+  "created_from_live_authenticated_export_only": true
+}

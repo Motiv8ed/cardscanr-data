@@ -1,0 +1,74 @@
+name: Authenticated TW 305 Missing Image Source Crosswalk
+on:
+  pull_request:
+    paths:
+      - "research/live-gap-20261122/**"
+      - "tools/private_tw_sv2a_sv3_live_exact_source.py"
+      - ".github/workflows/private-live-tw-sv2a-sv3-exact-source.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-pinned-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Offline source URL and alias tests
+        run: |
+          python -m py_compile cardscanr/tools/private_tw_sv2a_sv3_live_exact_source.py
+          python cardscanr/tools/private_tw_sv2a_sv3_live_exact_source.py --self-test
+      - uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            data_tc
+      - name: Verify pinned upstream then match 305 true current live-missing identities
+        run: |
+          test "$(git -C upstream rev-parse HEAD)" = "18e0de2feb7a35ebe4296ede0ba6cc768961489b"
+          python cardscanr/tools/private_tw_sv2a_sv3_live_exact_source.py \
+            --source-root upstream \
+            --live-root cardscanr/research/live-gap-20261122 \
+            --out exact-research-tw-305
+      - name: Check exact target accounting and no unauthorized art or imports
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path("exact-research-tw-305")
+          receipt=json.loads((root/"receipt.json").read_text(encoding="utf8"))
+          assert receipt["classification"]=="PRIVATE_LIVE_TW_SV2A_SV3_EXACT_SOURCE_ONLY_NOT_APPLIED"
+          assert receipt["source_commit"]=="18e0de2feb7a35ebe4296ede0ba6cc768961489b"
+          assert receipt["target_live_missing_card_count"]==305
+          assert receipt["pinned_live_missing_card_count"]==397
+          assert receipt["single_observed_source_image_url_candidates"]+receipt["quarantined_due_to_variant_or_identity"]==305
+          assert receipt["source_files_inspected_by_set"]=={"SV2a":363,"SV3":143}
+          assert receipt["current_live_link_inserts"]==receipt["new_live_canonical_cards"]==receipt["artwork_files_downloaded"]==0
+          assert receipt["source_research_only"] and not receipt["artwork_rights_verified"]
+          assert not receipt["can_import_from_this_artifact"] and not receipt["safe_for_public_artwork"]
+          for kind,entry in receipt["files"].items():
+              b=(root/entry["filename"]).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==entry["sha256"]
+              assert len(b.splitlines())==entry["rows"]
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as s:
+              s.write("### Real live TW 305 × pinned official source\n\n")
+              s.write(f"Source-unique native/name/number URL refs **{receipt['single_observed_source_image_url_candidates']}**, ")
+              s.write(f"quarantined alternate/unknown **{receipt['quarantined_due_to_variant_or_identity']}**.\n\n")
+              s.write("Source only, unlicensed art, no downloaded binaries or live DB inserts.\n")
+          print("REAL_TW_305_SINGLE_MATCH_SOURCE_ONLY_PASS",receipt["by_set"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Authenticated-TW-305-Exact-Source-URL-Research-Only
+          path: exact-research-tw-305/
+          retention-days: 21
+          if-no-files-found: error
