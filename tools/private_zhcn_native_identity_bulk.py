@@ -43,8 +43,12 @@ def examine(root: Path) -> tuple[list[dict], dict]:
         if not isinstance(cards, list) or len(cards) != spec["count"]:
             raise ValueError("source_card_count_drift:" + set_id)
         md5_receipts[set_id] = actual
+        # Source README documents the split 151C waves with upstream
+        # card setCode 151C; retain the file's wave as a distinct identity.
+        is_151_wave = set_id in {"151C-LV", "151C-WANG", "151C-JING", "151C-JU"}
+        expected_card_code = "151C" if is_151_wave else set_id
         for card in cards:
-            if not isinstance(card, dict) or card.get("setCode") != set_id:
+            if not isinstance(card, dict) or card.get("setCode") != expected_card_code:
                 raise ValueError("source_set_identity_drift:" + set_id)
             number = card.get("cardIndex")
             name = card.get("cardName")
@@ -122,6 +126,28 @@ def self_test():
         assert receipt["quarantined_duplicate_identity_rows"] == 2
         assert receipt["unique_native_identity_rows"] == 1
         assert all(r["safe_for_vault_apply"] is False and r["image_url"] is None for r in rows)
+        # Strictly document and verify only the four known 151C wave aliases.
+        wave = [{"setCode": "151C", "cardIndex": "001", "cardName": "妙蛙种子", "rarity": "C"}]
+        wave_bytes = json.dumps(wave).encode()
+        (folder / "151C-JING.json").write_bytes(wave_bytes)
+        manifest["sets"]["151C-JING"] = {"count": 1, "md5": hashlib.md5(wave_bytes).hexdigest()}
+        (root / "data/manifest.json").write_text(json.dumps(manifest))
+        wave_rows, wave_receipt = examine(root)
+        assert wave_receipt["source_card_rows"] == 4
+        assert any(r["source_set_code"] == "151C-JING" for r in wave_rows)
+        wave[0]["setCode"] = "NOT151C"
+        tampered = json.dumps(wave).encode()
+        (folder / "151C-JING.json").write_bytes(tampered)
+        manifest["sets"]["151C-JING"]["md5"] = hashlib.md5(tampered).hexdigest()
+        (root / "data/manifest.json").write_text(json.dumps(manifest))
+        try:
+            examine(root)
+            raise AssertionError("invalid 151C wave code accepted")
+        except ValueError as e:
+            assert str(e).startswith("source_set_identity_drift")
+        (folder / "151C-JING.json").write_bytes(wave_bytes)
+        manifest["sets"]["151C-JING"]["md5"] = hashlib.md5(wave_bytes).hexdigest()
+        (root / "data/manifest.json").write_text(json.dumps(manifest))
         manifest["sets"]["CSV1C"]["md5"] = "0" * 32
         (root / "data/manifest.json").write_text(json.dumps(manifest))
         try:
