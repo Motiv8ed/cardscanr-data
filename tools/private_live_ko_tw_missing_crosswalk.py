@@ -35,7 +35,7 @@ def key(row):
 def reconcile(live_paths, source_path, output):
     if output.exists():
         raise FileExistsError("output_exists")
-    live = list(x for path in live_paths for x in rows(path))
+    if len(set(map(str, live_paths))) != 6:\n        raise ValueError("duplicate_live_page_path")\n    live = list(x for path in live_paths for x in rows(path))
     if len(live) != 1528 or collections.Counter(x.get("language") for x in live) != {"ko":1131,"zh-tw":397}:
         raise ValueError("live_snapshot_count_drift")
     ids = [x.get("canonical_printing_id") for x in live]
