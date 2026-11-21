@@ -1,6 +1,26 @@
 # Shared Windows PowerShell 5.1 helpers for CardScanR Python runtime wrappers.
 # Dot-source from ensure_*_runtime.ps1 scripts. Do not run this file directly.
 
+function Resolve-CardScanRRuntimePythonPath {
+    param([Parameter(Mandatory = $true)][string]$RepoRoot)
+
+    # pythonw.exe has no console window; Invoke-LoggedPython still captures stdout/stderr.
+    $venvPyw = Join-Path $RepoRoot ".venv\Scripts\pythonw.exe"
+    if (Test-Path -LiteralPath $venvPyw) { return $venvPyw }
+    $venvPy = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $venvPy) { return $venvPy }
+
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $cmd) {
+        throw "python not found on PATH"
+    }
+    $pythonExe = $cmd.Source
+    $dir = Split-Path -Parent $pythonExe
+    $pythonw = Join-Path $dir "pythonw.exe"
+    if (Test-Path -LiteralPath $pythonw) { return $pythonw }
+    return $pythonExe
+}
+
 function Format-ProcessArgument {
     param(
         [AllowEmptyString()]
