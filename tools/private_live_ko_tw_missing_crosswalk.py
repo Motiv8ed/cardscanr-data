@@ -42,6 +42,17 @@ def key(row):
         values.append(nfc(value))
     return tuple(values)
 
+def valid_https_reference(value):
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = urlsplit(value)
+        return (parsed.scheme == "https" and bool(parsed.hostname)
+                and not parsed.username and not parsed.password
+                and not any(c.isspace() for c in value))
+    except ValueError:
+        return False
+
 def reconcile(live_paths, source_path, output):
     if output.exists():
         raise FileExistsError("output_exists")
@@ -99,7 +110,7 @@ def reconcile(live_paths, source_path, output):
             state = "quarantine_finish_conflict"
         elif matches[0].get("artwork_commercial_rights_verified") is not True:
             state = "quarantine_artwork_rights"
-        elif not isinstance(matches[0].get("artwork_rights_evidence_url"), str) or not matches[0]["artwork_rights_evidence_url"].startswith("https://"):
+        elif not valid_https_reference(matches[0].get("artwork_rights_evidence_url")):
             state = "quarantine_missing_rights_evidence"
         else:
             state = "review_unique_identity_and_rights_claim"
