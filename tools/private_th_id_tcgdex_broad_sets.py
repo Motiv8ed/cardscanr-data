@@ -43,12 +43,18 @@ def index_for(lang,limit):
     if not isinstance(src,list) or not 10<=len(src)<=600:
         raise ValueError("unexpected_set_index_type_or_count")
     selected={}
+    rejected=[]
     for item in src:
         if not isinstance(item,dict) or not isinstance(item.get("id"),str):
             raise ValueError("invalid_source_set_entry")
         code=item["id"]
         if not ID.fullmatch(code) or code in selected:
-            raise ValueError("invalid_or_duplicate_source_set_code")
+            # A published index can contain duplicate/variant labels.
+            # Quarantine unsupported set IDs rather than inventing a code or
+            # stopping all other legitimate source discovery.
+            rejected.append({"id":code[:48],
+                             "reason":"unsupported_or_duplicate_provider_set_id"})
+            continue
         count=item.get("cardCount") or {}
         if isinstance(count,dict):
             n=count.get("total") or count.get("official") or 0
@@ -59,8 +65,12 @@ def index_for(lang,limit):
         selected[code]={"id":code,"catalogue_card_count":n,
                         "name":item.get("name") if isinstance(item.get("name"),str) else ""}
     ranked=sorted(selected.values(),key=lambda x:(-x["catalogue_card_count"],x["id"]))
+    if len(ranked)<1:
+        raise ValueError("provider_index_no_safe_set_codes")
     return ranked[:limit],{"index_sha256":sha,"sets_visible":len(src),
-                           "sets_selected":min(limit,len(ranked))}
+                           "sets_selected":min(limit,len(ranked)),
+                           "quarantined_set_ids":rejected[:100],
+                           "quarantined_total":len(rejected)}
 
 
 def collect(out,limit=DEFAULT_MAX,pace=0.55):
