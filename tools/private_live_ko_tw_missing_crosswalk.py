@@ -22,10 +22,15 @@ def rows(path):
             yield obj
 
 def key(row):
-    return (row.get("language"), row.get("set_id"),
-            nfc(row.get("native_card_name")),
-            str(row.get("printed_collector_number") or ""),
-            str(row.get("printed_denominator") or ""))
+    fields = ("language", "set_id", "native_card_name",
+              "printed_collector_number", "printed_denominator")
+    values = []
+    for field in fields:
+        value = row.get(field)
+        if not isinstance(value, str) or not value.strip():
+            return None
+        values.append(nfc(value))
+    return tuple(values)
 
 def reconcile(live_paths, source_path, output):
     if output.exists():
@@ -38,20 +43,32 @@ def reconcile(live_paths, source_path, output):
         raise ValueError("duplicate_or_missing_live_id")
     if any(x.get("has_image_link") is not False for x in live):
         raise ValueError("live_record_not_missing")
+    # Reject mixed or incomplete page snapshots before any matching.
+    snapshots = {x.get("snapshot_sha256") for x in live}
+    if (len(snapshots) != 1 or
+        any(not isinstance(v, str) or len(v) != 64 or
+            any(c not in "0123456789abcdef" for c in v) for v in snapshots)):
+        raise ValueError("missing_or_mixed_live_snapshot")
     by_key = collections.defaultdict(list)
     for x in live:
-        by_key[key(x)].append(x)
+        k = key(x)
+        if k is not None:
+            by_key[k].append(x)
     source = list(rows(source_path))
     src_key = collections.defaultdict(list)
     for x in source:
         if x.get("language") in ("ko","zh-tw"):
-            src_key[key(x)].append(x)
+            k = key(x)
+            if k is not None:
+                src_key[k].append(x)
     outcomes = collections.Counter()
     reviews = []
     for target in live:
         k = key(target)
         matches = src_key.get(k, [])
-        if len(by_key[k]) != 1:
+        if k is None:
+            state = "quarantine_missing_identity_fields"
+        elif len(by_key[k]) != 1:
             state = "quarantine_multiple_live_printings"
         elif not matches:
             state = "no_exact_source"
@@ -61,7 +78,7 @@ def reconcile(live_paths, source_path, output):
             state = "quarantine_finish_not_proven"
         elif target["finish"] != matches[0]["finish"]:
             state = "quarantine_finish_conflict"
-        elif not matches[0].get("artwork_commercial_rights_verified"):
+        elif matches[0].get("artwork_commercial_rights_verified") is not True:
             state = "quarantine_artwork_rights"
         else:
             state = "review_unique_identity_and_rights_claim"
