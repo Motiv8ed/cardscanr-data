@@ -49,6 +49,9 @@ def run(out:Path):
                             "direct_text":a.get_text(" ",strip=True)[:250],
                             "images":images[:4],
                             "inner_html_shape":str(a)[:700],
+                            "parent_tag":a.parent.name if a.parent else None,
+                            "parent_visible_text":a.parent.get_text(" ",strip=True)[:300] if a.parent else "",
+                            "parent_html_shape":str(a.parent)[:1800] if a.parent else "",
                         })
                 examples=anchors[:4]
                 samples.append({
