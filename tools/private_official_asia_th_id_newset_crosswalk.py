@@ -135,8 +135,8 @@ def audit(pilot:Path,out:Path):
     return receipt
 
 def selftest():
-    records=[dict(zip(FIELDS,("cid1","tcgdex:asia:set:SV7s","th","เรดิบา","001",None,None)))]
-    source=[{"language":"th","source_product_code":"SV7s",
+    records=[dict(zip(FIELDS,("cid1","tcgdex:asia:set:SV4K","th","เรดิบา","001",None,None)))]
+    source=[{"language":"th","source_product_code":"SV4K",
              "source_name_native":"เรดิบา","source_collector_number":"001",
              "source_image_url_reference":"https://asia.pokemon-card.com/th/card-img/th00009635.png",
              "official_detail_id":"9635","official_detail_url":"https://asia.pokemon-card.com/th/card-search/detail/9635/",
