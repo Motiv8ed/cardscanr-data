@@ -1,0 +1,142 @@
+name: CardScanR Full 7-Language Source Backlog Sweep
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_all_language_bulk_aggregate.py'
+      - '.github/workflows/private-full-backlog-source-sweep.yml'
+  workflow_dispatch:
+  schedule:
+    # Weekly source-delta research, 02:45 Monday in Brisbane (16:45 Sunday UTC)
+    - cron: "45 16 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fail-closed offline self tests
+        run: |
+          python -m py_compile tools/private_all_language_bulk_aggregate.py tools/private_all_language_source_gap_discovery.py
+          python tools/private_all_language_bulk_aggregate.py --self-test
+          PYTHONPATH=. python -m unittest discover -s tests -p test_private_all_language_source_gap_discovery.py -v
+
+  bounded-page-scan:
+    needs: offline-contract-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        page: [0, 1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Scan all seven source indexes and 40 fresh unmatched sets per page
+        env:
+          PAGE: ${{ matrix.page }}
+        run: |
+          PYTHONPATH=. python tools/private_all_language_source_gap_discovery.py \
+            --batch-index "$PAGE" --batch-size 40 --pace 1.25 \
+            --output source-batch
+      - name: Reject unsafe/fabricated sources, verify SHA and report counts
+        env:
+          PAGE: ${{ matrix.page }}
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path('source-batch')
+          r=json.loads((root/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_SOURCE_SET_GAP_EVIDENCE_ONLY'
+          assert r['batch_index']==int(os.environ['PAGE'])
+          assert r['source_requests']<=40
+          assert r['production_writes']==r['image_binaries_downloaded']==r['verified_new_canonical_cards']==0
+          assert not r['rights_granted'] and not r['safe_for_public_use']
+          assert r['source_sets_succeeded']+r['source_sets_failed']==r['source_requests']
+          for name in ('unmatched_source_sets.jsonl','unmatched_source_card_briefs.jsonl'):
+              raw=(root/name).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==r[name]['sha256']
+              assert len(raw.splitlines())==r[name]['records']
+          print('CARD_SCANR_SOURCE_PAGE_PASS',os.environ['PAGE'],
+                'sets',r['source_sets_succeeded'],'briefs',r['card_briefs_captured'],
+                'refs',r['source_image_url_bases_found'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-FullSet-Gap-${{ matrix.page }}
+          path: source-batch/
+          retention-days: 14
+          if-no-files-found: error
+
+  combine-all-seven-pages:
+    runs-on: ubuntu-latest
+    needs: bounded-page-scan
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: CardScanR-FullSet-Gap-*
+          path: source-pages/
+          merge-multiple: false
+      - name: SHA reconcile all seven batches and make one private source inventory
+        run: |
+          python tools/private_all_language_bulk_aggregate.py \
+            --source-root source-pages --output complete-source-backlog
+      - name: Verify final artifact counts and hard no-production boundary
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          d=Path('complete-source-backlog')
+          r=json.loads((d/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_MULTILINGUAL_BULK_SOURCE_BACKLOG_NOT_LIVE'
+          for filename,entry in r['artifacts'].items():
+              raw=(d/filename).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==entry['gzip_sha256']
+              decompressed=gzip.decompress(raw)
+              assert hashlib.sha256(decompressed).hexdigest()==entry['raw_sha256']
+              assert len(decompressed.splitlines())==entry['records']
+          assert r['production_writes']==r['new_live_image_links']==r['new_canonical_cards_verified']==0
+          assert r['exact_live_card_matches_verified']==r['image_binaries_downloaded']==0
+          assert not r['source_artwork_rights_granted'] and not r['public_artwork_approved']
+          print('CARD_SCANR_COMPLETE_SOURCE_BACKLOG_PASS',
+                {k:r[k] for k in ('source_sets_unmatched_in_provider_index',
+                 'source_sets_succeeded','source_sets_failed',
+                 'source_card_briefs_collected','source_image_url_base_refs_observed',
+                 'complete_without_source_errors')})
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### Full 7-language source-backlog research\n\n')
+              f.write(f"Unmatched source set IDs: **{r['source_sets_unmatched_in_provider_index']:,}**; ")
+              f.write(f"sets fetched: **{r['source_sets_succeeded']:,}**; ")
+              f.write(f"card briefs: **{r['source_card_briefs_collected']:,}**; ")
+              f.write(f"image base references: **{r['source_image_url_base_refs_observed']:,}**.\n\n")
+              f.write('Provider-only records require aliases and unique canonical IDs before import. ')
+              f.write('No image binaries, live writes, licensed artwork or confirmed new canonical cards.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Full-7-Language-SHA-Backlog-Source-Only
+          path: complete-source-backlog/
+          retention-days: 21
+          if-no-files-found: error
