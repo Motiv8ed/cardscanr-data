@@ -1,0 +1,77 @@
+name: Private Chinese pack precision audit
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_source_pack_audit.py'
+      - '.github/workflows/private-zhcn-source-pack-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  readonly-packed-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: No-network synthetic safety tests
+        run: |
+          PYTHONPATH=cardscanr python -m py_compile cardscanr/tools/private_zhcn_source_pack_audit.py
+          PYTHONPATH=cardscanr python cardscanr/tools/private_zhcn_source_pack_audit.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44853089079
+          name: Private-ZHCN-Native-Picture-Crosswalk-Review
+          github-token: ${{ github.token }}
+          path: crosswalk
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44706393928
+          name: CardScanR-Private-Chinese-Set-Number-Source-Only-Candidates
+          github-token: ${{ github.token }}
+          path: provisional
+      - name: Check 41k archived SHA-pinned pack against candidate identities and rarity
+        run: |
+          PYTHONPATH=cardscanr python cardscanr/tools/private_zhcn_source_pack_audit.py \
+            --crosswalk crosswalk --provisional provisional --output private-pack-review
+      - name: Assert immutable evidence, no image downloads or publication
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path("private-pack-review")
+          r=json.loads((p/"receipt.json").read_text())
+          raw=(p/"candidate_pack_audit.jsonl").read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r["row_payload_sha256"]
+          assert len(raw.splitlines())==r["candidates_checked"]==5289
+          assert sum(r["pack_field_status_counts"].values())==5289
+          assert r["archived_pack_count"]==41185
+          assert r["new_image_links"]==r["production_writes"]==r["image_binaries_downloaded"]==0
+          assert r["live_vault_printing_verified"]==r["variant_finish_verified"]==0
+          assert not r["safe_to_import"] and not r["rights_granted"]
+          for line in raw.splitlines():
+              row=json.loads(line)
+              assert row["safe_to_apply"] is False and row["third_party_artwork_rights_granted"] is False
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a") as f:
+              f.write("### Chinese source-pack validation\n\n")
+              f.write(f"Card field result: {r['pack_field_status_counts']}\n\n")
+              f.write(f"Native corroborated rarity: {r['native_corroborated_rarity_comparison_counts']}\n\n")
+              f.write("Net new images **0**, no live identity or artwork rights granted.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Private-ZHCN-Archived-Pack-Rarity-Audit
+          path: private-pack-review/
+          retention-days: 7
+          if-no-files-found: error
