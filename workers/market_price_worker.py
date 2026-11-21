@@ -386,7 +386,11 @@ def run_worker_loop(
             config=config, continuous=continuous, operation_mode=operation_mode
         ):
             gate_info = classify_continuous_gate(market=gate_market)
-            if continuous and pacing_controller is not None:
+            # Staged (owned_daily disabled) eBay workers use this same pacing
+            # controller. A temporary SORRY halt must be reconsidered when the
+            # authoritative availability/probe gate permits recovery, without
+            # enabling owned-daily or clearing hard-stop/challenge latches.
+            if pacing_controller is not None:
                 maybe_resume_transient_halt(pacing_controller, gate_info)
             if continuous:
                 budget_reason = budget.budget_exhausted()
