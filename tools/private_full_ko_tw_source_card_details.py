@@ -73,10 +73,28 @@ def examine(root: Path):
                 if not isinstance(doc, dict) or doc.get("lang") != source_lang:
                     raise ValueError("wrong_source_language")
                 native_name, number, sid = doc.get("name"), doc.get("number"), doc.get("set_name")
-                if (not acceptable_text(native_name, 300) or not native_name.strip()
-                        or not acceptable_text(str(number), 80) or not str(number).strip()
-                        or sid != setdir.name):
-                    raise ValueError("missing_exact_source_card_identity")
+                has_identity = (
+                    acceptable_text(native_name, 300) and bool(native_name.strip())
+                    and type(number) in (str,int) and acceptable_text(str(number), 80)
+                    and bool(str(number).strip()) and sid == setdir.name
+                )
+                if not has_identity:
+                    # Do not discard a source file just because upstream skipped
+                    # a printed number or a set label. Retain its raw details in
+                    # a separate source-only quarantine, never in the image list.
+                    counters[lang]["incomplete_identity_quarantined"] += 1
+                    rows.append({
+                        "classification":"SOURCE_CARD_IDENTITY_INCOMPLETE_QUARANTINED",
+                        "source_repo":SOURCE,"source_commit":COMMIT,"language":lang,
+                        "source_path":(Path(dirname)/setdir.name/f.name).as_posix(),
+                        "source_raw_sha256":sha(blob),"source_complete_record":doc,
+                        "source_set_directory":setdir.name,
+                        "source_identity_valid":False,"image_url_reference":None,
+                        "safe_for_vault_apply":False,"artwork_rights_verified":False,
+                        "safe_for_public_artwork":False,
+                    })
+                    counters[lang]["source_card_files"] += 1
+                    continue
                 print_key = doc.get("print_key")
                 valid_print_key = isinstance(print_key, str) and print_key.startswith("asia:") and len(print_key) <= 200
                 if not valid_print_key:
