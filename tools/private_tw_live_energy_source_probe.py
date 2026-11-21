@@ -7,7 +7,7 @@ from a pinned public Git checkout. Strict source-only proof, no live writes.
 A matching source URL does NOT grant the right to download/display artwork.
 """
 from __future__ import annotations
-import argparse,hashlib,json,re
+import argparse,base64,gzip,hashlib,json,re
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -85,6 +85,44 @@ def check(root:Path,out:Path):
         "current_live_snapshot_identities_verified":False,
         "note":"20 specific TW missing-image card IDs were read from authenticated first-page Vault sample. The source name/set/number and official image URLs now match pinned upstream. Must recheck LIVE identity and permissions before VaultSync stage/apply."
     }
+    # Private VaultSync stage payload only. The live PC worker must independently
+    # preflight exact current native names/set/number and current link status.
+    # This file is NOT publication permission, a downloaded image or an import.
+    grouped={}
+    for row in rows:
+        grouped.setdefault(row["source_set_code"],[]).append(row)
+    sets=[{"language":"zh-tw","provider_set_id":code,
+           "source_response_sha256":hashlib.sha256(
+               "".join(sorted(v["source_file_sha256"] for v in group)).encode("ascii")
+           ).hexdigest(),"source_repo":"type-null/PTCG-database",
+           "source_commit":PIN}
+          for code,group in sorted(grouped.items())]
+    cards=[{"canonical_printing_id":x["canonical_printing_id_live_sample"],
+            "language":"zh-tw","provider_set_id":x["source_set_code"],
+            "provider_card_id":x["source_set_code"]+"-"+x["printed_collector_number"],
+            "status":"exact_unique","native_card_name":x["native_card_name"],
+            "printed_collector_number":x["printed_collector_number"]}
+           for x in rows]
+    images=[{"canonical_printing_id":x["canonical_printing_id_live_sample"],
+             "language":"zh-tw","provider_set_id":x["source_set_code"],
+             "image_url":x["source_image_url_reference"]} for x in rows]
+    stage_doc={"schema_version":1,"source":"official_crosswalk",
+               "artwork_rights_verified":False,
+               "image_binaries_downloaded":0,
+               "sets":sets,"cards":cards,"images":images}
+    packed=gzip.compress(json.dumps(stage_doc,ensure_ascii=False,sort_keys=True,
+                         separators=(",",":")).encode("utf8"),mtime=0,compresslevel=9)
+    if len(packed)>64000:
+        raise ValueError("stage_payload_over_one_bridge_chunk")
+    (out/"tw_20_official_stage.gz").write_bytes(packed)
+    receipt["stage_receipt"]={
+        "classification":"PRIVATE_UNAPPLIED_OFFICIAL_URL_SOURCE_PAYLOAD",
+        "batch_id":"twenergy20261121_00",
+        "gzip_sha256":hashlib.sha256(packed).hexdigest(),
+        "gzip_bytes":len(packed),
+        "cards":20,"images":20,
+        "live_vault_apply_finished":False,"source_rights_verified":False
+    }
     (out/"receipt.json").write_text(json.dumps(receipt,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf8")
     return receipt
 
@@ -106,6 +144,12 @@ if __name__=="__main__":
     else:
         if a.root is None or a.out is None:p.error("--root and --out required")
         result=check(a.root,a.out)
+        print("TW_20_BRIDGE_STAGE_CANDIDATE",json.dumps({
+            "draft_id": result["stage_receipt"]["batch_id"],
+            "expected_sha256": result["stage_receipt"]["gzip_sha256"],
+            "chunk_index":0,"limit":1,
+            "content":base64.b64encode((a.out/"tw_20_official_stage.gz").read_bytes()).decode("ascii")
+        },sort_keys=True))
         print("TW_20_PINNED_OFFICIAL_SOURCE_REFERENCES",json.dumps({
             k:result[k] for k in ("source_cards_exact_match","source_distinct_image_urls",
             "new_live_image_links","production_writes")
