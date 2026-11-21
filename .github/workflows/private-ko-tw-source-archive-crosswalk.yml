@@ -1,0 +1,77 @@
+name: Private Korean and TW Full Archive to Image-Gap Crosswalk
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_ko_tw_complete_source_archive_crosswalk.py'
+      - '.github/workflows/private-ko-tw-source-archive-crosswalk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  safe-source-crosswalk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Self-test source URL, exact identities and archival write safety
+        run: |
+          python -m py_compile cardscanr/tools/private_ko_tw_complete_source_archive_crosswalk.py
+          python cardscanr/tools/private_ko_tw_complete_source_archive_crosswalk.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44874157785
+          name: CardScanR-Complete-Korean-TW-Details-and-Original-URLs-Source-Only
+          github-token: ${{ github.token }}
+          path: source/
+      - name: Crosscheck 32,230 source URLs against SHA-pinned R2 KO/TW archives
+        run: |
+          PYTHONPATH=cardscanr python cardscanr/tools/private_ko_tw_complete_source_archive_crosswalk.py \
+            --source source --output verified-archived-crosswalk
+      - name: Verify immutable SHA, record counts, and no live writes
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          p=Path('verified-archived-crosswalk')
+          r=json.loads((p/'receipt.json').read_text())
+          z=(p/'exact_archived_image_crosswalk.jsonl.gz').read_bytes()
+          raw=gzip.decompress(z)
+          assert r['classification']=='PRIVATE_OFFICIAL_KO_TW_EXACT_ARCHIVED_SOURCE_CROSSWALK_NOT_LIVE'
+          assert hashlib.sha256(z).hexdigest()==r['crosswalk_compressed_sha256']
+          assert hashlib.sha256(raw).hexdigest()==r['crosswalk_uncompressed_sha256']
+          rows=[json.loads(x) for x in raw.splitlines()]
+          assert len(rows)==r['matched_records']
+          assert r['source_original_official_image_urls']==32230
+          assert r['new_live_image_links']==r['production_writes']==r['image_binaries_downloaded']==0
+          assert r['image_refs_matched_to_exact_live_vault_ids']==0
+          assert not r['image_rights_granted'] and not r['safe_for_public_artwork']
+          assert all(not row['safe_for_vault_apply'] and not row['source_image_rights_granted'] for row in rows)
+          print('CARD_SCANR_KO_TW_ARCHIVED_IMAGE_GAP_PASS',{
+            'source_urls':r['source_original_official_image_urls'],
+            'archive_missing_candidates':r['exact_archived_missing_image_url_candidates'],
+            'already_covered':r['already_archive_image_covered'],
+            'classification_counts':r['classification_counts']})
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### 32k KO/TW source URL reconciliation (archive only)\n\n')
+              f.write(f"Source URL records: **{r['source_original_official_image_urls']:,}**; ")
+              f.write(f"exact archive missing-image candidates: **{r['exact_archived_missing_image_url_candidates']:,}**; ")
+              f.write(f"already covered in archive: **{r['already_archive_image_covered']:,}**.\n\n")
+              f.write('No live vault ID, commercial rights, variant or image files verified. No production writes.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-KO-TW-Complete-Source-Archived-Image-Gap-Crosswalk
+          path: verified-archived-crosswalk/
+          retention-days: 21
+          if-no-files-found: error
