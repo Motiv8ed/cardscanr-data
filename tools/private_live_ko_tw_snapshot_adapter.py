@@ -20,6 +20,9 @@ def adapt(paths, output):
         raise FileExistsError("output_exists")
     if len(paths) != 6 or len(set(map(str, paths))) != 6:
         raise ValueError("expected_six_distinct_chunks")
+    names = [path.name for path in paths]
+    if len(set(names)) != len(names):
+        raise ValueError("duplicate_chunk_basename")
     counts = collections.Counter()
     ids = set()
     hashes = {}
