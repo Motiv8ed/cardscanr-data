@@ -45,6 +45,15 @@ def check(pack_records,source_records):
         if k and k[2] and k[3]:indexed[k].append(row)
     found=[]
     counts=Counter()
+    # Repeated provider identities are not independent printings. Quarantine
+    # every occurrence rather than choosing an arbitrary image URL.
+    source_identity_counts=Counter()
+    for row in source_records:
+        k=identity(row.get("language"),row.get("source_product_code"),
+                   str(row.get("source_collector_number") or ""),
+                   str(row.get("source_name_native") or ""))
+        if k:
+            source_identity_counts[k]+=1
     for row in source_records:
         lang=row["language"]
         k=identity(lang,row["source_product_code"],
@@ -52,6 +61,9 @@ def check(pack_records,source_records):
         url=row["source_image_url_reference"]
         if not k or not safe_url(url,lang):
             counts["unsafe_or_missing_source_identity"]+=1
+            continue
+        if source_identity_counts[k]!=1:
+            counts["ambiguous_source_printings"]+=1
             continue
         matches=indexed.get(k,[])
         if not matches:
@@ -145,6 +157,10 @@ def selftest():
     assert len(hits)==1 and counts["exact_missing_image_source_url_candidate"]==1
     hits,counts=check(records+records,source)
     assert len(hits)==0 and counts["ambiguous_card_variants"]==1
+    duplicated=[dict(source[0]),dict(source[0],official_detail_id="9636",
+                     source_image_url_reference="https://asia.pokemon-card.com/th/card-img/th00009636.png")]
+    hits,counts=check(records,duplicated)
+    assert len(hits)==0 and counts["ambiguous_source_printings"]==2
     assert not safe_url("https://asia.pokemon-card.com/id/card-img/id00009901.png","th")
     print("PASS strict official Thailand/Indonesia native name and number crosswalk")
 
