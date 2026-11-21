@@ -1,0 +1,57 @@
+name: Official Thai Indonesian List-only Image and Identity Probe
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_th_id_listing_art_probe.py"
+      - ".github/workflows/private-official-th-id-list-shape.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  listing-shape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install only HTML parser dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Offline strict official URL and locale safety tests
+        run: |
+          python -m py_compile tools/private_official_th_id_listing_art_probe.py
+          python -m tools.private_official_th_id_listing_art_probe --self-test
+      - name: Observe two robots-gated Thai and Indonesian official card-list pages
+        run: |
+          python -m tools.private_official_th_id_listing_art_probe \
+            --out official-list-shape-private
+      - name: Inspect source HTML examples and ensure zero image downloads or live writes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("official-list-shape-private/shape_receipt.json").read_text(encoding="utf8"))
+          assert d["classification"]=="PRIVATE_OFFICIAL_TH_ID_LISTING_HTML_IDENTITY_SHAPE_RESEARCH_ONLY"
+          assert d["source_list_pages"]==2
+          assert d["image_binaries_downloaded"]==0 and d["detail_page_requests"]==0
+          assert d["live_vault_writes"]==0 and d["public_artwork_rights_granted"] is False
+          assert len(d["sources"])==2 and {x["locale"] for x in d["sources"]}=={"th","id"}
+          for x in d["sources"]:
+              print("OFFICIAL_LIST_SHAPE_COUNTS",x["locale"],{
+                 "card_detail_links":x["detail_links"],
+                 "art_linked_anchors":x["anchors_with_image"],
+                 "native_text_anchors":x["anchors_with_native_text"],
+                 "next_page":x["next_page_detected"]
+              })
+              print("OFFICIAL_LIST_ANCHOR_SAMPLE",x["locale"],json.dumps(
+                  x["first_four_public_anchor_shapes"],ensure_ascii=False)[:5000])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-Asia-TH-ID-List-Shape-Only
+          path: official-list-shape-private/
+          retention-days: 7
+          if-no-files-found: error
