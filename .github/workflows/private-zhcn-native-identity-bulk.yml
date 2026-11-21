@@ -1,0 +1,60 @@
+name: Private zh-cn native identity bulk corroboration
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_native_identity_bulk.py'
+      - '.github/workflows/private-zhcn-native-identity-bulk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify offline fail-closed checks
+        run: |
+          python -m py_compile cardscanr/tools/private_zhcn_native_identity_bulk.py
+          python cardscanr/tools/private_zhcn_native_identity_bulk.py --self-test
+      - uses: actions/checkout@v4
+        with:
+          repository: zsjy947/PTCG-card-data
+          ref: 7f03f38f4538f01d8ee03121aa91aad3b0ae1149
+          path: source
+          persist-credentials: false
+      - name: Pin exact source commit and scan complete local archive
+        run: |
+          test "$(git -C source rev-parse HEAD)" = "7f03f38f4538f01d8ee03121aa91aad3b0ae1149"
+          python cardscanr/tools/private_zhcn_native_identity_bulk.py --source source --output private-zhcn-native
+      - name: Verify receipt and prohibit publication
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path('private-zhcn-native')
+          r=json.loads((p/'receipt.json').read_text())
+          raw=(p/'native_identity.jsonl').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r['native_identity_jsonl_sha256']
+          assert r['source_card_rows']==r['unique_native_identity_rows']+r['quarantined_duplicate_identity_rows']
+          assert r['source_set_count']>=100 and r['source_card_rows']>=10000
+          assert r['image_binaries_downloaded']==r['artwork_url_count']==r['live_vault_writes']==0
+          assert r['verified_live_printing_matches']==0 and r['safe_for_publication'] is False
+          assert len(raw.splitlines())==r['source_card_rows']
+          print('PRIVATE_NATIVE_ZHCN_EVIDENCE_PASS',r['source_card_rows'],r['unique_native_identity_rows'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Private-ZHCN-Native-Identity-Evidence-Only
+          path: private-zhcn-native/
+          retention-days: 7
+          if-no-files-found: error
