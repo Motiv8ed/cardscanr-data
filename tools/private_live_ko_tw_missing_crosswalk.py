@@ -35,7 +35,9 @@ def key(row):
 def reconcile(live_paths, source_path, output):
     if output.exists():
         raise FileExistsError("output_exists")
-    if len(set(map(str, live_paths))) != 6:\n        raise ValueError("duplicate_live_page_path")\n    live = list(x for path in live_paths for x in rows(path))
+    if len(set(map(str, live_paths))) != 6:
+        raise ValueError("duplicate_live_page_path")
+    live = list(x for path in live_paths for x in rows(path))
     if len(live) != 1528 or collections.Counter(x.get("language") for x in live) != {"ko":1131,"zh-tw":397}:
         raise ValueError("live_snapshot_count_drift")
     ids = [x.get("canonical_printing_id") for x in live]
@@ -80,6 +82,8 @@ def reconcile(live_paths, source_path, output):
             state = "quarantine_finish_conflict"
         elif matches[0].get("artwork_commercial_rights_verified") is not True:
             state = "quarantine_artwork_rights"
+        elif not isinstance(matches[0].get("artwork_rights_evidence_url"), str) or not matches[0]["artwork_rights_evidence_url"].startswith("https://"):
+            state = "quarantine_missing_rights_evidence"
         else:
             state = "review_unique_identity_and_rights_claim"
         outcomes[state] += 1
