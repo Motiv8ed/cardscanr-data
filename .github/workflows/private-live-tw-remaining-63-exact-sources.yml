@@ -1,0 +1,78 @@
+name: CardScanR Current TW Remaining 63 Exact Source URLs
+on:
+  pull_request:
+    paths:
+      - "tools/private_tw_remaining_63_actual_source.py"
+      - "research/live-gap-20261122/zh-tw-remaining-210-current.json"
+      - ".github/workflows/private-live-tw-remaining-63-exact-sources.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-current-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source URL and scope boundaries
+        run: |
+          python -m py_compile cardscanr/tools/private_tw_remaining_63_actual_source.py
+          python cardscanr/tools/private_tw_remaining_63_actual_source.py --self-test
+      - uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            data_tc
+      - name: Match real currently unlinked TW identities against pinned official source files
+        run: |
+          test "$(git -C upstream rev-parse HEAD)" = "18e0de2feb7a35ebe4296ede0ba6cc768961489b"
+          python cardscanr/tools/private_tw_remaining_63_actual_source.py \
+            --source-root upstream \
+            --live-snapshot cardscanr/research/live-gap-20261122/zh-tw-remaining-210-current.json \
+            --out remaining-tw-63 \
+            --print-b64
+      - name: Verify exact private candidate batch and integrity receipt
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          d=Path("remaining-tw-63")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="PRIVATE_TW_REMAINING_63_EXACT_SOURCE_URL_PROPOSAL_UNAPPLIED"
+          assert r["current_missing_tw_card_count"]==210 and r["target_unlinked_card_count"]==63
+          assert r["single_source_native_name_number_url_matches"]+r["ambiguous_or_source_unavailable"]==63
+          assert r["new_live_image_links"]==r["new_live_cards"]==r["downloaded_image_files"]==0
+          assert not r["rights_granted"] and not r["public_artwork_enabled"]
+          for file in ("source_candidates_file","quarantine_file"):
+              a=r[file];content=(d/a["filename"]).read_bytes()
+              assert hashlib.sha256(content).hexdigest()==a["sha256"]
+              assert len(content.splitlines())==a["rows"]
+          raw=(d/"exact_tw_current_210_batch.gz").read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r["compressed_sha256"]
+          stage=json.loads(gzip.decompress(raw))
+          assert len(stage["cards"])==len(stage["images"])==r["single_source_native_name_number_url_matches"]
+          assert stage["source"]=="official_crosswalk"
+          assert not stage["artwork_rights_verified"] and not stage["image_binaries_downloaded"]
+          assert len({row["canonical_printing_id"] for row in stage["cards"]})==len(stage["cards"])
+          print("PINNED_63_CURRENT_TW_SOURCE_PROOF_PASS",r["single_source_native_name_number_url_matches"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write(f"### More authentic missing TW card image URLs\n\n")
+              f.write(f"**{r['single_source_native_name_number_url_matches']}** exact source refs, ")
+              f.write(f"**{r['ambiguous_or_source_unavailable']}** quarantined/no source from 63 genuine current live gaps.\n\n")
+              f.write("Private, unlicensed source-only batch. Nothing live inserted by this GitHub run.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Current-TW-63-Exact-Source-Candidates-Private
+          path: remaining-tw-63/
+          retention-days: 21
+          if-no-files-found: error
