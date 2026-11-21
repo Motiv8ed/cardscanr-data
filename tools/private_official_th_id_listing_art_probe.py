@@ -35,8 +35,12 @@ def run(out:Path):
                     if m:
                         images=[]
                         for im in a.find_all("img"):
-                            src=urljoin(url,str(im.get("src") or ""))
-                            images.append({"art":src if accept_url(src,lang) else None,
+                            # Official website lazy loads images. Actual
+                            # observed URL is in data-original, while src="".
+                            raw_src=str(im.get("data-original") or im.get("src") or "")
+                            src=urljoin(url,raw_src) if raw_src else None
+                            images.append({"art":src if src and accept_url(src,lang) else None,
+                                          "source_attribute":"data-original" if im.get("data-original") else "src",
                                           "alt":str(im.get("alt") or "")[:100],
                                           "class":list(im.get("class") or [])[:4]})
                         anchors.append({
