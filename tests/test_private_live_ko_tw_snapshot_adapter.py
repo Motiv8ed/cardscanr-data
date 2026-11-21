@@ -38,7 +38,7 @@ class AdapterTests(unittest.TestCase):
                 folder = root / str(i)
                 folder.mkdir()
                 p = folder / "chunk.jsonl"
-                p.write_text('{"language":"ko"}\\n', encoding="utf-8")
+                p.write_text(json.dumps({"language": "ko"}) + "\n", encoding="utf-8")
                 paths.append(p)
             output = root / "result.json"
             with self.assertRaisesRegex(ValueError, "duplicate_chunk_basename"):
