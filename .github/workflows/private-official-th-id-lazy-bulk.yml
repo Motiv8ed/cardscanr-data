@@ -1,0 +1,66 @@
+name: Official Thai Indonesian Actual Lazy Card Art URL Bulk Collector
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_th_id_lazy_bulk_urls.py"
+      - ".github/workflows/private-official-th-id-lazy-bulk.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  official-lazy-urls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install parser dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Validate exact official image URL versus detail ID offline
+        run: |
+          python -m py_compile tools/private_official_th_id_lazy_bulk_urls.py
+          python -m tools.private_official_th_id_lazy_bulk_urls --self-test
+      - name: Collect actual HTML-declared Thai and Indonesian image references
+        run: |
+          python -m tools.private_official_th_id_lazy_bulk_urls \
+            --pages 12 --out actual-official-th-id-card-list-urls
+      - name: Validate source URL manifest, zero detail fetches, zero art binaries and no live claims
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path("actual-official-th-id-card-list-urls")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="PRIVATE_OFFICIAL_TH_ID_LAZY_LIST_BULK_IMAGE_URL_REFS_ONLY"
+          assert r["requested_sets"]==8 and r["requested_max_pages_per_set"]==12
+          assert r["pages_succeeded"]+r["pages_failed"]<=96
+          assert r["card_details_fetched"]==r["artwork_binaries_downloaded"]==0
+          assert r["exact_current_live_card_matches"]==r["new_live_image_links"]==r["new_canonical_cards"]==0
+          assert not r["artwork_rights_verified"] and not r["safe_for_public_artwork"]
+          b=(d/"official_lazy_card_source_urls.jsonl").read_bytes()
+          assert hashlib.sha256(b).hexdigest()==r["manifest_sha256"]
+          rows=[json.loads(x) for x in b.splitlines()]
+          assert len(rows)==r["distinct_official_detail_image_refs"]
+          assert len({(x["language"],x["official_detail_id"]) for x in rows})==len(rows)
+          for x in rows:
+              assert x["native_card_name"] is None and x["printed_collector_number"] is None
+              assert x["observed_image_url"].startswith("https://asia.pokemon-card.com/"+x["language"]+"/card-img/")
+              assert x["observed_image_url"].endswith(x["language"]+x["official_detail_id"].zfill(8)+".png")
+              assert not x["exact_live_identity_verified"] and not x["artwork_rights_verified"]
+          print("OFFICIAL_TH_ID_GENUINE_LIST_IMAGE_SOURCE_PROOF",len(rows),
+                "source_pages",r["pages_succeeded"],"errors",r["pages_failed"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### Actual official TH/ID card images observed in HTML lists\n")
+              f.write(f"**{len(rows)}** distinct official image URL references from **{r['pages_succeeded']}** robots-gated list pages. ")
+              f.write("No printed-card identity from list anchors, no live inserts, public artwork rights or image binaries.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-Official-Lazy-Image-Refs-Needs-Identity
+          path: actual-official-th-id-card-list-urls/
+          retention-days: 21
+          if-no-files-found: error
