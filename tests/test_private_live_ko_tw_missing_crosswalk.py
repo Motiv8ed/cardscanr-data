@@ -105,10 +105,31 @@ class CrosswalkTests(unittest.TestCase):
     def test_oversized_live_page_fails_closed(self):
         first = self.live[0]
         lines = first.read_text(encoding="utf-8").splitlines()
-        first.write_text("\n".join(lines + [lines[0]]) + "\n", encoding="utf-8")
+        first.write_text("\n".join(lines + [lines[0]] * 471) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "live_page_size_invalid"):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
+
+    def test_six_archived_chunks_accepted(self):
+        # Four Korean chunks and two Traditional Chinese chunks, like the
+        # pinned private snapshot; no source means no importable matches.
+        root = pathlib.Path(self.tmp.name)
+        all_rows = [json.loads(line) for path in self.live
+                    for line in path.read_text(encoding="utf-8").splitlines()]
+        ko = [r for r in all_rows if r["language"] == "ko"]
+        tw = [r for r in all_rows if r["language"] == "zh-tw"]
+        chunks = [ko[i:i+283] for i in range(0, len(ko), 283)]
+        chunks += [tw[:200], tw[200:]]
+        self.assertEqual(len(chunks), 6)
+        paths = []
+        for i, chunk in enumerate(chunks):
+            path = root / f"archive-{i}.jsonl"
+            path.write_text("".join(json.dumps(r) + "\\n" for r in chunk), encoding="utf-8")
+            paths.append(path)
+        result = reconcile(paths, self.source, self.output)
+        self.assertEqual(result["live_rows"], 1528)
+        self.assertEqual(result["outcomes"], {"no_exact_source": 1528})
+        self.assertFalse(result["production_writes"])
 
     def test_rights_claim_requires_evidence(self):
         self.source.write_text(json.dumps(dict(
