@@ -14,10 +14,19 @@ def nfc(v):
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
-def rows(path):
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        if line.strip():
-            obj = json.loads(line)
+def rows(path, max_rows=100000, max_line_bytes=1048576):
+    """Stream bounded JSONL input instead of loading untrusted archives at once."""
+    count = 0
+    with path.open("rb") as handle:
+        for number, line in enumerate(handle, 1):
+            if len(line) > max_line_bytes:
+                raise ValueError(f"jsonl_line_too_large:{path}:{number}")
+            if not line.strip():
+                continue
+            count += 1
+            if count > max_rows:
+                raise ValueError(f"jsonl_row_limit:{path}:{number}")
+            obj = json.loads(line.decode("utf-8"))
             if not isinstance(obj, dict):
                 raise ValueError(f"non-object:{path}:{number}")
             yield obj
@@ -40,7 +49,7 @@ def reconcile(live_paths, source_path, output):
         raise ValueError("duplicate_live_page_path")
     # Private snapshot is archived in six JSONL chunks, not 51 API-sized pages.
     # Bound each file while retaining the strict aggregate identity checks below.
-    pages = [list(rows(path)) for path in live_paths]
+    pages = [list(rows(path, max_rows=500)) for path in live_paths]
     if any(not page or len(page) > 500 for page in pages):
         raise ValueError("live_page_size_invalid")
     live = [x for page in pages for x in page]
