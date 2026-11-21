@@ -1,0 +1,67 @@
+name: CardScanR Thai and Indonesian Real TCGdex Image URL Sources
+on:
+  pull_request:
+    paths:
+      - "tools/private_th_id_tcgdex_set_image_source.py"
+      - ".github/workflows/private-th-id-tcgdex-bulk-real-urls.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-language-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline strict URL, language and image declaration safety
+        run: |
+          python -m py_compile tools/private_th_id_tcgdex_set_image_source.py
+          python tools/private_th_id_tcgdex_set_image_source.py --self-test
+      - name: Fetch only native Thai and Indonesian card summaries and declared image bases
+        run: |
+          python tools/private_th_id_tcgdex_set_image_source.py \
+            --out source-only-th-id-eight-sets
+      - name: Check actual source evidence without pretending live matches or licensed art
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path("source-only-th-id-eight-sets")
+          doc=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          lines=(d/"provider_card_sources.jsonl").read_bytes()
+          assert doc["classification"]=="PRIVATE_TH_ID_TCGDEX_REAL_SET_CARD_IMAGE_URL_REFS_ONLY"
+          assert doc["source_pages_attempted"]==8
+          assert doc["source_pages_succeeded"]+doc["source_pages_failed"]==8
+          assert doc["source_records"]==len(lines.splitlines())
+          assert hashlib.sha256(lines).hexdigest()==doc["source_url_manifest_sha256"]
+          assert doc["actual_live_new_links"]==doc["actual_live_new_canonical_cards"]==doc["images_downloaded"]==0
+          assert not doc["artwork_rights_verified"] and not doc["public_artwork_enabled"]
+          for line in lines.splitlines():
+              row=json.loads(line)
+              assert row["language"] in ("th","id")
+              if row["source_low_webp_url"] is not None:
+                  assert row["source_low_webp_url"].startswith("https://assets.tcgdex.net/"+row["language"]+"/")
+                  assert row["source_low_webp_url"].endswith("/low.webp")
+          print("TH_ID_ACTUAL_DECLARED_IMAGE_SOURCES_VERIFIED",{
+              "source_rows":doc["source_records"],
+              "real_language_image_bases":doc["provider_declared_language_image_bases"],
+              "errors":doc["source_pages_failed"],
+              "live_inserts":0
+          })
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### New real Thai and Indonesian provider image sources\n\n")
+              f.write(f"**{doc['source_records']}** source cards across {doc['source_pages_succeeded']} fetched sets, ")
+              f.write(f"**{doc['provider_declared_language_image_bases']}** have provider-declared image bases. ")
+              f.write("No live matches, downloads, or copyright clearance claimed.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Thai-Indonesian-Real-TCGdex-Source-URLs-Private
+          path: source-only-th-id-eight-sets/
+          retention-days: 21
+          if-no-files-found: error
