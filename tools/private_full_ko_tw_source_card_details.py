@@ -73,8 +73,10 @@ def examine(root: Path):
                         or sid != setdir.name):
                     raise ValueError("missing_exact_source_card_identity")
                 print_key = doc.get("print_key")
-                if not isinstance(print_key, str) or not print_key.startswith("asia:") or len(print_key) > 200:
-                    raise ValueError("source_print_identity_invalid")
+                valid_print_key = isinstance(print_key, str) and print_key.startswith("asia:") and len(print_key) <= 200
+                if not valid_print_key:
+                    counters[lang]["missing_or_unrecognized_print_key"] += 1
+                    print_key = None
                 k = (lang, setdir.name, f.stem)
                 if k in seen: raise ValueError("duplicate_source_file_identity")
                 seen.add(k)
@@ -86,6 +88,7 @@ def examine(root: Path):
                     "language": lang, "source_path": (Path(dirname)/setdir.name/f.name).as_posix(),
                     "source_raw_sha256": sha(blob),
                     "source_print_key": print_key,
+                    "source_complete_record": doc,
                     "source_set_code": sid,
                     "collector_number": str(number),
                     "collector_denominator": doc.get("set_total"),
@@ -129,7 +132,7 @@ def examine(root: Path):
                 if row["attacks"]: counters[lang]["attacks_present"] += 1
                 if row["abilities"]: counters[lang]["abilities_present"] += 1
                 if row["artist"]: counters[lang]["artist_present"] += 1
-                if allowed:
+                if allowed and valid_print_key:
                     counters[lang]["official_image_url_refs"] += 1
                     images.append({
                         "classification": "PRIVATE_OFFICIAL_SOURCE_IMAGE_URL_REFERENCE_ONLY",
@@ -144,7 +147,7 @@ def examine(root: Path):
                         "artwork_rights_verified": False,
                         "safe_for_public_artwork": False,
                     })
-                elif url: counters[lang]["unsafe_image_url_quarantined"] += 1
+                elif url and not allowed: counters[lang]["unsafe_image_url_quarantined"] += 1
     if not rows: raise ValueError("zero_source_cards")
     return rows, images, {k: dict(v) for k,v in counters.items()}
 
