@@ -35,9 +35,12 @@ def key(row):
 def reconcile(live_paths, source_path, output):
     if output.exists():
         raise FileExistsError("output_exists")
-    if len(set(map(str, live_paths))) != 6:
+    if not live_paths or len(set(map(str, live_paths))) != len(live_paths):
         raise ValueError("duplicate_live_page_path")
-    live = list(x for path in live_paths for x in rows(path))
+    pages = [list(rows(path)) for path in live_paths]
+    if any(not page or len(page) > 30 for page in pages):
+        raise ValueError("live_page_size_invalid")
+    live = [x for page in pages for x in page]
     if len(live) != 1528 or collections.Counter(x.get("language") for x in live) != {"ko":1131,"zh-tw":397}:
         raise ValueError("live_snapshot_count_drift")
     ids = [x.get("canonical_printing_id") for x in live]
@@ -103,7 +106,7 @@ def reconcile(live_paths, source_path, output):
 
 def main():
     p=argparse.ArgumentParser()
-    p.add_argument("--live",type=pathlib.Path,nargs=6,required=True)
+    p.add_argument("--live",type=pathlib.Path,nargs="+",required=True)
     p.add_argument("--source",type=pathlib.Path,required=True)
     p.add_argument("--output",type=pathlib.Path,required=True)
     a=p.parse_args()
