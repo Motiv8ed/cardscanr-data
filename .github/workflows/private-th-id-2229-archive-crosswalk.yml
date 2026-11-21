@@ -1,0 +1,75 @@
+name: Thai Indonesian 2229 Real Source URLs Exact Archive Crosswalk
+on:
+  pull_request:
+    paths:
+      - "tools/private_th_id_tcgdex_large_archive_crosswalk.py"
+      - ".github/workflows/private-th-id-2229-archive-crosswalk.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pinned-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline exact-native matching and ambiguity regression tests
+        run: |
+          python -m py_compile tools/private_th_id_tcgdex_large_archive_crosswalk.py
+          python -m tools.private_th_id_tcgdex_large_archive_crosswalk --self-test
+      - name: Validate artifact's exact source CI release SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/Motiv8ed/cardscanr-data/actions/runs/44961286331 --jq .head_sha)" = \
+            "955c1b668d88ed0b30d0e27e4da8ff9ef4334464"
+          test "$(gh api repos/Motiv8ed/cardscanr-data/actions/runs/44961286331 --jq .conclusion)" = "success"
+      - uses: actions/download-artifact@v4
+        with:
+          name: CardScanR-Th-Id-130Sets-Actual-Image-URL-Source-Candidates
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44961286331
+          github-token: ${{ github.token }}
+          path: th-id-pinned-source
+      - name: Reconcile source-native image URLs to SHA-verified CardScanR R2 archive
+        run: |
+          python -m tools.private_th_id_tcgdex_large_archive_crosswalk \
+            --source-root th-id-pinned-source \
+            --out exact-th-id-archive
+      - name: Enforce no live or publication claims and immutable crosswalk proof
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path("exact-th-id-archive")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="PRIVATE_TH_ID_LARGE_TCGDEX_PINNED_ARCHIVE_EXACT_CROSSWALK_ONLY"
+          assert r["source_declared_image_refs"]==2229
+          assert r["new_live_links"]==r["new_live_canonicals"]==r["artwork_binaries_downloaded"]==0
+          assert not r["commercial_rights_verified"]
+          assert r["current_live_printing_check_pending"] and not r["stage_allowed_without_live_exact_native_variant_check"]
+          for filename,detail in [
+              ("archived_source_image_candidates.jsonl",r["candidates_file"]),
+              ("quarantined_source_identities.jsonl",r["quarantine_file"])]:
+              b=(d/filename).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==detail["sha256"]
+              assert len(b.splitlines())==detail["rows"]
+          print("TH_ID_2229_ARCHIVE_UNIQUE_SHA_PASS",r["archive_exact_image_source_refs"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### TCGdex declared image URLs vs archived CardScanR printings\n\n")
+              f.write(f"**{r['archive_exact_image_source_refs']}** archived exact native-name/set/number source references from 2229 candidates; ")
+              f.write(f"**{r['source_identity_quarantined']}** quarantined. ")
+              f.write("Requires CURRENT live missing-identity confirmation before VaultSync staging or import.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-2229-Source-Archive-Exact-Crosswalk-NOT-LIVE
+          path: exact-th-id-archive/
+          retention-days: 21
+          if-no-files-found: error
