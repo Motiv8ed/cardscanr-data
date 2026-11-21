@@ -146,5 +146,32 @@ class CrosswalkTests(unittest.TestCase):
         result = reconcile(self.live, self.source, self.output)
         self.assertEqual(result["outcomes"]["quarantine_missing_rights_evidence"], 1)
 
+    def test_exact_tw_printed_number_and_source_url_counted_without_import(self):
+        for path in self.live:
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for i, line in enumerate(lines):
+                row = json.loads(line)
+                if row["canonical_printing_id"] == "zh-tw-0":
+                    row.update(set_id="SV2a", native_card_name="測試卡",
+                               printed_collector_number="GRA", printed_denominator="187",
+                               finish="normal")
+                    lines[i] = json.dumps(row, ensure_ascii=False)
+                    path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+                    break
+        self.source.write_text(json.dumps(dict(
+            language="zh-tw", set_id="SV2a", native_card_name="測試卡",
+            printed_collector_number="GRA", printed_denominator="187",
+            finish="normal", image_url="https://example.org/tw/GRA.png",
+            artwork_commercial_rights_verified=False), ensure_ascii=False) + "\\n",
+            encoding="utf-8")
+        result = reconcile(self.live, self.source, self.output)
+        self.assertEqual(result["exact_source_identity_matches"], 1)
+        self.assertEqual(result["distinct_observed_source_image_urls"], 1)
+        self.assertEqual(result["new_live_image_links"], 0)
+        self.assertEqual(result["outcomes"]["quarantine_artwork_rights"], 1)
+        matched = next(x for x in result["reviews"] if x["canonical_printing_id"] == "zh-tw-0")
+        self.assertEqual(matched["source_image_url_reference"], "https://example.org/tw/GRA.png")
+        self.assertFalse(matched["safe_for_vault_apply"])
+
 if __name__ == "__main__":
     unittest.main()
