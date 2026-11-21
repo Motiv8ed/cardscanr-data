@@ -6,8 +6,13 @@ No marketplace requests, browser sessions, queues, or production state are used.
 from __future__ import annotations
 
 import ast
+from contextlib import ExitStack
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest import mock
+
+import workers.market_price_worker as worker
 
 from cardscanr_market_engine.continuous_worker_policy import maybe_resume_transient_halt
 from cardscanr_market_engine.owned_daily_outcomes import (
@@ -114,6 +119,79 @@ class StagedTransientHaltResumeTests(unittest.TestCase):
             )
         )
         self.assertEqual(controller.state.halt_reason, CHALLENGE_REQUIRED)
+        self.assertTrue(controller.state.browser_halted)
+
+
+
+class StagedWorkerLoopIntegrationTests(unittest.TestCase):
+    """Run the actual worker-loop state machine with no browser/DB/PC I/O."""
+
+    def _one_staged_cycle(self, *, gate_state: str, hard_stop: str | None = None):
+        controller = _halted_controller()
+        runner = SimpleNamespace(
+            run_once=mock.Mock(return_value=[]),
+            client=SimpleNamespace(),
+        )
+        config = SimpleNamespace(
+            provider_name="ebay_browser",
+            worker_id="test-staged-worker",
+            latest_report_path=ROOT / "never_written_staged_test.json",
+            runs_report_path=ROOT / "never_written_staged_test.jsonl",
+        )
+        budget = mock.MagicMock()
+        budget.budget_exhausted.return_value = None
+        budget.transient_hard_stop.return_value = None
+        budget.last_hard_stop = None
+        gate = {
+            "workerState": gate_state,
+            "hardStop": hard_stop,
+            "availabilityState": gate_state,
+            "activeChallenges": 1 if hard_stop else 0,
+        }
+        with ExitStack() as stack:
+            stack.enter_context(mock.patch.object(worker, "owned_daily_full_enable", return_value=False))
+            stack.enter_context(mock.patch.object(worker, "parse_operation_mode", return_value="STAGED"))
+            stack.enter_context(mock.patch.object(worker, "parse_market_allowlist", return_value=["AU"]))
+            stack.enter_context(mock.patch.object(worker, "classify_continuous_gate", return_value=gate))
+            stack.enter_context(mock.patch.object(worker, "ensure_continuous_au_safety_env"))
+            stack.enter_context(mock.patch.object(worker.ContinuousSafetyBudget, "from_env", return_value=budget))
+            stack.enter_context(mock.patch.object(worker, "_set_sweep_pre_job_gate_ok", return_value=False))
+            stack.enter_context(mock.patch.object(worker, "write_json"))
+            stack.enter_context(mock.patch.object(worker, "append_jsonl"))
+            stack.enter_context(mock.patch.object(worker, "append_daily_metrics"))
+            stack.enter_context(mock.patch(
+                "cardscanr_market_engine.navigation_runtime_context.mint_nav_handoff_writer_run_id"
+            ))
+            result = worker.run_worker_loop(
+                args=SimpleNamespace(once=True, max_cycles=0),
+                config=config,
+                runner=runner,
+                poll_seconds=5,
+                max_jobs=1,
+                pacing=controller,
+                logger=lambda *_args, **_kwargs: None,
+                sleep_func=lambda _seconds: None,
+            )
+        return result, runner.run_once.call_count, controller
+
+    def test_staged_healthy_gate_exits_halt_and_reaches_worker(self) -> None:
+        code, calls, controller = self._one_staged_cycle(gate_state="SELECTING")
+        self.assertEqual(code, 0)
+        self.assertEqual(calls, 1, "staged worker must not loop forever in transient_halt")
+        self.assertFalse(controller.state.browser_halted)
+
+    def test_staged_cooldown_never_reaches_worker(self) -> None:
+        code, calls, controller = self._one_staged_cycle(gate_state="COOLDOWN")
+        self.assertEqual(code, 0)
+        self.assertEqual(calls, 0)
+        self.assertTrue(controller.state.browser_halted)
+
+    def test_staged_hard_stop_never_reaches_worker(self) -> None:
+        code, calls, controller = self._one_staged_cycle(
+            gate_state="HARD_STOP", hard_stop="ACTIVE_CHALLENGE"
+        )
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, 0)
         self.assertTrue(controller.state.browser_halted)
 
 
