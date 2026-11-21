@@ -156,13 +156,13 @@ class CrosswalkTests(unittest.TestCase):
                                printed_collector_number="GRA", printed_denominator="187",
                                finish="normal")
                     lines[i] = json.dumps(row, ensure_ascii=False)
-                    path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+                    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
                     break
         self.source.write_text(json.dumps(dict(
             language="zh-tw", set_id="SV2a", native_card_name="測試卡",
             printed_collector_number="GRA", printed_denominator="187",
             finish="normal", image_url="https://example.org/tw/GRA.png",
-            artwork_commercial_rights_verified=False), ensure_ascii=False) + "\\n",
+            artwork_commercial_rights_verified=False), ensure_ascii=False) + "\n",
             encoding="utf-8")
         result = reconcile(self.live, self.source, self.output)
         self.assertEqual(result["exact_source_identity_matches"], 1)
