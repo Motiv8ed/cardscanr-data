@@ -4,6 +4,7 @@ on:
     paths:
       - "tools/private_official_asia_th_id_newset_url_pilot.py"
       - "tools/private_official_asia_th_id_newset_crosswalk.py"
+      - "tools/private_official_asia_th_id_newset_vault_stage.py"
       - ".github/workflows/private-official-th-id-newsets-source.yml"
   workflow_dispatch:
 permissions:
@@ -92,11 +93,43 @@ jobs:
               f.write(f"**{r['exact_crosswalk_rows']}** archived exact source matches out of 40 official source cards; ")
               f.write("independent CURRENT live vault preflight required before private inserts.\n")
           PY
+      - name: Package only exact archive-unlinked native card sources for live preflight
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_newset_vault_stage.py
+          python -m tools.private_official_asia_th_id_newset_vault_stage --self-test
+          python - <<'PY'
+          import json,subprocess,sys,base64,hashlib,gzip
+          from pathlib import Path
+          source=Path("th-id-newset-archived-exact")
+          r=json.loads((source/"receipt.json").read_text(encoding="utf8"))
+          n=r["exact_candidate_records"]
+          if not n:
+              print("OFFICIAL_TH_ID_NEWSET_STAGE_QUARANTINED_NO_ARCHIVE_GAPS")
+              sys.exit(0)
+          subprocess.run([sys.executable,"-m","tools.private_official_asia_th_id_newset_vault_stage",
+              "--source",str(source),"--out","new-thid-stage"],check=True)
+          stage=Path("new-thid-stage")
+          p=json.loads((stage/"receipt.json").read_text(encoding="utf8"))
+          raw=(stage/p["gzip_file"]).read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==p["gzip_sha256"]
+          assert p["card_candidates"]==p["image_url_candidates"]==n
+          d=json.loads(gzip.decompress(raw))
+          assert len(d["cards"])==len(d["images"])==n
+          assert all(x["status"]=="exact_unique" for x in d["cards"])
+          assert d["artwork_rights_verified"] is False and d["image_binaries_downloaded"]==0
+          assert p["live_vault_writes"]==0 and not p["safe_for_public_artwork"]
+          print("OFFICIAL_TH_ID_NEWSET_STAGE_META",p["batch_id"],p["gzip_sha256"],n)
+          print("OFFICIAL_TH_ID_NEWSET_STAGE_CONTENT",json.dumps({
+              "action":"artwork_vault_stage","draft_id":p["batch_id"],
+              "expected_sha256":p["gzip_sha256"],"chunk_index":0,"limit":1,
+              "content":base64.b64encode(raw).decode("ascii")},sort_keys=True))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: CardScanR-TH-SV4K-ID-SV6s-40-Official-Source-Images-Private
           path: |
             th-id-newset-official-source/
             th-id-newset-archived-exact/
+            new-thid-stage/
           retention-days: 21
           if-no-files-found: error
