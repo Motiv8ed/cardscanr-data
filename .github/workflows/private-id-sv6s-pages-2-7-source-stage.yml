@@ -1,0 +1,108 @@
+name: Official Indonesian SV6s 120 Exact Native Card Sources and VaultSync Batch
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_id_sv6s_p2p7_source.py"
+      - "tools/private_official_id_sv6s_p2p7_crosswalk.py"
+      - "tools/private_official_id_sv6s_p2p7_vault_stage.py"
+      - ".github/workflows/private-id-sv6s-pages-2-7-source-stage.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-exact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 19
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source parser dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Strict bounded source / identity / private rights offline tests
+        run: |
+          python -m py_compile tools/private_official_id_sv6s_p2p7_source.py \
+             tools/private_official_id_sv6s_p2p7_crosswalk.py \
+             tools/private_official_id_sv6s_p2p7_vault_stage.py
+          python -m tools.private_official_id_sv6s_p2p7_source --self-test
+          python -m tools.private_official_id_sv6s_p2p7_crosswalk --self-test
+          python -m tools.private_official_id_sv6s_p2p7_vault_stage --self-test
+      - name: Fetch 120 real native official Indonesian SV6s card details via robots-aware bounded collector
+        run: |
+          python -m tools.private_official_id_sv6s_p2p7_source \
+            --out id-sv6s-official-source
+      - name: Verify exact source provenance against SHA-pinned CardScanR Indonesian R2 printing pack
+        run: |
+          python -m tools.private_official_id_sv6s_p2p7_crosswalk \
+            --pilot id-sv6s-official-source \
+            --out id-sv6s-exact-archive
+      - name: Build one private stage proposal only from archive-exact unlinked printings
+        run: |
+          python - <<'PY'
+          import json,subprocess,sys,base64,gzip,hashlib
+          from pathlib import Path
+          r=json.loads(Path("id-sv6s-exact-archive/receipt.json").read_text(encoding="utf8"))
+          assert r["source_card_rows"]==120
+          assert r["live_vault_writes"]==r["new_canonical_cards"]==r["artwork_binaries_downloaded"]==0
+          assert r["artwork_rights_verified"] is False
+          n=r["exact_candidate_records"]
+          if n==0:
+              print("ID_SV6S_SOURCE_NO_UNIQUE_EXACT_ARCHIVED_CANDIDATES")
+              sys.exit(0)
+          subprocess.run([sys.executable,"-m","tools.private_official_id_sv6s_p2p7_vault_stage",
+             "--source","id-sv6s-exact-archive","--out","id-sv6s-private-stage"],check=True)
+          root=Path("id-sv6s-private-stage")
+          receipt=json.loads((root/"receipt.json").read_text(encoding="utf8"))
+          blob=(root/receipt["gzip_file"]).read_bytes()
+          assert hashlib.sha256(blob).hexdigest()==receipt["gzip_sha256"]
+          assert receipt["card_candidates"]==n
+          assert receipt["image_url_candidates"]==n
+          doc=json.loads(gzip.decompress(blob))
+          assert len(doc["images"])==len(doc["cards"])==n
+          assert all(i["language"]=="id" and i["provider_set_id"]=="SV6s" for i in doc["cards"])
+          assert doc["artwork_rights_verified"] is False and doc["image_binaries_downloaded"]==0
+          assert receipt["live_vault_writes"]==0 and not receipt["safe_for_public_artwork"]
+          print("ID_SV6S_120_STAGE_META",receipt["batch_id"],receipt["gzip_sha256"],n)
+          print("ID_SV6S_120_STAGE_CONTENT",json.dumps({
+              "action":"artwork_vault_stage","draft_id":receipt["batch_id"],
+              "expected_sha256":receipt["gzip_sha256"],"chunk_index":0,"limit":1,
+              "content":base64.b64encode(blob).decode("ascii")},sort_keys=True))
+          PY
+      - name: Source SHA and rights audit
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          a=Path("id-sv6s-official-source")
+          r=json.loads((a/"receipt.json").read_text(encoding="utf8"))
+          raw=(a/"official_asia_card_source_urls.jsonl").read_bytes()
+          assert r["classification"]=="PRIVATE_OFFICIAL_ID_SV6S_PAGES_2_7_SOURCE_DETAILS_ONLY"
+          assert r["source_cards"]==r["image_url_references"]==120
+          assert len(raw.splitlines())==120
+          assert hashlib.sha256(raw).hexdigest()==r["source_url_manifest_sha256"]
+          assert r["image_binaries_downloaded"]==r["live_vault_writes"]==0
+          assert not r["artwork_rights_granted"]
+          b=json.loads(Path("id-sv6s-exact-archive/receipt.json").read_text(encoding="utf8"))
+          assert 0<=b["exact_candidate_records"]<=b["exact_crosswalk_rows"]<=120
+          assert b["new_canonical_cards"]==b["live_vault_writes"]==0
+          print("ID_SV6S_120_REAL_SOURCE_ARCHIVE_PASS",{
+              "official_source":120,"archived_exact":b["exact_crosswalk_rows"],
+              "candidate_printings":b["exact_candidate_records"],
+              "reasons":b["matching_results"]})
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### Indonesian SV6s pages 2–7 exact source identities\n")
+              f.write(f"**120** official source images with full native metadata; ")
+              f.write(f"**{b['exact_candidate_records']}** uniquely matched to missing-image archival printings, awaiting live preflight.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Indonesian-SV6s-Pages2to7-Exact-Source-Only
+          path: |
+            id-sv6s-official-source/
+            id-sv6s-exact-archive/
+            id-sv6s-private-stage/
+          retention-days: 21
+          if-no-files-found: error
