@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 import gzip
+import io
 import hashlib
 import json
 from pathlib import Path
@@ -28,7 +29,9 @@ def load_verified(root, name, receipt):
     raw = path.read_bytes()
     if sha(raw) != entry["gzip_sha256"] or len(raw) != entry["gzip_bytes"]:
         raise ValueError("source_artifact_sha_mismatch")
-    decoded = gzip.decompress(raw)
+    # Never expand an untrusted gzip fully before checking the decompressed limit.
+    with gzip.GzipFile(fileobj=io.BytesIO(raw), mode="rb") as stream:
+        decoded = stream.read(MAX_INPUT * 16 + 1)
     if len(decoded) > MAX_INPUT * 16 or sha(decoded) != entry["raw_sha256"]:
         raise ValueError("source_raw_sha_mismatch")
     rows = [json.loads(line) for line in decoded.splitlines()]
@@ -145,6 +148,15 @@ def self_test():
         try: triage(root,Path(tmp)/"out")
         except FileExistsError: pass
         else: raise AssertionError("output_overwritten")
+        # A tiny valid gzip can otherwise expand far beyond the memory budget.
+        bomb = gzip.compress(b"x" * (MAX_INPUT * 16 + 1), compresslevel=9, mtime=0)
+        (root/"unmatched_source_card_briefs.jsonl.gz").write_bytes(bomb)
+        receipt["artifacts"]["unmatched_source_card_briefs.jsonl.gz"].update(
+            gzip_sha256=sha(bomb), gzip_bytes=len(bomb))
+        (root/"receipt.json").write_text(json.dumps(receipt))
+        try: triage(root, Path(tmp)/"bomb")
+        except ValueError as exc: assert str(exc) == "source_raw_sha_mismatch"
+        else: raise AssertionError("oversized_gzip_accepted")
         (root/"unmatched_source_card_briefs.jsonl.gz").write_bytes(b"tampered")
         try: triage(root,Path(tmp)/"out2")
         except ValueError: pass
