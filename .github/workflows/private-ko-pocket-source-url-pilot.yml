@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - "tools/private_ko_pocket_source_link_probe.py"
+      - "tools/private_pockettrades_ko_source_url_pilot.py"
       - ".github/workflows/private-ko-pocket-source-url-pilot.yml"
   workflow_dispatch:
 permissions:
@@ -18,38 +19,37 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Offline host, locale and source-identity safety tests
+      - name: Offline bounded URL and language guards for both providers
         run: |
-          python -m py_compile tools/private_ko_pocket_source_link_probe.py
+          python -m py_compile tools/private_ko_pocket_source_link_probe.py \
+            tools/private_pockettrades_ko_source_url_pilot.py
           python tools/private_ko_pocket_source_link_probe.py --self-test
-      - name: Collect three Korean Pocket page image URL references, no image bytes
+          python tools/private_pockettrades_ko_source_url_pilot.py --self-test
+      - name: Acquire actual Korean card image URL references from independently robots-allowed source
         run: |
-          python tools/private_ko_pocket_source_link_probe.py \
-            --set A1 --count 3 --pace 1.2 --output source-only-ko-pocket-pilot.json
-      - name: Verify genuine observed Korean image URL evidence
+          python tools/private_pockettrades_ko_source_url_pilot.py \
+            --set A1 --out source-only-ko-pocket-pilot.json
+      - name: Verify real observed source URLs and no artwork binary or live changes
         run: |
           python - <<'PY'
           import hashlib,json
           from pathlib import Path
           p=Path("source-only-ko-pocket-pilot.json")
           doc=json.loads(p.read_text(encoding="utf8"))
-          assert doc["classification"]=="PRIVATE_KOREAN_POCKET_SOURCE_LINK_PILOT_ONLY"
-          assert doc["source_cards_checked"]==3
-          assert doc["production_writes"]==doc["new_live_links"]==0
-          assert doc["artwork_binaries_downloaded"]==0
-          assert doc["commercial_artwork_rights_verified"] is False
-          for row in doc["source_rows"]:
-              assert row["image_rights_verified"] is False
-              assert row["commercial_publication_allowed"] is False
-              assert row["source_detail_url"].startswith("https://tcgpocket.centropkmn.com/ko_KR/a1/")
-              for url in row["observed_korean_image_urls"]:
-                  assert "/ko_KR/" in url and url.startswith("https://ptcgp-assets.centropkmn.com/cards/")
-          print("KO_POCKET_OBSERVED_PILOT_PASS",{
-             "cards":doc["source_cards_checked"],
-             "actual_korean_card_image_refs":doc["distinct_observed_korean_image_urls"],
-             "list_cards":doc["source_detail_urls_found"],
-             "receipt_sha256":hashlib.sha256(p.read_bytes()).hexdigest(),
-             "live_vault_new_links":0,
+          assert doc["classification"]=="PRIVATE_KO_POCKET_EXTERNAL_URLS_ONLY"
+          assert doc["source_pages"]==1
+          assert doc["production_writes"]==0
+          assert doc["image_binaries_downloaded"]==0
+          assert doc["artwork_rights_granted"] is False
+          assert doc["exact_live_card_matches_verified"]==0
+          for item in doc["pages"]:
+              for url in item["observed_korean_image_urls"]:
+                  assert url.startswith("https://tcgpocket-card-art-a.pages.dev/images/game-cards/v2/")
+                  assert "/ko." in url
+          print("KO_POCKET_REAL_SOURCE_PILOT_PASS",{
+              "actual_ko_source_image_refs":doc["observed_korean_image_url_refs"],
+              "sha256":hashlib.sha256(p.read_bytes()).hexdigest(),
+              "new_live_links":0
           })
           PY
       - uses: actions/upload-artifact@v4
