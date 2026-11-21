@@ -78,7 +78,8 @@ def collect(out,pages=MAX_PAGE):
     duplicate_pages=Counter()
     with tempfile.TemporaryDirectory(prefix="cardscanr-official-list-bulk-") as temp:
         for lang,codes in SETS.items():
-            with Collector(lang,Path(temp),0.75) as collector:
+            collector=Collector(lang,Path(temp),0.75)
+            try:
                 for code in codes:
                     for page in range(1,pages+1):
                         listurl=f"{BASE_URL}/{lang}/card-search/list/?expansionCodes={code}"
@@ -102,6 +103,8 @@ def collect(out,pages=MAX_PAGE):
                             errors.append({"locale":lang,"set_filter_code":code,
                                 "page":page,"error":type(exc).__name__+":"+str(exc)[:150]})
                             break
+            finally:
+                collector.close()
     dedup={}
     conflicting=[]
     for row in rows:
