@@ -11,7 +11,7 @@ class CrosswalkTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = pathlib.Path(self.tmp.name)
-        self.live = [root / f"live-{i}.jsonl" for i in range(6)]
+        self.live = [root / f"live-{i}.jsonl" for i in range(51)]
         self.source = root / "source.jsonl"
         self.output = root / "review.json"
         rows = []
@@ -23,7 +23,7 @@ class CrosswalkTests(unittest.TestCase):
                                  printed_denominator=str(count),
                                  has_image_link=False, snapshot_sha256="a" * 64))
         for i, path in enumerate(self.live):
-            path.write_text("".join(json.dumps(x) + "\n" for x in rows[i::6]), encoding="utf-8")
+            path.write_text("".join(json.dumps(x) + "\n" for x in rows[i*30:(i+1)*30]), encoding="utf-8")
         self.source.write_text("", encoding="utf-8")
 
     def test_missing_source_is_never_importable(self):
@@ -99,7 +99,15 @@ class CrosswalkTests(unittest.TestCase):
 
     def test_repeated_page_path_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicate_live_page_path"):
-            reconcile([self.live[0]] * 6, self.source, self.output)
+            reconcile([self.live[0]] * 51, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
+    def test_oversized_live_page_fails_closed(self):
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        first.write_text("\n".join(lines + [lines[0]]) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "live_page_size_invalid"):
+            reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
 
     def test_rights_claim_requires_evidence(self):
