@@ -57,7 +57,12 @@ def triage(source, output):
         if key in by_set: raise ValueError("duplicate_source_set")
         by_set[key] = row
     identities = defaultdict(list)
+    provider_ids = set()
     for row in cards:
+        provider_key = (row["language"], row["provider_card_id"])
+        if provider_key in provider_ids:
+            raise ValueError("duplicate_provider_card_identity")
+        provider_ids.add(provider_key)
         key = (row["language"], row["provider_set_id"])
         if key not in by_set: raise ValueError("orphan_source_card")
         if (row.get("canonical_printing_id") is not None or
@@ -148,6 +153,18 @@ def self_test():
         try: triage(root,Path(tmp)/"out")
         except FileExistsError: pass
         else: raise AssertionError("output_overwritten")
+        # Duplicate provider identities must not pass merely because local numbers differ.
+        duplicated = [dict(row) for row in cards]
+        duplicated[1]["provider_card_id"] = duplicated[0]["provider_card_id"]
+        raw_dup = "".join(json.dumps(x)+"\\n" for x in duplicated).encode()
+        gz_dup = gzip.compress(raw_dup,mtime=0)
+        (root/"unmatched_source_card_briefs.jsonl.gz").write_bytes(gz_dup)
+        receipt["artifacts"]["unmatched_source_card_briefs.jsonl.gz"].update(
+            raw_sha256=sha(raw_dup), gzip_sha256=sha(gz_dup), gzip_bytes=len(gz_dup))
+        (root/"receipt.json").write_text(json.dumps(receipt))
+        try: triage(root, Path(tmp)/"duplicate_provider")
+        except ValueError as exc: assert str(exc) == "duplicate_provider_card_identity"
+        else: raise AssertionError("duplicate_provider_accepted")
         # A tiny valid gzip can otherwise expand far beyond the memory budget.
         bomb = gzip.compress(b"x" * (MAX_INPUT * 16 + 1), compresslevel=9, mtime=0)
         (root/"unmatched_source_card_briefs.jsonl.gz").write_bytes(bomb)
