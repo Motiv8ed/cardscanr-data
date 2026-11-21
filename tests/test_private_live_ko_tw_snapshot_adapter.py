@@ -30,5 +30,20 @@ class AdapterTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 adapt(paths, root/"new.json")
 
+    def test_duplicate_chunk_basenames_rejected_before_output(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            paths = []
+            for i in range(6):
+                folder = root / str(i)
+                folder.mkdir()
+                p = folder / "chunk.jsonl"
+                p.write_text('{"language":"ko"}\\n', encoding="utf-8")
+                paths.append(p)
+            output = root / "result.json"
+            with self.assertRaisesRegex(ValueError, "duplicate_chunk_basename"):
+                adapt(paths, output)
+            self.assertFalse(output.exists())
+
 if __name__ == "__main__":
     unittest.main()
