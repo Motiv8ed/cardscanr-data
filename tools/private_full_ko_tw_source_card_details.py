@@ -55,8 +55,11 @@ def examine(root: Path):
         sets = sorted(p for p in folder.iterdir() if p.is_dir())
         if len(sets) < 1: raise ValueError("empty_source_sets")
         for setdir in sets:
-            if setdir.is_symlink() or not TOKEN.fullmatch(setdir.name):
-                raise ValueError("unsafe_source_set_directory")
+            # A source set directory may contain punctuation or Unicode.
+            # It is obtained directly from iterdir(), so it cannot traverse
+            # outside this root; reject links and extreme filenames only.
+            if setdir.is_symlink() or not 1 <= len(setdir.name) <= 128:
+                raise ValueError("unsafe_source_set_directory:" + setdir.name)
             files = sorted(setdir.glob("*.json"))
             if not files: continue
             counters[lang]["sets_with_card_data"] += 1
