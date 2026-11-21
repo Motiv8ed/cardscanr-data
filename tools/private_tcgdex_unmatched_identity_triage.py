@@ -156,7 +156,7 @@ def self_test():
         # Duplicate provider identities must not pass merely because local numbers differ.
         duplicated = [dict(row) for row in cards]
         duplicated[1]["provider_card_id"] = duplicated[0]["provider_card_id"]
-        raw_dup = "".join(json.dumps(x)+"\\n" for x in duplicated).encode()
+        raw_dup = "".join(json.dumps(x)+"\n" for x in duplicated).encode()
         gz_dup = gzip.compress(raw_dup,mtime=0)
         (root/"unmatched_source_card_briefs.jsonl.gz").write_bytes(gz_dup)
         receipt["artifacts"]["unmatched_source_card_briefs.jsonl.gz"].update(
