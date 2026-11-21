@@ -22,10 +22,6 @@ $stateDir = Join-Path $repoRoot "reports\runtime"
 New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
 $statePath = Join-Path $stateDir "bulk_reference_sync.pid.json"
 $taskName = "CardScanR-BulkReferencePricingSync"
-$pythonPath = (Get-Command python -ErrorAction SilentlyContinue).Source
-if (-not $pythonPath) {
-    throw "python not found on PATH"
-}
 
 function Get-BulkSyncProcesses {
     Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" |
@@ -38,6 +34,7 @@ function Write-StateFile {
 }
 
 . (Join-Path $PSScriptRoot "runtime_python_logging.ps1")
+$pythonPath = Resolve-CardScanRRuntimePythonPath -RepoRoot $repoRoot
 
 # Shared logging helpers: scripts/runtime_python_logging.ps1
 # Verify under powershell.exe 5.1:
@@ -88,14 +85,25 @@ switch ($Action) {
     }
     default {
         $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-        $scriptPath = Join-Path $repoRoot "scripts\ensure_live_bulk_reference_pricing_runtime.ps1"
-        $actionArg = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -Action run-once"
-        $taskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArg -WorkingDirectory $repoRoot
+        # Hidden VBS → hidden PowerShell. Task Scheduler Interactive + powershell.exe still flashes a console.
+        $vbsLauncher = Join-Path $repoRoot "scripts\ensure_live_bulk_reference_pricing_runtime_hidden.vbs"
+        if (-not (Test-Path -LiteralPath $vbsLauncher)) {
+            throw "Missing hidden launcher: $vbsLauncher"
+        }
+        $taskAction = New-ScheduledTaskAction `
+            -Execute "wscript.exe" `
+            -Argument "//B //Nologo `"$vbsLauncher`"" `
+            -WorkingDirectory $repoRoot
         # Finite repetition duration required by Task Scheduler (MaxValue XML is rejected).
         $taskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) `
             -RepetitionInterval (New-TimeSpan -Hours 1) `
             -RepetitionDuration (New-TimeSpan -Days 365)
-        $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+        $taskSettings = New-ScheduledTaskSettingsSet `
+            -AllowStartIfOnBatteries `
+            -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable `
+            -MultipleInstances IgnoreNew `
+            -Hidden
         if ($existing) {
             Set-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Settings $taskSettings | Out-Null
             Write-Host "[bulk-runtime] Updated scheduled task $taskName (hourly, ignore overlap)"

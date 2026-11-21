@@ -406,8 +406,11 @@ class WrapperScriptTests(unittest.TestCase):
     def test_wrappers_capture_stderr_and_keep_exit_code(self) -> None:
         shared = (ROOT / "scripts/runtime_python_logging.ps1").read_text(encoding="utf-8")
         self.assertIn("function Invoke-LoggedPython", shared)
+        self.assertIn("function Resolve-CardScanRRuntimePythonPath", shared)
+        self.assertIn("pythonw.exe", shared)
         self.assertIn("RedirectStandardError = $true", shared)
         self.assertIn("RedirectStandardOutput = $true", shared)
+        self.assertIn("CreateNoWindow = $true", shared)
         self.assertIn("StandardOutputEncoding", shared)
         self.assertIn("StandardErrorEncoding", shared)
         self.assertIn("$proc.ExitCode", shared)
@@ -424,6 +427,25 @@ class WrapperScriptTests(unittest.TestCase):
             self.assertNotIn("& $pythonPath @argList 1>> $stdout 2>> $stderr", text)
             self.assertIn("Traceback: simulated", text)
             self.assertIn("raise SystemExit(3)", text)
+
+    def test_bulk_reference_runtime_registers_hidden_launcher(self) -> None:
+        bulk = (ROOT / "scripts/ensure_live_bulk_reference_pricing_runtime.ps1").read_text(
+            encoding="utf-8"
+        )
+        vbs = (ROOT / "scripts/ensure_live_bulk_reference_pricing_runtime_hidden.vbs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Resolve-CardScanRRuntimePythonPath", bulk)
+        self.assertIn("wscript.exe", bulk)
+        self.assertIn("ensure_live_bulk_reference_pricing_runtime_hidden.vbs", bulk)
+        self.assertIn("-Hidden", bulk)
+        self.assertNotIn(
+            'New-ScheduledTaskAction -Execute "powershell.exe"',
+            bulk,
+        )
+        self.assertIn("-WindowStyle Hidden", vbs)
+        self.assertIn("sh.Run cmd, 0, True", vbs)
+        self.assertIn("-Action run-once", vbs)
 
 
 class WindowsPowerShell51HelperTests(unittest.TestCase):
