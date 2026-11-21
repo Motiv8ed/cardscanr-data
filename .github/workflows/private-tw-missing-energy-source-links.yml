@@ -1,0 +1,68 @@
+name: Private TW Missing Basic Energy Exact Source References
+on:
+  pull_request:
+    paths:
+      - "tools/private_tw_live_energy_source_probe.py"
+      - ".github/workflows/private-tw-missing-energy-source-links.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-reference-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline fail-closed source validation tests
+        run: |
+          python -m py_compile cardscanr/tools/private_tw_live_energy_source_probe.py
+          python cardscanr/tools/private_tw_live_energy_source_probe.py --self-test
+      - uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            data_tc
+      - name: Exact source code provenance and official image URL evidence
+        run: |
+          test "$(git -C upstream rev-parse HEAD)" = 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          python cardscanr/tools/private_tw_live_energy_source_probe.py \
+            --root upstream --out source-only-tw-energy
+      - name: Verify retained SHA evidence and ban live/publish claims
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          d=Path("source-only-tw-energy")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          data=(d/"tw_live_gap_source_urls.jsonl").read_bytes()
+          rows=[json.loads(s) for s in data.splitlines()]
+          assert len(rows)==r["source_cards_exact_match"]==20
+          assert r["source_distinct_image_urls"]==20
+          assert hashlib.sha256(data).hexdigest()==r["source_manifest_sha256"]
+          assert r["current_live_snapshot_identities_verified"] is False
+          assert not r["public_artwork_rights_granted"]
+          assert r["new_live_image_links"]==r["production_writes"]==r["source_image_binaries_downloaded"]==0
+          assert len({x["canonical_printing_id_live_sample"] for x in rows})==20
+          assert all(x["live_identity_recheck_needed"] and not x["safe_for_vault_apply_without_recheck"] for x in rows)
+          print("PINNED_TW_20_SOURCE_ONLY_PASS",r["source_manifest_sha256"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### New exact Traditional Chinese source image URL references\n\n")
+              f.write("**20** SHA-pinned name/set/number corroborated basic-energy source image URLs, ")
+              f.write("tied to observed live page-1 missing IDs. **Zero** inserted live links. ")
+              f.write("No rights grant, no binary downloads. Current live identity and variant must be rechecked before staging.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TW-20-Official-Image-Source-References-Not-Live
+          path: source-only-tw-energy/
+          retention-days: 21
+          if-no-files-found: error
