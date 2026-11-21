@@ -21,7 +21,7 @@ class CrosswalkTests(unittest.TestCase):
                                  set_id=f"set-{lang}", native_card_name=f"Card {n}",
                                  printed_collector_number=str(n + 1),
                                  printed_denominator=str(count),
-                                 has_image_link=False))
+                                 has_image_link=False, snapshot_sha256="a" * 64))
         for i, path in enumerate(self.live):
             path.write_text("".join(json.dumps(x) + "\n" for x in rows[i::6]), encoding="utf-8")
         self.source.write_text("", encoding="utf-8")
@@ -59,6 +59,42 @@ class CrosswalkTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             reconcile(self.live, self.source, self.output)
         self.assertEqual(self.output.read_text(encoding="utf-8"), "preserve")
+
+    def test_missing_live_identity_fields_quarantined(self):
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[0])
+        row["native_card_name"] = ""
+        lines[0] = json.dumps(row)
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = reconcile(self.live, self.source, self.output)
+        self.assertEqual(result["outcomes"]["quarantine_missing_identity_fields"], 1)
+
+    def test_mixed_snapshot_fails_closed(self):
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[0])
+        row["snapshot_sha256"] = "b" * 64
+        lines[0] = json.dumps(row)
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "missing_or_mixed_live_snapshot"):
+            reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
+    def test_string_false_rights_never_passes(self):
+        self.source.write_text(json.dumps(dict(
+            language="ko", set_id="set-ko", native_card_name="Card 0",
+            printed_collector_number="1", printed_denominator="1131",
+            finish="normal", artwork_commercial_rights_verified="false")) + "\n",
+            encoding="utf-8")
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[0])
+        row["finish"] = "normal"
+        lines[0] = json.dumps(row)
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        result = reconcile(self.live, self.source, self.output)
+        self.assertEqual(result["outcomes"]["quarantine_artwork_rights"], 1)
 
 
 if __name__ == "__main__":
