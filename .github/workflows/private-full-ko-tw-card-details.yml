@@ -1,0 +1,79 @@
+name: Complete Korean and Traditional Chinese Source Card Details
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_full_ko_tw_source_card_details.py'
+      - '.github/workflows/private-full-ko-tw-card-details.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-details:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and execute fully offline source handling tests
+        run: |
+          python -m py_compile cardscanr/tools/private_full_ko_tw_source_card_details.py
+          python cardscanr/tools/private_full_ko_tw_source_card_details.py --self-test
+      - uses: actions/checkout@v4
+        with:
+          repository: type-null/PTCG-database
+          ref: 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          path: upstream
+          persist-credentials: false
+          sparse-checkout: |
+            data_ko
+            data_tc
+      - name: Confirm exact original source commit and extract complete regional data
+        run: |
+          test "$(git -C upstream rev-parse HEAD)" = 18e0de2feb7a35ebe4296ede0ba6cc768961489b
+          python cardscanr/tools/private_full_ko_tw_source_card_details.py \
+            --root upstream --output complete-ko-tw-source
+      - name: Verify complete artifact integrity and rights isolation
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          d=Path('complete-ko-tw-source')
+          r=json.loads((d/'receipt.json').read_text(encoding='utf8'))
+          assert r['classification']=='PRIVATE_KO_ZHTW_COMPLETE_SOURCE_CARD_DETAILS_AND_IMAGE_URLS'
+          assert r['source_commit']=='18e0de2feb7a35ebe4296ede0ba6cc768961489b'
+          assert r['source_card_rows']>2000
+          assert r['source_official_image_url_refs']>0
+          assert r['new_live_image_links']==r['new_canonical_cards']==r['images_downloaded']==r['production_writes']==0
+          assert not r['public_artwork_approved'] and not r['source_metadata_artwork_rights_granted']
+          for lang in ('ko','zh-tw'):
+              assert r['by_language'][lang]['source_card_files']>=1000
+          for file,entry in r['artifacts'].items():
+              payload=(d/file).read_bytes()
+              assert hashlib.sha256(payload).hexdigest()==entry['sha256_gzip']
+              data=gzip.decompress(payload)
+              assert hashlib.sha256(data).hexdigest()==entry['sha256_raw']
+              assert len(data.splitlines())==entry['rows']
+          print('COMPLETE_TWO_LANGUAGE_CARD_DETAIL_ARCHIVE_PASS',
+                r['source_card_rows'],r['source_official_image_url_refs'],
+                r['by_language'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as f:
+              f.write('### Complete Korean + Traditional Chinese source archive\n\n')
+              f.write(f"Card detail rows **{r['source_card_rows']:,}**, official image URL refs **{r['source_official_image_url_refs']:,}**.\n\n")
+              for lang,counts in sorted(r['by_language'].items()):
+                  f.write(f"- {lang}: {counts['source_card_files']:,} card records, {counts.get('official_image_url_refs',0):,} URLs, {counts.get('attacks_present',0):,} attack records\n")
+              f.write('\n**No image binaries downloaded. No live canonical additions or image links imported.** Source and artwork rights separate.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Complete-Korean-TW-Details-and-Original-URLs-Source-Only
+          path: complete-ko-tw-source/
+          retention-days: 21
+          if-no-files-found: error
