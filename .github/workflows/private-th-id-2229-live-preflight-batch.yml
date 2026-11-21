@@ -1,0 +1,78 @@
+name: Thai Indonesian 2229 Exact Archive-Verified Live Preflight Batch
+on:
+  pull_request:
+    paths:
+      - "tools/private_th_id_2229_vault_stage.py"
+      - ".github/workflows/private-th-id-2229-live-preflight-batch.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-only-batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline SHA, rights and chunk size tests
+        run: |
+          python -m py_compile tools/private_th_id_2229_vault_stage.py
+          python -m tools.private_th_id_2229_vault_stage --self-test
+      - name: Validate exact archived crosswalk run identity and result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/Motiv8ed/cardscanr-data/actions/runs/44961677162 --jq .head_sha)" = \
+            "769b75a04e299a084d54f464d07d207efdc6e384"
+          test "$(gh api repos/Motiv8ed/cardscanr-data/actions/runs/44961677162 --jq .conclusion)" = "success"
+      - uses: actions/download-artifact@v4
+        with:
+          name: CardScanR-TH-ID-2229-Source-Archive-Exact-Crosswalk-NOT-LIVE
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44961677162
+          github-token: ${{ github.token }}
+          path: pinned-th-id-archive
+      - name: Create one live-preflight-only staged source batch with SHA and base64 chunks
+        run: |
+          python -m tools.private_th_id_2229_vault_stage \
+            --archive pinned-th-id-archive \
+            --out th-id-private-stage \
+            --emit-chunks
+      - name: Verify every image was source-declared and no artwork or live claims
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          folder=Path("th-id-private-stage")
+          m=json.loads((folder/"manifest.json").read_text(encoding="utf8"))
+          data=(folder/"thid_2229_stage.gz").read_bytes()
+          assert m["classification"]=="PRIVATE_ARCHIVE_MATCHED_TH_ID_2229_SHA_STAGE_NOT_LIVE"
+          assert hashlib.sha256(data).hexdigest()==m["gzip_sha256"]
+          assert m["chunk_count"]>=1 and m["chunk_count"]<=300
+          assert m["cards"]==m["image_refs"]==2229
+          assert m["sets"]<=150
+          assert m["actual_live_image_links_added"]==m["actual_new_canonical_cards"]==m["downloaded_image_binaries"]==0
+          assert not m["public_artwork_rights_granted"] and not m["public_artwork_enabled"]
+          doc=json.loads(gzip.decompress(data))
+          assert doc["source"]=="tcgdex" and not doc["artwork_rights_verified"]
+          assert doc["image_binaries_downloaded"]==0
+          assert len(doc["cards"])==len(doc["images"])==2229
+          assert len({x["canonical_printing_id"] for x in doc["cards"]})==2229
+          assert all(x["image_url"].startswith("https://assets.tcgdex.net/"+x["language"]+"/") for x in doc["images"])
+          print("TH_ID_2229_SHA_PINNED_BATCH_READY_NOT_APPLIED",m["gzip_sha256"],m["chunk_count"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### 2,229 exact archived Thai and Indonesian source cards\n\n")
+              f.write("One SHA-pinned compressed private VaultSync candidate. Not yet staged or applied.\n")
+              f.write("Must pass live read-only ID/set match, new link count, disk backup and rights policy.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-ID-2229-Pinned-Private-Stage-Not-Applied
+          path: th-id-private-stage/
+          retention-days: 21
+          if-no-files-found: error
