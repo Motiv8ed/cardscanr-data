@@ -48,8 +48,12 @@ def examine(root: Path) -> tuple[list[dict], dict]:
         is_151_wave = set_id in {"151C-LV", "151C-WANG", "151C-JING", "151C-JU"}
         expected_card_code = "151C" if is_151_wave else set_id
         for card in cards:
-            if not isinstance(card, dict) or card.get("setCode") != expected_card_code:
-                raise ValueError("source_set_identity_drift:" + set_id)
+            if not isinstance(card, dict):
+                raise ValueError("invalid_source_card_record:" + set_id)
+            # The published CS1DC file contains eight CSAC records. This is
+            # genuine upstream data drift. Quarantine mismatches in source-
+            # only evidence instead of silently relabelling or importing.
+            code_matches = card.get("setCode") == expected_card_code
             number = card.get("cardIndex")
             name = card.get("cardName")
             if not all(isinstance(x, str) and 0 < len(x) <= 300 for x in (number, name)):
@@ -57,15 +61,19 @@ def examine(root: Path) -> tuple[list[dict], dict]:
             if not isinstance(card.get("rarity"), str):
                 raise ValueError("missing_rarity")
             key = (set_id.casefold(), number.lstrip("0") or "0", name.strip())
-            seen[key].append(card)
+            if code_matches:
+                seen[key].append(card)
             rows.append({
                 "language": "zh-cn", "source_set_code": set_id,
+                "source_observed_set_code": card.get("setCode"),
+                "source_file_set_code_verified": code_matches,
                 "source_collector_number": number, "native_chinese_name": name,
                 "source_rarity": card["rarity"],
                 "source_english_name": card.get("nameEn") if isinstance(card.get("nameEn"), str) else None,
                 "source_english_set_code": card.get("setCodeEn") if isinstance(card.get("setCodeEn"), str) else None,
                 "source_english_collector_number": card.get("cardIndexEn") if isinstance(card.get("cardIndexEn"), str) else None,
-                "classification": "NATIVE_IDENTITY_CORROBORATION_ONLY",
+                "classification": ("NATIVE_IDENTITY_CORROBORATION_ONLY"
+                                   if code_matches else "UPSTREAM_SET_DRIFT_QUARANTINED"),
                 "canonical_printing_id": None,
                 "image_url": None, "image_rights_granted": False,
                 "live_vault_match_verified": False,
@@ -75,7 +83,9 @@ def examine(root: Path) -> tuple[list[dict], dict]:
     # Fail closed on duplicates: quarantine all repeated native identities.
     for row in rows:
         key = (row["source_set_code"].casefold(), row["source_collector_number"].lstrip("0") or "0", row["native_chinese_name"].strip())
-        row["source_identity_unique"] = key not in duplicates
+        row["source_identity_unique"] = (
+            row["source_file_set_code_verified"] and key not in duplicates
+        )
     rows.sort(key=lambda r: (r["source_set_code"], r["source_collector_number"], r["native_chinese_name"], r["source_rarity"]))
     receipt = {
         "classification": "PRIVATE_NATIVE_CHINESE_IDENTITY_EVIDENCE_ONLY",
@@ -85,7 +95,12 @@ def examine(root: Path) -> tuple[list[dict], dict]:
         "source_manifest_generated": manifest.get("generated"),
         "source_set_count": len(sets), "source_card_rows": len(rows),
         "unique_native_identity_rows": sum(r["source_identity_unique"] for r in rows),
-        "quarantined_duplicate_identity_rows": sum(not r["source_identity_unique"] for r in rows),
+        "quarantined_duplicate_identity_rows": sum(
+            r["source_file_set_code_verified"] and not r["source_identity_unique"]
+            for r in rows),
+        "quarantined_source_set_mismatch_rows": sum(
+            not r["source_file_set_code_verified"] for r in rows),
+        "quarantined_identity_rows": sum(not r["source_identity_unique"] for r in rows),
         "source_set_md5": md5_receipts,
         "rights": "CC0 compilation/format only; upstream content/artwork rights NOT granted",
         "artwork_url_count": 0, "image_binaries_downloaded": 0,
@@ -140,14 +155,29 @@ def self_test():
         (folder / "151C-JING.json").write_bytes(tampered)
         manifest["sets"]["151C-JING"]["md5"] = hashlib.md5(tampered).hexdigest()
         (root / "data/manifest.json").write_text(json.dumps(manifest))
-        try:
-            examine(root)
-            raise AssertionError("invalid 151C wave code accepted")
-        except ValueError as e:
-            assert str(e).startswith("source_set_identity_drift")
+        drift_rows, drift_receipt = examine(root)
+        assert drift_receipt["quarantined_source_set_mismatch_rows"] == 1
+        assert any(r["source_set_code"] == "151C-JING" and
+                   r["classification"] == "UPSTREAM_SET_DRIFT_QUARANTINED" and
+                   not r["source_identity_unique"] for r in drift_rows)
         (folder / "151C-JING.json").write_bytes(wave_bytes)
         manifest["sets"]["151C-JING"]["md5"] = hashlib.md5(wave_bytes).hexdigest()
         (root / "data/manifest.json").write_text(json.dumps(manifest))
+        # Non-wave wrong source set code is quarantined, never treated as
+        # validated source identity or eligible for a live import.
+        mixed = [
+            {"setCode": "CS1DC", "cardIndex": "001", "cardName": "正常", "rarity": "C"},
+            {"setCode": "CSAC", "cardIndex": "002", "cardName": "异源", "rarity": "C"},
+        ]
+        mixed_bytes = json.dumps(mixed).encode()
+        (folder / "CS1DC.json").write_bytes(mixed_bytes)
+        manifest["sets"]["CS1DC"] = {"count": 2, "md5": hashlib.md5(mixed_bytes).hexdigest()}
+        (root / "data/manifest.json").write_text(json.dumps(manifest))
+        mixed_rows, mixed_receipt = examine(root)
+        assert mixed_receipt["quarantined_source_set_mismatch_rows"] == 1
+        assert mixed_receipt["quarantined_identity_rows"] == 3
+        assert len([r for r in mixed_rows if r["classification"] == "UPSTREAM_SET_DRIFT_QUARANTINED"]) == 1
+        assert all(not r["safe_for_vault_apply"] for r in mixed_rows)
         manifest["sets"]["CSV1C"]["md5"] = "0" * 32
         (root / "data/manifest.json").write_text(json.dumps(manifest))
         try:
