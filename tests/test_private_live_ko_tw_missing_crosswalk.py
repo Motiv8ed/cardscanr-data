@@ -179,6 +179,28 @@ class CrosswalkTests(unittest.TestCase):
                 self.assertEqual(result["outcomes"]["quarantine_missing_rights_evidence"], 1)
                 self.assertEqual(result["new_live_image_links"], 0)
 
+    def test_malformed_source_artwork_urls_are_ignored_without_crashing(self):
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        row = json.loads(lines[0])
+        row["finish"] = "normal"
+        lines[0] = json.dumps(row)
+        first.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+        for invalid in ("https://[invalid", "https://user:pass@example.org/art.png",
+                        "https://example.org/bad\\npath", "http://example.org/art.png"):
+            with self.subTest(invalid=invalid):
+                self.source.write_text(json.dumps(dict(
+                    language="ko", set_id="set-ko", native_card_name="Card 0",
+                    printed_collector_number="1", printed_denominator="1131",
+                    finish="normal", image_url=invalid,
+                    artwork_commercial_rights_verified=False)) + "\\n", encoding="utf-8")
+                if self.output.exists():
+                    self.output.unlink()
+                result = reconcile(self.live, self.source, self.output)
+                self.assertEqual(result["exact_source_identity_matches"], 1)
+                self.assertEqual(result["distinct_observed_source_image_urls"], 0)
+                self.assertEqual(result["new_live_image_links"], 0)
+
     def test_exact_tw_printed_number_and_source_url_counted_without_import(self):
         for path in self.live:
             lines = path.read_text(encoding="utf-8").splitlines()
