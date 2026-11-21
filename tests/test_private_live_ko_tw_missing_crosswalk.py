@@ -124,7 +124,7 @@ class CrosswalkTests(unittest.TestCase):
         paths = []
         for i, chunk in enumerate(chunks):
             path = root / f"archive-{i}.jsonl"
-            path.write_text("".join(json.dumps(r) + "\\n" for r in chunk), encoding="utf-8")
+            path.write_text("".join(json.dumps(r) + "\n" for r in chunk), encoding="utf-8")
             paths.append(path)
         result = reconcile(paths, self.source, self.output)
         self.assertEqual(result["live_rows"], 1528)
