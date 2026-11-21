@@ -6,6 +6,7 @@ be independently verified. Only unique literal joins are review candidates.
 """
 from __future__ import annotations
 import argparse, collections, hashlib, json, pathlib, unicodedata
+from urllib.parse import urlsplit
 
 def nfc(v):
     return unicodedata.normalize("NFC", v) if isinstance(v, str) else ""
@@ -70,6 +71,8 @@ def reconcile(live_paths, source_path, output):
                 src_key[k].append(x)
     outcomes = collections.Counter()
     reviews = []
+    exact_identity_matches = 0
+    observed_image_urls = set()
     for target in live:
         k = key(target)
         matches = src_key.get(k, [])
@@ -91,14 +94,31 @@ def reconcile(live_paths, source_path, output):
             state = "quarantine_missing_rights_evidence"
         else:
             state = "review_unique_identity_and_rights_claim"
+        # Count source-only evidence independently from artwork rights or live inserts.
+        # Never manufacture image URLs from a provider base or an English image.
+        unique = matches[0] if k is not None and len(by_key[k]) == 1 and len(matches) == 1 else None
+        source_url = unique.get("image_url") if unique else None
+        if unique:
+            exact_identity_matches += 1
+        if isinstance(source_url, str):
+            parsed = urlsplit(source_url)
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+                source_url = None
+        else:
+            source_url = None
+        if source_url:
+            observed_image_urls.add(source_url)
         outcomes[state] += 1
         reviews.append({"canonical_printing_id":target["canonical_printing_id"],
                         "language":target["language"],"classification":state,
                         "source_matches":len(matches),
+                        "source_image_url_reference":source_url,
                         "safe_for_vault_apply":False,
                         "public_artwork_allowed":False})
     result = {"classification":"PRIVATE_READ_ONLY_LIVE_IDENTITY_REVIEW",
               "live_rows":len(live),"source_rows":len(source),
+              "exact_source_identity_matches":exact_identity_matches,
+              "distinct_observed_source_image_urls":len(observed_image_urls),
               "new_live_image_links":0,"new_canonical_cards":0,
               "rights_granted":False,"production_writes":False,
               "input_sha256":{str(p):digest(p) for p in [*live_paths,source_path]},
