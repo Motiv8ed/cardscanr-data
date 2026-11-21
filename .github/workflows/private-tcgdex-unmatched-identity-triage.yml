@@ -1,0 +1,99 @@
+name: Private TCGdex Unmatched Brief Identity Triage
+on:
+  pull_request:
+    paths:
+      - 'tools/private_tcgdex_unmatched_identity_triage.py'
+      - '.github/workflows/private-tcgdex-unmatched-identity-triage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and fail-closed source identity tests
+        run: |
+          python -m py_compile tools/private_tcgdex_unmatched_identity_triage.py
+          python tools/private_tcgdex_unmatched_identity_triage.py --self-test
+
+  triage-pinned-source:
+    needs: offline-safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate pinned source artifact provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          repo="Motiv8ed/cardscanr-data"
+          artifact_id=14695172560
+          item=json.loads(subprocess.check_output([
+              "gh","api",f"repos/{repo}/actions/artifacts/{artifact_id}"
+          ],text=True))
+          expected="sha256:902753fc9058b33ed26a8cd3b6e26aad0c0f10d5b8a922b3421dbfd2864f38ab"
+          assert item["id"]==artifact_id and not item["expired"]
+          assert item["name"]=="CardScanR-Full-7-Language-SHA-Backlog-Source-Only"
+          assert item["digest"]==expected
+          assert item["workflow_run"]["id"]==44873718603
+          assert item["workflow_run"]["head_sha"]=="e5dd0e97888ec320239754a1b49933a7e5628cba"
+          print("PINNED_1321_SOURCE_ARCHIVE_PROVENANCE_PASS")
+          PY
+      - name: Retrieve exact previously verified source-only inventory
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 44873718603 --repo Motiv8ed/cardscanr-data \
+            --name CardScanR-Full-7-Language-SHA-Backlog-Source-Only \
+            --dir source-evidence
+      - name: Classify actual 1,321 provider briefs against SHA-verified source receipts
+        run: |
+          python tools/private_tcgdex_unmatched_identity_triage.py \
+            --source source-evidence --output identity-research
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          root=Path("identity-research")
+          r=json.loads((root/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="PRIVATE_TCGDEX_UNMATCHED_SOURCE_IDENTITY_TRIAGE_NOT_LIVE"
+          assert r["source_briefs_checked"]==1321
+          assert sum(r["by_classification"].values())==1321
+          assert r["research_only"] is True
+          assert r["new_canonical_cards_verified"]==r["new_live_image_links"]==0
+          assert r["production_writes"]==r["image_binaries_downloaded"]==0
+          assert not r["public_artwork_approved"]
+          compressed=(root/"identity_triage.jsonl.gz").read_bytes()
+          assert hashlib.sha256(compressed).hexdigest()==r["candidate_file"]["gzip_sha256"]
+          with gzip.open(root/"identity_triage.jsonl.gz","rt",encoding="utf8") as f:
+              rows=[json.loads(line) for line in f]
+          assert len(rows)==1321
+          assert all(not x["safe_for_vault_apply"] and x["canonical_printing_id"] is None for x in rows)
+          print("REAL_1321_SOURCE_TRIAGE_PASS",r["by_classification"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as summary:
+              summary.write("### Actual pinned source identity triage\n\n")
+              summary.write("Processed **1,321** existing source briefs from #95; no re-crawl.\n\n")
+              for label,count in sorted(r["by_classification"].items()):
+                  summary.write(f"- {label}: **{count:,}**\n")
+              summary.write("\nResearch only. No new canonical records, links, artwork download or rights claim.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-1321-Source-Identity-Triage-Research-Only
+          path: identity-research/
+          retention-days: 21
+          if-no-files-found: error
