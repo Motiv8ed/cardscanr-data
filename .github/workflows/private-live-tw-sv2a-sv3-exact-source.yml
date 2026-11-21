@@ -4,6 +4,7 @@ on:
     paths:
       - "research/live-gap-20261122/**"
       - "tools/private_tw_sv2a_sv3_live_exact_source.py"
+      - "tools/private_tw_167_stage_proposals.py"
       - ".github/workflows/private-live-tw-sv2a-sv3-exact-source.yml"
   workflow_dispatch:
 permissions:
@@ -66,9 +67,51 @@ jobs:
               s.write("Source only, unlicensed art, no downloaded binaries or live DB inserts.\n")
           print("REAL_TW_305_SINGLE_MATCH_SOURCE_ONLY_PASS",receipt["by_set"])
           PY
+      - name: Generate SHA-pinned private stage proposals (no live writes)
+        run: |
+          python -m py_compile cardscanr/tools/private_tw_167_stage_proposals.py
+          python cardscanr/tools/private_tw_167_stage_proposals.py --self-test
+          python cardscanr/tools/private_tw_167_stage_proposals.py \
+            --research exact-research-tw-305 \
+            --out private-tw-167-stage-proposals \
+            --print-b64
+      - name: Verify all five nonimported packages preserve actual source rights status
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          d=Path("private-tw-167-stage-proposals")
+          r=json.loads((d/"manifest.json").read_text(encoding="utf8"))
+          assert r["classification"]=="UNAPPLIED_TW_167_VERIFIED_SOURCE_URL_BATCH_PROPOSALS"
+          assert r["proposed_image_url_references"]==167
+          assert len(r["batches"])==5
+          assert r["actual_new_live_links"]==r["actual_new_canonical_cards"]==r["artwork_binaries_downloaded"]==0
+          assert not r["artwork_rights_granted"] and not r["commercial_publication_allowed"]
+          assert r["requires_current_live_workbench_preflight"]
+          seen=set()
+          for entry in r["batches"]:
+              b=(d/(entry["batch_id"]+".gz")).read_bytes()
+              assert hashlib.sha256(b).hexdigest()==entry["gzip_sha256"]
+              assert len(b)<=72000
+              doc=json.loads(gzip.decompress(b))
+              assert doc["source"]=="official_crosswalk" and doc["image_binaries_downloaded"]==0
+              assert not doc["artwork_rights_verified"]
+              assert len(doc["images"])==len(doc["cards"])==entry["card_count"]
+              for item in doc["cards"]:
+                  assert item["canonical_printing_id"] not in seen
+                  seen.add(item["canonical_printing_id"])
+          assert len(seen)==167
+          print("TW_167_FIVE_PRIVATE_SHA_PROPOSALS_PASS",len(seen))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### Private VaultSync batch proposals\n\n")
+              f.write("**167** exact-source URL references in **5** SHA-verified staging proposals.\n")
+              f.write("These are **not yet staged, live, licensed or downloaded**. Current live preflight required.\n")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: CardScanR-Authenticated-TW-305-Exact-Source-URL-Research-Only
-          path: exact-research-tw-305/
+          path: |
+            exact-research-tw-305/
+            private-tw-167-stage-proposals/
           retention-days: 21
           if-no-files-found: error
