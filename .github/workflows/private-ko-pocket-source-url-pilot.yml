@@ -1,0 +1,45 @@
+name: Korean Pocket Source Collection Policy and URL Safety
+on:
+  pull_request:
+    paths:
+      - 'tools/private_ko_pocket_source_link_probe.py'
+      - 'tools/private_pockettrades_ko_source_url_pilot.py'
+      - 'research/confirmed-ko-pocket-source-url-samples-20261121.json'
+      - '.github/workflows/private-ko-pocket-source-url-pilot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  no-crawl-source-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile and test exact Korean URL safety without source network calls
+        run: |
+          python -m py_compile tools/private_ko_pocket_source_link_probe.py \
+            tools/private_pockettrades_ko_source_url_pilot.py
+          python tools/private_ko_pocket_source_link_probe.py --self-test
+          python tools/private_pockettrades_ko_source_url_pilot.py --self-test
+      - name: Verify explicit research-only evidence and no automated source crawl
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("research/confirmed-ko-pocket-source-url-samples-20261121.json")
+          x=json.loads(p.read_text(encoding="utf8"))
+          assert x["classification"]=="PRIVATE_SOURCE_URL_EVIDENCE_ONLY_NOT_LIVE"
+          assert x["distinct_source_urls"]==2
+          assert x["controls"]["artwork_files_downloaded"]==0
+          assert x["controls"]["actual_live_image_link_written"] is False
+          assert x["controls"]["commercial_reuse_rights_verified"] is False
+          assert x["new_live_image_links"]==0
+          assert all(y["canonical_printing_id"]=="tcgdex_international_A1_001:ko:KR" for y in x["image_urls"])
+          assert x["image_urls"][0]["safe_to_crawl"] is False
+          print("KO_POCKET_POLICY_PASS: 2 manual references, 1 card, zero automated crawls")
+          PY
