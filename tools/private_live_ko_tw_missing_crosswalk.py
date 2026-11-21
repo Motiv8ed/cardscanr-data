@@ -120,11 +120,9 @@ def reconcile(live_paths, source_path, output):
         source_url = unique.get("image_url") if unique else None
         if unique:
             exact_identity_matches += 1
-        if isinstance(source_url, str):
-            parsed = urlsplit(source_url)
-            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-                source_url = None
-        else:
+        # Malformed IPv6 hosts and whitespace must not crash a research run
+        # or be counted as usable source artwork references.
+        if not valid_https_reference(source_url):
             source_url = None
         if source_url:
             observed_image_urls.add(source_url)
