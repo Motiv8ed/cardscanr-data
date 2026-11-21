@@ -1,0 +1,65 @@
+name: Official Thai SV4K Indonesian SV6s Actual Source Card Details
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_asia_th_id_newset_url_pilot.py"
+      - ".github/workflows/private-official-th-id-newsets-source.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source parser dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Selftest strict official-source language URL and no arbitrary art
+        run: |
+          python -m py_compile tools/private_official_asia_th_id_newset_url_pilot.py
+          python -m tools.private_official_asia_th_id_newset_url_pilot --self-test
+      - name: Fetch 20 genuine official card identities and image links from each NEW set
+        run: |
+          python -m tools.private_official_asia_th_id_newset_url_pilot \
+            --page 1 --limit 20 --out th-id-newset-official-source
+      - name: Verify source artwork, native card number and no public rights
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          r=json.loads(Path("th-id-newset-official-source/receipt.json").read_text(encoding="utf8"))
+          b=Path("th-id-newset-official-source/official_asia_card_source_urls.jsonl").read_bytes()
+          assert r["classification"]=="PRIVATE_OFFICIAL_ASIA_CARD_URL_RESEARCH_ONLY"
+          assert r["source_cards"]==40
+          assert r["image_url_references"]==40
+          assert r["source_request_budget"]==42
+          assert hashlib.sha256(b).hexdigest()==r["source_url_manifest_sha256"]
+          assert r["live_vault_writes"]==r["image_binaries_downloaded"]==r["exact_live_canonical_ids_verified"]==0
+          assert r["artwork_rights_granted"] is False and not r["public_artwork_enabled"]
+          ids=set()
+          for line in b.splitlines():
+              c=json.loads(line)
+              assert (c["language"],c["source_product_code"]) in {("th","SV4K"),("id","SV6s")}
+              assert c["official_detail_id"].isdigit() and c["source_collector_number"]
+              assert c["source_name_native"]
+              assert c["source_image_url_reference"].startswith("https://asia.pokemon-card.com/"+c["language"]+"/card-img/")
+              assert (c["language"],c["official_detail_id"]) not in ids
+              ids.add((c["language"],c["official_detail_id"]))
+          assert len(ids)==40
+          print("OFFICIAL_TH_ID_NEWSETS_REAL_40_SOURCE_URLS_PASS",len(ids))
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### 40 exact official Thai SV4K / Indonesian SV6s native card source images\n")
+              f.write("Source-only, 0 live imports; native card name and number found for each official image URL.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-TH-SV4K-ID-SV6s-40-Official-Source-Images-Private
+          path: th-id-newset-official-source/
+          retention-days: 21
+          if-no-files-found: error
