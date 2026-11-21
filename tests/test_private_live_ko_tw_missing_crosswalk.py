@@ -27,13 +27,13 @@ class CrosswalkTests(unittest.TestCase):
         self.source.write_text("", encoding="utf-8")
 
     def test_oversized_source_jsonl_line_fails_without_output(self):
-        self.source.write_text(" " * (1048576 + 1) + "\\n", encoding="utf-8")
+        self.source.write_text(" " * (1048576 + 1) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "jsonl_line_too_large"):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
 
     def test_source_row_limit_fails_without_output(self):
-        self.source.write_text("{}\\n" * 100001, encoding="utf-8")
+        self.source.write_text("{}\n" * 100001, encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "jsonl_row_limit"):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
