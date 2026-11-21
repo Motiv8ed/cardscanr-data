@@ -1,0 +1,60 @@
+name: Private Korean Pocket Card Image URL Pilot
+on:
+  pull_request:
+    paths:
+      - "tools/private_ko_pocket_source_link_probe.py"
+      - ".github/workflows/private-ko-pocket-source-url-pilot.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  korean-pocket-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Offline host, locale and source-identity safety tests
+        run: |
+          python -m py_compile tools/private_ko_pocket_source_link_probe.py
+          python tools/private_ko_pocket_source_link_probe.py --self-test
+      - name: Collect three Korean Pocket page image URL references, no image bytes
+        run: |
+          python tools/private_ko_pocket_source_link_probe.py \
+            --set A1 --count 3 --pace 1.2 --output source-only-ko-pocket-pilot.json
+      - name: Verify genuine observed Korean image URL evidence
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path("source-only-ko-pocket-pilot.json")
+          doc=json.loads(p.read_text(encoding="utf8"))
+          assert doc["classification"]=="PRIVATE_KOREAN_POCKET_SOURCE_LINK_PILOT_ONLY"
+          assert doc["source_cards_checked"]==3
+          assert doc["production_writes"]==doc["new_live_links"]==0
+          assert doc["artwork_binaries_downloaded"]==0
+          assert doc["commercial_artwork_rights_verified"] is False
+          for row in doc["source_rows"]:
+              assert row["image_rights_verified"] is False
+              assert row["commercial_publication_allowed"] is False
+              assert row["source_detail_url"].startswith("https://tcgpocket.centropkmn.com/ko_KR/a1/")
+              for url in row["observed_korean_image_urls"]:
+                  assert "/ko_KR/" in url and url.startswith("https://ptcgp-assets.centropkmn.com/cards/")
+          print("KO_POCKET_OBSERVED_PILOT_PASS",{
+             "cards":doc["source_cards_checked"],
+             "actual_korean_card_image_refs":doc["distinct_observed_korean_image_urls"],
+             "list_cards":doc["source_detail_urls_found"],
+             "receipt_sha256":hashlib.sha256(p.read_bytes()).hexdigest(),
+             "live_vault_new_links":0,
+          })
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Korean-Pocket-Actual-Image-URLs-Source-Only
+          path: source-only-ko-pocket-pilot.json
+          retention-days: 21
+          if-no-files-found: error
