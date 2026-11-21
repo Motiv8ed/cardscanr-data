@@ -1,0 +1,89 @@
+name: Private zh-cn native-name to picture evidence join
+
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_native_picture_crosswalk.py'
+      - '.github/workflows/private-zhcn-native-picture-crosswalk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  crosswalk-source-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline strict-identity tests
+        run: |
+          python -m py_compile cardscanr/tools/private_zhcn_native_picture_crosswalk.py
+          python cardscanr/tools/private_zhcn_native_picture_crosswalk.py --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44852461101
+          name: Private-ZHCN-Native-Identity-Evidence-Only
+          github-token: ${{ github.token }}
+          path: native-evidence
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44706393928
+          name: CardScanR-Private-Chinese-Set-Number-Source-Only-Candidates
+          github-token: ${{ github.token }}
+          path: provisional-evidence
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          path: cardcorpus
+          persist-credentials: false
+          sparse-checkout: |
+            v1/sets/zh-hans
+          sparse-checkout-cone-mode: false
+      - name: Verify immutable upstream commit and reconcile in one pass
+        run: |
+          test "$(git -C cardcorpus rev-parse HEAD)" = c4f0b415d1dd3d4fbaadb8c32a0a591126746ed6
+          python cardscanr/tools/private_zhcn_native_picture_crosswalk.py \
+            --native native-evidence --provisional provisional-evidence \
+            --corpus cardcorpus --output private-crosswalk
+      - name: Validate counts, hashing and zero-publication boundary
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          p = Path("private-crosswalk")
+          r = json.loads((p / "receipt.json").read_text())
+          data = (p / "private_crosswalk.jsonl").read_bytes()
+          assert hashlib.sha256(data).hexdigest() == r["private_crosswalk_jsonl_sha256"]
+          assert len(data.splitlines()) == r["provisional_picture_candidates_examined"]
+          assert sum(r["classification_counts"].values()) == r["provisional_picture_candidates_examined"]
+          assert r["native_rows_examined"] == 13304 and r["native_unique_identity_rows"] == 13247
+          assert r["exact_variant_matches"] == r["live_vault_ids_verified"] == 0
+          assert r["new_image_links"] == r["production_writes"] == r["image_binaries_downloaded"] == 0
+          assert not r["rights_granted"] and not r["safe_to_publish"] and not r["safe_for_vault_apply"]
+          for line in data.splitlines():
+              row = json.loads(line)
+              assert not row["artwork_rights_granted"] and not row["safe_for_vault_apply"]
+              assert not row["finish_or_variant_verified"] and not row["live_vault_id_verified"]
+          print("PRIVATE_CROSSWALK_PASS", r["classification_counts"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("### Source-only Chinese crosswalk\n\n")
+              f.write(f"Corroborated native name + code + collector: **{r['native_name_corroborated_candidates']:,}** of {r['provisional_picture_candidates_examined']:,} candidates.\n\n")
+              f.write("Variant, live canonical ID, rights: **unverified**. Net new image links: **0**.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Private-ZHCN-Native-Picture-Crosswalk-Review
+          path: private-crosswalk/
+          retention-days: 7
+          if-no-files-found: error
