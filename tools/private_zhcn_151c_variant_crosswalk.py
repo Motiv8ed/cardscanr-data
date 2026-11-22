@@ -33,7 +33,7 @@ def advertised_name(card,variant):
     variants=card.get("variants")
     if not name or not isinstance(variants,list):return None
     if len(variants)==1:return name
-    suffix={"non-holo":"","master-ball":" Master Ball Holo",
+    suffix={"non-holo":"","holo":"","master-ball":" Master Ball Holo",
             "poke-ball":" Pokeball Holo"}.get(variant.get("id"))
     return name+suffix if suffix is not None else None
 
@@ -144,6 +144,7 @@ def self_test():
     assert ("001","Bulbasaur Master Ball Holo") in idx
     assert ("001","Bulbasaur Pokeball Holo") in idx
     assert ("001","Bulbasaur Holo") not in idx
+    multiholo={"id":"015","name":"Beedrill","number":{"short":"015"},\n               "variants":[mk("holo","holo"),mk("master-ball","master_ball"),mk("poke-ball","poke_ball")]}\n    hx,hn=index_source([multiholo])\n    assert hn==3 and ("015","Beedrill") in hx
     single={"id":"003","name":"Venusaur ex","number":{"short":"003"},"variants":[mk("holo","holo")]}
     idx,n=index_source([single])
     assert n==1 and ("003","Venusaur ex") in idx
