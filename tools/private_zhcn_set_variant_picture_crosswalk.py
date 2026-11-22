@@ -31,6 +31,12 @@ SPECS={
     "csm1dc": ("CSM1DC","zh-hans/storming-emergence-gx-starter-deck",336),
     "csm1cc": ("CSM1cC","zh-hans/storming-emergence-abundant",332),
     "cs1ac": ("CS1aC","zh-hans/dynamax-clash-thunder",329),
+    "csm1ac": ("CSM1aC","zh-hans/storming-emergence-radiant",331),
+    "csm1bc": ("CSM1bC","zh-hans/storming-emergence-verdant",324),
+    "csm2ac": ("CSM2aC","zh-hans/shining-synergy-shower",328),
+    "csm2bc": ("CSM2bC","zh-hans/shining-synergy-supreme",327),
+    "csm2cc": ("CSM2cC","zh-hans/shining-synergy-summon",322),
+    "cs1bc": ("CS1bC","zh-hans/dynamax-clash-flame",315),
 }
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
