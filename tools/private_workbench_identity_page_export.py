@@ -66,6 +66,11 @@ def normalize_pages(paths, output):
             seen.add(cid)
             # Never fabricate denominator or finish; page snapshot hash is provenance only.
             rows.append({**row, "snapshot_sha256": page["snapshot_sha256"]})
+        # The Workbench cursor is ordered by canonical ID. Reject a shuffled
+        # or repeated identity inside one page even when its hash is valid.
+        page_ids = [row["canonical_printing_id"] for row in chunk]
+        if page_ids != sorted(page_ids) or len(set(page_ids)) != len(page_ids):
+            raise ValueError("nonmonotonic_page")
         cursor = page.get("next_cursor")
         if cursor is not None and (not isinstance(cursor, str) or cursor != chunk[-1]["canonical_printing_id"]):
             raise ValueError("invalid_next_cursor")
