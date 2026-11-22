@@ -1,0 +1,66 @@
+name: Combine Live-Positive Thai Remaining Sets Into One Private VaultSync Batch
+on:
+  pull_request:
+    paths:
+      - "tools/private_combine_th_remain_ten.py"
+      - "research/live-vault-missing-id-th-20261122/th-remain-ten-live-positive-combine.json"
+      - ".github/workflows/private-th-remain-ten-one-stage.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-sha-union:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline strict SHA, source URL and native identity tests
+        run: |
+          python -m py_compile tools/private_combine_th_remain_ten.py
+          python -m tools.private_combine_th_remain_ten --self-test
+      - name: Build one backed-up-import candidate from unchanged native live-positive sources
+        run: |
+          python -m tools.private_combine_th_remain_ten \
+            --source-manifest research/live-vault-missing-id-th-20261122/th-remain-ten-live-positive-combine.json \
+            --out private-th-remain-ten-combined-stage \
+            --print-stage-b64
+      - name: Check immutable original batches and single new bundle scope
+        run: |
+          python - <<'PY'
+          import hashlib,json,gzip,os
+          from pathlib import Path
+          d=Path("private-th-remain-ten-combined-stage")
+          r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert r["classification"]=="COMBINED_SHA_VERIFIED_THAI_PRIVATE_BATCH_NOT_LIVE"
+          assert 2<=r["set_count"]<=10
+          assert 1<=r["source_url_records"]<=1200
+          assert r["preflight_newly_covered_at_time_of_source_checks"]>0
+          assert r["current_live_preflight_mandatory"] is True
+          assert not r["rights_verified"] and not r["public_artwork_enabled"]
+          assert r["new_live_image_links"]==r["new_live_canonical_cards"]==r["artwork_binaries_downloaded"]==0
+          raw=(d/(r["batch_id"]+".gz")).read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==r["gzip_sha256"]
+          doc=json.loads(gzip.decompress(raw))
+          assert len(doc["sets"])==r["set_count"]
+          assert len(doc["images"])==len(doc["cards"])==r["source_url_records"]
+          assert not doc["artwork_rights_verified"] and doc["image_binaries_downloaded"]==0
+          assert len({x["canonical_printing_id"] for x in doc["cards"]})==len(doc["cards"])
+          assert len({(x["language"],x["provider_set_id"]) for x in doc["sets"]})==r["set_count"]
+          print("COMBINED_PRIVATE_THAI_STAGE_SHA_CI_PASS",
+              r["source_url_records"],r["set_count"])
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write("### One immutable large Thai private metadata batch\n")
+              f.write(f"**{r['source_url_records']}** exact sources in **{r['set_count']}** distinct sets.")
+              f.write(" Verified at prior live source checks, still REQUIRES NEW full live read-only preflight before one SQLite-backed import. No art rights or binary downloads.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Thai-Combined-Remain-Ten-SHA-Stage-Not-Live
+          path: private-th-remain-ten-combined-stage/
+          retention-days: 21
+          if-no-files-found: error
