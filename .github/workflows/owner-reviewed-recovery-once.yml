@@ -27,3 +27,5 @@ jobs:
       - run: python -m unittest discover -s tests -p 'test_owner_reviewed_au_pricing_recovery.py' -v
       - run: python -m unittest discover -s tests -p 'test_control_plane_incidents.py' -v
       - run: python -m unittest discover -s tests -p 'test_control_plane_reconciliation.py' -v
+
+# Re-run exact recovery QA with production-launcher restoration correction.
