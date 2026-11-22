@@ -1,0 +1,74 @@
+name: Exact Chinese CSV9C variant picture ID evidence
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_csv9c_variant_crosswalk.py'
+      - 'reports/live_source_proofs/zhcn_csv9c_20261122.json'
+      - '.github/workflows/private-zhcn-csv9c-variant-crosswalk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-variant-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: pinned-corpus
+          persist-credentials: false
+          sparse-checkout: |
+            v1/sets/zh-hans/stellar-crystal.json
+          sparse-checkout-cone-mode: false
+      - name: Verify immutable upstream commit and guarded matching tests
+        run: |
+          test "$(git -C pinned-corpus rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile cardscanr/tools/private_zhcn_csv9c_variant_crosswalk.py
+          python cardscanr/tools/private_zhcn_csv9c_variant_crosswalk.py --self-test
+      - name: One-pass exact live Chinese set and variant matching
+        run: |
+          python cardscanr/tools/private_zhcn_csv9c_variant_crosswalk.py \
+            --live cardscanr/reports/live_source_proofs/zhcn_csv9c_20261122.json \
+            --source pinned-corpus/v1/sets/zh-hans/stellar-crystal.json \
+            --out private-zhcn-csv9c-candidates
+      - name: Verify SHA, all 620 identities and zero live/artwork writes
+        run: |
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          p=Path('private-zhcn-csv9c-candidates')
+          rec=json.loads((p/'receipt.json').read_text())
+          buf=(p/'candidate_crosswalk.jsonl').read_bytes()
+          rows=[json.loads(x) for x in buf.splitlines()]
+          assert rec['classification']=='PRIVATE_CHINESE_CSV9C_LIVE_VARIANT_PICTURE_SOURCE_CROSSWALK'
+          assert rec['live_missing_printings_examined']==rec['source_variants']==620
+          assert len(rows)==620 and sum(rec['classification_counts'].values())==620
+          assert hashlib.sha256(buf).hexdigest()==rec['candidate_sha256']
+          assert rec['images_downloaded']==rec['live_new_image_links']==0
+          assert rec['production_writes'] is False and rec['artwork_rights_verified'] is False
+          assert rec['ready_for_vault_apply'] is False
+          assert all(not r['safe_to_publish'] and not r['safe_for_vault_apply']
+                     and not r['artwork_rights_verified'] and
+                     not r['live_vault_preflight_passed'] and
+                     r['image_bytes_downloaded']==0 for r in rows)
+          print('CHINESE_CSV9C_VARIANT_CROSSWALK',json.dumps(rec['classification_counts'],sort_keys=True))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('### Chinese CSV9C exact source variant crosswalk\n\n')
+              f.write(str(rec['classification_counts'])+'\n\n')
+              f.write('All results private, no artwork downloads, no live import or publication.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Private-Chinese-CSV9C-Exact-Variant-CardCorpus-Refs
+          path: private-zhcn-csv9c-candidates/
+          retention-days: 14
+          if-no-files-found: error
