@@ -1,0 +1,54 @@
+name: Verify CardCorpus image URL template against immutable provider index
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_151c_variant_crosswalk.py'
+      - 'tools/private_zhcn_csv9c_variant_crosswalk.py'
+      - '.github/workflows/private-cardcorpus-image-url-template.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-url-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          path: cardscanr
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: pinned-corpus
+          persist-credentials: false
+          sparse-checkout: |
+            v1/index.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prove provider-declared sized image URL path and both independent crosswalks
+        run: |
+          python - <<'PY'
+          import importlib.util,json
+          from pathlib import Path
+          repo=Path("cardscanr")
+          pinned=Path("pinned-corpus")
+          assert __import__("subprocess").check_output(
+             ["git","-C",str(pinned),"rev-parse","HEAD"],text=True).strip()=="6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc"
+          provider=json.loads((pinned/"v1/index.json").read_text())
+          assert provider["pictures"]["sized"]=="https://img.cardcorpus.com/s1/{width}/{id}.avif"
+          assert 480 in provider["pictures"]["widths"]
+          for name in ("private_zhcn_151c_variant_crosswalk",
+                       "private_zhcn_csv9c_variant_crosswalk"):
+             file=repo/"tools"/(name+".py")
+             spec=importlib.util.spec_from_file_location(name,file)
+             module=importlib.util.module_from_spec(spec)
+             spec.loader.exec_module(module)
+             module.self_test()
+             assert module.URL_PREFIX+"a"*32+".avif" == provider["pictures"]["sized"].format(width=480,id="a"*32)
+             assert not module.URL_PREFIX.endswith("/m/")
+          print("PASS PINNED_SOURCE_DECLARED_CARD_IMAGE_URL_RECIPE")
+          PY

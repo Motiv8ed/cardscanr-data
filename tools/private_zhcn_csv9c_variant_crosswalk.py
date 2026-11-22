@@ -18,7 +18,7 @@ import unicodedata
 COMMIT="6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc"
 LIVE_SET="pokemon-tcg-kb-pikaqian:set:cn-csv9c"
 CORPUS_SET="zh-hans/stellar-crystal"
-URL_PREFIX="https://img.cardcorpus.com/m/"
+URL_PREFIX="https://img.cardcorpus.com/s1/480/"
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 EXPECTED=620
 
@@ -66,7 +66,7 @@ def index_source(cards):
                 index[(n,printed_label)].append({
                     "source_card_id":c["id"],"source_variant_id":v["id"],
                     "source_variant_finish":v.get("finish"),"source_picture_id":pic,
-                    "source_picture_url_reference":URL_PREFIX+pic,
+                    "source_picture_url_reference":URL_PREFIX+pic+".avif",
                     "source_card_name":c["name"]
                 })
     return index,len(vrefs)
@@ -164,6 +164,7 @@ def self_test():
     ai,av=index_source([alias])
     assert av==3 and ("022","Sunny Form Castform Master Ball Holo") in ai
     assert ("023","Sunny Form Castform") not in ai
+    assert URL_PREFIX=="https://img.cardcorpus.com/s1/480/"
     print("PASS exact variant labels and only pinned CSV9C Castform word-order alias")
 
 
