@@ -1,0 +1,73 @@
+name: Audit next six Chinese CardCorpus source sets (no imports)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_next_six_source_inventory.py'
+      - '.github/workflows/private-zhcn-next-six-source-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-metadata-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: pinned-provider
+          persist-credentials: false
+          sparse-checkout: |
+            v1/index.json
+            v1/sets/zh-hans.json
+            v1/sets/zh-hans/start-deck-100.json
+            v1/sets/zh-hans/nine-colours-gathering-friend.json
+            v1/sets/zh-hans/primordial-arts-overgrow.json
+            v1/sets/zh-hans/nine-colours-gathering-origin.json
+            v1/sets/zh-hans/primordial-arts-torrent.json
+            v1/sets/zh-hans/shadow-of-the-blue-sea-banish.json
+          sparse-checkout-cone-mode: false
+      - name: Exact upstream commit and local fail-closed tests
+        run: |
+          test "$(git -C pinned-provider rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile cardscanr/tools/private_zhcn_next_six_source_inventory.py
+          python cardscanr/tools/private_zhcn_next_six_source_inventory.py --self-test
+      - name: Reconcile all source picture metadata (no image bytes)
+        run: |
+          python cardscanr/tools/private_zhcn_next_six_source_inventory.py --root pinned-provider/v1 --out inventory
+      - name: Check count, rights, no production writes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          receipt=json.loads(Path('inventory/receipt.json').read_text())
+          assert receipt["source_variant_total"]==2004
+          assert receipt["possible_vault_gaps_observed_2026_11_23"]==2004
+          assert len(receipt["sets"])==6
+          assert all(x["source_variants"]==x["variants_with_picture_ids"] for x in receipt["sets"])
+          assert all(len(x["source_metadata_sha256"])==64 for x in receipt["sets"])
+          assert receipt["new_live_links"]==receipt["verified_current_live_matches"]==0
+          assert receipt["artwork_bytes_downloaded"]==receipt["production_writes"]==0
+          assert not receipt["artwork_rights_verified"] and not receipt["live_import_allowed"]
+          assert not receipt["public_artwork_enabled"]
+          print("NEXT_SIX_SOURCE_PASS 2004 picture variants, zero live imports")
+          with open('inventory/SUMMARY.md','w') as f:
+              f.write("# Six pinned Simplified Chinese source sets\n\n")
+              for row in receipt["sets"]:
+                  f.write(f'- {row["code"]}: {row["source_variants"]} source picture variants\n')
+              f.write("\nExact live Vault variant matching and licence checks remain outstanding.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhcn-six-metadata-only-provenance
+          path: inventory/
+          if-no-files-found: error
+          retention-days: 14
