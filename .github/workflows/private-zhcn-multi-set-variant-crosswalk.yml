@@ -29,6 +29,13 @@ on:
       - 'reports/live_source_proofs/zhcn_cs4bc_20261123.json'
       - 'reports/live_source_proofs/zhcn_cs3bc_20261123.json'
       - 'reports/live_source_proofs/zhcn_cs6bc_20261123.json'
+      - 'reports/live_source_proofs/zhcn_csve2c_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cbb4c_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cbb5c_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs5bc_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs5ac_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs3dc_20261123.json'
+      - 'reports/live_source_proofs/zhcn_csve1c_20261123.json'
       - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -145,6 +152,34 @@ jobs:
             source_slug: shadow-of-the-blue-sea-banish
             live_file: zhcn_cs6bc_20261123.json
             expected: 282
+          - slug: csve2c
+            source_slug: battle-party-shining-dream
+            live_file: zhcn_csve2c_20261123.json
+            expected: 237
+          - slug: cbb4c
+            source_slug: gem-pack-volume-4
+            live_file: zhcn_cbb4c_20261123.json
+            expected: 196
+          - slug: cbb5c
+            source_slug: gem-pack-volume-5
+            live_file: zhcn_cbb5c_20261123.json
+            expected: 196
+          - slug: cs5bc
+            source_slug: brave-stars-courage
+            live_file: zhcn_cs5bc_20261123.json
+            expected: 280
+          - slug: cs5ac
+            source_slug: brave-stars-charm
+            live_file: zhcn_cs5ac_20261123.json
+            expected: 275
+          - slug: cs3dc
+            source_slug: primordial-arts-v-starter-deck
+            live_file: zhcn_cs3dc_20261123.json
+            expected: 183
+          - slug: csve1c
+            source_slug: battle-party-dream-together
+            live_file: zhcn_csve1c_20261123.json
+            expected: 194
     steps:
       - uses: actions/checkout@v4
         with:
