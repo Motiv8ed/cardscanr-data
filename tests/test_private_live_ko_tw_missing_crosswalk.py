@@ -114,11 +114,11 @@ class CrosswalkTests(unittest.TestCase):
             reconcile([self.live[0]] * 51, self.source, self.output)
         self.assertFalse(self.output.exists())
 
-    def test_oversized_live_page_fails_closed(self):
+    def test_extra_live_row_fails_snapshot_count_check(self):
         first = self.live[0]
         lines = first.read_text(encoding="utf-8").splitlines()
         first.write_text("\n".join(lines + [lines[0]]) + "\n", encoding="utf-8")
-        with self.assertRaisesRegex(ValueError, "live_page_size_invalid"):
+        with self.assertRaisesRegex(ValueError, "live_snapshot_count_drift"):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
 
