@@ -72,10 +72,15 @@ def reconcile(live_paths, source_path, output):
     if any(x.get("has_image_link") is not False for x in live):
         raise ValueError("live_record_not_missing")
     # Reject mixed or incomplete page snapshots before any matching.
-    snapshots = {x.get("snapshot_sha256") for x in live}
-    if (len(snapshots) != 1 or
-        any(not isinstance(v, str) or len(v) != 64 or
-            any(c not in "0123456789abcdef" for c in v) for v in snapshots)):
+    # Workbench snapshots are language-scoped, not one global KO/TW hash.
+    snapshots_by_language = collections.defaultdict(set)
+    for record in live:
+        value = record.get("snapshot_sha256")
+        if (not isinstance(value, str) or len(value) != 64 or
+            any(c not in "0123456789abcdef" for c in value)):
+            raise ValueError("missing_or_mixed_live_snapshot")
+        snapshots_by_language[record["language"]].add(value)
+    if any(len(values) != 1 for values in snapshots_by_language.values()):
         raise ValueError("missing_or_mixed_live_snapshot")
     by_key = collections.defaultdict(list)
     for x in live:
