@@ -43,7 +43,7 @@ def source_image_valid(url,detail_id):
 
 
 def validate_page_ids(ids,seen):
-    if not isinstance(ids,list) or not 0<=len(ids)<=50:
+    if not isinstance(ids,list) or not 0<=len(ids)<=MAX_PER_PAGE:
         raise ValueError("official_page_card_count_outside_bound")
     if any(not isinstance(x,str) or not DETAIL.fullmatch(x) for x in ids):
         raise ValueError("official_invalid_detail_id")
@@ -51,7 +51,7 @@ def validate_page_ids(ids,seen):
         raise ValueError("official_same_page_duplicate_detail")
     if any(x in seen for x in ids):
         raise ValueError("official_detail_repeated_across_pages")
-    return ids[:MAX_PER_PAGE]
+    return ids
 
 
 def acquire(code,out,delay=0.75):
@@ -262,7 +262,7 @@ def test():
     assert not source_image_valid("https://evil.example/th/card-img/th00008110.png","8110")
     assert not source_image_valid("https://asia.pokemon-card.com/th/card-img/th00008110.png?bad=x","8110")
     assert validate_page_ids(["123","124"],{"100"})==["123","124"]
-    for seq in (["1","1"],["foo"],["1","2"]):
+    for seq in (["1","1"],["foo"],["1","2"],[str(i) for i in range(MAX_PER_PAGE+1)]):
         try:validate_page_ids(seq,{"1"} if seq==["1","2"] else set())
         except ValueError:pass
         else:raise AssertionError("duplicate source ID accepted")
