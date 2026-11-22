@@ -7,7 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 
-LANG_COUNTS = {"ko": 1131, "zh-tw": 397}
+LANGUAGES = {"ko", "zh-tw"}
 REQUIRED = ("canonical_printing_id", "language", "set_id",
             "native_card_name", "printed_collector_number")
 HEX = set("0123456789abcdef")
@@ -37,12 +37,12 @@ def normalize_pages(paths, output):
         if not isinstance(page, dict) or page.get("classification") != "LIVE_MISSING_CARD_IDENTITY_READ_ONLY_V1":
             raise ValueError("invalid_page_envelope")
         lang = page.get("language")
-        if lang not in LANG_COUNTS or not _sha(page.get("snapshot_sha256")) or not _sha(page.get("page_sha256")):
+        if lang not in LANGUAGES or not _sha(page.get("snapshot_sha256")) or not _sha(page.get("page_sha256")):
             raise ValueError("invalid_page_provenance")
         chunk = page.get("rows")
         if not isinstance(chunk, list) or not 1 <= len(chunk) <= 30 or page.get("page_size") != len(chunk):
             raise ValueError("invalid_page_size")
-        if page.get("page_limit") != 30 or page.get("missing_cards_in_snapshot") != LANG_COUNTS[lang]:
+        if page.get("page_limit") != 30 or type(page.get("missing_cards_in_snapshot")) is not int or not 1 <= page["missing_cards_in_snapshot"] <= 100000:
             raise ValueError("snapshot_count_drift")
         if (type(page.get("production_writes")) is not int or page["production_writes"] != 0
                 or page.get("artwork_rights_granted") is not False
@@ -56,12 +56,13 @@ def normalize_pages(paths, output):
             raise ValueError("page_hash_mismatch")
         previous = per_language.get(lang)
         if previous:
-            if previous["snapshot"] != page["snapshot_sha256"] or previous["cursor"] is None:
+            if previous["snapshot"] != page["snapshot_sha256"] or previous["expected"] != page["missing_cards_in_snapshot"] or previous["cursor"] is None:
                 raise ValueError("snapshot_or_chain_drift")
             if not isinstance(chunk[0], dict) or not isinstance(chunk[0].get("canonical_printing_id"), str) or chunk[0]["canonical_printing_id"] <= previous["cursor"]:
                 raise ValueError("nonmonotonic_page")
         else:
-            previous = {"snapshot": page["snapshot_sha256"], "cursor": None, "count": 0}
+            previous = {"snapshot": page["snapshot_sha256"], "cursor": None, "count": 0,
+                        "expected": page["missing_cards_in_snapshot"]}
         for row in chunk:
             if not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip() for k in REQUIRED):
                 raise ValueError("incomplete_identity")
@@ -82,11 +83,13 @@ def normalize_pages(paths, output):
         if cursor is not None and (not isinstance(cursor, str) or cursor != chunk[-1]["canonical_printing_id"]):
             raise ValueError("invalid_next_cursor")
         per_language[lang] = {"snapshot": page["snapshot_sha256"], "cursor": cursor,
-                              "count": previous["count"] + len(chunk)}
-    if set(per_language) != set(LANG_COUNTS) or any(per_language[k]["count"] != v or per_language[k]["cursor"] is not None for k, v in LANG_COUNTS.items()):
+                              "count": previous["count"] + len(chunk), "expected": previous["expected"]}
+    if set(per_language) != LANGUAGES or any(v["count"] != v["expected"] or v["cursor"] is not None for v in per_language.values()):
         raise ValueError("incomplete_live_snapshot")
     result = {"classification": "READ_ONLY_IDENTITY_PAGE_EXPORT_RESEARCH",
-              "counts": LANG_COUNTS, "input_sha256": input_hashes,
+              "counts": {k: v["expected"] for k, v in sorted(per_language.items())},
+              "snapshot_sha256": {k: v["snapshot"] for k, v in sorted(per_language.items())},
+              "input_sha256": input_hashes,
               "records": rows, "new_live_image_links": 0,
               "new_canonical_cards": 0, "rights_granted": False,
               "production_writes": False}
