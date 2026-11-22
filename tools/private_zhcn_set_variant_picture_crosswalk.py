@@ -43,8 +43,16 @@ SPECS={
     "cs4bc": ("CS4bC","zh-hans/nine-colours-gathering-origin",288),
     "cs3bc": ("CS3bC","zh-hans/primordial-arts-torrent",283),
     "cs6bc": ("CS6bC","zh-hans/shadow-of-the-blue-sea-banish",282),
+    "csve2c": ("CSVE2C","zh-hans/battle-party-shining-dream",237),
+    "cbb4c": ("CBB4C","zh-hans/gem-pack-volume-4",196),
+    "cbb5c": ("CBB5C","zh-hans/gem-pack-volume-5",196),
+    "cs5bc": ("CS5bC","zh-hans/brave-stars-courage",280),
+    "cs5ac": ("CS5aC","zh-hans/brave-stars-charm",275),
+    "cs3dc": ("CS3DC","zh-hans/primordial-arts-v-starter-deck",183),
+    "csve1c": ("CSVE1C","zh-hans/battle-party-dream-together",194),
 }
 NEXT_SIX=frozenset({"cs4dac","cs4ac","cs3ac","cs4bc","cs3bc","cs6bc"})
+LATEST_SEVEN=frozenset({"csve2c","cbb4c","cbb5c","cs5bc","cs5ac","cs3dc","csve1c"})
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
 COLLECTOR=re.compile(r"^[0-9]{3}$")
@@ -128,7 +136,7 @@ def reconcile(live, source, index, slug):
             or source.get("code","").upper()!=code.upper()):
         raise ValueError("wrong_source_set")
     expected_label=("PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261123"
-                    if slug in NEXT_SIX else "PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122")
+                    if slug in (NEXT_SIX | LATEST_SEVEN) else "PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122")
     if (live.get("classification")!=expected_label
             or live.get("source_commit")!=COMMIT
             or live.get("set_id")!=expected_vault
