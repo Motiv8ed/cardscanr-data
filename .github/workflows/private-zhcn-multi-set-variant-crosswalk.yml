@@ -23,6 +23,12 @@ on:
       - 'reports/live_source_proofs/zhcn_csm2bc_20261122.json'
       - 'reports/live_source_proofs/zhcn_csm2cc_20261122.json'
       - 'reports/live_source_proofs/zhcn_cs1bc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_cs4dac_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs4ac_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs3ac_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs4bc_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs3bc_20261123.json'
+      - 'reports/live_source_proofs/zhcn_cs6bc_20261123.json'
       - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -115,6 +121,30 @@ jobs:
             source_slug: dynamax-clash-flame
             live_file: zhcn_cs1bc_20261122.json
             expected: 315
+          - slug: cs4dac
+            source_slug: start-deck-100
+            live_file: zhcn_cs4dac_20261123.json
+            expected: 566
+          - slug: cs4ac
+            source_slug: nine-colours-gathering-friend
+            live_file: zhcn_cs4ac_20261123.json
+            expected: 295
+          - slug: cs3ac
+            source_slug: primordial-arts-overgrow
+            live_file: zhcn_cs3ac_20261123.json
+            expected: 290
+          - slug: cs4bc
+            source_slug: nine-colours-gathering-origin
+            live_file: zhcn_cs4bc_20261123.json
+            expected: 288
+          - slug: cs3bc
+            source_slug: primordial-arts-torrent
+            live_file: zhcn_cs3bc_20261123.json
+            expected: 283
+          - slug: cs6bc
+            source_slug: shadow-of-the-blue-sea-banish
+            live_file: zhcn_cs6bc_20261123.json
+            expected: 282
     steps:
       - uses: actions/checkout@v4
         with:
