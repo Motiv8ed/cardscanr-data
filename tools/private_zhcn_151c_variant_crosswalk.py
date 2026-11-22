@@ -18,7 +18,7 @@ import unicodedata
 COMMIT="6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc"
 LIVE_SET="pokemon-tcg-kb-pikaqian:set:cn-151c"
 CORPUS_SET="zh-hans/collect-151"
-URL_PREFIX="https://img.cardcorpus.com/m/"
+URL_PREFIX="https://img.cardcorpus.com/s1/480/"
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 EXPECTED=470
 
@@ -58,7 +58,7 @@ def index_source(cards):
             if label:index[(n,label)].append({
                 "source_card_id":c["id"],"source_variant_id":v["id"],
                 "source_variant_finish":v.get("finish"),"source_picture_id":pic,
-                "source_picture_url_reference":URL_PREFIX+pic,
+                "source_picture_url_reference":URL_PREFIX+pic+".avif",
                 "source_card_name":c["name"]
             })
     return index,len(vrefs)
@@ -151,6 +151,7 @@ def self_test():
     single={"id":"003","name":"Venusaur ex","number":{"short":"003"},"variants":[mk("holo","holo")]}
     idx,n=index_source([single])
     assert n==1 and ("003","Venusaur ex") in idx
+    assert URL_PREFIX=="https://img.cardcorpus.com/s1/480/"
     print("PASS exact standard, master-ball, poke-ball and singleton holo variant identities")
 
 
