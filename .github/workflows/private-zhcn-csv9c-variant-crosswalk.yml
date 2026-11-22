@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'tools/private_zhcn_csv9c_variant_crosswalk.py'
-      - 'reports/live_source_proofs/zhcn_ccsv9c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv9c_20261122.json'
       - '.github/workflows/private-zhcn-csv9c-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -37,7 +37,7 @@ jobs:
       - name: One-pass exact live Chinese set and variant matching
         run: |
           python cardscanr/tools/private_zhcn_csv9c_variant_crosswalk.py \
-            --live cardscanr/reports/live_source_proofs/zhcn_ccsv9c_20261122.json \
+            --live cardscanr/reports/live_source_proofs/zhcn_csv9c_20261122.json \
             --source pinned-corpus/v1/sets/zh-hans/stellar-crystal.json \
             --out private-zhcn-csv9c-candidates
       - name: Verify SHA, all 620 identities and zero live/artwork writes
