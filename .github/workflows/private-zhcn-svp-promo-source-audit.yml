@@ -1,0 +1,60 @@
+name: Chinese SV-P promo strict source proof (metadata only)
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_svp_promo_source_audit.py'
+      - 'reports/live_source_proofs/zhcn_promo_svp_20261123.json'
+      - '.github/workflows/private-zhcn-svp-promo-source-audit.yml'
+permissions:
+  contents: read
+jobs:
+  scoped-promo-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: data
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: provider
+          persist-credentials: false
+          sparse-checkout: |
+            v1/sets/zh-hans/sv-chinese-promos.json
+          sparse-checkout-cone-mode: false
+      - name: Check immutable source and code syntax
+        run: |
+          test "$(git -C provider rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile data/tools/private_zhcn_svp_promo_source_audit.py
+      - name: Count exact, ambiguous and missing sources without any imports
+        run: |
+          python data/tools/private_zhcn_svp_promo_source_audit.py --live data/reports/live_source_proofs/zhcn_promo_svp_20261123.json --source provider/v1/sets/zh-hans/sv-chinese-promos.json --out svp-audit
+      - name: Require fail-closed receipt and quarantine
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          receipt=json.loads(Path('svp-audit/receipt.json').read_text())
+          assert receipt["match_counts"] == {
+              "EXACT_SINGLE_SOURCE_VARIANT":220,
+              "AMBIGUOUS_SOURCE_VARIANTS":75,
+              "NO_EXACT_NAME_NUMBER":152,
+          }
+          assert receipt["live_import_allowed"] is False
+          assert receipt["artwork_rights_verified"] is False
+          assert receipt["new_live_links"] == receipt["images_downloaded"] == receipt["production_writes"] == 0
+          assert receipt["public_artwork_enabled"] is False
+          print('PASS: SV-P source proof only, no imports')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhcn-svp-promo-private-metadata-audit
+          path: svp-audit/
+          retention-days: 14
+          if-no-files-found: error
