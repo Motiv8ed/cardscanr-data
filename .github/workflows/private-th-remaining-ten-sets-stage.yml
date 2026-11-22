@@ -28,10 +28,10 @@ jobs:
       - name: Test bounded set and official URL constraints without fetching art
         run: |
           python -m py_compile tools/private_official_th_remaining_ten_sets.py
-          python -m tools.private_official_th_remaining_five_sets --self-test
+          python -m tools.private_official_th_remaining_ten_sets --self-test
       - name: Acquire authentic source cards and match pinned archived missing-printing identities
         run: |
-          python -m tools.private_official_th_remaining_five_sets \
+          python -m tools.private_official_th_remaining_ten_sets \
             --set ${{ matrix.setcode }} --out official-th-${{ matrix.setcode }}
       - name: Verify card source and private VaultSync SHA stage, no rights or live claims
         run: |
