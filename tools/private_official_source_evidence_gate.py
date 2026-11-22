@@ -5,7 +5,6 @@ Read-only: no network, artwork downloads, vault access or staging.
 Requires a current live missing-identity export for *actual* live-positive counts.
 """
 import argparse
-import hashlib
 import json
 import re
 from collections import Counter
@@ -52,20 +51,27 @@ def audit(paths, completed):
         with path.open(encoding="utf-8") as stream:
             for line_no, line in enumerate(stream, 1):
                 if line.strip():
-                    rows.append((str(path), line_no, json.loads(line)))
-    counts = Counter((r.get("language"), r.get("official_detail_id")) for _, _, r in rows)
-    url_counts = Counter(r.get("source_image_url_reference") for _, _, r in rows)
+                    try:
+                        parsed = json.loads(line)
+                    except json.JSONDecodeError:
+                        parsed = None
+                    rows.append((str(path), line_no, parsed))
+    counts = Counter((r.get("language"), r.get("official_detail_id")) for _, _, r in rows if isinstance(r, dict))
+    url_counts = Counter(r.get("source_image_url_reference") for _, _, r in rows if isinstance(r, dict))
     accepted, quarantined = [], []
     for filename, line_no, r in rows:
-        reason = check(r)
+        reason = "invalid_json_or_nonobject_row" if not isinstance(r, dict) else check(r)
         if not reason and (counts[(r["language"], r["official_detail_id"])] != 1
                            or url_counts[r["source_image_url_reference"]] != 1):
             reason = "duplicate_detail_or_image_across_input"
+        if not reason and (not isinstance(r.get("batch_id"), str) or not r["batch_id"].strip()):
+            reason = "missing_batch_id_replay_evidence"
         if not reason and r.get("batch_id") in completed:
             reason = "completed_batch_replay"
         record = {"file": filename, "line": line_no,
-                  "language": r.get("language"), "detail_id": r.get("official_detail_id"),
-                  "source_sha256": r.get("source_response_sha256")}
+                  "language": r.get("language") if isinstance(r, dict) else None,
+                  "detail_id": r.get("official_detail_id") if isinstance(r, dict) else None,
+                  "source_sha256": r.get("source_response_sha256") if isinstance(r, dict) else None}
         (quarantined if reason else accepted).append(dict(record, **({"reason": reason} if reason else {})))
     return {"classification": "OFFLINE_SOURCE_EVIDENCE_ONLY_NOT_LIVE",
             "input_rows": len(rows), "unique_evidence_candidates": len(accepted),
