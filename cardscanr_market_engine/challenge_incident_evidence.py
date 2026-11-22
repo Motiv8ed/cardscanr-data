@@ -153,7 +153,9 @@ def _title_class(title: Any) -> dict[str, Any]:
     return {
         "present": bool(raw),
         "titleSha256": _hash(raw) if raw else None,
-        "gateTitle": canonical[:60] if exact else None,
+        # Preserve only canonical generic wording, never free-form appended text.
+        "gateTitle": ("pardon our interruption" if canonical.startswith(
+            "pardon our interruption") else canonical) if exact else None,
         "gateTitleObserved": exact,
     }
 
