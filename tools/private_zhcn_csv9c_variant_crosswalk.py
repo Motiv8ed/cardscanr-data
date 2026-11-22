@@ -55,12 +55,20 @@ def index_source(cards):
             if not isinstance(pic,str) or not PICTURE.fullmatch(pic):
                 continue
             label=advertised_name(c,v)
-            if label:index[(n,label)].append({
-                "source_card_id":c["id"],"source_variant_id":v["id"],
-                "source_variant_finish":v.get("finish"),"source_picture_id":pic,
-                "source_picture_url_reference":URL_PREFIX+pic,
-                "source_card_name":c["name"]
-            })
+            labels=[label] if label else []
+            # Explicit independently-reviewed naming order for CSV9C #022 only.
+            # No transliteration, generic fuzzy join or set-wide name aliases.
+            if (n=="022" and c["id"]=="022" and
+                c["name"]=="Castform Sunny Form" and
+                label and label.startswith("Castform Sunny Form")):
+                labels.append("Sunny Form Castform"+label[len("Castform Sunny Form"):])
+            for printed_label in labels:
+                index[(n,printed_label)].append({
+                    "source_card_id":c["id"],"source_variant_id":v["id"],
+                    "source_variant_finish":v.get("finish"),"source_picture_id":pic,
+                    "source_picture_url_reference":URL_PREFIX+pic,
+                    "source_card_name":c["name"]
+                })
     return index,len(vrefs)
 
 
@@ -151,7 +159,12 @@ def self_test():
     single={"id":"003","name":"Venusaur ex","number":{"short":"003"},"variants":[mk("holo","holo")]}
     idx,n=index_source([single])
     assert n==1 and ("003","Venusaur ex") in idx
-    print("PASS exact standard, master-ball, poke-ball and singleton holo variant identities")
+    alias={"id":"022","name":"Castform Sunny Form","number":{"short":"022"},
+           "variants":[mk("non-holo","non_holo"),mk("master-ball","master_ball"),mk("poke-ball","poke_ball")]}
+    ai,av=index_source([alias])
+    assert av==3 and ("022","Sunny Form Castform Master Ball Holo") in ai
+    assert ("023","Sunny Form Castform") not in ai
+    print("PASS exact variant labels and only pinned CSV9C Castform word-order alias")
 
 
 if __name__=="__main__":
