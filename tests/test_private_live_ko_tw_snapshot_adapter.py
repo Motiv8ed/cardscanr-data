@@ -45,22 +45,25 @@ class AdapterTests(unittest.TestCase):
                 adapt(paths, output)
             self.assertFalse(output.exists())
 
-    def test_51_bounded_pages_cover_all_live_gaps(self):
+    def test_52_language_scoped_bounded_pages_cover_all_live_gaps(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            rows = []
-            for lang, count in (("ko", 1131), ("zh-tw", 397)):
-                rows.extend(dict(canonical_printing_id=f"{lang}:{j}", language=lang,
-                                 set_id=f"set-{lang}", native_card_name=f"native-{j}",
-                                 printed_collector_number=str(j + 1), has_image_link=False)
-                            for j in range(count))
             paths = []
-            for i in range(0, len(rows), 30):
-                path = root / f"page_{i // 30:02d}.jsonl"
-                path.write_text("".join(json.dumps(r) + "\n" for r in rows[i:i+30]),
-                                encoding="utf-8")
-                paths.append(path)
-            self.assertEqual(len(paths), 51)
+            for lang, count in (("ko", 1131), ("zh-tw", 397)):
+                rows = [dict(canonical_printing_id=f"{lang}:{j}", language=lang,
+                             set_id=f"set-{lang}", native_card_name=f"native-{j}",
+                             printed_collector_number=str(j + 1), has_image_link=False)
+                        for j in range(count)]
+                for start in range(0, count, 30):
+                    path = root / f"{lang}_page_{start // 30:02d}.jsonl"
+                    page_rows = rows[start:start + 30]
+                    path.write_text("".join(json.dumps(r) + "\n" for r in page_rows),
+                                    encoding="utf-8")
+                    self.assertLessEqual(len(page_rows), 30)
+                    self.assertEqual({r["language"] for r in page_rows}, {lang})
+                    paths.append(path)
+            # Workbench pagination is language-scoped: ceil(1131/30)+ceil(397/30)=52.
+            self.assertEqual(len(paths), 52)
             result = adapt(paths, root / "manifest.json")
             self.assertEqual(result["rows"], 1528)
             self.assertEqual(result["new_live_image_links"], 0)
