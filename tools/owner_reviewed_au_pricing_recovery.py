@@ -205,9 +205,9 @@ def worker_preflight() -> int:
 
 
 def backup_states() -> str:
-    BACKUPS.mkdir(parents=True, exist_ok=True)
-    if BACKUPS.is_symlink():
+    if BACKUPS.is_symlink() or getattr(BACKUPS, "is_junction", lambda: False)():
         fail("unsafe_recovery_backup_root")
+    BACKUPS.mkdir(parents=True, exist_ok=True)
     run = BACKUPS / ("recovery_" + uuid.uuid4().hex[:12])
     run.mkdir(mode=0o700)
     for path in (INC_FILE, OPS_FILE, AV_FILE, PID_FILE):
@@ -331,6 +331,9 @@ def start_one_probe() -> dict:
         "$env:MARKET_WORKER_MAX_JOBS_PER_RUN='1';"
         "$env:EBAY_BROWSER_MAX_CONCURRENCY='1';"
         "$env:EBAY_BROWSER_MAX_QUERY_ATTEMPTS='1';"
+        "$env:EBAY_BROWSER_NAV_MODE='linux_x11';"
+        "$env:EBAY_BROWSER_CDP_PORT='9444';"
+        "$env:EBAY_BROWSER_REUSE_CONTEXT='true';"
         "$env:CARDSCANR_OPERATION_MODE='PROBE';"
         "$env:CARDSCANR_STATE_WRITER_DOMAIN='windows_host';"
         "& '" + str(python) + "' -u 'workers/market_price_worker.py'"
@@ -430,11 +433,17 @@ def resume() -> dict:
        " -ErrorAction Stop | Out-Null")
     if scheduler().get("state") != "Ready":
         fail("task_enable_not_verified")
-    # Existing production ensure script is the only authority to launch the
-    # paced worker; never start an alternate persistent worker or enable daily.
-    command(["powershell.exe", "-NoProfile", "-NonInteractive",
-             "-File", str(ROOT / "scripts/ensure_live_ebay_pricing_runtime.ps1"),
-             "-Component", "worker"], timeout=45)
+    # Trigger only the existing verified scheduled action (the #45 shadow
+    # wrapper). Launching the official ensure script directly would drop its
+    # approved runtime shadow settings.
+    ps("Start-ScheduledTask -TaskName 'CardScanR-LiveEbayPricingRuntime'"
+       " -ErrorAction Stop")
+    for _ in range(15):
+        if len(workers()) == 1:
+            break
+        time.sleep(1)
+    if len(workers()) != 1:
+        fail("scheduled_runtime_relaunch_not_verified")
     rec["status"] = "RESUMED"
     rec["resumedUtc"] = utc_iso()
     _atomic_receipt(rec)
