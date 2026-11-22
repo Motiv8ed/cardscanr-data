@@ -62,7 +62,9 @@ def parse_product(html: str, url: str) -> dict[str, object]:
     if article:
         for image in article.find_all("img", src=True):
             source = str(image["src"])
-            if "image.pokemon.com.cn" in source and "/uploads/" in source:
+            if (urlparse(source).scheme == "https"
+                    and (urlparse(source).hostname or "").lower() == "image.pokemon.com.cn"
+                    and urlparse(source).path.startswith("/uploads/")):
                 images.append({"source_url": source, "canonical_url": unsigned_image_url(source), "alt": image.get("alt")})
     post_id_match = re.search(r"/(\d+)\.html$", url)
     return {
