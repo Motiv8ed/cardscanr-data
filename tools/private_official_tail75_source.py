@@ -19,7 +19,6 @@ from urllib.parse import urlsplit
 from cardscanr_worldwide.collectors.pokemon_asia import (
     BASE_URL, Collector, parse_card_detail, parse_card_list,
 )
-from tools.private_th_trainer_quarantine import source_image_valid as th_url_valid
 
 MAX_PAGES=12
 MAX_PER_PAGE=20
