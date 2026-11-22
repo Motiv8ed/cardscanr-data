@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Strict archived-live Chinese CN-CSV9C variant-to-picture source reconciliation.
 
-Compares the authenticated pinned live 470 missing printing identities against
-immutable CardCorpus Chinese Collect 151 set cards AND each explicit variant.
+Compares the authenticated pinned live 620 missing printing identities against
+immutable CardCorpus Chinese Stellar Crystal cards AND each exact variant.
 Stores third-party artwork URL REFERENCES privately, not image bytes.
 CC BY metadata does NOT license the copyrighted artwork.
 """
@@ -69,7 +69,7 @@ def match(live,source):
         or source.get("language")!="zh-Hans" or source.get("code")!="CSV9C"
         or len(source.get("cards",[]))!=266):
         raise ValueError("wrong_source_set")
-    if (live.get("classification")!="PINNED_LIVE_ZHCN_CCSV9C_VARIANT_IDENTITIES"
+    if (live.get("classification")!="PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122"
         or live.get("set_id")!=LIVE_SET or live.get("source_commit")!=COMMIT
         or live.get("source_set_id")!=CORPUS_SET or len(live.get("rows",[]))!=EXPECTED
         or not re.fullmatch(r"[0-9a-f]{64}",live.get("snapshot_sha256",""))):
