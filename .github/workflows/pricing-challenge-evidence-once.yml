@@ -1,0 +1,36 @@
+name: Pricing Challenge Evidence Offline QA (one-time)
+on:
+  push:
+    branches: [atlas/pricing-challenge-evidence-20261122]
+    paths: [.github/workflows/pricing-challenge-evidence-once.yml]
+permissions:
+  contents: read
+jobs:
+  pricing-evidence:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    env:
+      CONFIRM_LIVE_EBAY_WORKER: "false"
+      EBAY_BROWSER_ENABLED: "false"
+      EBAY_BROWSER_KILL_SWITCH: "true"
+      OWNED_DAILY_FULL_ENABLE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - name: Compile evidence and incident code (no browser)
+        run: python -m compileall -q cardscanr_market_engine/challenge_incident_evidence.py cardscanr_market_engine/marketplace_ops_state.py tests/test_pricing_challenge_incident_evidence.py
+      - name: New failure-time privacy and provenance regression
+        run: python -m unittest discover -s tests -p 'test_pricing_challenge_incident_evidence.py' -v
+      - name: Existing incident reconciliation regression
+        run: python -m unittest discover -s tests -p 'test_control_plane_incidents.py' -v
+      - name: Existing provider challenge hard-stop regression
+        run: python -m unittest discover -s tests -p 'test_data63_reqa_r5_20261119.py' -v
+      - name: Browser target lifecycle regression (offline fixtures)
+        run: python -m unittest discover -s tests -p 'test_inter_card_browser_lifecycle_closure.py' -v
