@@ -46,8 +46,13 @@ def audit(live: dict, provider: dict) -> tuple[list[dict], dict]:
     for card in provider["cards"]:
         number = card.get("number", {}).get("short")
         name = normalize(card.get("name"))
-        if not isinstance(number, str) or not NUM.fullmatch(number) or not name:
+        if not isinstance(number, str) or not number or not name:
             raise ValueError("invalid_source_name_or_number")
+        # Official promo catalogue also includes unnumbered energy and
+        # tournament-only entries such as DAR, WAT and SV-P. They cannot match
+        # our strictly three-digit live identities; retain them in upstream
+        # variant integrity counts but never let them enter the crosswalk.
+        numeric_source = NUM.fullmatch(number) is not None
         variants = card.get("variants")
         if not isinstance(variants, list) or not variants:
             raise ValueError("missing_source_variants")
@@ -60,6 +65,8 @@ def audit(live: dict, provider: dict) -> tuple[list[dict], dict]:
                     or not PIC.fullmatch(picture)):
                 raise ValueError("duplicate_variant_or_picture_metadata_drift")
             seen_source_variant.add(key)
+            if not numeric_source:
+                continue
             source_index[(number, name)].append({
                 "source_variant_id": variant_id, "picture_id": picture,
                 "source_card_id": card["id"],
