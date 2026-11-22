@@ -44,7 +44,7 @@ def normalize_pages(paths, output):
             raise ValueError("invalid_page_size")
         if page.get("page_limit") != 30 or page.get("missing_cards_in_snapshot") != LANG_COUNTS[lang]:
             raise ValueError("snapshot_count_drift")
-        if page.get("production_writes") != 0 or page.get("artwork_rights_granted") is not False or page.get("image_urls_exposed") is not False:
+        if type(page.get("production_writes")) is not int or page["production_writes"] != 0 or page.get("artwork_rights_granted") is not False or page.get("image_urls_exposed") is not False:
             raise ValueError("unsafe_page_flags")
         calculated = hashlib.sha256(json.dumps(chunk, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         if calculated != page["page_sha256"]:
