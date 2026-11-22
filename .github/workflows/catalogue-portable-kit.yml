@@ -7,14 +7,15 @@ on:
       - 'tools/Run-CardScanR-Reconciliation.cmd'
       - 'tools/PORTABLE_CATALOGUE_README.txt'
       - '.github/workflows/catalogue-portable-kit.yml'
-  push:
-    branches:
-      - 'catalogue/portable-reconcile-*'
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   portable-safety:
@@ -38,7 +39,7 @@ jobs:
           Write-Host 'PASS: Windows PowerShell 5.1 parses read-only launcher'
 
   portable-package:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: portable-safety
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -108,7 +109,7 @@ jobs:
 
 
   portable-windows-smoke:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: portable-package
     runs-on: windows-latest
     timeout-minutes: 8

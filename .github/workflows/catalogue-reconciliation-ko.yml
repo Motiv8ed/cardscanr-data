@@ -7,19 +7,15 @@ on:
       - 'tools/probe_korean_tcgdex.py'
       - 'tests/test_tcgdex_reconciliation_and_korean_probe.py'
       - '.github/workflows/catalogue-reconciliation-ko.yml'
-  push:
-    branches:
-      - 'catalogue/read-only-reconcile-*'
-    paths:
-      - 'tools/reconcile_tcgdex_metadata_batch.py'
-      - 'tools/probe_korean_tcgdex.py'
-      - 'tests/test_tcgdex_reconciliation_and_korean_probe.py'
-      - '.github/workflows/catalogue-reconciliation-ko.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -38,7 +34,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_tcgdex_reconciliation_and_korean_probe.py -v
 
   korean-coverage:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -64,7 +60,7 @@ jobs:
           retention-days: 7
 
   sample-reconciliation:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 6

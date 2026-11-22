@@ -1,10 +1,57 @@
 name: Pricing Offline Safety Tests
 
 on:
+  pull_request:
+    paths:
+      - 'cardscanr_market_engine/ebay_*.py'
+      - 'cardscanr_market_engine/ebay_scale/**'
+      - 'cardscanr_market_engine/live_ebay_component_health.py'
+      - 'cardscanr_market_engine/pricing_worker_runtime_gate.py'
+      - 'cardscanr_market_engine/providers/*ebay*.py'
+      - 'cardscanr_market_engine/*safety*.py'
+      - 'cardscanr_market_engine/*worker*.py'
+      - 'cardscanr_market_engine/*lifecycle*.py'
+      - 'cardscanr_market_engine/*pricing*.py'
+      - 'cardscanr_market_engine/job_runner.py'
+      - 'cardscanr_market_engine/inter_card*.py'
+      - 'cardscanr_market_engine/canary_control_plane.py'
+      - 'cardscanr_market_engine/control_plane*.py'
+      - 'cardscanr_market_engine/owned_daily*.py'
+      - 'cardscanr_market_engine/owned_verified_local_execution.py'
+      - 'cardscanr_market_engine/atomic_json_state.py'
+      - 'cardscanr_market_engine/failure_policy.py'
+      - 'cardscanr_market_engine/local_browser_runtime.py'
+      - 'cardscanr_market_engine/continuous_au_status.py'
+      - 'cardscanr_market_engine/marketplace_ops_state.py'
+      - 'cardscanr_market_engine/price_movement_guard.py'
+      - 'workers/**'
+      - 'scripts/*ebay*'
+      - 'scripts/inspect_pricing_browser_session.py'
+      - 'scripts/run_*price_worker.ps1'
+      - 'tools/*recovery*'
+      - 'tools/*probe*'
+      - 'tools/*search_gate*'
+      - 'tests/test_*ebay*'
+      - 'tests/test_pricing_*'
+      - 'tests/test_*sweep*'
+      - 'tests/test_inter_card*'
+      - 'tests/test_*safety*'
+      - 'tests/test_*job_runner*'
+      - 'tests/test_continuous_*'
+      - 'tests/test_canary_*'
+      - 'tests/test_*lifecycle*'
+      - 'tests/test_playwright_persistent_lifecycle.py'
+      - 'tests/test_inspect_pricing_browser_session.py'
+      - 'requirements.txt'
+      - '.github/workflows/pricing-offline-safety.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-safety:
@@ -23,6 +70,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install existing backend dependencies (no browser installation)
         run: |
@@ -43,3 +91,8 @@ jobs:
 
       - name: Playwright persistent-context lifecycle (mocked)
         run: python -m unittest discover -s tests -p "test_playwright_persistent_lifecycle.py" -v
+
+      # TODO when the #47 corrective PR lands (branch fix/data47-sweep-budget-20261119):
+      # add its budget/HARD_STOP/probe-required test module here, e.g.
+      # - name: Set-sweep attempt budget, HARD_STOP and probe gate
+      #   run: python -m unittest discover -s tests -p "test_<set_sweep_budget_module>.py" -v

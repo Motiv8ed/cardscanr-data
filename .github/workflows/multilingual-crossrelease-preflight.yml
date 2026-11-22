@@ -6,13 +6,14 @@ on:
       - 'tools/preflight_multilingual_crossrelease.py'
       - 'tests/test_preflight_multilingual_crossrelease.py'
       - '.github/workflows/multilingual-crossrelease-preflight.yml'
-  push:
-    branches:
-      - 'catalogue/multilingual-pack-crossrelease-preflight-*'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -31,7 +32,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_preflight_multilingual_crossrelease.py -v
 
   live-crossrelease-preflight:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15

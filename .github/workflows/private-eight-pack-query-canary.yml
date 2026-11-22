@@ -1,8 +1,5 @@
 name: Private Eight-Pack Data-Layer Integration Canary
 on:
-  push:
-    branches:
-      - 'catalogue/private-eight-pack-integration-*'
   pull_request:
     paths:
       - 'tools/private_eight_pack_query_canary.py'
@@ -14,6 +11,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   offline:
     runs-on: ubuntu-latest
@@ -32,6 +34,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_private_pack_completeness.py -v
           PYTHONPATH=. python -m unittest discover -s tests -p test_build_review_68_set_core.py -v
   private-query-canary:
+    if: github.event_name == 'workflow_dispatch'
     needs: offline
     runs-on: ubuntu-latest
     timeout-minutes: 20

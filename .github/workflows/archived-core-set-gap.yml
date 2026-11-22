@@ -6,13 +6,14 @@ on:
       - 'tools/audit_legacy_core_set_gap.py'
       - 'tests/test_audit_legacy_core_set_gap.py'
       - '.github/workflows/archived-core-set-gap.yml'
-  push:
-    branches:
-      - 'catalogue/legacy-core-set-gap-analysis-*'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -31,7 +32,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_audit_legacy_core_set_gap.py -v
 
   live-read-only-gap-check:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 15

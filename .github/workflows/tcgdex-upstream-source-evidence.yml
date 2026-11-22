@@ -6,14 +6,15 @@ on:
       - 'tools/verify_tcgdex_upstream_source.py'
       - 'tests/test_verify_tcgdex_upstream_source.py'
       - '.github/workflows/tcgdex-upstream-source-evidence.yml'
-  push:
-    branches:
-      - 'catalogue/tcgdex-upstream-source-evidence-*'
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -32,7 +33,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_verify_tcgdex_upstream_source.py -v
 
   live-pinned-source-proof:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 10

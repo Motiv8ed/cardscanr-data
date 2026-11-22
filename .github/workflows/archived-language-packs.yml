@@ -7,12 +7,14 @@ on:
       - 'tools/preflight_legacy_korean_pack.py'
       - 'tests/test_preflight_legacy_korean_pack.py'
       - '.github/workflows/archived-language-packs.yml'
-  push:
-    branches:
-      - 'catalogue/archived-multilingual-pack-inventory-*'
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   offline-tests:
     runs-on: ubuntu-latest
@@ -30,7 +32,7 @@ jobs:
           PYTHONPATH=. python -m unittest discover -s tests -p test_preflight_legacy_korean_pack.py -v
           PYTHONPATH=. python -m unittest discover -s tests -p test_archived_language_pack_inventory.py -v
   live-archive:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -55,7 +57,7 @@ jobs:
           retention-days: 7
 
   ko-structural-preflight:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     needs: offline-tests
     runs-on: ubuntu-latest
     timeout-minutes: 6
