@@ -1,0 +1,90 @@
+name: CardScanR Thai Trainer Missing Image Quarantine and Private Source
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_th_trainer_quarantine.py"
+      - ".github/workflows/private-th-trainer-unknown-details-stage.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-bulk-exact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        setcode: [SVAM, SVAW]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install robots-aware source collector dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Test bounded set and official URL constraints without fetching art
+        run: |
+          python -m py_compile tools/private_official_th_trainer_quarantine.py
+          python -m tools.private_official_th_trainer_quarantine --self-test
+      - name: Acquire authentic source cards and match pinned archived missing-printing identities
+        run: |
+          python -m tools.private_official_th_trainer_quarantine \
+            --set ${{ matrix.setcode }} --out official-th-${{ matrix.setcode }}
+      - name: Verify card source and private VaultSync SHA stage, no rights or live claims
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          d=Path("official-th-${{ matrix.setcode }}")
+          a=json.loads((d/"source_receipt.json").read_text(encoding="utf8"))
+          b=json.loads((d/"crosswalk_receipt.json").read_text(encoding="utf8"))
+          c=json.loads((d/"receipt.json").read_text(encoding="utf8"))
+          assert a["classification"]=="PRIVATE_OFFICIAL_TH_MULTI_SET_SOURCE_CARD_DETAILS_NO_LIVE_IMPORT"
+          assert a["set_code"]=="${{ matrix.setcode }}"
+          rows=(d/"official_source.jsonl").read_bytes()
+          assert hashlib.sha256(rows).hexdigest()==a["source_sha256"]
+          assert len(rows.splitlines())==a["source_cards"]<=240
+          quarantine=(d/"official_source_quarantine.jsonl").read_bytes()
+          assert len(quarantine.splitlines())==a["official_incomplete_details_quarantined"]
+          assert len(quarantine.splitlines())+a["source_cards"]<=240
+          assert hashlib.sha256(quarantine).hexdigest()==a["quarantine_sha256"]
+          for line in quarantine.splitlines():
+              item=json.loads(line)
+              assert item["reason"]=="official_detail_incomplete_or_image_not_allowlisted"
+              assert len(item["source_response_sha256"])==64
+              assert "source_image_url_reference" not in item
+          assert a["artwork_files_downloaded"]==a["new_live_image_links"]==0
+          exact=(d/"archive_unique_image_candidates.jsonl").read_bytes()
+          assert hashlib.sha256(exact).hexdigest()==b["candidate_sha256"]
+          assert len(exact.splitlines())==b["exact_archive_missing_candidates"]
+          assert b["source_rows"]==b["exact_archive_missing_candidates"]+b["quarantined"]
+          assert c["source_cards"]==a["source_cards"]
+          assert c["archive_exact_missing_candidates"]==b["exact_archive_missing_candidates"]
+          assert c["new_live_links"]==c["new_live_canonical_cards"]==c["artwork_files_downloaded"]==0
+          assert not c["public_artwork_rights_granted"]
+          if c["stage"]["cards"]:
+              m=json.loads((d/"stage_receipt.json").read_text(encoding="utf8"))
+              z=(d/(m["batch_id"]+".gz")).read_bytes()
+              assert hashlib.sha256(z).hexdigest()==m["gzip_sha256"]
+              data=json.loads(gzip.decompress(z))
+              assert len(data["cards"])==len(data["images"])==m["cards"]
+              assert data["source"]=="official_crosswalk"
+              assert all(x["provider_set_id"]=="${{ matrix.setcode }}" and x["language"]=="th" for x in data["cards"])
+              assert not data["artwork_rights_verified"] and data["image_binaries_downloaded"]==0
+          print("SIX_SET_OFFICIAL_TH_ARCHIVE_PASS",{
+              "set":"${{ matrix.setcode }}","new_archive_candidates":b["exact_archive_missing_candidates"],
+              "real_source_cards":a["source_cards"],"live_links":0})
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write(f"### Thai ${{ matrix.setcode }}\n\n")
+              f.write(f"**{a['source_cards']}** real official source cards, **{b['exact_archive_missing_candidates']}** unique archived missing-image candidates.")
+              f.write(" Separate current-live preflight and rights checks remain mandatory.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Official-TH-Trainer-${{ matrix.setcode }}-Exact-Private-Vault-Source
+          path: official-th-${{ matrix.setcode }}/
+          retention-days: 21
+          if-no-files-found: error
