@@ -37,7 +37,14 @@ SPECS={
     "csm2bc": ("CSM2bC","zh-hans/shining-synergy-supreme",327),
     "csm2cc": ("CSM2cC","zh-hans/shining-synergy-summon",322),
     "cs1bc": ("CS1bC","zh-hans/dynamax-clash-flame",315),
+    "cs4dac": ("CS4DaC","zh-hans/start-deck-100",566),
+    "cs4ac": ("CS4aC","zh-hans/nine-colours-gathering-friend",295),
+    "cs3ac": ("CS3aC","zh-hans/primordial-arts-overgrow",290),
+    "cs4bc": ("CS4bC","zh-hans/nine-colours-gathering-origin",288),
+    "cs3bc": ("CS3bC","zh-hans/primordial-arts-torrent",283),
+    "cs6bc": ("CS6bC","zh-hans/shadow-of-the-blue-sea-banish",282),
 }
+NEXT_SIX=frozenset({"cs4dac","cs4ac","cs3ac","cs4bc","cs3bc","cs6bc"})
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
 COLLECTOR=re.compile(r"^[0-9]{3}$")
@@ -120,7 +127,9 @@ def reconcile(live, source, index, slug):
             or source.get("language")!="zh-Hans"
             or source.get("code","").upper()!=code.upper()):
         raise ValueError("wrong_source_set")
-    if (live.get("classification")!="PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122"
+    expected_label=("PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261123"
+                    if slug in NEXT_SIX else "PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122")
+    if (live.get("classification")!=expected_label
             or live.get("source_commit")!=COMMIT
             or live.get("set_id")!=expected_vault
             or live.get("source_set_id")!=source_id
