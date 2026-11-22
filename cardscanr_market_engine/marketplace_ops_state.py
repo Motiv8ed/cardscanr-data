@@ -476,6 +476,13 @@ def maybe_record_failure_cooldown(
         target_incidents = None
     else:
         target_incidents = _incidents_path_for_ops(path)
+    # Retain redacted, decision-time page evidence with the incident. Previously
+    # only a generic message was registered, leaving owner review inconclusive.
+    from .challenge_incident_evidence import build_challenge_incident_evidence
+
+    incident_evidence = build_challenge_incident_evidence(
+        diagnostics, category=category,
+    )
     register_incident(
         market=str(market or "").strip().upper(),
         incident_type=incident_type,
@@ -483,6 +490,7 @@ def maybe_record_failure_cooldown(
         message=message,
         source_probe_id=source_probe_id,
         source_attempt_id=source_attempt_id,
+        evidence=incident_evidence,
         recorded_at=current,
         incident_id=incident_id,
         path=target_incidents,
