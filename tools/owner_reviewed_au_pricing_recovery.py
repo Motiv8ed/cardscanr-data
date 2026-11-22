@@ -168,11 +168,25 @@ def scheduler() -> dict:
         "workdir=[string]$a[0].WorkingDirectory}|ConvertTo-Json -Compress"))
     if (info.get("count") != 1
             or not str(info.get("exe") or "").lower().endswith("wscript.exe")
-            or "ensure_live_ebay_pricing_runtime_shadow45.vbs"
-                not in str(info.get("arguments") or "").lower()
+            or hashlib.sha256(str(info.get("arguments") or "").encode("utf-8")).hexdigest()
+                != "39c6fc71d93915abf358e2967fd2ae99b78e9deeebb2936d4d789b635e727b85"
             or os.path.normcase(str(info.get("workdir") or "").rstrip("\\"))
                 != os.path.normcase(str(ROOT))):
         fail("unexpected_scheduled_task_action")
+    # The owner-approved #45 shadow wrapper is pinned by *bytes*, not just
+    # filename: never run another launcher with similar-looking arguments.
+    launcher = Path(r"D:\CardScanR_worktrees\data_deploy_pr45_20261117_logs")
+    for name, expected in (
+        ("ensure_live_ebay_pricing_runtime_shadow45.vbs",
+         "4ca04866385ba80efdf45b2cabb5474a90e268bb8434af2485b520d48cd57621"),
+        ("ensure_live_ebay_pricing_runtime_shadow45.ps1",
+         "738040de9e4c1e43223658bc775b3b6a07d9c3956a6cacd9c23e15486fda8f49"),
+        ("apply_ebay_scale_shadow_flags.ps1",
+         "4904b01e6b1df708549bd7dd6eb06d03cbc77998c8298b52f65c03133c143ae0"),
+    ):
+        file = launcher / name
+        if not file.is_file() or file.is_symlink() or sha(file) != expected:
+            fail("pinned_scheduled_launcher_source_changed")
     return info
 
 
