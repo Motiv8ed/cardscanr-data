@@ -94,5 +94,45 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "nonmonotonic_page"):
                 normalize_pages(paths, root / "shuffled.json")
 
+
+    def test_updated_tw_count_and_mixed_count_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            paths = []
+            for lang, count in (("ko", 31), ("zh-tw", 35)):
+                records = [dict(canonical_printing_id=f"{lang}:{i:04d}",
+                                language=lang, set_id="test-set",
+                                native_card_name="native",
+                                printed_collector_number=str(i),
+                                has_image_link=False) for i in range(count)]
+                snap = hashlib.sha256(json.dumps(records, sort_keys=True, ensure_ascii=False,
+                    separators=(",", ":")).encode()).hexdigest()
+                for start in range(0, count, 30):
+                    chunk = records[start:start+30]
+                    raw = json.dumps(chunk, sort_keys=True, ensure_ascii=False,
+                                     separators=(",", ":")).encode()
+                    page = dict(classification="LIVE_MISSING_CARD_IDENTITY_READ_ONLY_V1",
+                        language=lang, rows=chunk, page_size=len(chunk), page_limit=30,
+                        missing_cards_in_snapshot=count, snapshot_sha256=snap,
+                        page_sha256=hashlib.sha256(raw).hexdigest(),
+                        next_cursor=chunk[-1]["canonical_printing_id"] if start+30<count else None,
+                        production_writes=0, artwork_rights_granted=False,
+                        image_urls_exposed=False, customer_data_exposed=False,
+                        variant_identity_verified=False,
+                        snapshot_consistency_must_match_across_pages=True)
+                    p = root / f"{lang}-{start:04d}.json"
+                    p.write_text(json.dumps(page), encoding="utf-8")
+                    paths.append(p)
+            result = normalize_pages(paths, root / "valid.json")
+            self.assertEqual(result["counts"], {"ko": 31, "zh-tw": 35})
+            self.assertEqual(len(result["records"]), 66)
+            self.assertFalse(result["production_writes"])
+            altered = json.loads(paths[-1].read_text(encoding="utf-8"))
+            altered["missing_cards_in_snapshot"] = 36
+            paths[-1].write_text(json.dumps(altered), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "snapshot_or_chain_drift"):
+                normalize_pages(paths, root / "invalid.json")
+            self.assertFalse((root / "invalid.json").exists())
+
 if __name__ == "__main__":
     unittest.main()
