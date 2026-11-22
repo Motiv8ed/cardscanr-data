@@ -117,7 +117,7 @@ class CrosswalkTests(unittest.TestCase):
     def test_oversized_live_page_fails_closed(self):
         first = self.live[0]
         lines = first.read_text(encoding="utf-8").splitlines()
-        first.write_text("\n".join(lines + [lines[0]] * 471) + "\n", encoding="utf-8")
+        first.write_text("\n".join(lines + [lines[0]]) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "live_page_size_invalid"):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
