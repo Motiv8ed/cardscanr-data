@@ -44,6 +44,16 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
             paths[0].write_text(json.dumps(page))
             with self.assertRaisesRegex(ValueError, "page_hash_mismatch"):
                 normalize_pages(paths, root / "other.json")
+            # Recalculate a valid page hash after shuffling IDs: ordering
+            # still must fail, independent of hash integrity.
+            page["rows"][0]["native_card_name"] = "native"
+            page["rows"][0], page["rows"][1] = page["rows"][1], page["rows"][0]
+            page["page_sha256"] = hashlib.sha256(json.dumps(
+                page["rows"], ensure_ascii=False, sort_keys=True,
+                separators=(",", ":")).encode("utf-8")).hexdigest()
+            paths[0].write_text(json.dumps(page), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "nonmonotonic_page"):
+                normalize_pages(paths, root / "shuffled.json")
 
 if __name__ == "__main__":
     unittest.main()
