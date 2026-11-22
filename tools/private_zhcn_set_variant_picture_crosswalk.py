@@ -26,6 +26,11 @@ SPECS={
     "csv2c": ("CSV2C","zh-hans/miracle-journey",393),
     "csv3c": ("CSV3C","zh-hans/fearless-terastal",386),
     "csv6c": ("CSV6C","zh-hans/true-mystery",393),
+    "cs1dc": ("CS1DC","zh-hans/dynamax-clash-v-starter-deck",222),
+    "csm2dc": ("CSM2DC","zh-hans/shining-synergy-gx-starter-deck",357),
+    "csm1dc": ("CSM1DC","zh-hans/storming-emergence-gx-starter-deck",336),
+    "csm1cc": ("CSM1cC","zh-hans/storming-emergence-abundant",332),
+    "cs1ac": ("CS1aC","zh-hans/dynamax-clash-thunder",329),
 }
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
@@ -52,7 +57,7 @@ def printing_label(card, variant):
     if not name or not isinstance(variants,list) or not variants:
         raise ValueError("invalid_source_printing")
     if len(variants)==1:return name
-    suffix={"non-holo":"","holo":"",
+    suffix={"non-holo":"","holo":"","reverse-holo":" Reverse Holo",
             "master-ball":" Master Ball Holo",
             "poke-ball":" Pokeball Holo"}.get(variant.get("id"))
     return name+suffix if suffix is not None else None
@@ -187,6 +192,12 @@ def self_test():
     assert n==3 and bad==0
     assert index[("001","Exeggcute Master Ball Holo")][0]["source_picture_url_reference"]=="https://img.cardcorpus.com/s1/480/"+"b"*32+".avif"
     assert ("001","Exeggcute Holo") not in index
+    rev={"id":"002","name":"Sandshrew","number":{"short":"002"},
+         "variants":[{"id":"non-holo","finish":"non_holo","picture":{"front":{"image":"a"*32}}},
+                     {"id":"reverse-holo","finish":"reverse_holo","picture":{"front":{"image":"b"*32}}}]}
+    r,n,bad=source_index([rev],"https://img.cardcorpus.com/s1/{width}/{id}.avif")
+    assert n==2 and bad==0 and ("002","Sandshrew Reverse Holo") in r
+    assert ("002","Sandshrew Holo") not in r
     print("PASS source-declared URL template, exact set/native labels, no guessed aliases")
 
 
