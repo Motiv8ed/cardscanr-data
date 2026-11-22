@@ -77,7 +77,8 @@ def normalize_pages(paths, output):
         if page_ids != sorted(page_ids) or len(set(page_ids)) != len(page_ids):
             raise ValueError("nonmonotonic_page")
         cursor = page.get("next_cursor")
-        if cursor is not None and len(chunk) != 30:\n            raise ValueError("short_nonterminal_page")
+        if cursor is not None and len(chunk) != 30:
+            raise ValueError("short_nonterminal_page")
         if cursor is not None and (not isinstance(cursor, str) or cursor != chunk[-1]["canonical_printing_id"]):
             raise ValueError("invalid_next_cursor")
         per_language[lang] = {"snapshot": page["snapshot_sha256"], "cursor": cursor,
