@@ -22,10 +22,10 @@ jobs:
       - name: Offline strict SHA, source URL and native identity tests
         run: |
           python -m py_compile tools/private_combine_thnext_five_live_proof.py
-          python -m tools.private_combine_th_sha_stage_batches --self-test
+          python -m tools.private_combine_thnext_five_live_proof --self-test
       - name: Build one backed-up-import candidate from unchanged native live-positive sources
         run: |
-          python -m tools.private_combine_th_sha_stage_batches \
+          python -m tools.private_combine_thnext_five_live_proof \
             --source-manifest research/live-vault-missing-id-th-20261122/thnext-five-live-positive-combine.json \
             --out private-th-next-five-combined-stage \
             --print-stage-b64
