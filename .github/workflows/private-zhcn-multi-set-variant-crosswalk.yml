@@ -6,6 +6,12 @@ on:
       - 'reports/live_source_proofs/zhcn_csv8c_20261122.json'
       - 'reports/live_source_proofs/zhcn_csv7c_20261122.json'
       - 'reports/live_source_proofs/zhcn_csv9_5c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv4c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv5c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv1c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv2c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv3c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv6c_20261122.json'
       - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -30,6 +36,30 @@ jobs:
             source_slug: terastal-gathering
             live_file: zhcn_csv9_5c_20261122.json
             expected: 601
+          - slug: csv4c
+            source_slug: bonus-round
+            live_file: zhcn_csv4c_20261122.json
+            expected: 395
+          - slug: csv5c
+            source_slug: dark-crystal-blaze
+            live_file: zhcn_csv5c_20261122.json
+            expected: 394
+          - slug: csv1c
+            source_slug: eternal-birth
+            live_file: zhcn_csv1c_20261122.json
+            expected: 393
+          - slug: csv2c
+            source_slug: miracle-journey
+            live_file: zhcn_csv2c_20261122.json
+            expected: 393
+          - slug: csv3c
+            source_slug: fearless-terastal
+            live_file: zhcn_csv3c_20261122.json
+            expected: 386
+          - slug: csv6c
+            source_slug: true-mystery
+            live_file: zhcn_csv6c_20261122.json
+            expected: 393
     steps:
       - uses: actions/checkout@v4
         with:
