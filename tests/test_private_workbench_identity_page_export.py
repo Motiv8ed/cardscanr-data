@@ -27,7 +27,9 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
                                 page_sha256=hashlib.sha256(raw).hexdigest(),
                                 next_cursor=chunk[-1]["canonical_printing_id"] if start+30 < count else None,
                                 production_writes=0, artwork_rights_granted=False,
-                                image_urls_exposed=False, customer_data_exposed=False,\n                                variant_identity_verified=False,\n                                snapshot_consistency_must_match_across_pages=True)
+                                image_urls_exposed=False, customer_data_exposed=False,
+                                variant_identity_verified=False,
+                                snapshot_consistency_must_match_across_pages=True)
                     p = root / f"{lang}-{start:04d}.json"
                     p.write_text(json.dumps(page), encoding="utf-8")
                     paths.append(p)
