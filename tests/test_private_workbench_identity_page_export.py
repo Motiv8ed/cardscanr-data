@@ -44,6 +44,14 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
             paths[0].write_text(json.dumps(page))
             with self.assertRaisesRegex(ValueError, "page_hash_mismatch"):
                 normalize_pages(paths, root / "other.json")
+            # Python bool is an int subclass: True == 1 and False == 0.
+            # The safety envelope must require an integer zero, not False.
+            page["rows"][0]["native_card_name"] = "native"
+            page["production_writes"] = False
+            paths[0].write_text(json.dumps(page), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "unsafe_page_flags"):
+                normalize_pages(paths, root / "boolean-write-flag.json")
+            page["production_writes"] = 0
             # Recalculate a valid page hash after shuffling IDs: ordering
             # still must fail, independent of hash integrity.
             page["rows"][0]["native_card_name"] = "native"
