@@ -228,5 +228,27 @@ class CrosswalkTests(unittest.TestCase):
         self.assertEqual(matched["source_image_url_reference"], "https://example.org/tw/GRA.png")
         self.assertFalse(matched["safe_for_vault_apply"])
 
+    def test_language_scoped_snapshot_hashes_are_accepted(self):
+        # The Workbench endpoint hashes KO and ZH-TW independently.
+        for path in self.live:
+            lines = path.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines if line.strip()]
+            for record in records:
+                if record["language"] == "zh-tw":
+                    record["snapshot_sha256"] = "b" * 64
+            path.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+        result = reconcile(self.live, self.source, self.output)
+        self.assertEqual(result["live_rows"], 1528)
+        self.assertEqual(result["new_live_image_links"], 0)
+
+    def test_mixed_snapshot_within_language_rejected(self):
+        path = self.live[0]
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+        records[0]["snapshot_sha256"] = "b" * 64
+        path.write_text("".join(json.dumps(record) + "\n" for record in records), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "missing_or_mixed_live_snapshot"):
+            reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
 if __name__ == "__main__":
     unittest.main()
