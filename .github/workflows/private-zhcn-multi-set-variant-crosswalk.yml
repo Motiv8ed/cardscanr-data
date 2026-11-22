@@ -1,0 +1,99 @@
+name: Bulk exact Chinese variant picture reference reconciliation
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_set_variant_picture_crosswalk.py'
+      - 'reports/live_source_proofs/zhcn_csv8c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv7c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csv9_5c_20261122.json'
+      - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-source-exact-variant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slug: csv8c
+            source_slug: brilliant-illusions
+            live_file: zhcn_csv8c_20261122.json
+            expected: 616
+          - slug: csv7c
+            source_slug: blade-awakening
+            live_file: zhcn_csv7c_20261122.json
+            expected: 605
+          - slug: csv9.5c
+            source_slug: terastal-gathering
+            live_file: zhcn_csv9_5c_20261122.json
+            expected: 601
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: cardscanr
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: pinned-provider
+          persist-credentials: false
+          sparse-checkout: |
+            v1/index.json
+            v1/sets/zh-hans/
+          sparse-checkout-cone-mode: false
+      - name: Source SHA pin, offline tests and URL recipe contract
+        run: |
+          test "$(git -C pinned-provider rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile cardscanr/tools/private_zhcn_set_variant_picture_crosswalk.py
+          python cardscanr/tools/private_zhcn_set_variant_picture_crosswalk.py --self-test
+      - name: Reconcile exact live native printing and source variants
+        run: |
+          python cardscanr/tools/private_zhcn_set_variant_picture_crosswalk.py \
+            --slug ${{ matrix.slug }} \
+            --live cardscanr/reports/live_source_proofs/${{ matrix.live_file }} \
+            --source pinned-provider/v1/sets/zh-hans/${{ matrix.source_slug }}.json \
+            --provider-index pinned-provider/v1/index.json \
+            --out private-verified-${{ matrix.slug }}
+      - name: SHA check, all live identities covered and no art publication
+        run: |
+          python - <<'PY'
+          import os,json,hashlib
+          from pathlib import Path
+          slug=os.environ['CASE']
+          count=int(os.environ['EXPECTED'])
+          root=Path('private-verified-'+slug)
+          receipt=json.loads((root/'receipt.json').read_text())
+          raw=(root/'candidates.jsonl').read_bytes()
+          rows=[json.loads(x) for x in raw.splitlines()]
+          assert len(rows)==receipt['live_missing_printings_checked']==count
+          assert sum(receipt['match_counts'].values())==count
+          assert receipt['candidate_sha256']==hashlib.sha256(raw).hexdigest()
+          assert receipt['provider_picture_url_recipe']=='https://img.cardcorpus.com/s1/{width}/{id}.avif'
+          assert receipt['new_live_links']==receipt['images_downloaded']==0
+          assert not receipt['rights_verified'] and not receipt['live_import_allowed']
+          assert not receipt['public_artwork_enabled']
+          assert all(not z['artwork_rights_verified'] and
+                     not z['safe_for_vault_apply'] and
+                     z['image_bytes_downloaded']==0 for z in rows)
+          print('CROSSWALK_PASS',slug,receipt['match_counts'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('### Chinese set '+slug+' variant matches\n\n')
+              f.write(str(receipt['match_counts'])+'\n\n')
+              f.write('No images or live writes. Source references only.\n')
+          PY
+        env:
+          CASE: ${{ matrix.slug }}
+          EXPECTED: ${{ matrix.expected }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Chinese-Private-Variant-Source-${{ matrix.slug }}
+          path: private-verified-${{ matrix.slug }}/
+          retention-days: 14
+          if-no-files-found: error
