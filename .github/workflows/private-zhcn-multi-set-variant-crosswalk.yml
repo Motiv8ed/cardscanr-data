@@ -12,6 +12,11 @@ on:
       - 'reports/live_source_proofs/zhcn_csv2c_20261122.json'
       - 'reports/live_source_proofs/zhcn_csv3c_20261122.json'
       - 'reports/live_source_proofs/zhcn_csv6c_20261122.json'
+      - 'reports/live_source_proofs/zhcn_cs1dc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm2dc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm1dc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm1cc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_cs1ac_20261122.json'
       - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -60,6 +65,26 @@ jobs:
             source_slug: true-mystery
             live_file: zhcn_csv6c_20261122.json
             expected: 393
+          - slug: cs1dc
+            source_slug: dynamax-clash-v-starter-deck
+            live_file: zhcn_cs1dc_20261122.json
+            expected: 222
+          - slug: csm2dc
+            source_slug: shining-synergy-gx-starter-deck
+            live_file: zhcn_csm2dc_20261122.json
+            expected: 357
+          - slug: csm1dc
+            source_slug: storming-emergence-gx-starter-deck
+            live_file: zhcn_csm1dc_20261122.json
+            expected: 336
+          - slug: csm1cc
+            source_slug: storming-emergence-abundant
+            live_file: zhcn_csm1cc_20261122.json
+            expected: 332
+          - slug: cs1ac
+            source_slug: dynamax-clash-thunder
+            live_file: zhcn_cs1ac_20261122.json
+            expected: 329
     steps:
       - uses: actions/checkout@v4
         with:
