@@ -64,5 +64,35 @@ class EvidenceGateTests(unittest.TestCase):
         self.assertEqual(result["quarantine"][0]["reason"], "image_identity_url_mismatch")
 
 
+    def test_wrong_detail_locale_and_query_are_quarantined(self):
+        wrong_locale = source_row("321")
+        wrong_locale["official_detail_url"] = "https://asia.pokemon-card.com/id/card-search/detail/321/"
+        with_query = source_row("322")
+        with_query["official_detail_url"] += "?redirect=1"
+        result = self.audit_lines([json.dumps(wrong_locale), json.dumps(with_query)])
+        self.assertEqual(result["unique_evidence_candidates"], 0)
+        self.assertEqual([r["reason"] for r in result["quarantine"]],
+                         ["detail_identity_url_mismatch", "untrusted_official_url"])
+
+    def test_invalid_response_hash_and_missing_native_name_fail_closed(self):
+        invalid_hash = source_row("323")
+        invalid_hash["source_response_sha256"] = "not-a-sha"
+        missing_name = source_row("324")
+        missing_name["source_name_native"] = ""
+        result = self.audit_lines([json.dumps(invalid_hash), json.dumps(missing_name)])
+        self.assertEqual(result["unique_evidence_candidates"], 0)
+        self.assertEqual([r["reason"] for r in result["quarantine"]],
+                         ["invalid_response_sha256", "incomplete_native_source_evidence"])
+
+    def test_same_detail_in_different_batches_never_counts_twice(self):
+        first = source_row("325", "new-batch-one")
+        second = source_row("325", "new-batch-two")
+        result = self.audit_lines([json.dumps(first), json.dumps(second)])
+        self.assertEqual(result["unique_evidence_candidates"], 0)
+        self.assertEqual(result["quarantined"], 2)
+        self.assertEqual({r["reason"] for r in result["quarantine"]},
+                         {"duplicate_detail_or_image_across_input"})
+
+
 if __name__ == "__main__":
     unittest.main()
