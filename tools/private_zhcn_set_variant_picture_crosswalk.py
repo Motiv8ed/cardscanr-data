@@ -31,6 +31,12 @@ SPECS={
     "csm1dc": ("CSM1DC","zh-hans/storming-emergence-gx-starter-deck",336),
     "csm1cc": ("CSM1cC","zh-hans/storming-emergence-abundant",332),
     "cs1ac": ("CS1aC","zh-hans/dynamax-clash-thunder",329),
+    "csm1ac": ("CSM1aC","zh-hans/storming-emergence-radiant",331),
+    "csm1bc": ("CSM1bC","zh-hans/storming-emergence-verdant",324),
+    "csm2ac": ("CSM2aC","zh-hans/shining-synergy-shower",328),
+    "csm2bc": ("CSM2bC","zh-hans/shining-synergy-supreme",327),
+    "csm2cc": ("CSM2cC","zh-hans/shining-synergy-summon",322),
+    "cs1bc": ("CS1bC","zh-hans/dynamax-clash-flame",315),
 }
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
@@ -87,14 +93,22 @@ def source_index(cards,template):
             if (p.scheme!="https" or p.hostname!="img.cardcorpus.com"
                     or p.path!=f"/s1/480/{picture}.avif" or p.query or p.fragment):
                 raise ValueError("image_url_does_not_match_declared_template")
-            by_print[(number,label)].append({
-                "source_card_id":card["id"],
-                "source_variant_id":variant["id"],
-                "source_variant_finish":variant.get("finish"),
-                "source_picture_id":picture,
-                "source_picture_url_reference":url,
-                "source_card_name":card["name"],
-            })
+            labels=[(label,"exact_source_name")]
+            # One explicitly bounded typography equivalence: terminal -GX vs GX.
+            # Never drop a tag-team partner, translate names, or fuzzy match.
+            if card["name"].endswith("-GX") and label.startswith(card["name"]):
+                labels.append((card["name"][:-3]+" GX"+label[len(card["name"]):],
+                               "terminal_gx_hyphen_only"))
+            for printed_label,method in labels:
+                by_print[(number,printed_label)].append({
+                    "source_card_id":card["id"],
+                    "source_variant_id":variant["id"],
+                    "source_variant_finish":variant.get("finish"),
+                    "source_picture_id":picture,
+                    "source_picture_url_reference":url,
+                    "source_card_name":card["name"],
+                    "source_name_match_method":method,
+                })
     return by_print,variant_count,no_picture
 
 
@@ -167,6 +181,9 @@ def run(live_path, source_path,index_path, out,slug):
         "live_missing_printings_checked":len(results),
         "source_cards":len(source["cards"]),"source_variants":total,
         "source_variants_without_picture":missing,"match_counts":counts,
+        "source_name_match_methods":dict(sorted(Counter(
+            r["source"]["source_name_match_method"] for r in results if r["source"]
+        ).items())),
         "candidate_sha256":hashlib.sha256(raw).hexdigest(),
         "new_live_links":0,"images_downloaded":0,"public_artwork_enabled":False,
         "rights_verified":False,"live_import_allowed":False,
@@ -192,6 +209,17 @@ def self_test():
     assert n==3 and bad==0
     assert index[("001","Exeggcute Master Ball Holo")][0]["source_picture_url_reference"]=="https://img.cardcorpus.com/s1/480/"+"b"*32+".avif"
     assert ("001","Exeggcute Holo") not in index
+    gx={"id":"003","name":"Charizard-GX","number":{"short":"003"},
+        "variants":[{"id":"holo","finish":"holo","picture":{"front":{"image":"d"*32}}}]}
+    gx_index,gx_count,gx_missing=source_index([gx],"https://img.cardcorpus.com/s1/{width}/{id}.avif")
+    assert gx_count==1 and gx_missing==0
+    assert gx_index[("003","Charizard GX")][0]["source_name_match_method"]=="terminal_gx_hyphen_only"
+    assert ("003","Charizard Ex") not in gx_index
+    tag={"id":"004","name":"Celebi & Venusaur-GX","number":{"short":"004"},
+         "variants":[{"id":"holo","picture":{"front":{"image":"e"*32}}}]}
+    tag_index,_,_=source_index([tag],"https://img.cardcorpus.com/s1/{width}/{id}.avif")
+    assert ("004","Celebi & Venusaur GX") in tag_index
+    assert ("004","Celebi GX") not in tag_index
     rev={"id":"002","name":"Sandshrew","number":{"short":"002"},
          "variants":[{"id":"non-holo","finish":"non_holo","picture":{"front":{"image":"a"*32}}},
                      {"id":"reverse-holo","finish":"reverse_holo","picture":{"front":{"image":"b"*32}}}]}
