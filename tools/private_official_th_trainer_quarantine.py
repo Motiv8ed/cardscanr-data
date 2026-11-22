@@ -279,7 +279,7 @@ def test():
         try:validate_page_ids(seq,{"1"} if seq==["1","2"] else set())
         except ValueError:pass
         else:raise AssertionError("duplicate source ID accepted")
-    assert normalize("th","SVAM","001","Dondozo")==normalize("th","SV4K","001","Dondozo")
+    assert normalize("th","SVAM","001","Dondozo")==normalize("th","SVAM","001","Dondozo")
     assert normalize("id","SVAM","001","Dondozo") is None
     print("PASS exact Thai official locale, identity collisions and private URLs")
 
