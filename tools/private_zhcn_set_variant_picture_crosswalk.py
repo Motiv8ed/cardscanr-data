@@ -20,6 +20,12 @@ SPECS={
     "csv8c": ("CSV8C","zh-hans/brilliant-illusions",616),
     "csv7c": ("CSV7C","zh-hans/blade-awakening",605),
     "csv9.5c": ("CSV9.5C","zh-hans/terastal-gathering",601),
+    "csv4c": ("CSV4C","zh-hans/bonus-round",395),
+    "csv5c": ("CSV5C","zh-hans/dark-crystal-blaze",394),
+    "csv1c": ("CSV1C","zh-hans/eternal-birth",393),
+    "csv2c": ("CSV2C","zh-hans/miracle-journey",393),
+    "csv3c": ("CSV3C","zh-hans/fearless-terastal",386),
+    "csv6c": ("CSV6C","zh-hans/true-mystery",393),
 }
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
