@@ -22,6 +22,14 @@ jobs:
             source_slug: brilliant-illusions
             live_file: zhcn_csv8c_20261122.json
             expected: 616
+          - slug: csv7c
+            source_slug: blade-awakening
+            live_file: zhcn_csv7c_20261122.json
+            expected: 605
+          - slug: csv9.5c
+            source_slug: terastal-gathering
+            live_file: zhcn_csv9_5c_20261122.json
+            expected: 601
     steps:
       - uses: actions/checkout@v4
         with:
