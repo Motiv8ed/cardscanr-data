@@ -43,8 +43,17 @@ SPECS={
     "cs4bc": ("CS4bC","zh-hans/nine-colours-gathering-origin",288),
     "cs3bc": ("CS3bC","zh-hans/primordial-arts-torrent",283),
     "cs6bc": ("CS6bC","zh-hans/shadow-of-the-blue-sea-banish",282),
+    "csve2c": ("CSVE2C","zh-hans/battle-party-shining-dream",237),
+    "cbb4c": ("CBB4C","zh-hans/gem-pack-volume-4",196),
+    "cbb5c": ("CBB5C","zh-hans/gem-pack-volume-5",196),
+    "cs5bc": ("CS5bC","zh-hans/brave-stars-courage",280),
+    "cs5ac": ("CS5aC","zh-hans/brave-stars-charm",275),
+    "cs3dc": ("CS3DC","zh-hans/primordial-arts-v-starter-deck",183),
+    "csve1c": ("CSVE1C","zh-hans/battle-party-dream-together",194),
 }
 NEXT_SIX=frozenset({"cs4dac","cs4ac","cs3ac","cs4bc","cs3bc","cs6bc"})
+LATEST_SEVEN=frozenset({"csve2c","cbb4c","cbb5c","cs5bc","cs5ac","cs3dc","csve1c"})
+GEM_PACK_FINISH_UNRESOLVED=frozenset({"cbb4c","cbb5c"})
 PICTURE=re.compile(r"^[0-9a-f]{32}$")
 SNAPSHOT=re.compile(r"^[0-9a-f]{64}$")
 COLLECTOR=re.compile(r"^[0-9]{3}$")
@@ -76,12 +85,12 @@ def printing_label(card, variant):
     return name+suffix if suffix is not None else None
 
 
-def source_index(cards,template):
+def source_index(cards,template, *, gem_pack=False):
     seen=set(); by_print=defaultdict(list); variant_count=0; no_picture=0
     for card in cards:
         number=card.get("number",{}).get("short")
-        if not isinstance(number,str) or not COLLECTOR.fullmatch(number):
-            raise ValueError("source_number_not_three_digits")
+        if not isinstance(number,str) or re.fullmatch(r"[0-9]{4}" if gem_pack else COLLECTOR,number) is None:
+            raise ValueError("source_collector_format_not_pinned")
         variants=card.get("variants")
         if not isinstance(variants,list) or not variants:
             raise ValueError("source_card_without_variants")
@@ -128,7 +137,7 @@ def reconcile(live, source, index, slug):
             or source.get("code","").upper()!=code.upper()):
         raise ValueError("wrong_source_set")
     expected_label=("PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261123"
-                    if slug in NEXT_SIX else "PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122")
+                    if slug in (NEXT_SIX | LATEST_SEVEN) else "PINNED_LIVE_ZHCN_PIKAQIAN_SET_PRINTINGS_20261122")
     if (live.get("classification")!=expected_label
             or live.get("source_commit")!=COMMIT
             or live.get("set_id")!=expected_vault
@@ -139,7 +148,8 @@ def reconcile(live, source, index, slug):
             or not SNAPSHOT.fullmatch(live.get("snapshot_sha256",""))):
         raise ValueError("live_identity_snapshot_or_set_drift")
     template=provider_url_recipe(index)
-    by_print,source_variants,no_picture=source_index(source["cards"],template)
+    gem_pack=slug in GEM_PACK_FINISH_UNRESOLVED
+    by_print,source_variants,no_picture=source_index(source["cards"],template,gem_pack=gem_pack)
     if source_variants < expected_live:raise ValueError("insufficient_source_variants")
     seen_ids=set();seen_variants=set();matched=[];counts=Counter()
     for row in live["rows"]:
@@ -148,16 +158,21 @@ def reconcile(live, source, index, slug):
                 or not isinstance(row["canonical_printing_id"],str)
                 or not row["canonical_printing_id"].startswith("pokemon-tcg-kb-pikaqian:printing:cn-"+slug+"-")
                 or row["canonical_printing_id"] in seen_ids or
-                not COLLECTOR.fullmatch(str(row["printed_collector_number"]))):
+                not re.fullmatch(r"[0-9]{2}" if gem_pack else COLLECTOR,str(row["printed_collector_number"]))):
             raise ValueError("invalid_live_printing_identity")
         cid=row["canonical_printing_id"]; seen_ids.add(cid)
-        matches=by_print.get((row["printed_collector_number"],norm(row["native_card_name"])),[])
+        # In Gem Pack the live printed number "01" omits source finish
+        # distinctions such as 0101-0107, which are separate physical variants.
+        # Never infer the missing finish from card name alone.
+        matches=([] if gem_pack else by_print.get(
+            (row["printed_collector_number"],norm(row["native_card_name"])),[]))
         selected=matches[0] if len(matches)==1 else None
         source_variant=(selected["source_card_id"],selected["source_variant_id"]) if selected else None
         if source_variant and source_variant in seen_variants:
             selected=None
         if selected:seen_variants.add(source_variant)
-        status=("EXACT_ONE_TO_ONE_NATIVE_PRINTING_VARIANT" if selected else
+        status=("GEM_PACK_NUMBER_AND_FINISH_UNRESOLVED" if gem_pack else
+                "EXACT_ONE_TO_ONE_NATIVE_PRINTING_VARIANT" if selected else
                 "NO_EXACT_SOURCE_VARIANT" if not matches else
                 "AMBIGUOUS_SOURCE_PRINTING_VARIANT")
         counts[status]+=1
@@ -235,6 +250,13 @@ def self_test():
     r,n,bad=source_index([rev],"https://img.cardcorpus.com/s1/{width}/{id}.avif")
     assert n==2 and bad==0 and ("002","Sandshrew Reverse Holo") in r
     assert ("002","Sandshrew Holo") not in r
+    gem={"id":"0101","name":"Ponyta","number":{"short":"0101"},
+         "variants":[{"id":"energy-symbol","picture":{"front":{"image":"f"*32}}}]}
+    gem_source,n_gem,bad_gem=source_index([gem],"https://img.cardcorpus.com/s1/{width}/{id}.avif",gem_pack=True)
+    assert n_gem==1 and bad_gem==0 and ("0101","Ponyta") in gem_source
+    try:source_index([gem],"https://img.cardcorpus.com/s1/{width}/{id}.avif")
+    except ValueError:pass
+    else:raise AssertionError("four_digit_non_gem_source_not_blocked")
     print("PASS source-declared URL template, exact set/native labels, no guessed aliases")
 
 
