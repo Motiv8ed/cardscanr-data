@@ -27,7 +27,7 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
                                 page_sha256=hashlib.sha256(raw).hexdigest(),
                                 next_cursor=chunk[-1]["canonical_printing_id"] if start+30 < count else None,
                                 production_writes=0, artwork_rights_granted=False,
-                                image_urls_exposed=False)
+                                image_urls_exposed=False, customer_data_exposed=False,\n                                variant_identity_verified=False,\n                                snapshot_consistency_must_match_across_pages=True)
                     p = root / f"{lang}-{start:04d}.json"
                     p.write_text(json.dumps(page), encoding="utf-8")
                     paths.append(p)
@@ -52,6 +52,35 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unsafe_page_flags"):
                 normalize_pages(paths, root / "boolean-write-flag.json")
             page["production_writes"] = 0
+            for key, unsafe in (("customer_data_exposed", True),
+                                ("variant_identity_verified", True),
+                                ("snapshot_consistency_must_match_across_pages", False)):
+                page[key] = unsafe
+                paths[0].write_text(json.dumps(page), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "unsafe_page_flags"):
+                    normalize_pages(paths, root / f"unsafe-{key}.json")
+                page[key] = not unsafe
+            # A short page cannot advertise a continuation cursor.
+            page["rows"] = page["rows"][:1]
+            page["page_size"] = 1
+            page["next_cursor"] = page["rows"][-1]["canonical_printing_id"]
+            page["page_sha256"] = hashlib.sha256(json.dumps(
+                page["rows"], ensure_ascii=False, sort_keys=True,
+                separators=(",", ":")).encode()).hexdigest()
+            paths[0].write_text(json.dumps(page), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "short_nonterminal_page"):
+                normalize_pages(paths, root / "short-middle.json")
+            page["rows"] = json.loads(paths[1].read_text())["rows"]
+            # Restore first page from its original sequence.
+            page["rows"] = [dict(canonical_printing_id=f"ko:{i:04d}", language="ko",
+                                set_id="tcgdex:asia:set:SV4K", native_card_name="native",
+                                printed_collector_number=str(i), has_image_link=False)
+                            for i in range(30)]
+            page["page_size"] = 30
+            page["next_cursor"] = page["rows"][-1]["canonical_printing_id"]
+            page["page_sha256"] = hashlib.sha256(json.dumps(
+                page["rows"], ensure_ascii=False, sort_keys=True,
+                separators=(",", ":")).encode()).hexdigest()
             # Recalculate a valid page hash after shuffling IDs: ordering
             # still must fail, independent of hash integrity.
             page["rows"][0]["native_card_name"] = "native"
