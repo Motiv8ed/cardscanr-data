@@ -60,7 +60,7 @@ def acquire(code,out,delay=0.75):
     if out.exists() or out.is_symlink():
         raise FileExistsError("output_must_be_new")
     rows=[];provenance=[];seen=set()
-    with tempfile.TemporaryDirectory(prefix="cardscanr-official-indonesian-"+code+"-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="cardscanr-official-thai-"+code+"-") as tmp:
         coll=Collector(LOCALE,Path(tmp),delay)
         try:
             for page in range(1,MAX_PAGES+1):
@@ -144,7 +144,7 @@ def match_archive(code,rows,out):
     if rows:
         manifest=json.loads(get(CANARY,2_000_000))
         desc=pick(manifest,"th")
-        with tempfile.TemporaryDirectory(prefix="cardscanr-indonesian-R2-"+code+"-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="cardscanr-thai-R2-"+code+"-") as tmp:
             pack=Path(tmp)/"thai.sqlite"
             z=get(desc["compressedDatabaseUrl"],MAX_GZIP)
             check,*_=inspect_pack(desc,z,pack)
@@ -167,7 +167,7 @@ def match_archive(code,rows,out):
                 k=normalize(r["language"],code,
                             r["source_collector_number"],r["source_name_native"])
                 if (k is None or index_counts[k]!=1
-                    or detail_counts[("id",r["official_detail_id"])]!=1):
+                    or detail_counts[("th",r["official_detail_id"])]!=1):
                     quarantined.append({"detail_id":r["official_detail_id"],
                         "reason":"ambiguous_source_printing_identity"});continue
                 matched=indexed.get(k,[])
@@ -266,9 +266,9 @@ def test():
         try:validate_page_ids(seq,{"1"} if seq==["1","2"] else set())
         except ValueError:pass
         else:raise AssertionError("duplicate source ID accepted")
-    assert normalize("id","SV1S","001","Dondozo")==normalize("id","SV1S","001","Dondozo")
+    assert normalize("th","SV1S","001","Dondozo")==normalize("th","SV1S","001","Dondozo")
     assert normalize("id","SV1S","001","Dondozo") is None
-    print("PASS exact ID official locale, identity collisions and private URLs")
+    print("PASS exact Thai official locale, identity collisions and private URLs")
 
 
 def main():
