@@ -1,0 +1,89 @@
+name: Official Indonesian SV6s Pages 8-12 Real Card Sources and Private Stage
+on:
+  pull_request:
+    paths:
+      - "tools/private_official_id_sv6s_p8p12_source.py"
+      - "tools/private_official_id_sv6s_p8p12_crosswalk.py"
+      - "tools/private_official_id_sv6s_p8p12_stage.py"
+      - ".github/workflows/private-id-sv6s-pages-8-12-source-stage.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-official-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing official source parser dependencies
+        run: python -m pip install requests beautifulsoup4
+      - name: Offline source, collisions, partial page and rights tests
+        run: |
+          python -m py_compile tools/private_official_id_sv6s_p8p12_source.py tools/private_official_id_sv6s_p8p12_crosswalk.py tools/private_official_id_sv6s_p8p12_stage.py
+          python -m tools.private_official_id_sv6s_p8p12_source --self-test
+          python -m tools.private_official_id_sv6s_p8p12_crosswalk --self-test
+          python -m tools.private_official_id_sv6s_p8p12_stage --self-test
+      - name: Collect genuine Indonesian SV6s pages 8-12, partial/empty allowed
+        run: |
+          python -m tools.private_official_id_sv6s_p8p12_source --out id-sv6s-p8p12-official
+      - name: Compare SHA-authenticated official source identities to backed R2 pack
+        run: |
+          python -m tools.private_official_id_sv6s_p8p12_crosswalk \
+            --source id-sv6s-p8p12-official --out id-sv6s-p8p12-crosswalk
+      - name: Build SHA private staging candidate, no live writes
+        run: |
+          python -m tools.private_official_id_sv6s_p8p12_stage \
+            --source id-sv6s-p8p12-crosswalk --out id-sv6s-p8p12-stage --print-stage-b64
+      - name: Confirm SHA, count, rights, no fabricated card or link
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json,os
+          from pathlib import Path
+          a=Path("id-sv6s-p8p12-official")
+          r=json.loads((a/"receipt.json").read_text(encoding="utf8"))
+          blob=(a/"official_asia_card_source_urls.jsonl").read_bytes()
+          assert r["classification"]=="PRIVATE_OFFICIAL_ID_SV6S_PAGES_8_12_PARTIAL_SAFE_NATIVE_DETAILS"
+          assert r["source_cards"]==len(blob.splitlines())==r["image_url_references"]
+          assert hashlib.sha256(blob).hexdigest()==r["source_url_manifest_sha256"]
+          assert r["source_identity_duplicates"]==r["live_vault_writes"]==r["image_binaries_downloaded"]==0
+          assert not r["artwork_rights_granted"] and not r["public_artwork_enabled"]
+          assert all(8<=p["page"]<=12 for p in r["source_pages"])
+          assert len({x["official_detail_id"] for x in map(json.loads,blob.splitlines())})==r["source_cards"]
+          b=json.loads(Path("id-sv6s-p8p12-crosswalk/receipt.json").read_text(encoding="utf8"))
+          assert b["source_cards"]==r["source_cards"]
+          assert b["exact_candidate_records"]<=b["matched_unique_archived_printings"]<=b["unique_source_identity_rows"]
+          assert b["unique_source_identity_rows"]+b["duplicate_or_ambiguous_source_rows"]==r["source_cards"]
+          assert b["actual_live_new_image_links"]==b["new_live_canonical_cards"]==b["image_binaries_downloaded"]==0
+          assert not b["public_artwork_enabled"] and not b["artwork_rights_verified"]
+          c=json.loads(Path("id-sv6s-p8p12-stage/receipt.json").read_text(encoding="utf8"))
+          assert c["proposed_url_refs"]==b["exact_candidate_records"]
+          assert c["live_new_links"]==c["artwork_files_downloaded"]==0
+          if c["proposed_url_refs"]:
+              p=Path("id-sv6s-p8p12-stage")/c["gzip_file"]
+              raw=p.read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==c["gzip_sha256"]
+              doc=json.loads(gzip.decompress(raw))
+              assert len(doc["cards"])==len(doc["images"])==c["proposed_url_refs"]
+              assert not doc["artwork_rights_verified"]
+          print("ID_SV6S_PAGES8_12_REAL_SOURCE_CI_PASS",{
+              "observed_cards":r["source_cards"],
+              "archive_unique_candidates":b["exact_candidate_records"],
+              "live_new_links":0})
+          with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf8") as f:
+              f.write(f"### Official Indonesian SV6s pages 8-12\n")
+              f.write(f"**{r['source_cards']}** original card-detail source records, **{b['exact_candidate_records']}** unique archived source candidates. All require a separate live preflight and approval of private reference use. No copyrighted binaries or live inserts.\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-ID-SV6s-Pages8to12-Official-Private-Source
+          path: |
+            id-sv6s-p8p12-official/
+            id-sv6s-p8p12-crosswalk/
+            id-sv6s-p8p12-stage/
+          retention-days: 21
+          if-no-files-found: error
