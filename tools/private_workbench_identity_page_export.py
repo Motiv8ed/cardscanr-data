@@ -44,7 +44,7 @@ def normalize_pages(paths, output):
             raise ValueError("invalid_page_size")
         if page.get("page_limit") != 30 or page.get("missing_cards_in_snapshot") != LANG_COUNTS[lang]:
             raise ValueError("snapshot_count_drift")
-        if type(page.get("production_writes")) is not int or page["production_writes"] != 0 or page.get("artwork_rights_granted") is not False or page.get("image_urls_exposed") is not False:
+        if (type(page.get("production_writes")) is not int or page["production_writes"] != 0\n                or page.get("artwork_rights_granted") is not False\n                or page.get("image_urls_exposed") is not False\n                or page.get("customer_data_exposed") is not False\n                or page.get("variant_identity_verified") is not False\n                or page.get("snapshot_consistency_must_match_across_pages") is not True):
             raise ValueError("unsafe_page_flags")
         calculated = hashlib.sha256(json.dumps(chunk, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
         if calculated != page["page_sha256"]:
@@ -53,7 +53,7 @@ def normalize_pages(paths, output):
         if previous:
             if previous["snapshot"] != page["snapshot_sha256"] or previous["cursor"] is None:
                 raise ValueError("snapshot_or_chain_drift")
-            if chunk[0]["canonical_printing_id"] <= previous["cursor"]:
+            if not isinstance(chunk[0], dict) or not isinstance(chunk[0].get("canonical_printing_id"), str) or chunk[0]["canonical_printing_id"] <= previous["cursor"]:
                 raise ValueError("nonmonotonic_page")
         else:
             previous = {"snapshot": page["snapshot_sha256"], "cursor": None, "count": 0}
@@ -71,7 +71,7 @@ def normalize_pages(paths, output):
         page_ids = [row["canonical_printing_id"] for row in chunk]
         if page_ids != sorted(page_ids) or len(set(page_ids)) != len(page_ids):
             raise ValueError("nonmonotonic_page")
-        cursor = page.get("next_cursor")
+        cursor = page.get("next_cursor")\n        if cursor is not None and len(chunk) != 30:\n            raise ValueError("short_nonterminal_page")
         if cursor is not None and (not isinstance(cursor, str) or cursor != chunk[-1]["canonical_printing_id"]):
             raise ValueError("invalid_next_cursor")
         per_language[lang] = {"snapshot": page["snapshot_sha256"], "cursor": cursor,
