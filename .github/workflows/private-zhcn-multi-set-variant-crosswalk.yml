@@ -17,6 +17,12 @@ on:
       - 'reports/live_source_proofs/zhcn_csm1dc_20261122.json'
       - 'reports/live_source_proofs/zhcn_csm1cc_20261122.json'
       - 'reports/live_source_proofs/zhcn_cs1ac_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm1ac_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm1bc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm2ac_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm2bc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_csm2cc_20261122.json'
+      - 'reports/live_source_proofs/zhcn_cs1bc_20261122.json'
       - '.github/workflows/private-zhcn-multi-set-variant-crosswalk.yml'
   workflow_dispatch:
 permissions:
@@ -85,6 +91,30 @@ jobs:
             source_slug: dynamax-clash-thunder
             live_file: zhcn_cs1ac_20261122.json
             expected: 329
+          - slug: csm1ac
+            source_slug: storming-emergence-radiant
+            live_file: zhcn_csm1ac_20261122.json
+            expected: 331
+          - slug: csm1bc
+            source_slug: storming-emergence-verdant
+            live_file: zhcn_csm1bc_20261122.json
+            expected: 324
+          - slug: csm2ac
+            source_slug: shining-synergy-shower
+            live_file: zhcn_csm2ac_20261122.json
+            expected: 328
+          - slug: csm2bc
+            source_slug: shining-synergy-supreme
+            live_file: zhcn_csm2bc_20261122.json
+            expected: 327
+          - slug: csm2cc
+            source_slug: shining-synergy-summon
+            live_file: zhcn_csm2cc_20261122.json
+            expected: 322
+          - slug: cs1bc
+            source_slug: dynamax-clash-flame
+            live_file: zhcn_cs1bc_20261122.json
+            expected: 315
     steps:
       - uses: actions/checkout@v4
         with:
