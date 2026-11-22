@@ -18,8 +18,8 @@ UNPROVEN = ("printed_denominator", "finish")
 def adapt(paths, output):
     if output.exists():
         raise FileExistsError("output_exists")
-    if len(paths) != 6 or len(set(map(str, paths))) != 6:
-        raise ValueError("expected_six_distinct_chunks")
+    if not 1 <= len(paths) <= 100 or len(set(map(str, paths))) != len(paths):
+        raise ValueError("invalid_distinct_chunk_count")
     names = [path.name for path in paths]
     if len(set(names)) != len(names):
         raise ValueError("duplicate_chunk_basename")
@@ -73,7 +73,7 @@ def adapt(paths, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--live", type=Path, nargs=6, required=True)
+    parser.add_argument("--live", type=Path, nargs="+", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = adapt(args.live, args.output)
