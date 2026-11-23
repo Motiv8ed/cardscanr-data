@@ -11,11 +11,13 @@ import hashlib
 import json
 from pathlib import Path
 
-EXPECTED = {"ko": 1131, "zh-tw": 397}
 REQUIRED = ("canonical_printing_id", "language", "set_id",
             "native_card_name", "printed_collector_number")
 UNPROVEN = ("printed_denominator", "finish")
-def adapt(paths, output):
+def adapt(paths, output, expected_counts=None):
+    """Require independently supplied, pinned snapshot counts; never assume historical totals."""
+    if not isinstance(expected_counts, dict) or set(expected_counts) != {"ko", "zh-tw"} or any(type(v) is not int or v < 1 or v > 100000 for v in expected_counts.values()):
+        raise ValueError("missing_or_invalid_snapshot_counts")
     if output.exists():
         raise FileExistsError("output_exists")
     if not 1 <= len(paths) <= 100 or len(set(map(str, paths))) != len(paths):
@@ -58,7 +60,7 @@ def adapt(paths, output):
                 "unproven_fields": missing,
                 "classification": "quarantine_unproven_printing" if missing else "identity_only_review",
                 "safe_for_import": False})
-    if dict(counts) != EXPECTED:
+    if dict(counts) != expected_counts:
         raise ValueError(f"snapshot_count_drift:{dict(counts)}")
     result = {"classification": "LIVE_KO_TW_SOURCE_ONLY_QUARANTINE",
         "input_sha256": dict(sorted(hashes.items())),
@@ -75,6 +77,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--live", type=Path, nargs="+", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--expected-ko", type=int, required=True)
+    parser.add_argument("--expected-zh-tw", type=int, required=True)
     args = parser.parse_args()
-    result = adapt(args.live, args.output)
+    result = adapt(args.live, args.output, {"ko": args.expected_ko, "zh-tw": args.expected_zh_tw})
     print(json.dumps({k: result[k] for k in ("counts", "rows", "unproven_printings")}, sort_keys=True))
