@@ -31,18 +31,20 @@ def reconcile(gaps_path,evidence_path):
         k=identity(r)
         if not all(k) or k in gaps: invalid_gaps+=1
         else: gaps.add(k)
-    eligible={}; blocked=set(); quarantine=[]; counts=collections.Counter()
+    eligible={}; blocked=set(); seen=set(); quarantine=[]; counts=collections.Counter()
     for n,r in rows(evidence_path):
         if not isinstance(r,dict):
             quarantine.append({"line":n,"reason":"invalid_evidence_record","identity":None})
             counts["invalid_evidence_record"]+=1
             continue
         k=identity(r); reason=None
-        if k in eligible:
-            prior=eligible.pop(k)
+        if all(k) and k in seen:
             blocked.add(k)
-            quarantine.append({"line":prior["line"],"reason":"conflicting_or_duplicate_identity","identity":k})
-            counts["conflicting_or_duplicate_identity"]+=1
+            if k in eligible:
+                prior=eligible.pop(k)
+                quarantine.append({"line":prior["line"],"reason":"conflicting_or_duplicate_identity","identity":k})
+                counts["conflicting_or_duplicate_identity"]+=1
+        if all(k): seen.add(k)
         if not all(k): reason="incomplete_identity"
         elif k not in gaps: reason="not_in_missing_snapshot"
         elif k in blocked: reason="conflicting_or_duplicate_identity"
