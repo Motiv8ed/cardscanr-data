@@ -1,0 +1,52 @@
+name: Pinned Workbench SV-P importer independent regression gate
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/verify-zhcn-svp-workbench-pr200.yml"
+permissions:
+  contents: read
+jobs:
+  pinned-workbench:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Motiv8ed/cardscanr-workbench
+          ref: fc62378d5184d2d3f7f48e744bbfcaa28a070cdb
+          path: workbench
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify exact reviewed Workbench commit
+        run: |
+          test "$(git -C workbench rev-parse HEAD)" = fc62378d5184d2d3f7f48e744bbfcaa28a070cdb
+          python -m py_compile workbench/pc_workbench_app/pc_artwork_vault.py
+      - name: Run all pinned VaultSync regressions
+        run: |
+          cd workbench
+          for name in test_pc_artwork_vault.py test_pc_artwork_vault_stage_capacity.py test_pc_artwork_vault_identity_page.py test_pc_artwork_vault_language_expansion.py test_pc_artwork_vault_zhcn_scoped_identity.py test_pc_artwork_vault_chinese_variant_source.py; do
+            PYTHONPATH=pc_workbench_app python -m unittest discover -s pc_workbench_app/tests -p "$name" -v
+          done
+      - name: Enforce private-only metadata and bounded actions
+        run: |
+          cd workbench
+          PYTHONPATH=pc_workbench_app python - <<'PY'
+          from pc_artwork_vault import ACTIONS,image_url_valid,_CORPUS_PINNED_SETS,_CORPUS_PROMO_VARIANT
+          assert len(ACTIONS)==11
+          assert _CORPUS_PINNED_SETS["cn-promo-sv-p"] == (
+            "zh-hans/sv-chinese-promos","SV-P",
+            "15b619ebfe06c4484901c48960824c4a495403389c77f9a8b150f0f39a0a85e2")
+          assert "world-championships-stamp" in _CORPUS_PROMO_VARIANT
+          assert not image_url_valid("http://img.cardcorpus.com/s1/480/"+"a"*32+".avif",
+              source="cardcorpus_variant_reference",language="zh-cn",set_code="cn-promo-sv-p")
+          print("PASS: pinned SHA, promo-only variants, exact private reference scope")
+          PY
