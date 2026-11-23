@@ -1,0 +1,64 @@
+name: Three Chinese expansion sets strict holo-source proof
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/private-zhcn-three-holo-source-audit.yml"
+      - "tools/private_zhcn_three_holo_source_audit.py"
+      - "reports/live_source_proofs/zhcn_holo_*.json"
+permissions:
+  contents: read
+jobs:
+  verify-holo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: data
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: provider
+          persist-credentials: false
+          sparse-checkout: |
+            v1/sets/zh-hans/shadow-of-the-blue-sea-roar.json
+            v1/sets/zh-hans/vivid-portrayals-obsidian.json
+            v1/sets/zh-hans/vivid-portrayals-indigo.json
+          sparse-checkout-cone-mode: false
+      - name: Check exact immutable source checkout and syntax
+        run: |
+          test "$(git -C provider rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile data/tools/private_zhcn_three_holo_source_audit.py
+      - name: Audit 759 real missing identities and exactly 150 unique holos
+        run: |
+          python data/tools/private_zhcn_three_holo_source_audit.py \
+            --live-dir data/reports/live_source_proofs \
+            --source-dir provider/v1/sets \
+            --out-dir evidence
+      - name: Require 150 safe metadata candidates and no Vault writes
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected={'cn-cs6ac':(60,107,110),'cn-cs2ac':(45,96,100),'cn-cs2bc':(45,96,100)}
+          for code, (exact,amb,unmatched) in expected.items():
+              p=json.loads((Path('evidence')/(code+'.json')).read_text())
+              assert p['counts']=={'exact':exact,'ambiguous':amb,'unmatched':unmatched}
+              assert len(p['exact_private_metadata_candidates'])==exact
+              assert {x['source_variant_id'] for x in p['exact_private_metadata_candidates']}=={'holo'}
+              assert p['rights_granted'] is False and p['live_import_allowed'] is False
+              assert p['images_downloaded']==p['production_writes']==0
+              assert p['public_artwork_enabled'] is False
+          print('PASS: 150 unique holo matches, 609 exclusions, zero downloads or imports')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhcn-exact-holo-private-metadata
+          path: evidence/
+          retention-days: 14
+          if-no-files-found: error
