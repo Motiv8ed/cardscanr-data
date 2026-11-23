@@ -24,7 +24,7 @@ def _reject_duplicate_keys(pairs):
     return obj
 def adapt(paths, output, expected_counts=None):
     """Require independently supplied, pinned snapshot counts; never assume historical totals."""
-    if not isinstance(expected_counts, dict) or set(expected_counts) != {"ko", "zh-tw"} or any(type(v) is not int or v < 1 or v > 100000 for v in expected_counts.values()):
+    if not isinstance(expected_counts, dict) or set(expected_counts) != {"ko", "zh-tw"} or any(type(v) is not int or v < 0 or v > 100000 for v in expected_counts.values()):
         raise ValueError("missing_or_invalid_snapshot_counts")
     if output.exists():
         raise FileExistsError("output_exists")
@@ -68,7 +68,7 @@ def adapt(paths, output, expected_counts=None):
                 "unproven_fields": missing,
                 "classification": "quarantine_unproven_printing" if missing else "identity_only_review",
                 "safe_for_import": False})
-    if dict(counts) != expected_counts:
+    if {language: counts[language] for language in ('ko', 'zh-tw')} != expected_counts:
         raise ValueError(f"snapshot_count_drift:{dict(counts)}")
     result = {"classification": "LIVE_KO_TW_SOURCE_ONLY_QUARANTINE",
         "input_sha256": dict(sorted(hashes.items())),
