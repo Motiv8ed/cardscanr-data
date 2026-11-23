@@ -61,7 +61,10 @@ def valid_https_reference(value):
     except ValueError:
         return False
 
-def reconcile(live_paths, source_path, output):
+def reconcile(live_paths, source_path, output, expected_counts=None):
+    if (not isinstance(expected_counts, dict) or set(expected_counts) != {'ko', 'zh-tw'}
+            or any(type(v) is not int or not 1 <= v <= 100000 for v in expected_counts.values())):
+        raise ValueError('missing_or_invalid_snapshot_counts')
     if output.exists():
         raise FileExistsError("output_exists")
     if not live_paths or len(set(map(str, live_paths))) != len(live_paths):
@@ -72,7 +75,7 @@ def reconcile(live_paths, source_path, output):
     if any(not page or len(page) > 500 for page in pages):
         raise ValueError("live_page_size_invalid")
     live = [x for page in pages for x in page]
-    if len(live) != 1528 or collections.Counter(x.get("language") for x in live) != {"ko":1131,"zh-tw":397}:
+    if dict(collections.Counter(x.get("language") for x in live)) != expected_counts:
         raise ValueError("live_snapshot_count_drift")
     ids = [x.get("canonical_printing_id") for x in live]
     if len(set(ids)) != len(ids) or any(not isinstance(x,str) or not x for x in ids):
@@ -162,8 +165,10 @@ def main():
     p.add_argument("--live",type=pathlib.Path,nargs="+",required=True)
     p.add_argument("--source",type=pathlib.Path,required=True)
     p.add_argument("--output",type=pathlib.Path,required=True)
+    p.add_argument("--expected-ko", type=int, required=True)
+    p.add_argument("--expected-zh-tw", type=int, required=True)
     a=p.parse_args()
-    r=reconcile(a.live,a.source,a.output)
+    r=reconcile(a.live,a.source,a.output, {"ko": a.expected_ko, "zh-tw": a.expected_zh_tw})
     print(json.dumps({"live_rows":r["live_rows"],"outcomes":r["outcomes"]},sort_keys=True))
 
 if __name__=="__main__":
