@@ -250,5 +250,26 @@ class CrosswalkTests(unittest.TestCase):
             reconcile(self.live, self.source, self.output)
         self.assertFalse(self.output.exists())
 
+    def test_duplicate_source_json_key_rejected_without_output(self):
+        self.source.write_text('{"language":"ko","language":"zh-tw"}\n', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+            reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
+    def test_duplicate_nested_source_json_key_rejected_without_output(self):
+        self.source.write_text('{"metadata":{"rights":true,"rights":false}}\n', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+            reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
+    def test_duplicate_live_json_key_rejected_without_output(self):
+        first = self.live[0]
+        lines = first.read_text(encoding="utf-8").splitlines()
+        lines[0] = lines[0].replace('"language": "ko"', '"language": "ko", "language": "zh-tw"', 1)
+        first.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+            reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
+
 if __name__ == "__main__":
     unittest.main()
