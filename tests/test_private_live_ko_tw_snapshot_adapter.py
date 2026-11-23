@@ -40,7 +40,7 @@ class AdapterTests(unittest.TestCase):
                     canonical_printing_id=f"{lang}:{j}", language=lang,
                     set_id="set", native_card_name="name",
                     printed_collector_number=str(j+1), has_image_link=False
-                )) + "\\n" for j in range(count)))
+                )) + "\n" for j in range(count)))
                 paths.append(p)
             output = root / "result.json"
             with self.assertRaisesRegex(ValueError, "missing_or_invalid_snapshot_counts"):
