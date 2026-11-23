@@ -52,6 +52,26 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(result["counts"], {"ko": 2, "zh-tw": 1})
             self.assertFalse(result["production_writes"])
 
+    def test_duplicate_json_keys_rejected_in_live_jsonl(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            ko = root / "ko.jsonl"
+            tw = root / "tw.jsonl"
+            base = dict(canonical_printing_id="ko:1", language="ko",
+                        set_id="set", native_card_name="native",
+                        printed_collector_number="1", has_image_link=False)
+            ko.write_text(json.dumps(base)[:-1] + ', "canonical_printing_id": "ko:2"}\n', encoding="utf-8")
+            tw.write_text(json.dumps({**base, "canonical_printing_id": "tw:1",
+                                      "language": "zh-tw"}) + "\n", encoding="utf-8")
+            output = root / "out.json"
+            with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+                adapt([ko, tw], output, {"ko": 1, "zh-tw": 1})
+            self.assertFalse(output.exists())
+            ko.write_text(json.dumps(base)[:-1] + ', "extra": {"a": 1, "a": 2}}\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+                adapt([ko, tw], output, {"ko": 1, "zh-tw": 1})
+            self.assertFalse(output.exists())
+
     def test_duplicate_chunk_basenames_rejected_before_output(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
