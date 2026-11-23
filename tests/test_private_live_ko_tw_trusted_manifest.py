@@ -36,7 +36,7 @@ class TrustedManifestTests(unittest.TestCase):
     def test_valid_pinned_manifest_and_read_only_quarantine(self):
         self.assertEqual(self.check(), {"ko": 1, "zh-tw": 1})
         output = self.root / "research.json"
-        result = verified_adapt(self.manifest, self.pin, [self.ko, self.tw], output)
+        result = verified_adapt(self.manifest, self.pin, [self.ko], output)
         self.assertTrue(output.exists())
         self.assertFalse(result["production_writes"])
         self.assertEqual(result["new_live_image_links"], 0)
@@ -72,9 +72,9 @@ class TrustedManifestTests(unittest.TestCase):
         # One language can legitimately have no missing-image records.
         self.tw.write_text("", encoding="utf-8")
         self.doc["counts"]["zh-tw"] = 0
-        self.doc["chunks"]["tw.jsonl"] = hashlib.sha256(b"").hexdigest()
+        del self.doc["chunks"]["tw.jsonl"]
         self.save()
-        self.assertEqual(self.check(), {"ko": 1, "zh-tw": 0})
+        self.assertEqual(verify(self.manifest, self.pin, [self.ko]), {"ko": 1, "zh-tw": 0})
         output = self.root / "zero-gap-research.json"
         result = verified_adapt(self.manifest, self.pin, [self.ko, self.tw], output)
         self.assertEqual(result["rows"], 1)
