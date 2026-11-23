@@ -1,0 +1,21 @@
+name: Missing-only source proof safety tests
+on:
+  pull_request:
+    paths:
+      - 'tools/audit_missing_only_source_proof.py'
+      - '.github/workflows/missing-only-source-proof-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-fail-closed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile tools/audit_missing_only_source_proof.py
+      - run: python tools/audit_missing_only_source_proof.py --self-test
