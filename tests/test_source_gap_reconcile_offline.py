@@ -18,6 +18,8 @@ class ReconcileTests(unittest.TestCase):
         s,ok,q=self.check([{**GOOD,"image_url":"https://asia.pokemon-card.com.evil.test/a"}]);self.assertFalse(ok)
     def test_conflicting_second_receipt_quarantines_first(self):
         s,ok,q=self.check([GOOD,{**GOOD,"source_sha256":"bad"}]);self.assertFalse(ok);self.assertEqual(len(q),2)
+    def test_invalid_first_receipt_blocks_later_valid_duplicate(self):
+        s,ok,q=self.check([{**GOOD,"source_sha256":"bad"},GOOD]);self.assertFalse(ok);self.assertEqual(len(q),2)
     def test_replay_exclusion(self):
         s,ok,q=self.check([{**GOOD,"batch_id":"idremain20261122sv1v"}]);self.assertFalse(ok)
     def test_malformed_and_nonobject_evidence_quarantined(self):
