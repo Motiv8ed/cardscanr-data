@@ -68,6 +68,18 @@ class TrustedManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "untrusted_manifest"):
             self.check(original)
 
+    def test_zero_gap_language_is_valid(self):
+        # One language can legitimately have no missing-image records.
+        self.tw.write_text("", encoding="utf-8")
+        self.doc["counts"]["zh-tw"] = 0
+        self.doc["chunks"]["tw.jsonl"] = hashlib.sha256(b"").hexdigest()
+        self.save()
+        self.assertEqual(self.check(), {"ko": 1, "zh-tw": 0})
+        output = self.root / "zero-gap-research.json"
+        result = verified_adapt(self.manifest, self.pin, [self.ko, self.tw], output)
+        self.assertEqual(result["rows"], 1)
+        self.assertFalse(result["production_writes"])
+
     def test_boolean_counts_rejected(self):
         self.doc["counts"]["ko"] = True
         self.save()
