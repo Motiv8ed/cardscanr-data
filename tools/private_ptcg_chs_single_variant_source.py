@@ -82,7 +82,7 @@ def run(crosswalk,live_dir,out):
         if len(live)!=missing_count:raise ValueError("duplicate_live_canonical")
         src=source_set(slug,digest)
         if src["code"].upper()!=set_code or src["language"]!="zh-Hans":raise ValueError("source_set_code_drift")
-        bynum={str(int(c["number"]["numerator"])):c for c in src["cards"]}
+        bynum={number(c["number"]["short"]):c for c in src["cards"]}
         if len(bynum)!=len(src["cards"]):raise ValueError("ambiguous_source_numbers")
         eligible=[r for r in cross if r["archived_canonical_printing_id"].startswith(
             "ptcg-chs-datasets:printing:"+scope+"_")]
