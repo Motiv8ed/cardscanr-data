@@ -1,0 +1,65 @@
+name: Chinese S-P and SM-P promo strict source audit (metadata only)
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/private-zhcn-legacy-promo-source-audit.yml"
+      - "tools/private_zhcn_legacy_promo_source_audit.py"
+      - "reports/live_source_proofs/zhcn_promo_sp_20261123.json"
+      - "reports/live_source_proofs/zhcn_promo_smp_20261123.json"
+permissions:
+  contents: read
+jobs:
+  private-source-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: data
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/checkout@v4
+        with:
+          repository: cardcorpus/pokemon-card-dataset
+          ref: 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          path: provider
+          persist-credentials: false
+          sparse-checkout: |
+            v1/sets/zh-hans/swsh-chinese-promos.json
+            v1/sets/zh-hans/sm-chinese-promos.json
+          sparse-checkout-cone-mode: false
+      - name: Verify immutable CardCorpus source SHA and audit syntax
+        run: |
+          test "$(git -C provider rev-parse HEAD)" = 6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc
+          python -m py_compile data/tools/private_zhcn_legacy_promo_source_audit.py
+      - name: Produce fail-closed 303-card identity crosswalk
+        run: |
+          python data/tools/private_zhcn_legacy_promo_source_audit.py \
+            --s-p-live data/reports/live_source_proofs/zhcn_promo_sp_20261123.json \
+            --sm-p-live data/reports/live_source_proofs/zhcn_promo_smp_20261123.json \
+            --source-dir provider/v1/sets --output evidence
+      - name: Require exact counts and no import/publication
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path("evidence/cn-promo-s-p.json").read_text())
+          sm=json.loads(Path("evidence/cn-promo-sm-p.json").read_text())
+          assert s["counts"] == {"EXACT_SINGLE_SOURCE_VARIANT":198,"AMBIGUOUS_SOURCE_VARIANTS":20,"NO_EXACT_NAME_NUMBER":24}
+          assert sm["counts"] == {"EXACT_SINGLE_SOURCE_VARIANT":37,"AMBIGUOUS_SOURCE_VARIANTS":10,"NO_EXACT_NAME_NUMBER":14}
+          assert len(s["candidates"])==242 and len(sm["candidates"])==61
+          for x in (s,sm):
+              assert x["source_commit"]=="6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc"
+              assert x["images_downloaded"]==x["production_writes"]==x["new_live_links"]==0
+              assert x["artwork_rights_verified"] is False and x["public_artwork_enabled"] is False
+              assert x["live_import_allowed"] is False
+          print("PASS: metadata-only audits, 235 exact source candidates, 68 quarantined")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhcn-legacy-promos-private-metadata-audit
+          path: evidence/
+          retention-days: 14
+          if-no-files-found: error
