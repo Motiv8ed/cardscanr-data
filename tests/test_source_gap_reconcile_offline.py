@@ -20,4 +20,21 @@ class ReconcileTests(unittest.TestCase):
         s,ok,q=self.check([GOOD,{**GOOD,"source_sha256":"bad"}]);self.assertFalse(ok);self.assertEqual(len(q),2)
     def test_replay_exclusion(self):
         s,ok,q=self.check([{**GOOD,"batch_id":"idremain20261122sv1v"}]);self.assertFalse(ok)
+    def test_malformed_and_nonobject_evidence_quarantined(self):
+        with tempfile.TemporaryDirectory() as d:
+            gaps=Path(d)/"gaps.jsonl";ev=Path(d)/"ev.jsonl"
+            gaps.write_text(json.dumps(BASE)+"\n",encoding="utf-8")
+            ev.write_text('not-json\n[]\nnull\n'+json.dumps(GOOD)+'\n',encoding="utf-8")
+            summary,ok,q=reconcile(gaps,ev)
+            self.assertEqual(len(ok),1)
+            self.assertEqual(summary["reasons"]["invalid_evidence_record"],3)
+            self.assertEqual(len(q),3)
+    def test_malformed_gap_row_is_counted(self):
+        with tempfile.TemporaryDirectory() as d:
+            gaps=Path(d)/"gaps.jsonl";ev=Path(d)/"ev.jsonl"
+            gaps.write_text('[]\ninvalid-json\n'+json.dumps(BASE)+'\n',encoding="utf-8")
+            ev.write_text(json.dumps(GOOD)+'\n',encoding="utf-8")
+            summary,ok,q=reconcile(gaps,ev)
+            self.assertEqual(summary["invalid_gap_rows"],2)
+            self.assertEqual(len(ok),1)
 if __name__=="__main__":unittest.main()
