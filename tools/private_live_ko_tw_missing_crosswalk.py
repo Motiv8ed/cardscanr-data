@@ -45,6 +45,12 @@ def key(row):
     values = []
     for field in fields:
         value = row.get(field)
+        if field == "printed_denominator":
+            alias = row.get("printed_collector_total")
+            if value is not None and alias is not None and value != alias:
+                return None  # Conflicting print totals must never be guessed.
+            if value is None:
+                value = alias
         if not isinstance(value, str) or not value.strip():
             return None
         values.append(nfc(value))

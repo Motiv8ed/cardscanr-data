@@ -13,7 +13,16 @@ from pathlib import Path
 
 REQUIRED = ("canonical_printing_id", "language", "set_id",
             "native_card_name", "printed_collector_number")
-UNPROVEN = ("printed_denominator", "finish")
+UNPROVEN = ("finish",)
+
+def _total_proven(row):
+    """Accept only an exact string total; conflicting aliases are unproven."""
+    primary = row.get("printed_denominator")
+    alias = row.get("printed_collector_total")
+    if primary is not None and alias is not None and primary != alias:
+        return False
+    value = primary if primary is not None else alias
+    return isinstance(value, str) and bool(value.strip())
 
 def _reject_duplicate_keys(pairs):
     obj = {}
@@ -61,6 +70,8 @@ def adapt(paths, output, expected_counts=None):
             ids.add(ident)
             counts[row["language"]] += 1
             missing = [k for k in UNPROVEN if not isinstance(row.get(k), str) or not row[k].strip()]
+            if not _total_proven(row):
+                missing.insert(0, "printed_denominator")
             quarantine.append({"canonical_printing_id": ident,
                 "language": row["language"], "set_id": row["set_id"],
                 "native_card_name": row["native_card_name"],

@@ -111,5 +111,19 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(result["new_live_image_links"], 0)
             self.assertFalse(result["production_writes"])
 
+class SnapshotCollectorAliasTests(unittest.TestCase):
+    def test_alias_is_proven(self):
+        from tools.private_live_ko_tw_snapshot_adapter import _total_proven
+        self.assertTrue(_total_proven({'printed_collector_total': '100'}))
+
+    def test_conflicting_alias_is_unproven(self):
+        from tools.private_live_ko_tw_snapshot_adapter import _total_proven
+        self.assertFalse(_total_proven({'printed_denominator': '101', 'printed_collector_total': '100'}))
+
+    def test_nonstring_and_absent_totals_unproven(self):
+        from tools.private_live_ko_tw_snapshot_adapter import _total_proven
+        self.assertFalse(_total_proven({'printed_collector_total': 100}))
+        self.assertFalse(_total_proven({}))
+
 if __name__ == "__main__":
     unittest.main()
