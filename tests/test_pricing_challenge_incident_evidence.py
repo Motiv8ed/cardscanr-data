@@ -222,6 +222,55 @@ class ChallengeIncidentEvidenceTests(unittest.TestCase):
             self.assertIsNone(state)
             self.assertFalse((directory / "control_plane_incidents.json").exists())
 
+    def test_gate_target_after_first_eight_is_not_lost(self) -> None:
+        normal_targets = [{
+            "type": "service_worker", "topLevel": False,
+            "originClass": "auxiliary", "blocking": False,
+            "url": f"https://example.invalid/assets/worker-{i}.js",
+            "title": "",
+        } for i in range(9)]
+        target = {
+            "type": "page", "topLevel": True, "originClass": "ebay_challenge",
+            "blocking": True, "reason": "INTER_CARD_CHALLENGE_TARGET",
+            "url": "https://www.ebay.com.au/splashui/challenge",
+            "title": "Verify yourself to continue",
+        }
+        evidence = build_challenge_incident_evidence({
+            "resultCode": "INTER_CARD_CHALLENGE_TARGET",
+            "targetPolicy": {"reasonCodes": ["INTER_CARD_CHALLENGE_TARGET"],
+                             "classified": normal_targets + [target]},
+        }, category="CHALLENGE_REQUIRED")
+        self.assertEqual(evidence["policyClassifiedTargetCount"], 10)
+        self.assertEqual(evidence["evidenceQuality"], "GATE_PAGE_OBSERVED")
+        self.assertLessEqual(len(evidence["targetEvidence"]), 8)
+        self.assertTrue(evidence["targetEvidence"][0]["directGateEvidence"])
+        self.assertFalse(evidence["automaticResumeAllowed"])
+
+    def test_code_only_with_ten_targets_remains_fail_closed(self) -> None:
+        normal_targets = [{
+            "type": "service_worker", "topLevel": False,
+            "originClass": "auxiliary", "blocking": False,
+            "url": f"https://example.invalid/assets/worker-{i}.js",
+            "title": "",
+        } for i in range(9)]
+        normal_targets.append({
+            "type": "page", "topLevel": True, "originClass": "ebay_marketplace",
+            "blocking": True, "reason": "INTER_CARD_CHALLENGE_TARGET",
+            "url": "https://www.ebay.com.au/sch/i.html?_nkw=private-card",
+            "title": "Normal sold results",
+        })
+        evidence = build_challenge_incident_evidence({
+            "resultCode": "INTER_CARD_CHALLENGE_TARGET",
+            "targetPolicy": {"reasonCodes": ["INTER_CARD_CHALLENGE_TARGET"],
+                             "classified": normal_targets},
+        }, category="CHALLENGE_REQUIRED")
+        self.assertEqual(evidence["policyClassifiedTargetCount"], 10)
+        self.assertEqual(evidence["evidenceQuality"], "CODE_ONLY_UNCORROBORATED")
+        self.assertFalse(evidence["targetEvidence"][0]["directGateEvidence"])
+        self.assertFalse(evidence["automaticResumeAllowed"])
+        self.assertNotIn("private-card", json.dumps(evidence))
+
+
 
 if __name__ == "__main__":
     unittest.main()
