@@ -95,6 +95,22 @@ class WorkbenchEnvelopeTests(unittest.TestCase):
                 normalize_pages(paths, root / "shuffled.json")
 
 
+    def test_duplicate_json_keys_fail_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            page = root / "ambiguous.json"
+            # A permissive JSON decoder silently takes the last value,
+            # allowing a misleading provenance or safety flag.
+            page.write_text('{"classification":"LIVE_MISSING_CARD_IDENTITY_READ_ONLY_V1",'
+                            '"classification":"UNTRUSTED"}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+                normalize_pages([page], root / "out.json")
+            self.assertFalse((root / "out.json").exists())
+            page.write_text('{"rows":[{"canonical_printing_id":"a",'
+                            '"canonical_printing_id":"b"}]}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "duplicate_json_key"):
+                normalize_pages([page], root / "out.json")
+
     def test_updated_tw_count_and_mixed_count_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
