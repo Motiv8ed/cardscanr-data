@@ -103,6 +103,10 @@ def is_ebay_marketplace_gate_url(url: str | None) -> bool:
         return False
     host = (parsed.hostname or "").lower()
     path = (parsed.path or "").lower()
+    # A path resembling an eBay challenge on another host is not eBay evidence.
+    # Redirect URLs may mention ebay.com.au in a query parameter.
+    if parsed.scheme.lower() not in {"https", "http"} or parsed.username or parsed.password or not _ebay_host_ok(host):
+        return False
     if host.startswith("signin.") and "ebay" in host:
         return True
     if "signin.ebay" in host:
@@ -159,5 +163,14 @@ def is_marketplace_gate_page(
     if is_ebay_marketplace_gate_url(url):
         return True
     if is_exact_marketplace_gate_page_title(title):
-        return True
+        # Generic titles such as "Access denied" on foreign tabs must not be
+        # mistaken for an eBay challenge. Empty URLs remain fail-closed.
+        if not url:
+            return True
+        try:
+            host = (urlparse(str(url)).hostname or "").lower()
+        except ValueError:
+            host = ""
+        if _ebay_host_ok(host):
+            return True
     return is_pardon_interstitial_at_marketplace_url(url, title=title, body=body)
