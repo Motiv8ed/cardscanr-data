@@ -14,6 +14,14 @@ def nfc(v):
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def _reject_duplicate_keys(pairs):
+    obj = {}
+    for name, value in pairs:
+        if name in obj:
+            raise ValueError("duplicate_json_key")
+        obj[name] = value
+    return obj
+
 def rows(path, max_rows=100000, max_line_bytes=1048576):
     """Stream bounded JSONL input instead of loading untrusted archives at once."""
     count = 0
@@ -26,7 +34,7 @@ def rows(path, max_rows=100000, max_line_bytes=1048576):
             count += 1
             if count > max_rows:
                 raise ValueError(f"jsonl_row_limit:{path}:{number}")
-            obj = json.loads(line.decode("utf-8"))
+            obj = json.loads(line.decode("utf-8"), object_pairs_hook=_reject_duplicate_keys)
             if not isinstance(obj, dict):
                 raise ValueError(f"non-object:{path}:{number}")
             yield obj
