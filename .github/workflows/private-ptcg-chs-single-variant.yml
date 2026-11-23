@@ -1,0 +1,65 @@
+name: Private CHS 915 single-variant live source proof
+on:
+  pull_request:
+    paths:
+      - "tools/private_ptcg_chs_single_variant_source.py"
+      - "reports/live_source_proofs/ptcg_chs_set_*_20261123.json"
+      - ".github/workflows/private-ptcg-chs-single-variant.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-only-915:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Offline fail-closed 1-variant regression tests
+        run: |
+          python -m py_compile tools/private_ptcg_chs_single_variant_source.py
+          python -m tools.private_ptcg_chs_single_variant_source --self-test
+      - uses: actions/download-artifact@v4
+        with:
+          repository: Motiv8ed/cardscanr-data
+          run-id: 44853089079
+          name: Private-ZHCN-Native-Picture-Crosswalk-Review
+          github-token: ${{ github.token }}
+          path: crosswalk
+      - name: Match full authenticated live identities against exact one-variant pinned source cards
+        run: |
+          python -m tools.private_ptcg_chs_single_variant_source \
+            --crosswalk crosswalk/private_crosswalk.jsonl \
+            --live-dir reports/live_source_proofs \
+            --out ptcg-915-private-stage
+      - name: Verify archive SHA, count and no image or rights claims
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json
+          from pathlib import Path
+          p=Path("ptcg-915-private-stage")
+          r=json.loads((p/"receipt.json").read_text())
+          assert r["classification"]=="PRIVATE_PTCG_CHS_SINGLE_VARIANT_SOURCE_ONLY"
+          assert len(r["records"])==3 and r["total_candidates"]==915
+          assert r["new_live_links"]==0 and not r["public_artwork_rights_granted"]
+          for item in r["records"]:
+              z=(p/(item["batch_id"]+".gz")).read_bytes()
+              assert hashlib.sha256(z).hexdigest()==item["gzip_sha256"]
+              d=json.loads(gzip.decompress(z))
+              assert len(d["cards"])==len(d["images"])==item["source_printings"]
+              assert d["source"]=="cardcorpus_ptcg_single_variant_reference"
+              assert all(c["source_variant_verified"] for c in d["cards"])
+              assert not d["artwork_rights_verified"] and d["image_binaries_downloaded"]==0
+          print("PTCG_CHS_915_ALL_STAGE_ARCHIVES_SHA_PASS",r["total_candidates"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-Ptcg-CHS-915-Single-Variant-Needs-Workbench-Gate
+          path: ptcg-915-private-stage/
+          retention-days: 14
+          if-no-files-found: error
