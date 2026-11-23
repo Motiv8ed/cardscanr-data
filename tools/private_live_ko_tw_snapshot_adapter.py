@@ -14,6 +14,14 @@ from pathlib import Path
 REQUIRED = ("canonical_printing_id", "language", "set_id",
             "native_card_name", "printed_collector_number")
 UNPROVEN = ("printed_denominator", "finish")
+
+def _reject_duplicate_keys(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("duplicate_json_key")
+        obj[key] = value
+    return obj
 def adapt(paths, output, expected_counts=None):
     """Require independently supplied, pinned snapshot counts; never assume historical totals."""
     if not isinstance(expected_counts, dict) or set(expected_counts) != {"ko", "zh-tw"} or any(type(v) is not int or v < 1 or v > 100000 for v in expected_counts.values()):
@@ -40,7 +48,7 @@ def adapt(paths, output, expected_counts=None):
         for line in lines:
             if len(line) > 16384:
                 raise ValueError("oversize_record")
-            row = json.loads(line)
+            row = json.loads(line, object_pairs_hook=_reject_duplicate_keys)
             if not isinstance(row, dict):
                 raise ValueError("non_object")
             if any(not isinstance(row.get(k), str) or not row[k].strip() for k in REQUIRED):
