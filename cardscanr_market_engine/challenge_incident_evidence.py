@@ -208,9 +208,22 @@ def build_challenge_incident_evidence(
     classified = policy.get("classified")
     if not isinstance(classified, list):
         classified = []
-    target_evidence = [
-        _target_evidence(row) for row in classified[:12] if isinstance(row, dict)
-    ][:8]
+    # Scan every bounded target before choosing the compact receipt sample.
+    # A real gate can be target 9/10 among auxiliary CDP workers; truncating to
+    # the first eight previously mislabeled that incident CODE_ONLY_UNCORROBORATED.
+    scanned = [
+        _target_evidence(row) for row in classified[:128] if isinstance(row, dict)
+    ]
+    direct_first = [row for row in scanned if row["directGateEvidence"]]
+    challenge_code = [
+        row for row in scanned if not row["directGateEvidence"]
+        and "INTER_CARD_CHALLENGE_TARGET" in row["reasonCodes"]
+    ]
+    remainder = [
+        row for row in scanned if not row["directGateEvidence"]
+        and "INTER_CARD_CHALLENGE_TARGET" not in row["reasonCodes"]
+    ]
+    target_evidence = (direct_first + challenge_code + remainder)[:8]
     # Prefer observed navigation URL over a pre-search URL when both exist.
     nav_url = diag.get("url") or nav.get("url") or diag.get("urlBeforeSearch")
     nav_title = diag.get("title") or nav.get("title") or diag.get("titleBeforeSearch")
@@ -219,7 +232,7 @@ def build_challenge_incident_evidence(
         nav_obs["hostClass"].startswith("EBAY_")
         and (nav_obs["gateUrlObserved"] or nav_obs["gateTitleObserved"])
     )
-    direct = nav_direct or any(row["directGateEvidence"] for row in target_evidence)
+    direct = nav_direct or any(row["directGateEvidence"] for row in scanned)
     code_only = bool(codes) and not direct
     return {
         "schema": EVIDENCE_SCHEMA,
