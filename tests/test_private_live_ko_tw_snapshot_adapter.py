@@ -111,10 +111,6 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(result["new_live_image_links"], 0)
             self.assertFalse(result["production_writes"])
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class SnapshotCollectorAliasTests(unittest.TestCase):
     def test_alias_is_proven(self):
         from tools.private_live_ko_tw_snapshot_adapter import _total_proven
@@ -128,3 +124,6 @@ class SnapshotCollectorAliasTests(unittest.TestCase):
         from tools.private_live_ko_tw_snapshot_adapter import _total_proven
         self.assertFalse(_total_proven({'printed_collector_total': 100}))
         self.assertFalse(_total_proven({}))
+
+if __name__ == "__main__":
+    unittest.main()
