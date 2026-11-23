@@ -6,10 +6,16 @@ import re
 from pathlib import Path
 
 def verify(manifest, rows):
-    if manifest.get("source") != "official_pokemon_asia_archived_listing":
+    if not isinstance(manifest, dict) or manifest.get("source") != "official_pokemon_asia_archived_listing":
         raise ValueError("untrusted_manifest")
+    if not isinstance(manifest.get("pages"), list):
+        raise ValueError("invalid_manifest_pages")
+    if not isinstance(rows, list):
+        raise ValueError("invalid_detail_rows")
     expected = {}
     for p in manifest["pages"]:
+        if not isinstance(p, dict) or any(k not in p for k in ("language", "set", "page", "official_detail_ids", "source_list_sha256")):
+            raise ValueError("invalid_manifest_page")
         key = (p["language"], p["set"], p["page"])
         ids = p["official_detail_ids"]
         sha = p["source_list_sha256"]
@@ -26,6 +32,8 @@ def verify(manifest, rows):
         raise ValueError("empty_manifest")
     seen = {key: set() for key in expected}
     for r in rows:
+        if not isinstance(r, dict):
+            raise ValueError("invalid_detail_row")
         key = (r.get("language"), r.get("source_product_code"), r.get("source_list_page"))
         if key not in expected:
             raise ValueError("unmanifested_page")
@@ -59,7 +67,13 @@ def self_test():
         except ValueError:
             continue
         raise AssertionError("invalid page accepted")
-    print("PASS 50-card page and truncated/duplicate fixtures")
+    for bad_manifest, bad_rows in (([], rows), (None, rows), ({"source": m["source"], "pages": [None]}, rows), ({"source": m["source"], "pages": [{}]}, rows), (m, rows + [None]), (m, rows + [[]])):
+        try:
+            verify(bad_manifest, bad_rows)
+        except ValueError:
+            continue
+        raise AssertionError("malformed JSON structure accepted")
+    print("PASS 50-card page, truncated/duplicate and malformed-structure fixtures")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
