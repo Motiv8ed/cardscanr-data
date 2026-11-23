@@ -3,7 +3,7 @@ from pathlib import Path
 from tools.source_gap_reconcile_offline import reconcile
 
 BASE={"canonical_id":"id-1","language":"id","set_code":"SV2a","collector_number":"001","variant":"standard"}
-GOOD={**BASE,"source_kind":"official_card_detail","rights_status":"verified","source_url":"https://asia.pokemon-card.com/id/card-search/1/","image_url":"https://asia.pokemon-card.com/id/assets/1.png","source_sha256":"a"*64}
+GOOD={**BASE,"source_kind":"official_card_detail","rights_status":"verified","source_url":"https://asia.pokemon-card.com/id/card-search/1/","image_url":"https://asia.pokemon-card.com/id/assets/1.png","source_sha256":"a"*64,"batch_id":"new-official-evidence-20261123"}
 
 class ReconcileTests(unittest.TestCase):
     def check(self, evidence):
@@ -20,6 +20,15 @@ class ReconcileTests(unittest.TestCase):
         s,ok,q=self.check([GOOD,{**GOOD,"source_sha256":"bad"}]);self.assertFalse(ok);self.assertEqual(len(q),2)
     def test_invalid_first_receipt_blocks_later_valid_duplicate(self):
         s,ok,q=self.check([{**GOOD,"source_sha256":"bad"},GOOD]);self.assertFalse(ok);self.assertEqual(len(q),2)
+    def test_missing_batch_id_is_quarantined(self):
+        row={k:v for k,v in GOOD.items() if k!="batch_id"}
+        summary,ok,q=self.check([row])
+        self.assertFalse(ok)
+        self.assertEqual(q[0]["reason"],"missing_batch_id_replay_evidence")
+    def test_blank_batch_id_is_quarantined(self):
+        summary,ok,q=self.check([{**GOOD,"batch_id":"  "}])
+        self.assertFalse(ok)
+        self.assertEqual(q[0]["reason"],"missing_batch_id_replay_evidence")
     def test_replay_exclusion(self):
         s,ok,q=self.check([{**GOOD,"batch_id":"idremain20261122sv1v"}]);self.assertFalse(ok)
     def test_malformed_and_nonobject_evidence_quarantined(self):
