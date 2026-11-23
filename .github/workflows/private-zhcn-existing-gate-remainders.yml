@@ -1,0 +1,60 @@
+name: Verified remaining Chinese cards through installed VaultSync source
+on:
+  pull_request:
+    paths:
+      - "tools/private_zhcn_existing_gate_remainders.py"
+      - "reports/live_source_proofs/pikaqian_cn-*_20261123.json"
+      - ".github/workflows/private-zhcn-existing-gate-remainders.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  existing-bridge-source-102:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run strict offline regression checks
+        run: |
+          python -m py_compile tools/private_zhcn_existing_gate_remainders.py
+          python -m tools.private_zhcn_existing_gate_remainders --self-test
+      - name: Match immutable sources against five complete authenticated live missing-set snapshots
+        run: |
+          python -m tools.private_zhcn_existing_gate_remainders \
+            --live-dir reports/live_source_proofs \
+            --out private-existing-gate-102
+      - name: Independently verify exact batches and safety receipts
+        run: |
+          python - <<'PY'
+          import gzip,hashlib,json
+          from pathlib import Path
+          d=Path("private-existing-gate-102")
+          rec=json.loads((d/"receipt.json").read_text())
+          assert rec["classification"]=="EXISTING_VAULT_SOURCE_GATED_PRIVATE_URL_ONLY"
+          assert rec["source_match_candidates"]==102
+          assert rec["quarantined"]==19 and len(rec["batches"])==5
+          assert rec["new_live_links"]==0 and not rec["rights_granted"]
+          assert sorted(b["source_exact_single_variant"] for b in rec["batches"])==[3,3,20,24,52]
+          for b in rec["batches"]:
+              p=d/(b["batch_id"]+".gz")
+              z=p.read_bytes()
+              assert hashlib.sha256(z).hexdigest()==b["gzip_sha256"]
+              payload=json.loads(gzip.decompress(z))
+              assert payload["source"]=="cardcorpus_variant_reference"
+              assert len(payload["cards"])==len(payload["images"])==b["source_exact_single_variant"]
+              assert not payload["artwork_rights_verified"] and payload["image_binaries_downloaded"]==0
+              assert len({c["canonical_printing_id"] for c in payload["cards"]})==len(payload["cards"])
+              assert all(c["status"]=="exact_unique" and c["source_variant_verified"] for c in payload["cards"])
+          print("LEGACY_CHS_102_FIVE_SHA_GATED_SOURCE_BATCHES_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-CHS-102-Existing-VaultSync-Gate-Only
+          path: private-existing-gate-102/
+          retention-days: 14
+          if-no-files-found: error
