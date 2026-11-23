@@ -135,7 +135,7 @@ def run(live_dir,out):
                 "image_url":"https://img.cardcorpus.com/s1/480/"+picture+".avif",
             })
         if len(cards)!=expected_matches or len(quarantined)+len(cards)!=expected:
-            raise ValueError("exact_match_count_drift")
+            raise ValueError(f"exact_match_count_drift:{code}:got={len(cards)},expected={expected_matches},quarantine={dict(quarantined)}")
         payload={"schema_version":1,"source":"cardcorpus_variant_reference",
             "source_commit":SOURCE_COMMIT,"image_binaries_downloaded":0,
             "artwork_rights_verified":False,
