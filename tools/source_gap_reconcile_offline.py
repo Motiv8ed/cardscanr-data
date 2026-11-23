@@ -9,7 +9,9 @@ EXCLUDED_BATCHES={"idremain20261122sv1v","thremaincombined20261122_01","idremain
 def rows(path):
     with open(path,encoding="utf-8") as f:
         for n,line in enumerate(f,1):
-            if line.strip(): yield n,json.loads(line)
+            if line.strip():
+                try: yield n,json.loads(line)
+                except json.JSONDecodeError: yield n,None
 
 def identity(r):
     return tuple(str(r.get(k,"")).strip() for k in KEYS)
@@ -23,16 +25,24 @@ def official(url,language):
 def reconcile(gaps_path,evidence_path):
     gaps=set(); invalid_gaps=0
     for _,r in rows(gaps_path):
+        if not isinstance(r,dict):
+            invalid_gaps+=1
+            continue
         k=identity(r)
         if not all(k) or k in gaps: invalid_gaps+=1
         else: gaps.add(k)
     eligible={}; blocked=set(); quarantine=[]; counts=collections.Counter()
     for n,r in rows(evidence_path):
+        if not isinstance(r,dict):
+            quarantine.append({"line":n,"reason":"invalid_evidence_record","identity":None})
+            counts["invalid_evidence_record"]+=1
+            continue
         k=identity(r); reason=None
         if k in eligible:
             prior=eligible.pop(k)
             blocked.add(k)
             quarantine.append({"line":prior["line"],"reason":"conflicting_or_duplicate_identity","identity":k})
+            counts["conflicting_or_duplicate_identity"]+=1
         if not all(k): reason="incomplete_identity"
         elif k not in gaps: reason="not_in_missing_snapshot"
         elif k in blocked: reason="conflicting_or_duplicate_identity"
