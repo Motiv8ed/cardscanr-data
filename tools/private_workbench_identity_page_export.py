@@ -15,6 +15,14 @@ HEX = set("0123456789abcdef")
 def _sha(value):
     return isinstance(value, str) and len(value) == 64 and set(value) <= HEX
 
+def _reject_duplicate_keys(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("duplicate_json_key")
+        obj[key] = value
+    return obj
+
 def normalize_pages(paths, output):
     paths = [Path(p) for p in paths]
     output = Path(output)
@@ -33,7 +41,7 @@ def normalize_pages(paths, output):
         if len(raw) > 65536:
             raise ValueError("oversize_page")
         input_hashes[path.name] = hashlib.sha256(raw).hexdigest()
-        page = json.loads(raw)
+        page = json.loads(raw, object_pairs_hook=_reject_duplicate_keys)
         if not isinstance(page, dict) or page.get("classification") != "LIVE_MISSING_CARD_IDENTITY_READ_ONLY_V1":
             raise ValueError("invalid_page_envelope")
         lang = page.get("language")
