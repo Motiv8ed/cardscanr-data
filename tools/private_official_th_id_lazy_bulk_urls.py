@@ -17,7 +17,7 @@ from tools.private_official_asia_th_id_url_pilot import accept_url
 
 SETS={"th":("SV7s","SV4K","SV3","SV2a"),
       "id":("SV4a","SV6s","SV7a","SV5a")}
-MAX_PAGE=12
+MAX_PAGE=20  # Official Indonesian SV4a listing currently spans 18 pages; 12 truncates it.
 DETAIL=re.compile(r"^/(th|id)/card-search/detail/([0-9]{1,10})/$")
 IMAGE=re.compile(r"^/(th|id)/card-img/(th|id)([0-9]{8})\.png$")
 MAX_LIST_BYTES=3_000_000
@@ -147,6 +147,7 @@ def self_test():
     assert a[0]["observed_image_url"].endswith("/th00009635.png")
     assert a[0]["native_card_name"] is None and a[0]["printed_collector_number"] is None
     assert not a[0]["artwork_rights_verified"]
+    assert MAX_PAGE >= 18, "SV4a official listing has 18 pages; do not truncate at 12"
     bad=html.replace("th00009635","th00009636")
     try:source_rows(bad,"https://asia.pokemon-card.com/th/card-search/list/?expansionCodes=SV7s","th","SV7s",1,"a"*64)
     except ValueError:pass

@@ -27,7 +27,7 @@ jobs:
       - name: Collect actual HTML-declared Thai and Indonesian image references
         run: |
           python -m tools.private_official_th_id_lazy_bulk_urls \
-            --pages 12 --out actual-official-th-id-card-list-urls
+            --pages 20 --out actual-official-th-id-card-list-urls
       - name: Validate source URL manifest, zero detail fetches, zero art binaries and no live claims
         run: |
           python - <<'PY'
@@ -36,8 +36,8 @@ jobs:
           d=Path("actual-official-th-id-card-list-urls")
           r=json.loads((d/"receipt.json").read_text(encoding="utf8"))
           assert r["classification"]=="PRIVATE_OFFICIAL_TH_ID_LAZY_LIST_BULK_IMAGE_URL_REFS_ONLY"
-          assert r["requested_sets"]==8 and r["requested_max_pages_per_set"]==12
-          assert r["pages_succeeded"]+r["pages_failed"]<=96
+          assert r["requested_sets"]==8 and r["requested_max_pages_per_set"]==20
+          assert r["pages_succeeded"]+r["pages_failed"]<=160
           assert r["card_details_fetched"]==r["artwork_binaries_downloaded"]==0
           assert r["exact_current_live_card_matches"]==r["new_live_image_links"]==r["new_canonical_cards"]==0
           assert not r["artwork_rights_verified"] and not r["safe_for_public_artwork"]
