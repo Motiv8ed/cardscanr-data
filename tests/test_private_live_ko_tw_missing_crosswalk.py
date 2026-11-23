@@ -3,7 +3,12 @@ import json
 import pathlib
 import tempfile
 import unittest
-from tools.private_live_ko_tw_missing_crosswalk import reconcile
+from tools.private_live_ko_tw_missing_crosswalk import reconcile as _reconcile
+
+
+def reconcile(live_paths, source_path, output, expected_counts=None):
+    return _reconcile(live_paths, source_path, output,
+                      expected_counts if expected_counts is not None else {'ko': 1131, 'zh-tw': 397})
 
 
 class CrosswalkTests(unittest.TestCase):
@@ -25,6 +30,30 @@ class CrosswalkTests(unittest.TestCase):
         for i, path in enumerate(self.live):
             path.write_text("".join(json.dumps(x) + "\n" for x in rows[i*30:(i+1)*30]), encoding="utf-8")
         self.source.write_text("", encoding="utf-8")
+
+    def test_explicit_updated_snapshot_counts_are_accepted(self):
+        # Remove 232 TW identities and prove a fresh 165-card TW snapshot is valid.
+        all_rows = [json.loads(line) for path in self.live
+                    for line in path.read_text(encoding='utf-8').splitlines()]
+        updated = [r for r in all_rows if r['language'] == 'ko' or
+                   (r['language'] == 'zh-tw' and int(r['canonical_printing_id'].split('-')[-1]) < 165)]
+        chunks = [updated[i:i+30] for i in range(0, len(updated), 30)]
+        for i, chunk in enumerate(chunks):
+            self.live[i].write_text(''.join(json.dumps(r) + '\n' for r in chunk), encoding='utf-8')
+        result = reconcile(self.live[:len(chunks)], self.source, self.output,
+                           {'ko': 1131, 'zh-tw': 165})
+        self.assertEqual(result['live_rows'], 1296)
+        self.assertFalse(result['production_writes'])
+
+    def test_updated_counts_reject_stale_snapshot(self):
+        with self.assertRaisesRegex(ValueError, 'live_snapshot_count_drift'):
+            reconcile(self.live, self.source, self.output, {'ko': 1131, 'zh-tw': 165})
+        self.assertFalse(self.output.exists())
+
+    def test_missing_counts_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, 'missing_or_invalid_snapshot_counts'):
+            _reconcile(self.live, self.source, self.output)
+        self.assertFalse(self.output.exists())
 
     def test_oversized_source_jsonl_line_fails_without_output(self):
         self.source.write_text(" " * (1048576 + 1) + "\n", encoding="utf-8")
