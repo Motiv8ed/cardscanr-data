@@ -26,7 +26,7 @@ OFFICIAL_IMAGE=re.compile(r"^/id/card-img/id[0-9]{8}\.png$")
 PACK_COLUMNS=("canonical_printing_id","set_id","language","native_card_name",
               "printed_collector_number","image_thumbnail_url","image_display_url")
 MAX_PAGES=24
-MAX_PER_PAGE=20
+MAX_PER_PAGE=50
 
 
 def source_image_valid(url,detail_id):
@@ -51,7 +51,7 @@ def validate_page_ids(ids,seen):
         raise ValueError("official_same_page_duplicate_detail")
     if any(x in seen for x in ids):
         raise ValueError("official_detail_repeated_across_pages")
-    return ids[:MAX_PER_PAGE]
+    return ids
 
 
 def acquire(code,out,delay=0.75):
@@ -69,10 +69,11 @@ def acquire(code,out,delay=0.75):
                 response=coll.fetch(url)
                 if response.status!=200 or len(response.content)>3_000_000:
                     raise ValueError("official_list_http_or_size_wrong")
-                found,_=parse_card_list(response.content.decode("utf8"),LOCALE)
+                found,has_next=parse_card_list(response.content.decode("utf8"),LOCALE)
                 chosen=validate_page_ids(found,seen)
                 list_sha=hashlib.sha256(response.content).hexdigest()
                 if not chosen:
+                    if has_next:raise ValueError("official_empty_page_claims_more")
                     provenance.append({"page":page,"cards":0,
                                        "sha256":list_sha,"ended":"empty"})
                     break
@@ -105,8 +106,9 @@ def acquire(code,out,delay=0.75):
                     seen.add(detail_id)
                 provenance.append({"page":page,"cards":len(chosen),
                                    "sha256":list_sha,
-                                   "ended":"partial" if len(found)<MAX_PER_PAGE else "continue"})
-                if len(found)<MAX_PER_PAGE:break
+                                   "ended":"continue" if has_next else "final"})
+                if not has_next:break
+                if page==MAX_PAGES:raise ValueError("official_page_budget_exhausted_with_next")
         finally:coll.close()
     if len(rows)>480 or len(rows)!=len(seen):
         raise ValueError("source_card_count_or_duplicates_wrong")
@@ -262,6 +264,11 @@ def test():
     assert not source_image_valid("https://evil.example/id/card-img/id00008110.png","8110")
     assert not source_image_valid("https://asia.pokemon-card.com/id/card-img/id00008110.png?bad=x","8110")
     assert validate_page_ids(["123","124"],{"100"})==["123","124"]
+    full=[str(i) for i in range(1,51)]
+    assert len(validate_page_ids(full,set()))==50
+    try:validate_page_ids(full+["51"],set())
+    except ValueError:pass
+    else:raise AssertionError("overlong official page accepted")
     for seq in (["1","1"],["foo"],["1","2"]):
         try:validate_page_ids(seq,{"1"} if seq==["1","2"] else set())
         except ValueError:pass
