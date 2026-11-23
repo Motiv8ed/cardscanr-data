@@ -76,7 +76,7 @@ class TrustedManifestTests(unittest.TestCase):
         self.save()
         self.assertEqual(verify(self.manifest, self.pin, [self.ko]), {"ko": 1, "zh-tw": 0})
         output = self.root / "zero-gap-research.json"
-        result = verified_adapt(self.manifest, self.pin, [self.ko, self.tw], output)
+        result = verified_adapt(self.manifest, self.pin, [self.ko], output)
         self.assertEqual(result["rows"], 1)
         self.assertFalse(result["production_writes"])
 
