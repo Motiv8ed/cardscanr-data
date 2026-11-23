@@ -134,7 +134,7 @@ def run(live_dir,out):
                 "canonical_printing_id":cid,"language":"zh-cn","provider_set_id":code,
                 "image_url":"https://img.cardcorpus.com/s1/480/"+picture+".avif",
             })
-        if len(cards)!=expected_matches or len(quarantined)+len(cards)!=expected:
+        if len(cards)!=expected_matches or sum(quarantined.values())+len(cards)!=expected:
             raise ValueError(f"exact_match_count_drift:{code}:got={len(cards)},expected={expected_matches},quarantine={dict(quarantined)}")
         payload={"schema_version":1,"source":"cardcorpus_variant_reference",
             "source_commit":SOURCE_COMMIT,"image_binaries_downloaded":0,
