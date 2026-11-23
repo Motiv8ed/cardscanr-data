@@ -48,6 +48,7 @@ def reconcile(gaps_path,evidence_path):
         if not all(k): reason="incomplete_identity"
         elif k not in gaps: reason="not_in_missing_snapshot"
         elif k in blocked: reason="conflicting_or_duplicate_identity"
+        elif not isinstance(r.get("batch_id"),str) or not r["batch_id"].strip(): reason="missing_batch_id_replay_evidence"
         elif r.get("batch_id") in EXCLUDED_BATCHES: reason="previously_completed_batch"
         elif r.get("source_kind")!="official_card_detail": reason="not_card_detail"
         elif r.get("rights_status")!="verified": reason="rights_not_attested"
