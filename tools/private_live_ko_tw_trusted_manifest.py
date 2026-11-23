@@ -39,7 +39,7 @@ def verify(manifest_path, trusted_sha256, chunks):
     if not isinstance(doc, dict) or set(doc) != {"schema", "counts", "chunks"} or doc["schema"] != SCHEMA:
         raise ValueError("invalid_manifest_schema")
     counts = doc["counts"]
-    if not isinstance(counts, dict) or set(counts) != {"ko", "zh-tw"} or any(type(v) is not int or not 1 <= v <= 100000 for v in counts.values()):
+    if not isinstance(counts, dict) or set(counts) != {"ko", "zh-tw"} or any(type(v) is not int or not 0 <= v <= 100000 for v in counts.values()):
         raise ValueError("invalid_manifest_counts")
     expected = doc["chunks"]
     if not isinstance(expected, dict) or not 1 <= len(expected) <= 100:
