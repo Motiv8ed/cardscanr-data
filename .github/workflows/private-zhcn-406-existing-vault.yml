@@ -1,0 +1,62 @@
+name: Private 406 Chinese exact-variant source through existing VaultSync
+on:
+  pull_request:
+    paths:
+      - 'tools/private_zhcn_406_existing_vault_source.py'
+      - 'reports/live_source_proofs/pikaqian_*_406_20261123.json'
+      - '.github/workflows/private-zhcn-406-existing-vault.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-live-identity-and-source-sha:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fail-closed offline source-variant tests
+        run: |
+          python -m py_compile tools/private_zhcn_406_existing_vault_source.py
+          python -m tools.private_zhcn_406_existing_vault_source --self-test
+      - name: Exact SHA-pinned CardCorpus to complete authenticated live unlinked set identities
+        run: |
+          python -m tools.private_zhcn_406_existing_vault_source \
+            --live-dir reports/live_source_proofs \
+            --out private-zhcn-406
+      - name: Validate all four private archives SHA and no artwork usage rights
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import gzip,hashlib,json
+          p=Path('private-zhcn-406')
+          r=json.loads((p/'receipt.json').read_text())
+          assert r['classification']=='PRIVATE_EXISTING_WORKBENCH_CHS_406_EXACT_SOURCE_PROOF'
+          assert len(r['batches'])==4
+          assert r['total_verified_source_candidates']==406
+          assert r['total_quarantined']==190
+          assert r['new_live_links']==0 and not r['rights_granted']
+          assert sorted(x['source_verified_cards'] for x in r['batches'])==[19,31,131,225]
+          for b in r['batches']:
+            blob=(p/(b['batch_id']+'.gz')).read_bytes()
+            assert len(blob)==b['gzip_size']
+            assert hashlib.sha256(blob).hexdigest()==b['gzip_sha256']
+            assert len(blob)<=65536  # one bounded Bridge chunk
+            d=json.loads(gzip.decompress(blob))
+            assert d['schema_version']==1 and d['source']=='cardcorpus_variant_reference'
+            assert d['image_binaries_downloaded']==0 and d['artwork_rights_verified'] is False
+            assert len(d['sets'])==1 and len(d['cards'])==len(d['images'])==b['source_verified_cards']
+            assert len(set(c['canonical_printing_id'] for c in d['cards']))==len(d['cards'])
+            assert all(c['status']=='exact_unique' and c['source_variant_verified'] for c in d['cards'])
+          print('CHS_406_FOUR_PRIVATE_SHA_RECEIPTS_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Private-ZHCN-406-Existing-Workbench-Source
+          path: private-zhcn-406/
+          retention-days: 14
+          if-no-files-found: error
