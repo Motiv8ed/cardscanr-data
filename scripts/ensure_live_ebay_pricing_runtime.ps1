@@ -43,7 +43,11 @@ function Write-StateFile {
         [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)]$Payload
     )
-    ($Payload | ConvertTo-Json -Depth 6) | Set-Content -Path $Path -Encoding utf8
+    # Windows PowerShell 5.1 Set-Content -Encoding utf8 emits a BOM.
+    # Python json.loads(UTF-8) rejects that BOM when reading the PID receipt.
+    $json = ($Payload | ConvertTo-Json -Depth 6) + [Environment]::NewLine
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $json, $utf8NoBom)
 }
 
 function Write-StopIntent {
