@@ -136,6 +136,7 @@ def main() -> None:
         "public_artwork_enabled": False,
     }
     (a.out / "receipt.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print("SVP_PROMO_SOURCE_SHA256", receipt["source_file_sha256"])
     print("SVP_PROMO_AUDIT_PASS", json.dumps(receipt["match_counts"], sort_keys=True))
 
 
