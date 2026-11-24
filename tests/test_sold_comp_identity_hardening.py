@@ -70,15 +70,22 @@ class CollectorNumberHardeningTests(unittest.TestCase):
 
 
     def test_full_number_wrong_denominator_never_falls_back_to_short(self) -> None:
-        for title in ("Charizard 4/100 Base Set Pokemon raw", "Charizard 004-100 Base Set Pokemon raw"):
+        for title in (
+            "Charizard 4/100 Base Set Pokemon raw",
+            "Charizard 004-100 Base Set Pokemon raw",
+            "Charizard 4 / 100 Base Set Pokemon raw",
+            "Charizard 004 - 100 Base Set Pokemon raw",
+        ):
             with self.subTest(title=title):
                 evaluated = filter_comps(_key(collector_number="4/102"), [_comp(title)])
                 self.assertFalse(evaluated[0].included_in_estimate)
                 self.assertEqual(evaluated[0].rejection_reason, "wrong_collector_number")
 
     def test_full_number_matching_zero_padded_accepted(self) -> None:
-        evaluated = filter_comps(_key(collector_number="4/102"), [_comp("Charizard 004/102 Base Set Pokemon raw")])
-        self.assertTrue(evaluated[0].included_in_estimate)
+        for title in ("Charizard 004/102 Base Set Pokemon raw", "Charizard 004 / 102 Base Set Pokemon raw"):
+            with self.subTest(title=title):
+                evaluated = filter_comps(_key(collector_number="4/102"), [_comp(title)])
+                self.assertTrue(evaluated[0].included_in_estimate)
 
     def test_full_number_short_only_with_set_remains_accepted(self) -> None:
         evaluated = filter_comps(_key(collector_number="4/102"), [_comp("Charizard 4 Base Set Pokemon raw")])
