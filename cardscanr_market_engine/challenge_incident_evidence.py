@@ -104,10 +104,12 @@ def _url_class(url: Any) -> dict[str, Any]:
         return result
     if parsed.scheme != "https" or parsed.username or parsed.password:
         return result
-    known = host_root in _KNOWN_HOSTS or host_root in {
-        "signin.ebay.com", "signin.ebay.com.au", "captcha.ebay.com",
-        "captcha.ebay.com.au",
-    }
+    # Match the gate detector's domain boundary, including genuine regional
+    # subdomains. Never treat an unrelated suffix or a query as eBay evidence.
+    known = any(
+        host_root == root or host_root.endswith("." + root)
+        for root in _KNOWN_HOSTS
+    )
     if not known:
         result["hostClass"] = "OTHER"
         return result
@@ -180,6 +182,11 @@ def _target_evidence(item: dict[str, Any]) -> dict[str, Any]:
             is_page and url["hostClass"].startswith("EBAY_")
             and (url["gateUrlObserved"] or title["gateTitleObserved"])
         ),
+        # Embedded verification is evidence of a security surface, not proof
+        # that a visible full-page interstitial or account ban occurred.
+        "embeddedGateUrlObserved": bool(
+            cdp_type == "iframe" and not is_page and url["gateUrlObserved"]
+        ),
     }
 
 
@@ -215,15 +222,18 @@ def build_challenge_incident_evidence(
         _target_evidence(row) for row in classified[:128] if isinstance(row, dict)
     ]
     direct_first = [row for row in scanned if row["directGateEvidence"]]
+    embedded = [row for row in scanned if row["embeddedGateUrlObserved"]]
     challenge_code = [
         row for row in scanned if not row["directGateEvidence"]
+        and not row["embeddedGateUrlObserved"]
         and "INTER_CARD_CHALLENGE_TARGET" in row["reasonCodes"]
     ]
     remainder = [
         row for row in scanned if not row["directGateEvidence"]
+        and not row["embeddedGateUrlObserved"]
         and "INTER_CARD_CHALLENGE_TARGET" not in row["reasonCodes"]
     ]
-    target_evidence = (direct_first + challenge_code + remainder)[:8]
+    target_evidence = (direct_first + embedded + challenge_code + remainder)[:8]
     # Prefer observed navigation URL over a pre-search URL when both exist.
     nav_url = diag.get("url") or nav.get("url") or diag.get("urlBeforeSearch")
     nav_title = diag.get("title") or nav.get("title") or diag.get("titleBeforeSearch")
@@ -243,6 +253,8 @@ def build_challenge_incident_evidence(
         "policyPresent": bool(policy),
         "policyClassifiedTargetCount": len(classified),
         "targetEvidence": target_evidence,
+        "embeddedGateUrlObservedCount": len(embedded),
+        "targetEvidenceScanTruncated": len(classified) > 128,
         "navigation": {**nav_obs, "directGateEvidence": nav_direct},
         "providerReportedChallenge": diag.get("challenge") is True,
         "evidenceQuality": (
