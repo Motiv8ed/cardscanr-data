@@ -461,11 +461,11 @@ def _collector_equivalent(left: object, right: object) -> bool:
 def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
     full_numbers = {
         normalize_collector_number(match)
-        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*\s*/\s*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
     }
     hyphen_numbers = {
         normalize_collector_number(match.replace("-", "/"))
-        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
+        for match in re.findall(r"\b(\d+[A-Za-z]*\s*-\s*\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
     }
     # Hash-prefixed shorts only — avoid harvesting every bare digit from titles.
     short_numbers = {
