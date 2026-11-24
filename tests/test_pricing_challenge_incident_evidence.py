@@ -272,5 +272,50 @@ class ChallengeIncidentEvidenceTests(unittest.TestCase):
 
 
 
+    def test_embedded_regional_ebay_gate_is_retained_without_visible_page_claim(self):
+        evidence = build_challenge_incident_evidence({
+            "resultCode": "INTER_CARD_CHALLENGE_TARGET",
+            "url": "https://www.ebay.com.au/sch/i.html?_nkw=private",
+            "targetPolicy": {"classified": [
+                {"type": "iframe", "topLevel": False, "blocking": True,
+                 "originClass": "ebay_challenge",
+                 "reason": "INTER_CARD_CHALLENGE_TARGET",
+                 "url": "https://captcha.ebay.co.uk/challenge?token=private"},
+            ]},
+        }, category="CHALLENGE_REQUIRED")
+        self.assertEqual(evidence["embeddedGateUrlObservedCount"], 1)
+        row = evidence["targetEvidence"][0]
+        self.assertTrue(row["embeddedGateUrlObserved"])
+        self.assertTrue(row["gateUrlObserved"])
+        self.assertFalse(row["directGateEvidence"])
+        self.assertEqual(row["hostClass"], "EBAY_CAPTCHA")
+        self.assertFalse(evidence["automaticResumeAllowed"])
+        self.assertNotIn("token=private", json.dumps(evidence))
+
+    def test_foreign_lookalike_embedded_host_is_not_ebay_gate_evidence(self):
+        evidence = build_challenge_incident_evidence({
+            "resultCode": "INTER_CARD_CHALLENGE_TARGET",
+            "targetPolicy": {"classified": [{
+                "type": "iframe", "topLevel": False,
+                "url": "https://captcha.ebay.com.au.example.invalid/challenge",
+            }]},
+        }, category="CHALLENGE_REQUIRED")
+        self.assertEqual(evidence["embeddedGateUrlObservedCount"], 0)
+        self.assertEqual(evidence["targetEvidence"][0]["hostClass"], "OTHER")
+        self.assertFalse(evidence["automaticResumeAllowed"])
+
+    def test_embedded_gate_beyond_sample_is_prioritized(self):
+        rows = [{"type": "worker", "url": "https://example.invalid/worker"}] * 10
+        rows.append({"type": "iframe", "topLevel": False,
+                     "url": "https://security.ebay.com.au/challenge"})
+        evidence = build_challenge_incident_evidence({
+            "resultCode": "INTER_CARD_CHALLENGE_TARGET",
+            "targetPolicy": {"classified": rows},
+        }, category="CHALLENGE_REQUIRED")
+        self.assertEqual(evidence["embeddedGateUrlObservedCount"], 1)
+        self.assertTrue(evidence["targetEvidence"][0]["embeddedGateUrlObserved"])
+        self.assertFalse(evidence["automaticResumeAllowed"])
+
+
 if __name__ == "__main__":
     unittest.main()
