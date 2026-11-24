@@ -503,6 +503,11 @@ def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: st
     if any(_collector_equivalent(requested, value) for value in full_numbers):
         return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
 
+    # A stated full collector number must not fall back to its shared numerator.
+    # For example, 104/198 is not 104/165 even if the title names the same card.
+    if has_full_number and full_numbers:
+        return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
+
     # Conflicting hash numbers (#330 vs requested #1) are hard rejects.
     if short and _conflicting_hash_numbers(normalized_title, short):
         return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
