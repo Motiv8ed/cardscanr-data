@@ -461,11 +461,11 @@ def _collector_equivalent(left: object, right: object) -> bool:
 def _detected_collector_numbers(normalized_title: str) -> tuple[set[str], set[str]]:
     full_numbers = {
         normalize_collector_number(match)
-        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*/\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
+        for match in re.findall(r"\b([A-Za-z]*\d+[A-Za-z]*\s*/\s*\d+[A-Za-z]*)\b", normalized_title, flags=re.IGNORECASE)
     }
     hyphen_numbers = {
         normalize_collector_number(match.replace("-", "/"))
-        for match in re.findall(r"\b(\d+[A-Za-z]*-\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
+        for match in re.findall(r"\b(\d+[A-Za-z]*\s*-\s*\d+[A-Za-z]*)(?:-[A-Za-z0-9-]+)?\b", normalized_title, flags=re.IGNORECASE)
     }
     # Hash-prefixed shorts only — avoid harvesting every bare digit from titles.
     short_numbers = {
@@ -502,6 +502,11 @@ def _collector_number_match_info(price_key: MarketPriceKey, normalized_title: st
         return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
     if any(_collector_equivalent(requested, value) for value in full_numbers):
         return {"matches": True, "quality": "full", "requested": requested, "detected": detected}
+
+    # A stated full collector number must not fall back to its shared numerator.
+    # For example, 104/198 is not 104/165 even if the title names the same card.
+    if has_full_number and full_numbers:
+        return {"matches": False, "quality": "conflict", "requested": requested, "detected": detected}
 
     # Conflicting hash numbers (#330 vs requested #1) are hard rejects.
     if short and _conflicting_hash_numbers(normalized_title, short):
