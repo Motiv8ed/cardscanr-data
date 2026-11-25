@@ -1,0 +1,21 @@
+name: Official source page coverage QA
+on:
+  pull_request:
+    paths:
+      - 'tools/verify_official_page_coverage.py'
+      - '.github/workflows/official-page-coverage-qa.yml'
+  workflow_dispatch:
+jobs:
+  offline-coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax and 50-card completeness regression
+        run: |
+          python -m py_compile tools/verify_official_page_coverage.py
+          python tools/verify_official_page_coverage.py --self-test
