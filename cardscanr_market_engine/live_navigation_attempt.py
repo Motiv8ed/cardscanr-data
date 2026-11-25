@@ -209,7 +209,10 @@ def emit_search_submission_started(
         "monotonic": time.monotonic(),
     }
     tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    with tmp.open("w", encoding="utf-8") as stream:
+        stream.write(json.dumps(payload, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     os.replace(tmp, path)
     return SearchSubmissionEvent(
         event=SEARCH_SUBMISSION_STARTED,

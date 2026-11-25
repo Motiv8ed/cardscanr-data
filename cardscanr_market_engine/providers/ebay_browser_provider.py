@@ -3169,11 +3169,9 @@ class EbayBrowserSoldCompsProvider:
 
     def fetch_set_sweep_results_html(self, *, query_text: str) -> str:
         """One AU set-level sold search; returns authoritative HTML (counts as browser work)."""
-        if not self._linux_x11_nav_mode_enabled():
-            raise ProviderTemporaryError(
-                "Set sweep HTML capture requires linux_x11 nav mode",
-                diagnostics={},
-            )
+        if not self._desktop_nav_mode_enabled():
+            raise ProviderTemporaryError("Set sweep requires desktop navigation", diagnostics={})
+        linux_nav = self._linux_x11_nav_mode_enabled()
         from ..navigation_runtime_context import RUNTIME_COLD_START, apply_context_to_environ, load_navigation_runtime_context
         from .au_ebay_variant_resilience import (
             LIVE_EBAY_NAVIGATION_COUNT,
@@ -3182,8 +3180,11 @@ class EbayBrowserSoldCompsProvider:
             is_generic_error_page_nav,
             merge_live_navigation_into_diagnostics,
         )
-        from .linux_x11_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
-        from .linux_x11_ebay_nav import navigate_query_to_sold
+        from ..live_navigation_attempt import new_attempt_id
+        if linux_nav:
+            from .linux_x11_ebay_nav import navigate_query_to_sold
+        else:
+            from .desktop_win32_ebay_nav import navigate_query_to_sold
         from .post_sold_capture import resolve_authoritative_capture_html_path
         from .post_sold_capture_process import (
             capture_deadline_seconds,
@@ -3195,7 +3196,8 @@ class EbayBrowserSoldCompsProvider:
         ctx.runtime_mode = RUNTIME_COLD_START
         ctx.expected_prior = None
         apply_context_to_environ(ctx)
-        port = self._ensure_linux_chrome_cdp_ready()
+        port = self._ensure_linux_chrome_cdp_ready() if linux_nav else self._ensure_native_chrome_cdp_ready()
+        attempt_id = os.getenv("CARDSCANR_LIVE_ATTEMPT_ID") if linux_nav else new_attempt_id()
         self._live_ebay_navigation_count = 0
         au_resilience = au_variant_resilience_enabled(market_country="AU")
         desktop_generic_retried = False
@@ -3214,7 +3216,7 @@ class EbayBrowserSoldCompsProvider:
             return navigate_query_to_sold(
                 query_text,
                 reset_homepage=True,
-                attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+                attempt_id=attempt_id,
                 price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
             )
 
@@ -3243,6 +3245,10 @@ class EbayBrowserSoldCompsProvider:
                 desktop_generic_retried = True
                 time.sleep(generic_error_page_retry_delay_seconds())
                 nav = _run_set_sweep_nav()
+        if nav.error == "MARKETPLACE_WORK_GATE_BLOCKED":
+            raise ProviderBlockedError("Marketplace work gate blocks Windows pricing", diagnostics={})
+        if not linux_nav and nav.error == "EBAY_AUTH_REQUIRED":
+            raise ProviderAuthenticationRequiredError("Windows pricing requires sign-in", diagnostics={})
         if nav.challenge:
             raise ProviderBlockedError(
                 "eBay returned a verification challenge during set-sweep navigation",
@@ -3294,16 +3300,18 @@ class EbayBrowserSoldCompsProvider:
             )
         artifact_path = resolve_authoritative_capture_html_path(
             job_id=os.environ.get("CARDSCANR_JOB_ID"),
-            attempt_id=os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID"),
+            attempt_id=attempt_id,
             price_key_id=os.environ.get("CARDSCANR_PRICE_KEY_ID"),
         )
-        cdp_port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or port
+        if not linux_nav:
+            self._require_native_cdp_owner()
+        cdp_port = port
         capture_budget = capture_deadline_seconds()
         proc_result = run_capture_worker_process(
             cdp_endpoint=f"http://127.0.0.1:{int(cdp_port)}",
             expected_url=nav.url,
             expected_query=query_text,
-            expected_origin="ebay.com.au",
+            expected_origin="ebay.com.au" if linux_nav else urlparse(nav.url).hostname,
             deadline_seconds=capture_budget,
             max_results=self.config.max_results * 3,
             socket_timeout=min(4.0, max(2.0, capture_budget / 3.0)),
@@ -3313,10 +3321,11 @@ class EbayBrowserSoldCompsProvider:
             proc_result,
             x11_sold_state_verified=bool(nav.sold_state_verified),
         )
-        if not sold_capture.success and not artifact_path.is_file():
+        if not sold_capture.success and (not linux_nav or not artifact_path.is_file()):
             raise ProviderTemporaryError(
                 "Set sweep capture produced no HTML artifact",
-                diagnostics={"artifactPath": str(artifact_path)},
+                diagnostics={"artifactPath": str(artifact_path), "failureClass": sold_capture.failure_class,
+                             "capture": sold_capture.diagnostics},
             )
         return artifact_path.read_text(encoding="utf-8", errors="replace")
 
@@ -3334,6 +3343,34 @@ class EbayBrowserSoldCompsProvider:
         )
         return int(port)
 
+    @staticmethod
+    def _ensure_native_chrome_cdp_ready() -> int:
+        from ..ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+        from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT, ensure_chrome_with_cdp
+
+        gate = evaluate_ebay_browser_work_gate(market="AU")
+        if not gate.allowed or not gate.state_integrity_ok:
+            raise ProviderBlockedError("Marketplace work gate blocks Windows pricing", diagnostics=gate.to_dict())
+        try:
+            ensure_chrome_with_cdp()
+        except Exception as exc:
+            raise ProviderTemporaryError(
+                "Dedicated Windows Chrome unavailable", diagnostics={"failureClass": type(exc).__name__},
+            ) from exc
+        return DEFAULT_CDP_PORT
+
+    @staticmethod
+    def _require_native_cdp_owner() -> None:
+        from ..native_windows_pricing_browser import listener_owner
+
+        try:
+            if listener_owner() is None:
+                raise RuntimeError("Dedicated Chrome listener disappeared")
+        except Exception as exc:
+            raise ProviderTemporaryError(
+                "Dedicated Windows Chrome owner unverified", diagnostics={"failureClass": type(exc).__name__},
+            ) from exc
+
     def _connect_desktop_cdp_browser(self) -> Any:
         """Connect Playwright over CDP; do not select a page target yet."""
         from playwright.sync_api import sync_playwright
@@ -3343,7 +3380,8 @@ class EbayBrowserSoldCompsProvider:
         else:
             from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
 
-        port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT)
+        port = (_parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT)
+                if self._linux_x11_nav_mode_enabled() else _DEFAULT_CDP_PORT)
         connect_timeout_ms = max(5_000, int(self.config.launch_timeout_seconds * 1000))
 
         def _connect() -> Any:
@@ -3357,12 +3395,7 @@ class EbayBrowserSoldCompsProvider:
                     allow_existing_ebay_targets=ctx.is_inter_card(),
                 )
             else:
-                from .desktop_win32_ebay_nav import ensure_chrome_with_cdp
-
-                ensure_chrome_with_cdp(
-                    profile_dir=self.config.ensure_profile_dir(),
-                    cdp_port=port or _DEFAULT_CDP_PORT,
-                )
+                self._ensure_native_chrome_cdp_ready()
             if self._pw is None:
                 self._pw = sync_playwright().start()
             self._desktop_cdp_browser = self._pw.chromium.connect_over_cdp(
@@ -3473,6 +3506,8 @@ class EbayBrowserSoldCompsProvider:
         else:
             from .desktop_win32_ebay_nav import navigate_query_to_sold
 
+            if request.market_country.upper() != "AU":
+                raise ProviderUnsupportedMarketError("Native Windows pricing currently supports AU only")
             nav_mode_label = "desktop_win32"
             nav_stage = "desktop_win32_search_and_sold"
 
@@ -3486,8 +3521,8 @@ class EbayBrowserSoldCompsProvider:
                 stage_timings.fields["cdpPortReady"] = port
                 stage_timings.fields["playwrightAttachedBeforeNav"] = False
             else:
-                self._ensure_desktop_cdp_page()
-                stage_timings.fields["playwrightAttachedBeforeNav"] = True
+                stage_timings.fields["cdpPortReady"] = self._ensure_native_chrome_cdp_ready()
+                stage_timings.fields["playwrightAttachedBeforeNav"] = False
 
         with _StageTimer(stage_timings, nav_stage):
             from .search_entry_contract import (
@@ -3496,7 +3531,7 @@ class EbayBrowserSoldCompsProvider:
             )
 
             ctx = load_navigation_runtime_context()
-            pre_submit = pre_submit_only_requested(flag=False)
+            pre_submit = pre_submit_only_requested(flag=not self._linux_x11_nav_mode_enabled())
             attempt_id = os.environ.get("CARDSCANR_LIVE_ATTEMPT_ID")
             # Production query entry: RENDERED_UI_X11 only (no manufactured /sch?_nkw=).
             stage_timings.fields["searchEntryMode"] = SEARCH_ENTRY_MODE_RENDERED_UI_X11
@@ -3578,7 +3613,7 @@ class EbayBrowserSoldCompsProvider:
                 query_before_submit=str(search_query.query_text or "") or None,
                 direct_search_url_navigation=False,
                 search_submission_event_written=bool(submission_event),
-                enter_pressed=bool(nav.search_success) and not pre_submit,
+                enter_pressed=self._linux_x11_nav_mode_enabled() and bool(nav.search_success) and not pre_submit,
                 ordinary_results_confirmed=bool(nav.search_success and not nav.sorry and not nav.challenge),
                 attempt_id=attempt_id,
             )
@@ -3638,6 +3673,11 @@ class EbayBrowserSoldCompsProvider:
                         "stageTimings": stage_timings.snapshot(),
                     }
                 ),
+            )
+        if nav.error == "MARKETPLACE_WORK_GATE_BLOCKED":
+            raise ProviderBlockedError(
+                "Marketplace work gate blocks Windows pricing",
+                diagnostics={"stageTimings": stage_timings.snapshot()},
             )
         if is_ebay_authentication_url(nav.url or "") or str(nav.error or "") in {
             "EBAY_AUTH_REQUIRED",
@@ -3854,7 +3894,11 @@ class EbayBrowserSoldCompsProvider:
             else:
                 from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT as _DEFAULT_CDP_PORT
 
-            cdp_port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or _DEFAULT_CDP_PORT
+            if self._linux_x11_nav_mode_enabled():
+                cdp_port = _parse_positive_int("EBAY_BROWSER_CDP_PORT", _DEFAULT_CDP_PORT) or _DEFAULT_CDP_PORT
+            else:
+                self._require_native_cdp_owner()
+                cdp_port = _DEFAULT_CDP_PORT
             cdp_endpoint = f"http://127.0.0.1:{int(cdp_port)}"
 
             # HARD PROCESS BOUNDARY — parent never calls connect_over_cdp here.
