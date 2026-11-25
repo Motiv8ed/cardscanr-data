@@ -1,0 +1,126 @@
+{
+  "classification": "PRIVATE_SOURCE_ACQUISITION_PLAN_ONLY",
+  "crosswalk_sha256": "525ed14cf3318d971a19557e4a1c70b1d2309131832f16a64e6534c90cd19c03",
+  "source_commit": "6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc",
+  "candidate_count": 1262,
+  "verified_candidates": 0,
+  "live_imports": 0,
+  "rights_granted": false,
+  "instructions": "Each digest covers all native-corroborated original archive tuples sorted by canonical ID; only accept a matching full digest after exact pinned source single-variant and fresh missing-only live identity validation. If subset/digest differs, compare actual archive rows and quarantine unmatched; do not invent expected digests. Use 200-row CHS pages, independently checkpoint each set, and exclude all reserved sets. Normalize source set codes uppercase alphanumeric exactly as original archive.",
+  "sets": [
+    {
+      "id": "1",
+      "source_set": "zh-hans/storming-emergence-radiant",
+      "archive_candidate_count": 91,
+      "expected_tuple_sha256": "7cac5f77e8d2c02b5e19e1e194121dcd8ab7c0f7da9d5630344e39d79cbb2239"
+    },
+    {
+      "id": "2",
+      "source_set": "zh-hans/storming-emergence-verdant",
+      "archive_candidate_count": 84,
+      "expected_tuple_sha256": "6bcde220e1ec819e87f8e4b0c8d02384c16cf95cb0c2fb1d1a01b22f948df720"
+    },
+    {
+      "id": "30",
+      "source_set": "zh-hans/dynamax-clash-flame",
+      "archive_candidate_count": 83,
+      "expected_tuple_sha256": "18a32b19707bb240dae59ba3534c6c60202229f14e42e5c1d3099b3529ed21ee"
+    },
+    {
+      "id": "94",
+      "source_set": "zh-hans/primordial-arts-overgrow",
+      "archive_candidate_count": 78,
+      "expected_tuple_sha256": "b86a4f35f9500041bb2ab2023f448eb698929dad96d227ab42d626a6b47e5d4a"
+    },
+    {
+      "id": "183",
+      "source_set": "zh-hans/brave-stars-charm",
+      "archive_candidate_count": 77,
+      "expected_tuple_sha256": "ed985b02bf8c207edf17366b41785ede9bd7162dc7b38cb7818711f12507652e"
+    },
+    {
+      "id": "182",
+      "source_set": "zh-hans/brave-stars-courage",
+      "archive_candidate_count": 76,
+      "expected_tuple_sha256": "7ebcc009d6622016231cc1948bdcda1b050ae15833a1f6514d8ebc2df31b0058"
+    },
+    {
+      "id": "92",
+      "source_set": "zh-hans/primordial-arts-torrent",
+      "archive_candidate_count": 75,
+      "expected_tuple_sha256": "f2c0d43215da043be9a36b500426bd22f61f013168c99f2841224d1385190e99"
+    },
+    {
+      "id": "126",
+      "source_set": "zh-hans/nine-colours-gathering-friend",
+      "archive_candidate_count": 73,
+      "expected_tuple_sha256": "4d6178082a9f7bdde2aee9eb393130d80a91f06fad54d8fc968d3faac43b4882"
+    },
+    {
+      "id": "124",
+      "source_set": "zh-hans/nine-colours-gathering-origin",
+      "archive_candidate_count": 66,
+      "expected_tuple_sha256": "95bc189904554d9b08496aaeb0adb308cc7f532a9f9c59477a901925090dd54a"
+    },
+    {
+      "id": "206",
+      "source_set": "zh-hans/shadow-of-the-blue-sea-banish",
+      "archive_candidate_count": 62,
+      "expected_tuple_sha256": "245254565e59700ee5641995dbf25b71f848ce452ec859468991703ab54899f2"
+    },
+    {
+      "id": "208",
+      "source_set": "zh-hans/shadow-of-the-blue-sea-roar",
+      "archive_candidate_count": 61,
+      "expected_tuple_sha256": "e9be9c69b7fab20634b3e818f6a5ef5bc6afd8f4ecf7a754782ea2d25da0d9a4"
+    },
+    {
+      "id": "10",
+      "source_set": "zh-hans/shining-synergy-shower",
+      "archive_candidate_count": 60,
+      "expected_tuple_sha256": "b052a475b89fcd7e1ec3cbf5fedec5dc28ede7c276160e2d16010cd913fba85d"
+    },
+    {
+      "id": "11",
+      "source_set": "zh-hans/shining-synergy-supreme",
+      "archive_candidate_count": 59,
+      "expected_tuple_sha256": "ae969643a0cb5832e53dd36577424e5c7529fd55a76b0adcedef0bedf8b83818"
+    },
+    {
+      "id": "12",
+      "source_set": "zh-hans/shining-synergy-summon",
+      "archive_candidate_count": 58,
+      "expected_tuple_sha256": "53e9a5486592959c032dcd2ade0752be58401b17f2061b1394a330ce7c4fd7cb"
+    },
+    {
+      "id": "244",
+      "source_set": "zh-hans/eternal-birth",
+      "archive_candidate_count": 54,
+      "expected_tuple_sha256": "b3a14dcd12299c71868962bf3be46abb9821dd03e5b1e7895df4196de8d539d4"
+    },
+    {
+      "id": "81",
+      "source_set": "zh-hans/golden-energy",
+      "archive_candidate_count": 54,
+      "expected_tuple_sha256": "5c4c81b1e734c9f32d8642ab297966276c0c4c671503e2044ae0e72816e17e27"
+    },
+    {
+      "id": "35",
+      "source_set": "zh-hans/dynamax-tactics",
+      "archive_candidate_count": 51,
+      "expected_tuple_sha256": "34a243ca589c87c37d28b16ef22494efdd4f3873d93f4fc7d6d8c2080711a3ce"
+    },
+    {
+      "id": "14",
+      "source_set": "zh-hans/striking-competition",
+      "archive_candidate_count": 50,
+      "expected_tuple_sha256": "90bc8fbf780c454058757cff73091de6a0b7353821da3f1cf1d36acb86839160"
+    },
+    {
+      "id": "285",
+      "source_set": "zh-hans/bonus-round",
+      "archive_candidate_count": 50,
+      "expected_tuple_sha256": "ea14947f515fc179797f6e96c8e8e43cee090c20083517147154630c1d3433eb"
+    }
+  ]
+}
