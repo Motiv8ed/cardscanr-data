@@ -57,7 +57,7 @@ def expected(rows, sid, slug):
 
 def match(source, live, archive, scope):
     sid, slug = scope["id"], scope["source_set"]
-    require(source["id"] == slug, "source_set_mismatch")
+    require(source["id"] == slug and source.get("catalog")=="zh-hans" and source.get("language")=="zh-Hans", "source_set_mismatch")
     tuples = expected(archive, sid, slug)
     require(len(tuples)==scope["archive_candidate_count"]
             and sha(encoded(tuples))==scope["expected_tuple_sha256"], "plan_not_derived_from_crosswalk")
@@ -97,10 +97,10 @@ def match(source, live, archive, scope):
 
 def fetch_json(req, limit):
     # Network destinations are fixed; never follow redirects to another endpoint.
-    from urllib.request import build_opener, HTTPRedirectHandler
+    from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
     class NoRedirect(HTTPRedirectHandler):
         def redirect_request(self,*args,**kwargs): return None
-    with build_opener(NoRedirect()).open(req,timeout=25) as r:
+    with build_opener(ProxyHandler({}), NoRedirect()).open(req,timeout=25) as r:
         raw=r.read(limit+1)
     require(len(raw)<=limit,"response_limit")
     return json.loads(raw),raw
@@ -129,6 +129,8 @@ def live_get(secret,sid,read=bridge_read):
         cursor=page["next_cursor"]
         if not cursor:
             require(len(rows)==total and len({r["canonical_printing_id"] for r in rows})==total,"snapshot_count_mismatch")
+            raw=json.dumps(rows,sort_keys=True,ensure_ascii=False,separators=(",",":")).encode("utf8")
+            require(sha(raw)==snapshot,"snapshot_hash_mismatch")
             return rows,snapshot
         require(cursor not in seen and page["rows"],"cursor_loop")
         seen.add(cursor)
@@ -139,11 +141,17 @@ def atomic_new(path,obj):
     if path.exists():
         require(path.read_bytes()==raw,"checkpoint_conflict")
         return
-    # Create-only immutable checkpoint, never overwrite completed proof.
-    with path.open("xb") as f:
-        f.write(raw); f.flush()
-        import os
-        os.fsync(f.fileno())
+    # Flush a temporary sibling and publish with an exclusive hard link.
+    # An interrupted write cannot leave a partially written final checkpoint.
+    import os, tempfile
+    fd,tmp=tempfile.mkstemp(prefix=".proof-",suffix=".tmp",dir=path.parent)
+    try:
+        with os.fdopen(fd,"wb") as f:
+            f.write(raw); f.flush(); os.fsync(f.fileno())
+        try: os.link(tmp,path)
+        except FileExistsError: require(path.read_bytes()==raw,"checkpoint_conflict")
+    finally:
+        os.unlink(tmp)
 
 def run(plan,archive,out,secret,max_sets=5,source_reader=source_get,live_reader=live_get):
     require(plan["crosswalk_sha256"]==CROSSWALK and plan["source_commit"]==REF,"invalid_plan")
@@ -154,7 +162,12 @@ def run(plan,archive,out,secret,max_sets=5,source_reader=source_get,live_reader=
     for scope in plan["sets"]:
         sid=scope["id"]
         require(re.fullmatch("[0-9]{1,6}",sid),"invalid_scope_id")
-        if sid in RESERVED or (out/("set_"+sid+".json")).exists(): continue
+        if sid in RESERVED: continue
+        checkpoint=out/("set_"+sid+".json")
+        if checkpoint.exists():
+            saved=json.loads(checkpoint.read_text("utf8"))
+            require(saved.get("classification")=="PRIVATE_SOURCE_PROOF_ONLY" and saved.get("id")==sid and saved.get("source_commit")==REF and saved.get("new_live_links")==0 and saved.get("verified_candidates")==len(saved.get("rows",[])), "invalid_checkpoint")
+            continue
         if completed>=max_sets: break
         completed+=1
         try:
