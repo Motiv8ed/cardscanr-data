@@ -60,3 +60,12 @@ def test_worker_wrapper_treats_supervised_stop_as_non_fatal() -> None:
     assert "chromium.launch(channel=\"chrome\", headless=True)" in checker_py
     assert "run_worker_loop" not in checker_py
     assert "run_once(" not in checker_py
+
+
+def test_ensure_pid_receipts_use_utf8_without_bom() -> None:
+    # PowerShell 5.1 Set-Content -Encoding utf8 inserts a BOM rejected by Python json.loads.
+    ensure = read_script("scripts/ensure_live_ebay_pricing_runtime.ps1")
+    assert "function Write-StateFile" in ensure
+    assert "New-Object System.Text.UTF8Encoding($false)" in ensure
+    assert "[System.IO.File]::WriteAllText($Path, $json, $utf8NoBom)" in ensure
+    assert "Set-Content -Path $Path -Encoding utf8" not in ensure
