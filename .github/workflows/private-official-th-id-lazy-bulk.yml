@@ -38,6 +38,9 @@ jobs:
           assert r["classification"]=="PRIVATE_OFFICIAL_TH_ID_LAZY_LIST_BULK_IMAGE_URL_REFS_ONLY"
           assert r["requested_sets"]==8 and r["requested_max_pages_per_set"]==20
           assert r["pages_succeeded"]+r["pages_failed"]<=160
+          assert r["pages_failed"]==0 and not r["errors"], "incomplete official-source listing; quarantine manifest"
+          sv4a={s["page"] for s in r["sources"] if s["locale"]=="id" and s["set_filter_code"]=="SV4a"}
+          assert set(range(1,19)).issubset(sv4a), "SV4a official 18-page listing incomplete"
           assert r["card_details_fetched"]==r["artwork_binaries_downloaded"]==0
           assert r["exact_current_live_card_matches"]==r["new_live_image_links"]==r["new_canonical_cards"]==0
           assert not r["artwork_rights_verified"] and not r["safe_for_public_artwork"]
