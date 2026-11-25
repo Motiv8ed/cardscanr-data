@@ -1,0 +1,60 @@
+name: Private final 75 Thai and Indonesian exact source URL acquisition
+on:
+  pull_request:
+    paths:
+      - 'tools/private_last_th_id_gap_probe.py'
+      - 'reports/live_source_proofs/th_id_last75_20261122.json'
+      - '.github/workflows/private-last-th-id-75-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-tail-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline strict source URL tests
+        run: |
+          python -m py_compile tools/private_last_th_id_gap_probe.py
+          PYTHONPATH=tools python tools/private_last_th_id_gap_probe.py --self-test
+      - name: Acquire actual source-declared URLs, no image bytes
+        run: |
+          PYTHONPATH=tools python tools/private_last_th_id_gap_probe.py \
+            --live reports/live_source_proofs/th_id_last75_20261122.json \
+            --out private-tail75-source
+      - name: Verify SHA evidence, block public application and report real results
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          path=Path('private-tail75-source')
+          receipt=json.loads((path/'receipt.json').read_text())
+          raw=(path/'candidates.jsonl').read_bytes()
+          items=[json.loads(x) for x in raw.splitlines()]
+          assert receipt['classification']=='REAL_TH_ID_TAIL_SOURCE_URL_RESEARCH_ONLY'
+          assert len(items)==receipt['live_unlinked_identity_rows']==75
+          assert hashlib.sha256(raw).hexdigest()==receipt['candidate_jsonl_sha256']
+          assert receipt['source_sets_attempted']==13
+          assert receipt['actual_new_live_links']==receipt['image_binaries_downloaded']==0
+          assert not receipt['artwork_rights_verified'] and not receipt['public_artwork_enabled']
+          assert all(x['safe_for_vault_apply'] is False and not x['live_variant_verified']
+                     and x['artwork_downloaded']==0 for x in items)
+          print('REAL_TAIL_SOURCE_COUNTERS',json.dumps(receipt['candidate_counts'],sort_keys=True))
+          print('SOURCE_ERRORS',json.dumps(receipt['source_errors']))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('### Last 75 actual Thai/Indonesian missing printings\n\n')
+              f.write(str(receipt['candidate_counts'])+'\n\n')
+              f.write('No image binaries, legal permissions or live imports.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardScanR-Last75-Real-TCGdex-Source-Refs
+          path: private-tail75-source/
+          retention-days: 14
+          if-no-files-found: error

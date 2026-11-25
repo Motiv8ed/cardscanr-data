@@ -1,0 +1,78 @@
+name: Official Asia source audit for proven Thai and Indonesian missing printings
+on:
+  pull_request:
+    paths:
+      - 'tools/private_official_tail75_source.py'
+      - 'reports/live_source_proofs/th_id_last75_20261122.json'
+      - '.github/workflows/private-official-tail75-source.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  official-exact-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - language: th
+            code: SVDs
+          - language: id
+            code: SV4a
+          - language: th
+            code: SV2a
+          - language: id
+            code: SV2a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install HTML parsing dependencies
+        run: pip install 'requests>=2.31,<3' 'beautifulsoup4>=4.12,<5'
+      - name: Strict offline source tests
+        run: |
+          python -m py_compile tools/private_official_tail75_source.py
+          PYTHONPATH=. python tools/private_official_tail75_source.py --self-test
+      - name: Robots-aware official locale card-detail acquisition and targeted native matching
+        run: |
+          PYTHONPATH=. python tools/private_official_tail75_source.py \
+            --language ${{ matrix.language }} --set-code ${{ matrix.code }} \
+            --live reports/live_source_proofs/th_id_last75_20261122.json \
+            --out private-official-tail
+      - name: Check immutable evidence and protect unpublished artwork
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          p=Path('private-official-tail')
+          receipt=json.loads((p/'receipt.json').read_text())
+          blob=(p/'candidates.jsonl').read_bytes()
+          rows=[json.loads(x) for x in blob.splitlines()]
+          assert receipt['classification']=='OFFICIAL_ASIA_TH_ID_LAST75_SOURCE_ONLY'
+          assert hashlib.sha256(blob).hexdigest()==receipt['candidate_sha256']
+          assert len(rows)==receipt['requested_missing_cards']
+          assert sum(receipt['results'].values())==len(rows)
+          assert receipt['new_live_links']==receipt['images_downloaded']==0
+          assert not receipt['commercial_artwork_rights_verified']
+          assert all(x['safe_for_vault_apply'] is False and
+                     not x['finish_or_variant_verified'] and
+                     x['artwork_downloaded']==0 for x in rows)
+          print('ACTUAL_OFFICIAL_SOURCE_RESULT',receipt['locale'],receipt['set_code'],
+                json.dumps(receipt['results'],sort_keys=True),
+                'details_scanned',receipt['official_details_scanned'])
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('### Official-source exact remaining-card research\n\n')
+              f.write(str(receipt['locale'])+' '+str(receipt['set_code'])+' '+str(receipt['results'])+'\n')
+              f.write('No image binaries or live imports.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Official-Remaining-${{ matrix.language }}-${{ matrix.code }}-Source-Only
+          path: private-official-tail/
+          retention-days: 14
+          if-no-files-found: error
