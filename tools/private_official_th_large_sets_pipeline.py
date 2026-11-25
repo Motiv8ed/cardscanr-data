@@ -51,7 +51,9 @@ def validate_page_ids(ids,seen):
         raise ValueError("official_same_page_duplicate_detail")
     if any(x in seen for x in ids):
         raise ValueError("official_detail_repeated_across_pages")
-    return ids[:MAX_PER_PAGE]
+    if len(ids)>MAX_PER_PAGE:
+        raise ValueError("official_page_exceeds_supported_detail_budget_no_truncation")
+    return ids
 
 
 def acquire(code,out,delay=0.75):
@@ -262,6 +264,9 @@ def test():
     assert not source_image_valid("https://evil.example/th/card-img/th00008110.png","8110")
     assert not source_image_valid("https://asia.pokemon-card.com/th/card-img/th00008110.png?bad=x","8110")
     assert validate_page_ids(["123","124"],{"100"})==["123","124"]
+    try:validate_page_ids([str(i) for i in range(21)],set())
+    except ValueError as exc:assert "no_truncation" in str(exc)
+    else:raise AssertionError("21st official card silently discarded")
     for seq in (["1","1"],["foo"],["1","2"]):
         try:validate_page_ids(seq,{"1"} if seq==["1","2"] else set())
         except ValueError:pass
