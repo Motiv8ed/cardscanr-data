@@ -232,39 +232,44 @@ def version_info(cdp_http_base: str, *, timeout: float = 2.0) -> tuple[dict[str,
 class DirectCdpSession:
     """Minimal CDP session over websocket-client with per-call timeouts."""
 
-    def __init__(self, ws_url: str, *, timeout: float = 5.0) -> None:
+    def __init__(self, ws_url: str, *, timeout: float = 5.0, suppress_origin: bool = False) -> None:
         try:
             import websocket  # type: ignore
         except Exception as exc:  # pragma: no cover
             raise RuntimeError(f"websocket_client_unavailable:{exc}") from exc
         self._timeout = float(timeout)
-        # Chrome DevTools rejects WS without an allowed Origin. Prefer the CDP HTTP
-        # origin; fall back to suppressing Origin for older / relay setups.
-        origin = "http://127.0.0.1"
-        try:
-            from urllib.parse import urlparse
+        if suppress_origin:
+            self._ws = websocket.create_connection(
+                ws_url, timeout=self._timeout, enable_multithread=False, suppress_origin=True,
+            )
+        else:
+            # Chrome DevTools rejects WS without an allowed Origin. Prefer the CDP HTTP
+            # origin; fall back to suppressing Origin for older / relay setups.
+            origin = "http://127.0.0.1"
+            try:
+                from urllib.parse import urlparse
 
-            parsed = urlparse(ws_url)
-            if parsed.hostname and parsed.port:
-                origin = f"http://{parsed.hostname}:{parsed.port}"
-            elif parsed.hostname:
-                origin = f"http://{parsed.hostname}"
-        except Exception:
-            pass
-        try:
-            self._ws = websocket.create_connection(
-                ws_url,
-                timeout=self._timeout,
-                enable_multithread=False,
-                header=[f"Origin: {origin}"],
-            )
-        except Exception:
-            self._ws = websocket.create_connection(
-                ws_url,
-                timeout=self._timeout,
-                enable_multithread=False,
-                suppress_origin=True,
-            )
+                parsed = urlparse(ws_url)
+                if parsed.hostname and parsed.port:
+                    origin = f"http://{parsed.hostname}:{parsed.port}"
+                elif parsed.hostname:
+                    origin = f"http://{parsed.hostname}"
+            except Exception:
+                pass
+            try:
+                self._ws = websocket.create_connection(
+                    ws_url,
+                    timeout=self._timeout,
+                    enable_multithread=False,
+                    header=[f"Origin: {origin}"],
+                )
+            except Exception:
+                self._ws = websocket.create_connection(
+                    ws_url,
+                    timeout=self._timeout,
+                    enable_multithread=False,
+                    suppress_origin=True,
+                )
         self._ws.settimeout(self._timeout)
         self._next_id = 1
 

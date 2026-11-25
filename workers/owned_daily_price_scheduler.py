@@ -20,6 +20,8 @@ from cardscanr_market_engine.owned_daily_scheduler import (
     OwnedDailySchedulerConfig,
     OwnedPrintingRefreshScheduler,
 )
+from cardscanr_market_engine.providers.search_entry_contract import native_windows_pricing_selected
+from cardscanr_market_engine.scheduler import parse_market_allowlist
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 
 
@@ -37,6 +39,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    native_windows = native_windows_pricing_selected()
+    if native_windows and os.name != "nt":
+        raise ValueError("desktop_win32 pricing requires Windows")
+    allowed = os.getenv("OWNED_DAILY_ALLOWED_MARKETS")
+    if native_windows and allowed is not None and "AU" not in parse_market_allowlist(allowed):
+        raise ValueError("Native Windows pricing requires AU in OWNED_DAILY_ALLOWED_MARKETS")
     if args.dry_run:
         os.environ["OWNED_DAILY_DRY_RUN"] = "true"
     if args.max_enqueue > 0:
@@ -55,6 +63,10 @@ def main() -> int:
         if args.dry_run:
             os.environ["OWNED_DAILY_DRY_RUN"] = "true"
 
+    if native_windows:
+        os.environ["OWNED_DAILY_ALLOWED_MARKETS"] = "AU"
+        os.environ["OWNED_DAILY_MAX_ENQUEUE"] = "1"
+        os.environ["OWNED_DAILY_FULL_MAX_ENQUEUE"] = "1"
     config = OwnedDailySchedulerConfig.from_env(require_supabase=True)
     client = SupabaseMarketEngineClient(
         supabase_url=config.supabase_url,

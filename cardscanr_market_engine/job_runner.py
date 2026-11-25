@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from dataclasses import replace
 import os
 import time
+from uuid import NAMESPACE_URL, uuid5
 from typing import Any
 
 from .cache_writer import build_cache_payload
@@ -40,6 +41,9 @@ from .navigation_runtime_context import (
 )
 from .ebay_scale.set_sweep_worker_hook import maybe_apply_set_sweep_live_skip
 from .scheduler import parse_market_allowlist
+from .providers.search_entry_contract import native_windows_pricing_selected
+from .live_navigation_attempt import has_search_submission_started
+from .navigation_runtime_context import NAV_CONTEXT_ENV, NavigationRuntimeContext
 from .x11_chrome_focus import is_local_runtime_failure_message
 from .marketplace_ops_state import (
     get_active_cooldown,
@@ -999,6 +1003,12 @@ class MarketPriceJobRunner:
         prior_cache: dict[str, Any] | None = None
         live_submission_reserved = False
         inter_card_self_heal_pass = 0
+        native_windows = (
+            str(getattr(self.provider, "provider_name", "")).lower() == "ebay_browser"
+            and native_windows_pricing_selected()
+        )
+        native_attempt = str(uuid5(NAMESPACE_URL, f"cardscanr:windows-au:{job.id}")) if native_windows else None
+        prior_native_env = {key: os.getenv(key) for key in ("CARDSCANR_LIVE_ATTEMPT_ID", NAV_CONTEXT_ENV)}
         try:
             price_key = self.client.get_price_key(job.price_key_id)
             if not price_key.id:
@@ -1208,11 +1218,13 @@ class MarketPriceJobRunner:
             os.environ.setdefault("CARDSCANR_CAPTURE_ORIGIN", "LIVE_BROWSER_CAPTURE")
             if getattr(price_key, "fingerprint", None):
                 os.environ["CARDSCANR_FINGERPRINT"] = str(price_key.fingerprint)
-            nav_ctx = load_navigation_runtime_context()
-            nav_ctx = reconcile_navigation_context_for_browser_recycle(nav_ctx)
-            from .inter_card_cdp_recovery import reconcile_nav_context_for_cdp_change
+            if native_windows:
+                nav_ctx = NavigationRuntimeContext(current_attempt_id=native_attempt)
+            else:
+                from .inter_card_cdp_recovery import reconcile_nav_context_for_cdp_change
 
-            nav_ctx = reconcile_nav_context_for_cdp_change(nav_ctx)
+                nav_ctx = reconcile_navigation_context_for_browser_recycle(load_navigation_runtime_context())
+                nav_ctx = reconcile_nav_context_for_cdp_change(nav_ctx)
             nav_ctx.current_job_id = str(job.id)
             nav_ctx.current_price_key_id = str(price_key.id)
             if getattr(price_key, "fingerprint", None):
@@ -1241,6 +1253,14 @@ class MarketPriceJobRunner:
                 return live_sweep
 
             self._assert_market_allowed_for_worker(price_key)
+            if native_attempt and has_search_submission_started(native_attempt):
+                from .providers.search_entry_contract import ProviderInvariantError
+
+                raise ProviderInvariantError(
+                    "WINDOWS_SEARCH_ATTEMPT_ALREADY_CONSUMED",
+                    diagnostics={"attemptId": native_attempt, "searchSubmissionStarted": True,
+                                 "budgetSubmissionCounted": True},
+                )
             self.logger(f"[market-engine] processing job={job.id} key={price_key.fingerprint}")
             market_country = str(price_key.market_country or "AU").upper()
             reserved, blocked = self._reserve_per_card_submission(market_country)
@@ -1716,6 +1736,13 @@ class MarketPriceJobRunner:
                     result=result,
                 )
             return result
+        finally:
+            if native_windows:
+                for key, previous in prior_native_env.items():
+                    if previous is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = previous
 
     def run_once(self, *, max_jobs: int | None = None) -> list[dict[str, Any]]:
         gaming = GamingResourcePauseController()

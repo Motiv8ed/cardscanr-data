@@ -475,7 +475,29 @@ def probe_pre_live_runtime(
     runtime_mode: str = RUNTIME_COLD_START,
     expected_prior: PriorCardContext | dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Full pre-live gate: Xvfb + CDP + mode-aware target policy + X11 navigation runtime."""
+    """Read-only readiness for the selected local browser runtime."""
+    from .providers.search_entry_contract import resolved_ebay_browser_nav_mode
+
+    if resolved_ebay_browser_nav_mode() in {"desktop_win32", "desktop", "real_desktop"}:
+        from .native_windows_pricing_browser import PORT, listener_owner
+
+        result = {
+            "ready": False, "runtimeMode": runtime_mode, "navMode": "desktop_win32",
+            "cdpPort": PORT, "cdpReady": False, "chromeWindowReady": False,
+            "reasonCodes": ["WINDOWS_BROWSER_UNVERIFIED"],
+        }
+        try:
+            pid = listener_owner()
+            if pid is not None:
+                from .providers.desktop_win32_ebay_nav import _check_page, _read, _window
+
+                _window(pid)
+                _, state = _read()
+                _check_page(state, allow_blank=True)
+                result.update(ready=True, cdpReady=True, chromeWindowReady=True, reasonCodes=[])
+        except Exception:
+            pass
+        return result
     from .x11_navigation_runtime import probe_x11_navigation_runtime
 
     prior = (

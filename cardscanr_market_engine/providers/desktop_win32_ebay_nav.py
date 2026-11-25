@@ -1,87 +1,53 @@
-"""Real Windows desktop mouse/keyboard navigation for eBay AU sold search.
-
-Navigation only — no Playwright clicks, no CDP input, no page.goto search URLs.
-Playwright/CDP may attach afterward solely to READ the already-loaded page.
-"""
+"""Windows rendered-UI navigation on the verified dedicated pricing browser."""
 from __future__ import annotations
-
-import json
-import subprocess
-import time
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 import ctypes
 from ctypes import wintypes
+from dataclasses import dataclass
+import os
+from pathlib import Path
+import time
+from typing import Any
+from urllib.parse import parse_qs, urlsplit
+from websocket import WebSocketTimeoutException
 
-user32 = ctypes.windll.user32
-kernel32 = ctypes.windll.kernel32
-shcore = ctypes.windll.shcore
-try:
-    shcore.SetProcessDpiAwareness(2)
-except Exception:
-    try:
-        user32.SetProcessDPIAware()
-    except Exception:
-        pass
+from ..ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+from ..live_navigation_attempt import emit_search_submission_started, has_search_submission_started
+from ..marketplace_gate_url import is_marketplace_gate_page
+from ..native_windows_pricing_browser import (
+    PORT as DEFAULT_CDP_PORT, browser_lock, cdp_json, ensure_browser,
+    listener_owner, valid_socket,
+)
+from ..navigation_runtime_context import PRE_SUBMIT_QUERY_READY, pre_submit_only_requested
+from .post_sold_capture_cdp import DirectCdpSession
 
-MOUSEEVENTF_MOVE = 0x0001
-MOUSEEVENTF_LEFTDOWN = 0x0002
-MOUSEEVENTF_LEFTUP = 0x0004
-MOUSEEVENTF_WHEEL = 0x0800
-MOUSEEVENTF_ABSOLUTE = 0x8000
-MOUSEEVENTF_VIRTUALDESK = 0x4000
-INPUT_MOUSE = 0
-INPUT_KEYBOARD = 1
-KEYEVENTF_KEYUP = 0x0002
-KEYEVENTF_UNICODE = 0x0004
-VK_CONTROL, VK_A, VK_BACK, VK_RETURN = 0x11, 0x41, 0x08, 0x0D
-VK_ESCAPE, VK_NEXT, VK_L = 0x1B, 0x22, 0x4C
-WHEEL_DELTA = 120
-SW_RESTORE, SW_MAXIMIZE = 9, 3
-
-ROOT = Path(__file__).resolve().parents[2]
-TOOLS = ROOT / "tools"
-DEFAULT_PROFILE = ROOT / ".browser_profiles" / "cardscanr"
-DEFAULT_CDP_PORT = 9333
-
-
-class RECT(ctypes.Structure):
-    _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long), ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
-
-
-class POINT(ctypes.Structure):
-    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
-
-
-class MOUSEINPUT(ctypes.Structure):
-    _fields_ = [
-        ("dx", wintypes.LONG),
-        ("dy", wintypes.LONG),
-        ("mouseData", wintypes.DWORD),
-        ("dwFlags", wintypes.DWORD),
-        ("time", wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
-    ]
-
-
-class KEYBDINPUT(ctypes.Structure):
-    _fields_ = [
-        ("wVk", wintypes.WORD),
-        ("wScan", wintypes.WORD),
-        ("dwFlags", wintypes.DWORD),
-        ("time", wintypes.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
-    ]
-
-
-class INPUT_UNION(ctypes.Union):
-    _fields_ = [("mi", MOUSEINPUT), ("ki", KEYBDINPUT)]
-
-
-class INPUT(ctypes.Structure):
-    _fields_ = [("type", wintypes.DWORD), ("union", INPUT_UNION)]
+_HOME = "https://www.ebay.com.au/"
+_ORIGIN = "https://www.ebay.com.au"
+_CONTROLS = r"""
+    const visible = e => e.getClientRects().length && getComputedStyle(e).visibility === 'visible';
+    const label = e => (e.getAttribute('aria-label') || e.innerText || e.value || e.placeholder || '').trim();
+    const fields = [...document.querySelectorAll('input[name="_nkw"]')]
+        .filter(e => !e.disabled && !e.readOnly && visible(e));
+    const field = fields.length === 1 ? fields[0] : null;
+    const buttons = [...(field?.form?.elements || [])].filter(e =>
+        e.type === 'submit' && !e.disabled && visible(e) && label(e).toLowerCase() === 'search');
+    const sold = [...document.querySelectorAll('a,label,button,[role="checkbox"],input[type="checkbox"]')]
+        .filter(e => label(e) === 'Sold items' && !e.disabled && visible(e));
+    const point = e => {
+        if (!e) return null;
+        const r = e.getBoundingClientRect();
+        const x = r.x + r.width / 2, y = r.y + r.height / 2;
+        return r.width > 0 && r.height > 0 && e.contains(document.elementFromPoint(x, y))
+            ? [x, y] : null;
+    };
+    const controls = {field, submit: buttons.length === 1 ? buttons[0] : null,
+                      sold: sold.length === 1 ? sold[0] : null};
+"""
+_STATE = "(() => {" + _CONTROLS + r"""
+    return {url: location.href, title: document.title, body: document.body?.innerText.slice(0, 60000) || '',
+        field: !!field, query: field?.value, form: field?.form?.action, method: field?.form?.method,
+        submit: !!controls.submit, sold: !!controls.sold};
+})()"""
 
 
 @dataclass
@@ -100,461 +66,235 @@ class DesktopNavResult:
     diagnostics: dict[str, Any] | None = None
 
 
-def virt_metrics() -> dict[str, int]:
-    return {
-        "x": user32.GetSystemMetrics(76),
-        "y": user32.GetSystemMetrics(77),
-        "w": user32.GetSystemMetrics(78),
-        "h": user32.GetSystemMetrics(79),
-    }
+def ensure_chrome_with_cdp(*, profile_dir: Path | None = None, cdp_port: int = DEFAULT_CDP_PORT,
+                           start_url: str = "about:blank") -> dict:
+    if profile_dir is not None or cdp_port != DEFAULT_CDP_PORT or start_url != "about:blank":
+        raise RuntimeError("Native pricing requires its dedicated profile, port and blank startup")
+    return ensure_browser()
 
 
-def to_absolute(x: int, y: int, virt: dict[str, int]) -> tuple[int, int]:
-    ax = int((x - virt["x"]) * 65535 / max(1, virt["w"]))
-    ay = int((y - virt["y"]) * 65535 / max(1, virt["h"]))
-    return ax, ay
+def _origin(url: str) -> bool:
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}" == _ORIGIN
 
 
-def send_mouse_abs(x: int, y: int, flags: int, virt: dict[str, int], mouse_data: int = 0) -> None:
-    ax, ay = to_absolute(x, y, virt)
-    inp = INPUT()
-    inp.type = INPUT_MOUSE
-    md = mouse_data & 0xFFFFFFFF
-    inp.union.mi = MOUSEINPUT(
-        ax, ay, md, flags | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK | MOUSEEVENTF_MOVE, 0, None
-    )
-    user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
+def _window(pid: int) -> int:
+    user32 = ctypes.windll.user32
+    windows = []
 
-
-def move_visible(x1: int, y1: int, x2: int, y2: int, virt: dict[str, int], steps: int = 40) -> None:
-    for i in range(steps + 1):
-        t = i / steps
-        e = t * t * (3 - 2 * t)
-        x = int(x1 + (x2 - x1) * e)
-        y = int(y1 + (y2 - y1) * e)
-        send_mouse_abs(x, y, 0, virt)
-        user32.SetCursorPos(x, y)
-        time.sleep(0.012)
-
-
-def click_at(x: int, y: int, virt: dict[str, int], *, pause: float = 1.0) -> None:
-    pt = POINT()
-    user32.GetCursorPos(ctypes.byref(pt))
-    move_visible(pt.x, pt.y, x, y, virt)
-    time.sleep(pause)
-    send_mouse_abs(x, y, MOUSEEVENTF_LEFTDOWN, virt)
-    time.sleep(0.07)
-    send_mouse_abs(x, y, MOUSEEVENTF_LEFTUP, virt)
-    time.sleep(0.2)
-
-
-def wheel_at(x: int, y: int, virt: dict[str, int], notches: int) -> None:
-    send_mouse_abs(x, y, 0, virt)
-    user32.SetCursorPos(x, y)
-    time.sleep(0.04)
-    delta = int(-notches * WHEEL_DELTA)
-    send_mouse_abs(x, y, MOUSEEVENTF_WHEEL, virt, mouse_data=delta)
-    time.sleep(0.1)
-
-
-def tap(vk: int) -> None:
-    user32.keybd_event(vk, 0, 0, 0)
-    time.sleep(0.04)
-    user32.keybd_event(vk, 0, KEYEVENTF_KEYUP, 0)
-    time.sleep(0.04)
-
-
-def type_slow(text: str, delay: float = 0.07) -> None:
-    for ch in text:
-        for flags in (KEYEVENTF_UNICODE, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP):
-            inp = INPUT()
-            inp.type = INPUT_KEYBOARD
-            inp.union.ki = KEYBDINPUT(0, ord(ch), flags, 0, None)
-            user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(INPUT))
-        time.sleep(delay)
-
-
-def find_ebay_hwnd() -> tuple[int, str, tuple[int, int, int, int]] | None:
-    found: list[tuple[int, str, tuple[int, int, int, int]]] = []
-
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-    def cb(hwnd, _lparam):  # noqa: ANN001
-        if not user32.IsWindowVisible(hwnd):
-            return True
-        length = user32.GetWindowTextLengthW(hwnd)
-        buf = ctypes.create_unicode_buffer(length + 1)
-        user32.GetWindowTextW(hwnd, buf, length + 1)
-        title = buf.value or ""
-        cls = ctypes.create_unicode_buffer(256)
-        user32.GetClassNameW(hwnd, cls, 256)
-        if cls.value == "Chrome_WidgetWin_1" and "ebay" in title.lower():
-            r = RECT()
-            user32.GetWindowRect(hwnd, ctypes.byref(r))
-            if r.left > -10000:
-                found.append((int(hwnd), title, (r.left, r.top, r.right, r.bottom)))
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def collect(hwnd, _):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value == pid and user32.IsWindowVisible(hwnd):
+            name = ctypes.create_unicode_buffer(64)
+            user32.GetClassNameW(hwnd, name, 64)
+            if name.value == "Chrome_WidgetWin_1":
+                windows.append(hwnd)
         return True
 
-    user32.EnumWindows(cb, 0)
-    if not found:
-        return None
-    for item in found:
-        if "ebay australia" in item[1].lower() or "for sale" in item[1].lower() or "sold" in item[1].lower():
-            return item
-    return found[0]
+    if not user32.EnumWindows(collect, 0) or len(windows) != 1:
+        raise RuntimeError("Expected one visible dedicated Chrome window")
+    return windows[0]
 
 
-def foreground_ebay() -> tuple[int, str, tuple[int, int, int, int]]:
-    item = find_ebay_hwnd()
-    if not item:
-        raise RuntimeError("no_ebay_chrome_window")
-    hwnd, title, _ = item
-    user32.ShowWindow(hwnd, SW_RESTORE)
-    time.sleep(0.12)
-    user32.ShowWindow(hwnd, SW_MAXIMIZE)
-    time.sleep(0.25)
-    fg = user32.GetForegroundWindow()
-    fg_tid = user32.GetWindowThreadProcessId(fg, None)
-    cur = kernel32.GetCurrentThreadId()
-    if fg_tid and fg_tid != cur:
-        user32.AttachThreadInput(cur, fg_tid, True)
+def _page_socket(target_id: str | None = None) -> tuple[str, str]:
+    targets = cdp_json("/json/list")
+    pages = [t for t in targets if t.get("type") == "page"]
+    if len(pages) != 1 or (target_id is not None and pages[0].get("id") != target_id):
+        raise RuntimeError("Expected one unchanged dedicated Chrome target")
+    page = pages[0]
+    socket = page["webSocketDebuggerUrl"]
+    if not valid_socket(socket, "/devtools/page/") or not socket.endswith("/" + page["id"]):
+        raise RuntimeError("Unexpected native Chrome target socket")
+    return page["id"], socket
+
+
+def _read(target_id: str | None = None) -> tuple[str, dict]:
+    target, socket = _page_socket(target_id)
+    session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
     try:
-        user32.AllowSetForegroundWindow(-1)
-    except Exception:
-        pass
-    user32.SetForegroundWindow(hwnd)
-    user32.BringWindowToTop(hwnd)
-    if fg_tid and fg_tid != cur:
-        user32.AttachThreadInput(cur, fg_tid, False)
-    time.sleep(0.3)
-    tap(VK_ESCAPE)
-    time.sleep(0.12)
-    r = RECT()
-    user32.GetWindowRect(hwnd, ctypes.byref(r))
-    return hwnd, title, (r.left, r.top, r.right, r.bottom)
+        state = session.evaluate(_STATE, timeout=4)
+    finally:
+        session.close()
+    if not isinstance(state, dict):
+        raise RuntimeError("Chrome page inspection returned no state")
+    return target, state
 
 
-def window_title(hwnd: int) -> str:
-    length = user32.GetWindowTextLengthW(hwnd)
-    buf = ctypes.create_unicode_buffer(length + 1)
-    user32.GetWindowTextW(hwnd, buf, length + 1)
-    return buf.value or ""
-
-
-def _run_ps(script_path: Path) -> str:
-    proc = subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script_path)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    return proc.stdout
-
-
-def uia_search_controls() -> tuple[dict[str, int] | None, dict[str, int] | None, str]:
-    text = _run_ps(TOOLS / "_uia_ebay_search2.ps1")
-    field = None
-    button = None
-    url = ""
-    for line in text.splitlines():
-        if line.startswith("UNIQUE_SEARCH_BTN|"):
-            parts = dict(p.split("=", 1) for p in line.split("|")[1:] if "=" in p)
-            button = {k: int(v) for k, v in parts.items()}
-        elif line.startswith("HIT|") and "Search for anything" in line and field is None:
-            parts = dict(p.split("=", 1) for p in line.split("|")[1:] if "=" in p)
-            left, top, w, h = int(parts["left"]), int(parts["top"]), int(parts["w"]), int(parts["h"])
-            field = {"left": left, "top": top, "w": w, "h": h, "right": left + w, "cx": left + w // 2, "cy": top + h // 2}
-    return field, button, text
-
-
-def uia_sold_and_url() -> tuple[dict[str, int] | None, str, str, list[str]]:
-    text = _run_ps(TOOLS / "_uia_ebay_sold.ps1")
-    sold = None
-    url = ""
-    title = ""
-    body: list[str] = []
-    for line in text.splitlines():
-        if line.startswith("WINDOW|"):
-            parts = dict(p.split("=", 1) for p in line.split("|")[1:] if "=" in p)
-            title = parts.get("name", "")
-        elif line.startswith("URL_EDIT|"):
-            parts = dict(p.split("=", 1) for p in line.split("|")[1:] if "=" in p)
-            url = parts.get("value", "") or url
-        elif line.startswith("SOLD_HIT|") and "|name=Sold items|" in f"|{line}|":
-            parts = dict(p.split("=", 1) for p in line.split("|")[1:] if "=" in p)
-            if str(parts.get("name")) == "Sold items":
-                sold = {k: (int(v) if k in {"left", "top", "w", "h", "cx", "cy"} else v) for k, v in parts.items()}
-        elif line.startswith("TEXT|"):
-            body.append(line[5:])
-    return sold, url, title, body
-
-
-def in_viewport(hit: dict[str, int], rect: tuple[int, int, int, int], margin: int = 40) -> bool:
-    return (
-        hit["left"] >= rect[0] + 8
-        and hit["top"] >= rect[1] + margin
-        and hit["left"] + hit["w"] <= rect[2] - 8
-        and hit["top"] + hit["h"] <= rect[3] - margin
-    )
-
-
-def ensure_chrome_with_cdp(
-    *,
-    profile_dir: Path | None = None,
-    cdp_port: int = DEFAULT_CDP_PORT,
-    start_url: str = "https://www.ebay.com.au/",
-) -> dict[str, Any]:
-    """Relaunch CardScanR Chrome profile with remote debugging if needed."""
-    import urllib.request
-
-    profile = Path(profile_dir or DEFAULT_PROFILE)
-    endpoint = f"http://127.0.0.1:{cdp_port}/json/version"
+def _open_home(target: str) -> None:
+    _, socket = _page_socket(target)
+    session = DirectCdpSession(socket, timeout=6, suppress_origin=True)
     try:
-        with urllib.request.urlopen(endpoint, timeout=2) as resp:
-            meta = json.loads(resp.read().decode("utf-8"))
-            return {"alreadyRunning": True, "cdpPort": cdp_port, "browser": meta.get("Browser"), "profile": str(profile)}
-    except Exception:
-        pass
+        session.call("Page.navigate", {"url": _HOME}, timeout=6)
+    finally:
+        session.close()
 
-    # Stop only processes using this user-data-dir (not other Chrome profiles).
-    marker = str(profile).replace("/", "\\").lower()
-    ps = f"""
-$marker = '{marker}'.ToLower()
-Get-CimInstance Win32_Process -Filter \"name='chrome.exe'\" | ForEach-Object {{
-  if ($_.CommandLine -and $_.CommandLine.ToLower().Contains($marker)) {{
-    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-  }}
-}}
-Start-Sleep -Seconds 1.5
-$chrome = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-$args = @(
-  '--remote-debugging-port={cdp_port}',
-  '--remote-debugging-address=127.0.0.1',
-  '--remote-allow-origins=*',
-  '--user-data-dir={str(profile)}',
-  '--profile-directory=Default',
-  '--no-first-run',
-  '--no-default-browser-check',
-  '--new-window',
-  '{start_url}'
-)
-Start-Process -FilePath $chrome -ArgumentList $args
-"""
-    subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps], check=False)
-    deadline = time.time() + 40
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(endpoint, timeout=2) as resp:
-                meta = json.loads(resp.read().decode("utf-8"))
-                time.sleep(1.5)
-                return {
-                    "alreadyRunning": False,
-                    "cdpPort": cdp_port,
-                    "browser": meta.get("Browser"),
-                    "profile": str(profile),
-                    "startUrl": start_url,
+
+def _activate_control(target: str, state: dict, control: str, *, query: str = "") -> None:
+    """Send input to one verified Chrome tab, with no Windows cursor or focus APIs."""
+    if control not in {"field", "submit", "sold"}:
+        raise ValueError("Unknown pricing control")
+
+    _, socket = _page_socket(target)
+    session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
+    try:
+        activated = session.evaluate_function(
+            "(args) => {" + _CONTROLS + r"""
+                if (location.href !== args.url) return false;
+                const control = controls[args.control];
+                if (!control || (args.control === 'submit' && field.value !== args.query)) return false;
+                control.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'});
+                if (!point(control)) return false;
+                if (args.control === 'field') {
+                    field.focus({preventScroll: true});
+                    field.select();
+                    return document.activeElement === field;
                 }
-        except Exception:
-            time.sleep(0.5)
-    raise RuntimeError(f"chrome_cdp_not_ready port={cdp_port}")
+                control.click();
+                return true;
+            }""",
+            {"url": state["url"], "control": control, "query": state.get("query")},
+            timeout=4,
+        )
+        if activated is not True:
+            raise RuntimeError("Rendered pricing control changed or is obscured")
+        if control == "field":
+            session.call("Input.insertText", {"text": query})
+    finally:
+        session.close()
 
 
-def wait_for_search_controls(*, timeout_s: float = 30.0) -> tuple[dict[str, int] | None, dict[str, int] | None]:
-    deadline = time.time() + timeout_s
-    last_field = None
-    last_button = None
-    while time.time() < deadline:
+def _search_form(state: dict) -> bool:
+    return bool(state.get("field") and state.get("submit") and state.get("method") == "get"
+                and _origin(state.get("form") or ""))
+
+
+def _require_gate(market: str) -> None:
+    gate = evaluate_ebay_browser_work_gate(market=market)
+    if not gate.allowed or not gate.state_integrity_ok:
+        raise RuntimeError("MARKETPLACE_WORK_GATE_BLOCKED")
+
+
+def _check_page(state: dict, *, allow_blank: bool = False) -> None:
+    from .ebay_browser_provider import is_ebay_authentication_url
+
+    url, title, body = state["url"], state["title"], state["body"]
+    if is_ebay_authentication_url(url):
+        raise RuntimeError("EBAY_AUTH_REQUIRED")
+    if is_marketplace_gate_page(url, title=title, body=body) or "captcha" in body.lower() or "security measure" in body.lower():
+        raise RuntimeError("CHALLENGE_REQUIRED")
+    if "error page" in title.lower() or "/error" in urlsplit(url).path.lower():
+        raise RuntimeError("TEMPORARY_EBAY_SERVER_FAILURE")
+    if not _origin(url) and not (allow_blank and url == "about:blank"):
+        raise RuntimeError("UNEXPECTED_PRICING_ORIGIN")
+
+
+def _wait(target: str, ready, *, timeout: float = 25) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         try:
-            foreground_ebay()
-        except Exception:
-            time.sleep(0.5)
+            _, state = _read(target)
+        except (TimeoutError, WebSocketTimeoutException):
             continue
-        last_field, last_button, _ = uia_search_controls()
-        if last_field and last_button:
-            return last_field, last_button
-        time.sleep(0.6)
-    return last_field, last_button
+        _check_page(state, allow_blank=True)
+        if ready(state):
+            return state
+        time.sleep(0.3)
+    raise RuntimeError("WINDOWS_PRICING_PAGE_NOT_CONFIRMED")
 
 
-def desktop_goto_homepage(virt: dict[str, int]) -> None:
-    """Address-bar navigation via real keyboard (not Playwright/CDP)."""
-    hwnd, title, rect = foreground_ebay()
-    # Already on AU homepage with search UI — skip address-bar churn.
-    field, button = wait_for_search_controls(timeout_s=3.0)
-    if field and button and "ebay australia" in title.lower() and "for sale" not in title.lower():
-        _ = virt
-        return
-    user32.SetCursorPos(rect[0] + (rect[2] - rect[0]) // 2, rect[1] + 120)
-    time.sleep(0.15)
-    user32.keybd_event(VK_CONTROL, 0, 0, 0)
-    tap(VK_L)
-    user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
-    time.sleep(0.15)
-    user32.keybd_event(VK_CONTROL, 0, 0, 0)
-    tap(VK_A)
-    user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
-    time.sleep(0.08)
-    type_slow("https://www.ebay.com.au/", delay=0.04)
-    time.sleep(0.1)
-    tap(VK_RETURN)
-    time.sleep(2.0)
-    wait_for_search_controls(timeout_s=25.0)
-    _ = hwnd
+def wait_for_search_controls(*, timeout_s: float = 30.0):
+    target, _ = _read()
+    state = _wait(target, _search_form, timeout=timeout_s)
+    return state["field"], state["submit"]
 
 
-def desktop_search_and_sold(query: str, *, pause_before_click: float = 1.0) -> DesktopNavResult:
-    """Homepage assumed loaded. Search via desktop input, then Sold items click."""
-    from cardscanr_market_engine.providers.ebay_browser_provider import verify_sold_result_state
+def navigate_query_to_sold(
+    query: str, *, reset_homepage: bool = True, attempt_id: str | None = None,
+    price_key_id: str | None = None, pre_submit_only: bool = False,
+) -> DesktopNavResult:
+    from .ebay_browser_provider import verify_sold_result_state
 
-    virt = virt_metrics()
-    diag: dict[str, Any] = {"query": query, "steps": []}
+    attempt_id = (attempt_id or os.getenv("CARDSCANR_LIVE_ATTEMPT_ID") or "").strip()
+    price_key_id = (price_key_id or os.getenv("CARDSCANR_PRICE_KEY_ID") or "").strip() or None
+    market = (os.getenv("CARDSCANR_MARKET") or "AU").strip().upper()
+    pre_submit = pre_submit_only or pre_submit_only_requested(flag=True)
+    search: dict[str, Any] = {"attemptId": attempt_id, "priceKeyId": price_key_id}
+    diagnostics = {"search": search}
+    state: dict = {}
+    submitted = sold_click = False
+
+    def result(error=None, *, success=False, sold_dates=0):
+        return DesktopNavResult(
+            success, query, submitted or error == PRE_SUBMIT_QUERY_READY, sold_click,
+            success and sold_click, state.get("url", ""), state.get("title", ""),
+            error == "TEMPORARY_EBAY_SERVER_FAILURE", error == "CHALLENGE_REQUIRED",
+            sold_dates, error, diagnostics,
+        )
+
     try:
-        hwnd, title0, rect = foreground_ebay()
-        diag["steps"].append({"step": "foreground", "title": title0, "rect": list(rect)})
-
-        field, button = wait_for_search_controls(timeout_s=30.0)
-        if not field or not button:
-            return DesktopNavResult(
-                False, query, False, False, False, "", title0, False, False, 0,
-                error="search_controls_not_found", diagnostics=diag,
+        _require_gate(market)
+        if market != "AU" or not query.strip() or any(not c.isprintable() for c in query):
+            raise RuntimeError("INVALID_WINDOWS_PRICING_QUERY_OR_MARKET")
+        with browser_lock():
+            if not pre_submit and (not attempt_id or has_search_submission_started(attempt_id)):
+                raise RuntimeError("SEARCH_ATTEMPT_MISSING_OR_ALREADY_CONSUMED")
+            pid = listener_owner()
+            if pid is None:
+                raise RuntimeError("NATIVE_PRICING_BROWSER_NOT_READY")
+            target, state = _read()
+            _check_page(state, allow_blank=True)
+            _window(pid)
+            if state["url"] == "about:blank" or (reset_homepage and state["url"] != _HOME):
+                _require_gate(market)
+                _open_home(target)
+            state = _wait(target, _search_form)
+            search["searchInputLocated"] = True
+            if state.get("query") != query:
+                _activate_control(target, state, "field", query=query)
+            state = _wait(target, lambda s: _search_form(s) and s.get("query") == query, timeout=8)
+            search["queryTyped"] = True
+            if pre_submit:
+                search.update(resultCode=PRE_SUBMIT_QUERY_READY, submitted=False)
+                return result(PRE_SUBMIT_QUERY_READY, success=True)
+            if listener_owner() != pid:
+                raise RuntimeError("NATIVE_PRICING_BROWSER_OWNER_CHANGED")
+            _require_gate(market)
+            state = _wait(target, lambda s: _search_form(s) and s.get("query") == query, timeout=8)
+            event = emit_search_submission_started(
+                attempt_id=attempt_id, price_key_id=price_key_id, query=query, market=market,
+                currency=os.getenv("CARDSCANR_CURRENCY"), fingerprint=os.getenv("CARDSCANR_FINGERPRINT"),
             )
+            search["searchSubmissionStarted"] = event.to_dict()
+            _require_gate(market)
+            _activate_control(target, state, "submit")
+            submitted = True
+            search.update(submitted=True, submit="windows_tab_control_click")
 
-        click_at(field["cx"], field["cy"], virt, pause=pause_before_click)
-        time.sleep(0.2)
-        user32.keybd_event(VK_CONTROL, 0, 0, 0)
-        tap(VK_A)
-        user32.keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
-        tap(VK_BACK)
-        time.sleep(0.1)
-        type_slow(query, delay=0.07)
-        time.sleep(0.35)
-        diag["steps"].append({"step": "typed_query", "field": field})
+            def query_matches(s):
+                return query in parse_qs(urlsplit(s["url"]).query).get("_nkw", [])
 
-        click_at(button["cx"], button["cy"], virt, pause=pause_before_click)
-        deadline = time.time() + 45
-        search_ok = False
-        last_title = ""
-        last_url = ""
-        while time.time() < deadline:
-            last_title = window_title(hwnd)
-            if "error page" in last_title.lower():
-                return DesktopNavResult(
-                    False, query, False, False, False, "", last_title, True, False, 0,
-                    error="SORRY_after_search", diagnostics=diag,
-                )
-            _, last_url, _, _ = uia_sold_and_url()
-            url_l = (last_url or "").lower()
-            title_l = last_title.lower()
-            token = query.split()[0].lower()
-            if (
-                token in title_l
-                or "for sale" in title_l
-                or "results for" in title_l
-                or f"_nkw={token}" in url_l
-                or token in url_l.replace("+", " ").replace("%20", " ")
-                or "/sch/" in url_l
-            ):
-                search_ok = True
-                break
-            time.sleep(0.4)
-        time.sleep(2.0)
-        if not search_ok:
-            return DesktopNavResult(
-                False, query, False, False, False, last_url, last_title, False, False, 0,
-                error="search_results_not_confirmed",
-                diagnostics={**diag, "lastTitle": last_title, "lastUrl": last_url},
+            state = _wait(target, lambda s: query_matches(s) and "/sch/" in urlsplit(s["url"]).path)
+            if not state.get("sold") or listener_owner() != pid:
+                raise RuntimeError("SOLD_CONTROL_OR_BROWSER_OWNER_UNVERIFIED")
+            _require_gate(market)
+            _, state = _read(target)
+            _check_page(state)
+            if not query_matches(state) or not state.get("sold"):
+                raise RuntimeError("SOLD_CONTROL_CHANGED")
+            _activate_control(target, state, "sold")
+            sold_click = True
+            state = _wait(target, lambda s: query_matches(s)
+                          and "1" in parse_qs(urlsplit(s["url"]).query).get("LH_Sold", []))
+            diagnostics["sold"] = {"body": state["body"]}
+            sold_state = verify_sold_result_state(
+                url=state["url"], title=state["title"], body_text=state["body"],
             )
-        diag["steps"].append({"step": "search_results", "title": window_title(hwnd)})
-
-        r = RECT()
-        user32.GetWindowRect(hwnd, ctypes.byref(r))
-        rect = (r.left, r.top, r.right, r.bottom)
-        sold, url, title, _ = uia_sold_and_url()
-        if not sold:
-            return DesktopNavResult(
-                False, query, True, False, False, url, title, False, False, 0,
-                error="sold_control_not_found", diagnostics=diag,
-            )
-
-        hover_x = rect[0] + 220
-        hover_y = rect[1] + int((rect[3] - rect[1]) * 0.55)
-        user32.SetCursorPos(hover_x, hover_y)
-        attempts = 0
-        while not in_viewport(sold, rect) and attempts < 40:
-            attempts += 1
-            if attempts % 5 == 0:
-                tap(VK_NEXT)
-            else:
-                wheel_at(hover_x, hover_y, virt, notches=3)
-            time.sleep(0.12)
-            user32.GetWindowRect(hwnd, ctypes.byref(r))
-            rect = (r.left, r.top, r.right, r.bottom)
-            sold, url, title, _ = uia_sold_and_url()
-            if not sold:
-                continue
-        if not sold or not in_viewport(sold, rect):
-            return DesktopNavResult(
-                False, query, True, False, False, url, title, False, False, 0,
-                error="sold_not_in_viewport", diagnostics={**diag, "scrollAttempts": attempts},
-            )
-
-        click_at(int(sold["cx"]), int(sold["cy"]), virt, pause=pause_before_click)
-        diag["steps"].append({"step": "sold_click", "sold": sold, "scrollAttempts": attempts})
-
-        home_url = url
-        deadline = time.time() + 50
-        while time.time() < deadline:
-            sold2, url, title, body = uia_sold_and_url()
-            _ = sold2
-            if url and not url.startswith("http"):
-                url = "https://www." + url.lstrip("/")
-            low = (url or "").lower()
-            if "lh_sold=1" in low or "error page" in title.lower():
-                break
-            if url and home_url and url != home_url:
-                time.sleep(1.2)
-                break
-            time.sleep(0.4)
-        time.sleep(1.8)
-        _, url, title, body = uia_sold_and_url()
-        if url and not url.startswith("http"):
-            url = "https://www." + url.lstrip("/")
-        body_text = "\n".join(body)
-        sold_state = verify_sold_result_state(url=url, title=title, body_text=body_text)
-        sorry = "error page" in title.lower() or "/error" in (url or "").lower()
-        challenge = "captcha" in body_text.lower() or "security measure" in body_text.lower()
-        url_sold = "lh_sold=1" in (url or "").lower()
-        # Nav gate: eBay-generated sold URL after physical click. Strict SOLD_STATE_VERIFIED
-        # is re-checked from the full page body after CDP attach for pricing parse.
-        verified_nav = bool(url_sold and not sorry and not challenge)
-        return DesktopNavResult(
-            ok=verified_nav,
-            query=query,
-            search_success=True,
-            sold_click_success=True,
-            sold_state_verified=verified_nav,
-            url=url,
-            title=title,
-            sorry=sorry,
-            challenge=challenge,
-            sold_date_lines=int(sold_state.get("soldDateLines") or 0),
-            error=None if verified_nav else "sold_url_not_confirmed",
-            diagnostics={
-                **diag,
-                "soldStateUiaSparse": sold_state,
-                "url": url,
-                "uiaStrictVerified": sold_state.get("SOLD_STATE_VERIFIED"),
-            },
-        )
+            if not sold_state["SOLD_STATE_VERIFIED"]:
+                raise RuntimeError("SOLD_STATE_NOT_VERIFIED")
+            return result(success=True, sold_dates=int(sold_state["soldDateLines"]))
     except Exception as exc:
-        return DesktopNavResult(
-            False, query, False, False, False, "", "", False, False, 0,
-            error=f"{type(exc).__name__}:{exc}", diagnostics=diag,
-        )
-
-
-def navigate_query_to_sold(query: str, *, reset_homepage: bool = True) -> DesktopNavResult:
-    virt = virt_metrics()
-    if reset_homepage:
-        desktop_goto_homepage(virt)
-    return desktop_search_and_sold(query)
+        error = str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__
+        search["resultCode"] = error
+        return result(error)

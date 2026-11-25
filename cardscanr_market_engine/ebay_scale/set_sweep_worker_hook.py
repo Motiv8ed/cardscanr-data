@@ -615,7 +615,7 @@ def _default_fetch_set_sweep_html(
     *,
     budget: "ContinuousSafetyBudget | None" = None,
 ) -> str:
-    """Live PC path: X11 sold navigation + authoritative HTML capture."""
+    """Live PC path: configured desktop sold navigation and authoritative HTML capture."""
     del set_code, set_name
     from ..providers.ebay_browser_provider import EbayBrowserSoldCompsProvider
 

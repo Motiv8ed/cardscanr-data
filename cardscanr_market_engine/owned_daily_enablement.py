@@ -66,6 +66,12 @@ def ensure_continuous_au_safety_env() -> bool:
 
 def apply_continuous_au_env() -> dict[str, str]:
     """Bind production continuous AU env. Does not start processes."""
+    configured_nav = os.getenv("EBAY_BROWSER_NAV_MODE", "").strip().lower()
+    nav_mode = (
+        "desktop_win32"
+        if os.name == "nt" and configured_nav in {"desktop_win32", "desktop", "real_desktop"}
+        else "linux_x11"
+    )
     values = {
         "OWNED_DAILY_FULL_ENABLE": "true",
         "OWNED_DAILY_ALLOWED_MARKETS": "AU",
@@ -80,7 +86,7 @@ def apply_continuous_au_env() -> dict[str, str]:
         "EBAY_BROWSER_MAX_QUERY_ATTEMPTS": "1",
         "EBAY_BROWSER_ENABLED": "true",
         "MARKET_LOOKUP_PROVIDER": "ebay_browser",
-        "EBAY_BROWSER_NAV_MODE": "linux_x11",
+        "EBAY_BROWSER_NAV_MODE": nav_mode,
         "MARKET_WORKER_CONCURRENCY": "1",
         "MARKET_WORKER_MAX_JOBS_PER_RUN": "1",
         "CONFIRM_LIVE_EBAY_WORKER": "true",
