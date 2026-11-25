@@ -60,6 +60,6 @@ class AcquisitionTests(unittest.TestCase):
             self.assertEqual(m.run(plan,a,out,"dummy",2,source_reader,live_reader)["verified_candidates"],1)
             self.assertFalse((out/"set_30.json").exists())
             self.assertEqual(m.run(plan,a,out,"dummy",2,source_reader,live_reader)["verified_candidates"],0)
-            self.assertEqual(json.loads((out/"set_2.json").read_text())["new_live_links"],0)
+            self.assertEqual(json.loads((out/"set_2.json").read_text(encoding="utf8"))["new_live_links"],0)
 
 if __name__=="__main__":unittest.main()
