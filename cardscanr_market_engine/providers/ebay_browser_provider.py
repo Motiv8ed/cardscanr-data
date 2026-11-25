@@ -3345,10 +3345,10 @@ class EbayBrowserSoldCompsProvider:
 
     @staticmethod
     def _ensure_native_chrome_cdp_ready() -> int:
-        from ..ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+        from ..ebay_browser_work_gate import evaluate_native_browser_work_gate
         from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT, ensure_chrome_with_cdp
 
-        gate = evaluate_ebay_browser_work_gate(market="AU")
+        gate = evaluate_native_browser_work_gate(market="AU")
         if not gate.allowed or not gate.state_integrity_ok:
             raise ProviderBlockedError("Marketplace work gate blocks Windows pricing", diagnostics=gate.to_dict())
         try:

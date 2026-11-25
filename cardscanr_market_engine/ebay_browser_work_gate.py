@@ -7,6 +7,8 @@ inspecting availability HEALTHY alone.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -63,6 +65,7 @@ def evaluate_ebay_browser_work_gate(
     market: str = "AU",
     now: datetime | None = None,
     for_probe: bool = False,
+    _owned_probe_started_at: str | None = None,
     availability_path: Path | None = None,
     ops_path: Path | None = None,
     incidents_path: Path | None = None,
@@ -95,7 +98,12 @@ def evaluate_ebay_browser_work_gate(
         if str(snap.last_outcome or "") == "availability_state_unreadable_or_locked":
             result.state_integrity_ok = False
             reasons.append("AVAILABILITY_STATE_UNREADABLE")
-        elif not allowed_avail:
+        elif not allowed_avail and not (
+            for_probe and _owned_probe_started_at and market_n == "AU"
+            and snap.state == "PROBE_REQUIRED" and snap.probe_in_flight
+            and snap.last_outcome == "probe_started"
+            and result.availability.get("updatedAtUtc") == _owned_probe_started_at
+        ):
             reasons.append(str(avail_reason or "EBAY_AVAILABILITY_BLOCKED"))
             if snap.probe_in_flight and for_probe:
                 reasons.append("EBAY_AVAILABILITY_PROBE_IN_FLIGHT")
@@ -146,6 +154,33 @@ def evaluate_ebay_browser_work_gate(
         # Still allowed for probe; surface probe reason without denying.
         result.reason_codes = [EBAY_AVAILABILITY_PROBE]
     return result
+
+
+_native_probe_started_at: ContextVar[str | None] = ContextVar("native_probe_started_at", default=None)
+
+
+@contextmanager
+def native_probe_scope(started_at: str):
+    """Continue only the explicit AU probe already claimed in this execution."""
+    token = _native_probe_started_at.set(started_at)
+    try:
+        yield
+    finally:
+        _native_probe_started_at.reset(token)
+
+
+def evaluate_native_browser_work_gate(*, market: str = "AU") -> EbayBrowserWorkGateResult:
+    started_at = _native_probe_started_at.get()
+    gate = evaluate_ebay_browser_work_gate(
+        market=market, for_probe=started_at is not None, _owned_probe_started_at=started_at,
+    )
+    if started_at is not None and not (
+        gate.market == "AU" and gate.availability_state == "PROBE_REQUIRED" and gate.probe_in_flight
+        and gate.availability and gate.availability.get("updatedAtUtc") == started_at
+    ):
+        gate.allowed = False
+        gate.reason_codes.append("RECOVERY_PROBE_OWNERSHIP_LOST")
+    return gate
 
 
 def may_ebay_browser_work_begin(**kwargs: Any) -> bool:

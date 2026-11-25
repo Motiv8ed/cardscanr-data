@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from websocket import WebSocketTimeoutException
 
-from ..ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+from ..ebay_browser_work_gate import evaluate_native_browser_work_gate
 from ..live_navigation_attempt import emit_search_submission_started, has_search_submission_started
 from ..marketplace_gate_url import is_marketplace_gate_page
 from ..native_windows_pricing_browser import (
@@ -171,7 +171,7 @@ def _search_form(state: dict) -> bool:
 
 
 def _require_gate(market: str) -> None:
-    gate = evaluate_ebay_browser_work_gate(market=market)
+    gate = evaluate_native_browser_work_gate(market=market)
     if not gate.allowed or not gate.state_integrity_ok:
         raise RuntimeError("MARKETPLACE_WORK_GATE_BLOCKED")
 
