@@ -1,0 +1,35 @@
+name: KO TW identity crosswalk offline QA
+on:
+  pull_request:
+    paths:
+      - 'tools/private_live_ko_tw_missing_crosswalk.py'
+      - 'tools/private_live_ko_tw_snapshot_adapter.py'
+      - 'tools/private_workbench_identity_page_export.py'
+      - 'tests/test_private_live_ko_tw_missing_crosswalk.py'
+      - 'tests/test_private_live_ko_tw_snapshot_adapter.py'
+      - 'tests/test_private_workbench_identity_page_export.py'
+      - '.github/workflows/ko-tw-identity-crosswalk-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-regressions:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile research-only modules
+        run: python -m py_compile tools/private_live_ko_tw_missing_crosswalk.py tools/private_live_ko_tw_snapshot_adapter.py tools/private_workbench_identity_page_export.py
+      - name: Run KO TW offline regressions
+        run: python -m unittest discover -s tests -p 'test_private_*ko_tw*.py' -v
+      - name: Run identity envelope regressions
+        run: python -m unittest discover -s tests -p 'test_private_workbench_identity_page_export.py' -v
