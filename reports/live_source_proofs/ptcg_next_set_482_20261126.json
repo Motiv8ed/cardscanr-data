@@ -1,18 +1,18 @@
 {
   "id": "482",
-  "classification": "REQUIRES_FILTERED_ARCHIVE_COMPARISON",
+  "classification": "LIVE_MISSING_AND_PINNED_NATIVE_SINGLE_VARIANT_PROOF",
   "source_commit": "6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc",
   "source_git_blob": "8c93269c50d9167f827c9cefa47d5c464b133da2",
   "source_content_sha256": "96db94e4143a56aa13cd42de59ed46bcca93b00f8784ae9baeb204628cf5e094",
   "source_set": "zh-hans/terastal-gathering",
-  "source_code": "CSV9.5C",
+  "source_code": "CSV95C",
   "live_snapshot_sha256": "980d4dc5ad0529583bb228c7a12da710d6a714e2776eb107338563856e7e2899",
   "live_missing": 601,
   "expected_crosswalk_count": 88,
   "expected_crosswalk_tuple_sha256": "394ba9636fb63594618d585020bdf9d15566abf40c56fdb54c0a05aa994cc28a",
-  "actual_tuple_sha256": "6d4bc06d1f3c08df9ffe802870be8fce3985a9e4767ea1dc413f34594752e9d7",
+  "actual_tuple_sha256": "394ba9636fb63594618d585020bdf9d15566abf40c56fdb54c0a05aa994cc28a",
   "matched_count": 88,
-  "verified_candidates": 0,
+  "verified_candidates": 88,
   "live_imports": 0,
   "rights_granted": false,
   "excluded_numbers": [],
@@ -1249,5 +1249,6 @@
       "finish": "holo",
       "number": "259"
     }
-  ]
+  ],
+  "raw_source_code": "CSV9.5C"
 }
