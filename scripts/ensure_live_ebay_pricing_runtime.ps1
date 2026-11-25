@@ -43,7 +43,9 @@ function Write-StateFile {
         [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)]$Payload
     )
-    ($Payload | ConvertTo-Json -Depth 6) | Set-Content -Path $Path -Encoding utf8
+    # Windows PowerShell 5.1 adds a BOM with Set-Content -Encoding utf8.
+    $json = ($Payload | ConvertTo-Json -Depth 6) + [Environment]::NewLine
+    [System.IO.File]::WriteAllText($Path, $json, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 function Write-StopIntent {
