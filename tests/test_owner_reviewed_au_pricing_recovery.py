@@ -164,6 +164,31 @@ class RecoverySafetyTests(unittest.TestCase):
                 path=self.files["AV_FILE"], market="AU").state,
                 "CHALLENGE_REQUIRED")
 
+    def test_unrelated_transient_incident_remains_active_without_blocking_probe(self):
+        ledger = json.loads(self.files["INC_FILE"].read_text())
+        ledger["incidents"]["cpi_prior_transient"] = {
+            "incidentId": "cpi_prior_transient", "status": "active",
+            "market": "AU", "incidentType": "TRANSIENT_EBAY_SORRY",
+        }
+        self.files["INC_FILE"].write_text(json.dumps(ledger), encoding="utf-8")
+        recovery.resolve_incident()
+        after = json.loads(self.files["INC_FILE"].read_text())
+        self.assertEqual(after["incidents"]["cpi_prior_transient"]["status"], "active")
+        self.assertEqual(after["incidents"][recovery.INCIDENT]["status"], "resolved")
+        self.assertEqual(recovery.active_blocking_au_incidents(), [])
+
+    def test_status_counts_only_blocking_incidents(self):
+        ledger = json.loads(self.files["INC_FILE"].read_text())
+        ledger["incidents"]["cpi_prior_transient"] = {
+            "incidentId": "cpi_prior_transient", "status": "active",
+            "market": "AU", "incidentType": "TRANSIENT_EBAY_SORRY",
+        }
+        self.files["INC_FILE"].write_text(json.dumps(ledger), encoding="utf-8")
+        self.assertEqual(len(recovery.active_blocking_au_incidents()), 1)
+        ledger["incidents"][recovery.INCIDENT]["status"] = "resolved"
+        self.files["INC_FILE"].write_text(json.dumps(ledger), encoding="utf-8")
+        self.assertEqual(recovery.active_blocking_au_incidents(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

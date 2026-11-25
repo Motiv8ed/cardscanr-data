@@ -92,6 +92,16 @@ def source_preflight() -> dict:
     return {"branch": EXPECTED_BRANCH, "head": EXPECTED_HEAD, "owned_daily": "OFF"}
 
 
+def active_blocking_au_incidents() -> list[dict]:
+    """Only CHALLENGE/AUTH_REQUIRED incidents block AU owner-recovery probes.
+
+    Retain unrelated transient incidents in the ledger for audit without letting
+    them falsely fail the final post-reconciliation verification.
+    """
+    return [row for row in list_active_incidents(market="AU", path=INC_FILE)
+            if row.get("incidentType") in ("CHALLENGE", "AUTH_REQUIRED")]
+
+
 def state_preflight() -> dict:
     for path in (INC_FILE, OPS_FILE, AV_FILE, PID_FILE):
         if (not path.is_file() or path.is_symlink()
@@ -109,8 +119,7 @@ def state_preflight() -> dict:
             or row.get("market") != "AU"
             or parse_utc(row.get("recordedAt")) != parse_utc(RECORDED)):
         fail("pinned_incident_mismatch")
-    active = [a for a in list_active_incidents(market="AU", path=INC_FILE)
-              if a.get("incidentType") in ("CHALLENGE", "AUTH_REQUIRED")]
+    active = active_blocking_au_incidents()
     if len(active) != 1 or active[0].get("incidentId") != INCIDENT:
         fail("new_or_unrelated_active_challenge_present")
     ops = load_ops_state(path=OPS_FILE).get("markets")
@@ -304,7 +313,7 @@ def resolve_incident() -> None:
     updated = _mutate_availability(update, path=AV_FILE, market="AU")
     if updated.state != "PROBE_REQUIRED":
         fail("probe_gate_not_restored")
-    if list_active_incidents(market="AU", path=INC_FILE):
+    if active_blocking_au_incidents():
         fail("new_active_incident_after_reconciliation")
 
 
@@ -421,7 +430,7 @@ def probe_status() -> dict:
             "exit_code": int(raw_exit) if raw_exit in ("0", "1", "2") else None,
             "availability_state": state.state,
             "availability_outcome": state.last_outcome,
-            "active_challenges": len(list_active_incidents(market="AU", path=INC_FILE)),
+            "active_challenges": len(active_blocking_au_incidents()),
             "task": scheduler().get("state"),
             "owned_daily": "OFF", "probe_started_utc": rec.get("probeStartedUtc")}
 
