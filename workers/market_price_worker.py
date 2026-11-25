@@ -48,6 +48,7 @@ from cardscanr_market_engine.owned_daily_outcomes import (
 )
 from cardscanr_market_engine.owned_daily_pacing import OwnedDailyPacingController
 from cardscanr_market_engine.providers import create_market_comps_provider
+from cardscanr_market_engine.providers.search_entry_contract import native_windows_pricing_selected
 from cardscanr_market_engine.scheduler import parse_market_allowlist
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 from cardscanr_market_engine.x11_chrome_focus import is_local_runtime_failure_message
@@ -265,7 +266,7 @@ def _handle_set_sweep_hard_stop_in_cycle(
     budget: ContinuousSafetyBudget,
     runner: InternationalMarketPriceJobRunner,
     config: MarketEngineConfig,
-    args: argparse.Namespace,
+    last_cycle: bool,
     started_at: str,
     continuous: bool,
     operation_mode: str,
@@ -300,7 +301,7 @@ def _handle_set_sweep_hard_stop_in_cycle(
         mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
         logger=logger,
     )
-    if args.once:
+    if last_cycle:
         return True
     sleep_func(max(poll_seconds, 60))
     return True
@@ -360,6 +361,7 @@ def run_worker_loop(
     from cardscanr_market_engine.navigation_runtime_context import mint_nav_handoff_writer_run_id
 
     mint_nav_handoff_writer_run_id()
+    native_windows = _ebay_browser_provider(config) and native_windows_pricing_selected()
     budget = ContinuousSafetyBudget.from_env()
     enforce_budget = _safety_budget_enforced(config)
     min_spacing_seconds = max(0, int(os.getenv("MARKET_WORKER_MIN_JOB_SPACING_SECONDS", "0") or 0))
@@ -370,6 +372,7 @@ def run_worker_loop(
 
     while True:
         cycle += 1
+        last_cycle = args.once or (args.max_cycles > 0 and cycle >= args.max_cycles)
         started_at = utc_iso()
         cycle_t0 = time.monotonic()
         continuous = owned_daily_full_enable()
@@ -451,7 +454,7 @@ def run_worker_loop(
                     mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
+                if last_cycle:
                     return 2
                 sleep_func(max(poll_seconds, 60))
                 continue
@@ -470,14 +473,17 @@ def run_worker_loop(
                     mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
+                if last_cycle:
                     return 0
                 sleep_func(max(poll_seconds, 60))
                 continue
-            if worker_state == "COOLDOWN":
+            native_gate_closed = native_windows and (
+                operation_mode == "PROBE" or not (gate_info.get("gate") or {}).get("allowed")
+            )
+            if worker_state == "COOLDOWN" or native_gate_closed:
                 logger(
                     "[market-engine] "
-                    f"cycle={cycle} status=COOLDOWN market={gate_market} "
+                    f"cycle={cycle} status={worker_state} market={gate_market} "
                     f"until={gate_info.get('cooldownUntil')} "
                     f"nextProbeAt={gate_info.get('nextProbeAt')} no provider"
                 )
@@ -486,12 +492,12 @@ def run_worker_loop(
                     config,
                     cycle=cycle,
                     started_at=started_at,
-                    state="cooldown",
+                    state="gate_wait" if native_gate_closed else "cooldown",
                     reason=worker_state,
                     mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
+                if last_cycle:
                     return 0
                 sleep_func(max(poll_seconds, 30))
                 continue
@@ -511,9 +517,7 @@ def run_worker_loop(
                     mode=_heartbeat_gate_mode(continuous=False, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
-                    return 2
-                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                if last_cycle:
                     return 2
                 sleep_func(max(poll_seconds, 60))
                 continue
@@ -529,9 +533,7 @@ def run_worker_loop(
                     mode=_heartbeat_gate_mode(continuous=False, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
-                    return 0
-                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                if last_cycle:
                     return 0
                 sleep_func(max(poll_seconds, 60))
                 continue
@@ -554,9 +556,7 @@ def run_worker_loop(
                     mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                     logger=logger,
                 )
-                if args.once:
-                    return 0
-                if args.max_cycles > 0 and cycle >= args.max_cycles:
+                if last_cycle:
                     return 0
                 sleep_func(max(poll_seconds, pacing_controller.config.max_inter_job_delay_seconds))
                 continue
@@ -574,7 +574,7 @@ def run_worker_loop(
                 mode=_heartbeat_gate_mode(continuous=continuous, operation_mode=operation_mode),
                 logger=logger,
             )
-            if args.once:
+            if last_cycle:
                 return 0
             sleep_func(max(poll_seconds, 30))
             continue
@@ -612,7 +612,7 @@ def run_worker_loop(
                         budget=budget,
                         runner=runner,
                         config=config,
-                        args=args,
+                        last_cycle=last_cycle,
                         started_at=started_at,
                         continuous=continuous,
                         operation_mode=operation_mode,
@@ -620,7 +620,7 @@ def run_worker_loop(
                         poll_seconds=poll_seconds,
                         logger=logger,
                     ):
-                        if args.once:
+                        if last_cycle:
                             return 2
                         continue
             except Exception as sweep_exc:
@@ -651,9 +651,7 @@ def run_worker_loop(
                 f"retryAfter={transient_backoff_seconds}s report={config.latest_report_path}"
             )
 
-            if args.once:
-                return 0
-            if args.max_cycles > 0 and cycle >= args.max_cycles:
+            if last_cycle:
                 return 0
             sleep_func(transient_backoff_seconds)
             continue
@@ -695,7 +693,7 @@ def run_worker_loop(
                             "[market-engine] "
                             f"cycle={cycle} status=HARD_STOP reason={stop_reason}"
                         )
-                        if args.once:
+                        if last_cycle:
                             return 2
                         break
                 elif outcome in {"UPDATED_FROM_EBAY", "UNCHANGED_FROM_EBAY", "CHECKED_NO_NEW_EXACT_EVIDENCE"}:
@@ -747,7 +745,7 @@ def run_worker_loop(
                             budget=budget,
                             runner=runner,
                             config=config,
-                            args=args,
+                            last_cycle=last_cycle,
                             started_at=started_at,
                             continuous=False,
                             operation_mode=operation_mode,
@@ -755,7 +753,7 @@ def run_worker_loop(
                             poll_seconds=poll_seconds,
                             logger=logger,
                         ):
-                            if args.once:
+                            if last_cycle:
                                 return 2
                             continue
             except Exception as sweep_exc:
@@ -808,9 +806,7 @@ def run_worker_loop(
             logger(f"[market-engine] heartbeat_warning={heartbeat_exc.__class__.__name__}")
         logger(f"[market-engine] cycle={cycle} jobCount={len(results)} report={config.latest_report_path}")
 
-        if args.once:
-            return 0
-        if args.max_cycles > 0 and cycle >= args.max_cycles:
+        if last_cycle:
             return 0
         if pacing_controller is not None and results:
             delay = pacing_controller.next_delay_seconds(more_jobs_pending=True)
@@ -822,25 +818,39 @@ def run_worker_loop(
             sleep_func(poll_seconds)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the CardScanR market price worker.")
     parser.add_argument("--once", action="store_true", help="Process one poll cycle and exit.")
     parser.add_argument("--max-cycles", type=int, default=0, help="Optional cycle limit for loop mode.")
     parser.add_argument("--max-jobs", type=int, default=0, help="Override MARKET_WORKER_MAX_JOBS_PER_RUN.")
     parser.add_argument("--poll-seconds", type=int, default=0, help="Override MARKET_WORKER_POLL_SECONDS.")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     bind_persisted_nav_context_path()
-    args = parse_args()
+    args = parse_args(argv)
+    explicitly_native = native_windows_pricing_selected()
+    if explicitly_native and os.name != "nt":
+        raise ValueError("desktop_win32 pricing requires Windows")
     ensure_continuous_au_safety_env()
     config = MarketEngineConfig.from_env(require_supabase=True)
+    if explicitly_native and not _ebay_browser_provider(config):
+        raise ValueError("Native Windows pricing requires MARKET_LOOKUP_PROVIDER=ebay_browser")
     if config.provider_name == "ebay_browser" and os.getenv("CONFIRM_LIVE_EBAY_WORKER", "").strip().lower() != "true":
         raise ValueError(
             "MARKET_LOOKUP_PROVIDER=ebay_browser requires CONFIRM_LIVE_EBAY_WORKER=true for the bulk worker. "
             "Use the one-card live write smoke for controlled validation."
         )
+    native_windows = _ebay_browser_provider(config) and native_windows_pricing_selected()
+    if native_windows:
+        from cardscanr_market_engine.native_windows_pricing_browser import require_active_console_session
+
+        require_active_console_session()
+        allowed = os.getenv("MARKET_WORKER_ALLOWED_MARKETS")
+        if allowed is not None and "AU" not in parse_market_allowlist(allowed):
+            raise ValueError("Native Windows pricing requires AU in MARKET_WORKER_ALLOWED_MARKETS")
+        os.environ["MARKET_WORKER_ALLOWED_MARKETS"] = "AU"
     if config.worker_concurrency != 1:
         print("[market-engine] MARKET_WORKER_CONCURRENCY>1 is not used for local browser provider; continuing sequentially.")
 
@@ -860,7 +870,7 @@ def main() -> int:
         config=config,
         runner=runner,
         poll_seconds=poll_seconds,
-        max_jobs=max_jobs,
+        max_jobs=min(1, max_jobs) if native_windows else max_jobs,
     )
 
 

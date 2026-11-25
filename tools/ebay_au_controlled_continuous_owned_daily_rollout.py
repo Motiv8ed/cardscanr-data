@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Controlled continuous AU owned_daily rollout. Max 25 SEARCH_SUBMISSION_STARTED.
 
-Bounded unattended proof of the committed demand-aware scheduler.
-Does NOT leave continuous owned_daily enabled afterward.
+Linux uses the existing bounded demand-aware rollout and shuts it down afterward.
+Explicit Windows mode runs one normal AU worker poll against the existing queue.
 """
 from __future__ import annotations
 
@@ -20,20 +20,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 ROLL_OUT_MAX = 25
-os.environ["OWNED_DAILY_FULL_ENABLE"] = "false"
-os.environ["CARDSCANR_RELIABILITY_MAX"] = str(ROLL_OUT_MAX)
-os.environ["CARDSCANR_RELIABILITY_SELECT_LIMIT"] = "80"
-os.environ["CARDSCANR_CONTINUE_ON_FRESH_SKIP"] = "1"
-os.environ["CARDSCANR_MID_RUN_CHECKPOINT_AT"] = "10"
-os.environ["CARDSCANR_MID_RUN_CHECKPOINT_ATS"] = "10,20"
-os.environ["CARDSCANR_CHECKPOINT_REQUIRE_SOLD_IDENTITY"] = "1"
-os.environ["EBAY_BROWSER_MAX_QUERY_ATTEMPTS"] = "1"
-os.environ["HOT_VERIFIED_TTL_HOURS"] = "12"
-os.environ["NORMAL_VERIFIED_TTL_HOURS"] = "24"
-os.environ["HIGH_DEMAND_REQUESTS_24H"] = "3"
-
-import tools.ebay_au_final_five_consecutive_e2e as harness
-import tools.ebay_au_final_five_sequential_production_proof as seq
 from cardscanr_market_engine.demand_aware_policy import DemandAwarePolicy, DEFAULT_DEMAND_AWARE_POLICY
 from cardscanr_market_engine.demand_aware_scheduler import (
     DemandIndex,
@@ -43,11 +29,6 @@ from cardscanr_market_engine.demand_aware_scheduler import (
     is_user_demand_reason,
 )
 from cardscanr_market_engine.navigation_runtime_context import PRE_SUBMIT_ONLY_ENV
-from tools.ebay_au_five_card_inter_card_handoff_e2e import (
-    _enrich_card_artifact_fields,
-    _extend_deploy,
-    phase0_self_checks,
-)
 
 OUT = ROOT / "reports" / "artifacts" / "final_controlled_25_job_rollout"
 TASK_ID = "CARDSCANR-FINAL-CONTROLLED-25-JOB-ROLLOUT"
@@ -63,7 +44,7 @@ def _utc() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _bind() -> None:
+def _bind(harness, seq) -> None:
     seq.OUT = OUT
     seq.TASK_ID = TASK_ID
     harness.OUT = OUT
@@ -560,7 +541,39 @@ def write_zip(report_path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    _bind()
+    from cardscanr_market_engine.providers.search_entry_contract import native_windows_pricing_selected
+
+    if native_windows_pricing_selected():
+        # Windows uses a bounded cycle of the normal worker and its existing gates.
+        # The Linux reliability harness changes environment and manages X11 services.
+        from workers.market_price_worker import main as run_pricing_worker
+
+        return run_pricing_worker(["--once", "--max-jobs", "1"])
+    return _run_linux_rollout()
+
+
+def _run_linux_rollout() -> int:
+    os.environ["OWNED_DAILY_FULL_ENABLE"] = "false"
+    os.environ["CARDSCANR_RELIABILITY_MAX"] = str(ROLL_OUT_MAX)
+    os.environ["CARDSCANR_RELIABILITY_SELECT_LIMIT"] = "80"
+    os.environ["CARDSCANR_CONTINUE_ON_FRESH_SKIP"] = "1"
+    os.environ["CARDSCANR_MID_RUN_CHECKPOINT_AT"] = "10"
+    os.environ["CARDSCANR_MID_RUN_CHECKPOINT_ATS"] = "10,20"
+    os.environ["CARDSCANR_CHECKPOINT_REQUIRE_SOLD_IDENTITY"] = "1"
+    os.environ["EBAY_BROWSER_MAX_QUERY_ATTEMPTS"] = "1"
+    os.environ["HOT_VERIFIED_TTL_HOURS"] = "12"
+    os.environ["NORMAL_VERIFIED_TTL_HOURS"] = "24"
+    os.environ["HIGH_DEMAND_REQUESTS_24H"] = "3"
+
+    import tools.ebay_au_final_five_consecutive_e2e as harness
+    import tools.ebay_au_final_five_sequential_production_proof as seq
+    from tools.ebay_au_five_card_inter_card_handoff_e2e import (
+        _enrich_card_artifact_fields,
+        _extend_deploy,
+        phase0_self_checks,
+    )
+
+    _bind(harness, seq)
     for d in (OUT, harness.BOOT, harness.BEFORE, harness.AFTER, harness.CARDS_DIR, harness.ATTEMPTS):
         d.mkdir(parents=True, exist_ok=True)
 

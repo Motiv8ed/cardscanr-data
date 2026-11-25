@@ -42,6 +42,10 @@ def resolved_ebay_browser_nav_mode() -> str:
     return DEFAULT_NAV_MODE
 
 
+def native_windows_pricing_selected() -> bool:
+    return resolved_ebay_browser_nav_mode() in {"desktop_win32", "desktop", "real_desktop"}
+
+
 def is_ebay_homepage_or_root(url: str | None) -> bool:
     u = str(url or "").strip()
     if not u:

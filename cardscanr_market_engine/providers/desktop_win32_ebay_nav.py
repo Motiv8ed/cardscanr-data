@@ -112,9 +112,9 @@ def _page_socket(target_id: str | None = None) -> tuple[str, str]:
 
 def _read(target_id: str | None = None) -> tuple[str, dict]:
     target, socket = _page_socket(target_id)
-    session = DirectCdpSession(socket, timeout=2)
+    session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
     try:
-        state = session.evaluate(_STATE, timeout=2)
+        state = session.evaluate(_STATE, timeout=4)
     finally:
         session.close()
     if not isinstance(state, dict):
@@ -124,9 +124,9 @@ def _read(target_id: str | None = None) -> tuple[str, dict]:
 
 def _open_home(target: str) -> None:
     _, socket = _page_socket(target)
-    session = DirectCdpSession(socket, timeout=3)
+    session = DirectCdpSession(socket, timeout=6, suppress_origin=True)
     try:
-        session.call("Page.navigate", {"url": _HOME}, timeout=3)
+        session.call("Page.navigate", {"url": _HOME}, timeout=6)
     finally:
         session.close()
 
@@ -137,7 +137,7 @@ def _activate_control(target: str, state: dict, control: str, *, query: str = ""
         raise ValueError("Unknown pricing control")
 
     _, socket = _page_socket(target)
-    session = DirectCdpSession(socket, timeout=4)
+    session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
     try:
         activated = session.evaluate_function(
             "(args) => {" + _CONTROLS + r"""

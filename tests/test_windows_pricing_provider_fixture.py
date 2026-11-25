@@ -6,7 +6,6 @@ import socket
 import subprocess
 import sys
 import threading
-import time
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import pytest
@@ -151,10 +150,9 @@ def test_native_windows_provider_and_matcher(tmp_path, monkeypatch):
                 provider.EbayBrowserSoldCompsProvider().fetch_set_sweep_results_html(query_text=query)
             assert len(submissions) == 1 and not lookup_search_submission_event("blocked")["found"]
         finally:
-            if pid is not None and chrome.listener_owner() == pid:
-                hwnd = nav._window(pid)
-                ctypes.windll.user32.PostMessageW(ctypes.c_void_p(hwnd), 0x0010, 0, 0)
-                deadline = time.monotonic() + 12
-                while chrome.listener_owner() is not None and time.monotonic() < deadline:
-                    time.sleep(0.2)
-            server.shutdown()
+            try:
+                if pid is not None:
+                    chrome.close_browser()
+                    assert chrome.listener_owner() is None
+            finally:
+                server.shutdown()

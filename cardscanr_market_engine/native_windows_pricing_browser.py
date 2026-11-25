@@ -33,7 +33,7 @@ def profile_dir() -> Path:
     return Path(os.environ["LOCALAPPDATA"]) / "CardScanR" / "NativePricingChrome"
 
 
-def _session() -> int:
+def require_active_console_session() -> int:
     session = ctypes.c_ulong()
     if not ctypes.windll.kernel32.ProcessIdToSessionId(os.getpid(), ctypes.byref(session)):
         raise RuntimeError("Windows session inspection failed")
@@ -60,7 +60,7 @@ def _launch_args() -> list[str]:
         "--remote-debugging-address=127.0.0.1", f"--user-data-dir={profile}",
         "--profile-directory=Default", "--no-first-run", "--no-default-browser-check",
         "--disable-background-networking",
-        "--window-size=1050,760", "--new-window", "about:blank",
+        "--no-startup-window",
     ]
 
 
@@ -101,7 +101,7 @@ def _inventory() -> dict:
 def listener_owner(*, port: int = PORT) -> int | None:
     if port != PORT or os.name != "nt":
         raise RuntimeError("Native pricing requires Windows loopback port 9232")
-    session = _session()
+    session = require_active_console_session()
     launch = _launch_args()
     inventory = _inventory()
     listeners = inventory["listeners"]
@@ -154,15 +154,38 @@ def valid_socket(url: str, target_path: str) -> bool:
     )
 
 
+def _ensure_background_window(browser_socket: str) -> None:
+    from .providers.post_sold_capture_cdp import DirectCdpSession
+
+    targets = cdp_json("/json/list")
+    if not isinstance(targets, list) or any(not isinstance(row, dict) for row in targets):
+        raise RuntimeError("Unexpected native Chrome target inventory")
+    pages = [row for row in targets if row.get("type") == "page"]
+    if len(pages) > 1:
+        raise RuntimeError("Expected one dedicated native Chrome tab")
+    if pages:
+        return
+
+    session = DirectCdpSession(browser_socket, timeout=6, suppress_origin=True)
+    try:
+        # Chrome shows this window inactive. Starting with a positional URL
+        # instead can raise the new browser even with SW_SHOWNOACTIVATE.
+        created = session.call("Target.createTarget", {
+            "url": "about:blank", "newWindow": True, "background": True,
+            "width": 1050, "height": 760,
+        })
+        if not isinstance(created, dict) or not created.get("targetId"):
+            raise RuntimeError("Native Chrome background window was not created")
+    finally:
+        session.close()
+
+
 def ensure_browser() -> dict:
     with browser_lock():
         owner = listener_owner()
         proc = None
         if owner is None:
-            startup = subprocess.STARTUPINFO()
-            startup.dwFlags = subprocess.STARTF_USESHOWWINDOW
-            startup.wShowWindow = 4  # SW_SHOWNOACTIVATE
-            proc = subprocess.Popen(_launch_args(), startupinfo=startup)
+            proc = subprocess.Popen(_launch_args(), creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             deadline = time.monotonic() + 25
             while time.monotonic() < deadline:
@@ -180,6 +203,7 @@ def ensure_browser() -> dict:
                     if not (isinstance(meta, dict) and str(meta.get("Browser", "")).startswith("Chrome/")
                             and valid_socket(str(meta.get("webSocketDebuggerUrl") or ""), "/devtools/browser/")):
                         raise RuntimeError("Unexpected native Chrome CDP metadata")
+                    _ensure_background_window(meta["webSocketDebuggerUrl"])
                     return {"alreadyRunning": owner is not None, "cdpPort": PORT, "pid": pid}
                 time.sleep(0.5)
             raise RuntimeError("Native Chrome listener did not start")
@@ -188,3 +212,31 @@ def ensure_browser() -> dict:
                 proc.terminate()
                 proc.wait(timeout=5)
             raise
+
+
+def close_browser() -> None:
+    """Close only the verified dedicated browser, including its background process."""
+    from websocket import WebSocketConnectionClosedException
+    from .providers.post_sold_capture_cdp import DirectCdpSession
+
+    with browser_lock():
+        owner = listener_owner()
+        if owner is None:
+            return
+        meta = cdp_json("/json/version")
+        socket = meta.get("webSocketDebuggerUrl", "") if isinstance(meta, dict) else ""
+        if not valid_socket(socket, "/devtools/browser/") or listener_owner() != owner:
+            raise RuntimeError("Native Chrome shutdown ownership unverified")
+        session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
+        try:
+            session.call("Browser.close")
+        except WebSocketConnectionClosedException:
+            pass  # Chrome may exit before acknowledging its own close command.
+        finally:
+            session.close()
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline:
+            if listener_owner() is None:
+                return
+            time.sleep(0.2)
+        raise RuntimeError("Native Chrome shutdown did not release port 9232")

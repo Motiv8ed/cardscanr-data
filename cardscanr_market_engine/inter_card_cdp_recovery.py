@@ -378,6 +378,8 @@ def observe_inter_card_no_request_outcome(
     page_title: str | None = None,
 ) -> tuple[NavigationRuntimeContext, str | None, dict[str, Any] | None]:
     """Track no-request rejections; self-heal after consecutive stuck-tab rejections."""
+    from .providers.search_entry_contract import native_windows_pricing_selected
+
     policy_codes = extract_policy_reason_codes(result_code=result_code, diagnostics=diagnostics)
     state = _load_state()
     if search_submission_started:
@@ -394,6 +396,9 @@ def observe_inter_card_no_request_outcome(
     ):
         _save_state(state)
         return ctx, "CHALLENGE_REQUIRED", None
+    if native_windows_pricing_selected():
+        # The native browser validates its own listener; legacy recovery may close tabs.
+        return ctx, None, None
     if not _is_stuck_tab_rejection(
         runtime_error=runtime_error,
         raw_error=raw_error,
