@@ -1,0 +1,1300 @@
+{
+  "classification": "LIVE_MISSING_SOURCE_STAMP_AND_PLAIN_VARIANT_RESEARCH",
+  "source_commit": "6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc",
+  "original_crosswalk_sha256": "525ed14cf3318d971a19557e4a1c70b1d2309131832f16a64e6534c90cd19c03",
+  "verified_candidate_count": 89,
+  "canonical_variant_column_verified": false,
+  "stage_allowed": false,
+  "images_downloaded": 0,
+  "live_imports": 0,
+  "rights_granted": false,
+  "sets": [
+    {
+      "id": "100",
+      "source_set": "zh-hans/family-pokemon-trading-card-game",
+      "source_code": "CS2DAC",
+      "source_git_blob": "bb6590d966d1f44ae7e281e909553beddb96425b",
+      "source_content_sha256": "a24fbc7df3ece132eed1a1dbb807bd7c2d850d948fd4b29e8fe6747023437243",
+      "live_snapshot_sha256": "07aa5ea8e9b805718bb6bb7e5bbc80e38058612d5f6e8cf367fd88a05e78b7f4",
+      "live_missing": 78,
+      "expected_crosswalk_subset_sha256": "35b8719fd77c4c27e12dd16f1ddaf81119e4255944b530fd4972e76bc74b2e7e",
+      "actual_tuple_sha256": "35b8719fd77c4c27e12dd16f1ddaf81119e4255944b530fd4972e76bc74b2e7e",
+      "matched_count": 39,
+      "rows": [
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7128_9fbe6d3efc37e036eb943d013af35524:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "小木灵",
+            "printed_collector_number": "001",
+            "has_image_link": false
+          },
+          "picture": "e6ba37040e4e8e292f3cef398dd08d05",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "1"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7129_198697683612d01d98ceb2c8c24da81d:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "朽木妖",
+            "printed_collector_number": "002",
+            "has_image_link": false
+          },
+          "picture": "9b901c7f540663ac263abbdd27615b4a",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "2"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7130_a72e3cbe13abfd844fdce90f1c4fc6e8:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "幼棉棉",
+            "printed_collector_number": "003",
+            "has_image_link": false
+          },
+          "picture": "e3170e3709a5056104bbd1e17bd4be74",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "3"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7131_738b4f784e29d9b3424c67d1593e1b68:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "白蓬蓬",
+            "printed_collector_number": "004",
+            "has_image_link": false
+          },
+          "picture": "6c11b0fa25d303e8411df12dc0ea79f9",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "4"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7132_e8084ff2e5d6d168767ee78017bf4f04:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "丰蜜龙V",
+            "printed_collector_number": "005",
+            "has_image_link": false
+          },
+          "picture": "780f1e0f7bcc04ccde6c50950741bd7c",
+          "variant": "holo-cinderace-silhouette-stamp",
+          "finish": "holo",
+          "number": "5"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7133_c1b24f83732e874eb27ce66e74501df2:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "萨戮德",
+            "printed_collector_number": "006",
+            "has_image_link": false
+          },
+          "picture": "88e4cb9ac152ea6c346c68edf3b37f75",
+          "variant": "non-holo-cinderace-15-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "6"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7134_6d20aef71783888a5d0766954b5d376f:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "六尾",
+            "printed_collector_number": "007",
+            "has_image_link": false
+          },
+          "picture": "3c5477a20530d2fb41fcd6ad0c91b218",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "7"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7135_19b014c58a3ef28881edf659382e7c76:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "九尾",
+            "printed_collector_number": "008",
+            "has_image_link": false
+          },
+          "picture": "331e0361848fb6818b8f727c54c59321",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "8"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7136_d7a0843d19af72275694fc0140d53160:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "比克提尼",
+            "printed_collector_number": "009",
+            "has_image_link": false
+          },
+          "picture": "15e7dc66d8eea62eaf77cdae88cfafc8",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "9"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7137_a79c58c00131d57cd8bb65cc87a4a08c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "闪焰王牌V",
+            "printed_collector_number": "010",
+            "has_image_link": false
+          },
+          "picture": "c4ce6f3dfceb98446cf2cd9e3c76f9b6",
+          "variant": "holo-cinderace-silhouette-stamp",
+          "finish": "holo",
+          "number": "10"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7142_6955898de5ca06bfba0798ef223c22e8:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "千针鱼",
+            "printed_collector_number": "013",
+            "has_image_link": false
+          },
+          "picture": "caa9c0054f04a8f98d4194138c4bed8a",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "13"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7143_102e8ec310c93d65c1df859b7a5b48d0:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "甲贺忍蛙V",
+            "printed_collector_number": "014",
+            "has_image_link": false
+          },
+          "picture": "38ab7ef8f54b27daf9d832e9653d635a",
+          "variant": "holo-pikachu-silhouette-stamp",
+          "finish": "holo",
+          "number": "14"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7144_df5bb122aabb22f28291209567d29419:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "咬咬龟",
+            "printed_collector_number": "015",
+            "has_image_link": false
+          },
+          "picture": "f7ba59b860ee7dd88e5f23d0d9c56f3e",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "15"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7145_7d78e41f3e4acf6a95d848bf937f35d7:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "暴噬龟",
+            "printed_collector_number": "016",
+            "has_image_link": false
+          },
+          "picture": "11704528534ba4300c0b042fee86bb50",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "16"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7148_e108326296cae971a74e71b0c6125eb0:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "戽斗尖梭",
+            "printed_collector_number": "018",
+            "has_image_link": false
+          },
+          "picture": "44d0fb48bbfeaa5d790ab390939c5e30",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "18"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7149_d8c35da08a71cf690ddf011f5c48d6d4:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "皮卡丘V",
+            "printed_collector_number": "019",
+            "has_image_link": false
+          },
+          "picture": "ab17454f2e1d2c7700028ae50e468579",
+          "variant": "holo-pikachu-silhouette-stamp",
+          "finish": "holo",
+          "number": "19"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7152_93fc7ef58f5f637ecceeb7c6ff37bc30:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "勒克猫",
+            "printed_collector_number": "021",
+            "has_image_link": false
+          },
+          "picture": "b1f38d95af8d1f8290d57a8f387982a0",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "21"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7153_246737dd82975154cd580beff7641c54:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "伦琴猫",
+            "printed_collector_number": "022",
+            "has_image_link": false
+          },
+          "picture": "8bada858cc581a86d14ff951a75d087b",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "22"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7154_9d389a4749884dd326b845e5e9bb5199:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "捷拉奥拉",
+            "printed_collector_number": "023",
+            "has_image_link": false
+          },
+          "picture": "a3f9f7f11ff307f8fb8857c7b2c964ef",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "23"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7155_e8626b016cd91ac9f6a2be27d1002f9e:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "莫鲁贝可",
+            "printed_collector_number": "024",
+            "has_image_link": false
+          },
+          "picture": "3038ff7a938cf127050a88ed9dcb7610",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "24"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7156_bed9223714efdd40fdf93dee77f9d7cd:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "猴怪",
+            "printed_collector_number": "025",
+            "has_image_link": false
+          },
+          "picture": "e6d41ec4536fa39eebed03aef732b448",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "25"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7157_a066fe5ea9964f72c5338f023f19c51c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "火暴猴",
+            "printed_collector_number": "026",
+            "has_image_link": false
+          },
+          "picture": "47a6965720e48d6694165ecdac4d53a0",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "26"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7158_67a3d19b83114c86f4e31da8fea99d0a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "路卡利欧V",
+            "printed_collector_number": "027",
+            "has_image_link": false
+          },
+          "picture": "5def63c31dde0d74dffcce4af0adc18d",
+          "variant": "holo-tyranitar-silhouette-stamp",
+          "finish": "holo",
+          "number": "27"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7159_bd916c180bde6df1d6f95c86bf201a7c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "拳拳蛸",
+            "printed_collector_number": "028",
+            "has_image_link": false
+          },
+          "picture": "12d067bca871402d304fe3f396dc0d75",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "28"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7160_cad3a37da141385641fcb18b6827984a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "八爪武师",
+            "printed_collector_number": "029",
+            "has_image_link": false
+          },
+          "picture": "8d279571853b132407ba3d82cdf2f310",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "29"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7161_f933afe8ee91249047dff381e5ff3a7a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "列阵兵",
+            "printed_collector_number": "030",
+            "has_image_link": false
+          },
+          "picture": "57797a249e4acdb14ced0e60e3aab5a3",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "30"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7162_db1bd2efc6759811c207213311e4efaa:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "班基拉斯V",
+            "printed_collector_number": "031",
+            "has_image_link": false
+          },
+          "picture": "8d38e3c57560b1e4107320c6172e0461",
+          "variant": "holo-tyranitar-silhouette-stamp",
+          "finish": "holo",
+          "number": "31"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7163_04e9d906e1d3ca777242537f4b729220:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "利牙鱼",
+            "printed_collector_number": "032",
+            "has_image_link": false
+          },
+          "picture": "7ab71710516be2e5a1a5909ee6e13fe3",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "32"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7164_0238da7c5088d0cc0923715cd48f3579:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "巨牙鲨",
+            "printed_collector_number": "033",
+            "has_image_link": false
+          },
+          "picture": "f40e565d7fa909cd4322c7dd80058991",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "33"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7165_22d653e8a94a7c883f6fd589497697e7:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "达克莱伊",
+            "printed_collector_number": "034",
+            "has_image_link": false
+          },
+          "picture": "fea1b60cfc81f114bc02daf7ca4265db",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "34"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7166_4a555d025604313989b87d3c6ef57b54:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "索罗亚",
+            "printed_collector_number": "035",
+            "has_image_link": false
+          },
+          "picture": "1c4d626b7c2004f9ec00e9cb204d1075",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "35"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7167_7ce9c5cdfb8ccecbfc8ddc0d2b2cecf1:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "索罗亚克",
+            "printed_collector_number": "036",
+            "has_image_link": false
+          },
+          "picture": "2e6d3ed04a0288ac50bcf204e484ad94",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "36"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7168_2369bf857442bd1e1536850de9c517fd:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "伊布",
+            "printed_collector_number": "037",
+            "has_image_link": false
+          },
+          "picture": "5899c5ec87374da7c60786ed0dfb6098",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "37"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7169_a8f9ccc245f695050d65dc75f9245712:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "卡比兽",
+            "printed_collector_number": "038",
+            "has_image_link": false
+          },
+          "picture": "566fb9189441d9e00248969141e04595",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "38"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7170_a85e70607a32a061979c72d97db1080a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "毛辫羊",
+            "printed_collector_number": "039",
+            "has_image_link": false
+          },
+          "picture": "6b64eb70329dcd01dc420f3a34eb9d2f",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "39"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7174_d3fa0a8aec707cab8f6f9903acaf1cc0:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "粉碎之锤",
+            "printed_collector_number": "041",
+            "has_image_link": false
+          },
+          "picture": "11a0e795d8e45b193798ba851a605d3c",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "41"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7187_1b25783b6a1f3b9d77e39cbbda172930:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "西餐厨师",
+            "printed_collector_number": "046",
+            "has_image_link": false
+          },
+          "picture": "c0a42b23292f07330092fe861a69368c",
+          "variant": "non-holo-cinderace-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "46"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7194_5d44e2bf735c6aa46b463964c8222fba:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "丹帝",
+            "printed_collector_number": "049",
+            "has_image_link": false
+          },
+          "picture": "2fc1c590ed09fb13483f29adc44aedf1",
+          "variant": "non-holo-tyranitar-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "49"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:100_7198_2ed18ffd02804fb68689935b80dfab57:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:100",
+            "native_card_name": "老大的指令",
+            "printed_collector_number": "051",
+            "has_image_link": false
+          },
+          "picture": "732ea0c34eecd648a12f66b0fe9d2c0a",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "51"
+        }
+      ]
+    },
+    {
+      "id": "326",
+      "source_set": "zh-hans/battle-academy",
+      "source_code": "CSVSC",
+      "source_git_blob": "27e53b929b3166c8e66bb975d23d43abe9a3ef44",
+      "source_content_sha256": "ad102d2a17ca72b22049da212a6fb3551f1ab4cf88818812bfd4a09da6a204a3",
+      "live_snapshot_sha256": "f198602a7091b6e2e2100596928a465532f83cd646846186d97bf6289ab25b84",
+      "live_missing": 98,
+      "expected_crosswalk_subset_sha256": "38fba624e1ff911cd99be76ef90dae9345b4b1d726a0a7f8ced570b7af1df958",
+      "actual_tuple_sha256": "38fba624e1ff911cd99be76ef90dae9345b4b1d726a0a7f8ced570b7af1df958",
+      "matched_count": 49,
+      "rows": [
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16772_5186b8153ae2779df57e9d1d294f2f28:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "时拉比",
+            "printed_collector_number": "001",
+            "has_image_link": false
+          },
+          "picture": "15a703acb819602870dae8a8f94424ea",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "1"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16773_c994c19896b5473b98379ee756725f7a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "新叶喵ex",
+            "printed_collector_number": "002",
+            "has_image_link": false
+          },
+          "picture": "c915d3546e52907f95a190bf901ec5af",
+          "variant": "holo-sprigatito-silhouette-stamp",
+          "finish": "holo",
+          "number": "2"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16774_1c83b18192fdf381d70c357604522492:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "豆蟋蟀",
+            "printed_collector_number": "003",
+            "has_image_link": false
+          },
+          "picture": "372c079472029380ffaaf9cdfb5f0730",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "3"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16775_5a76b8ec4cec2c4d8f89a6365276d0b5:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "烈腿蝗",
+            "printed_collector_number": "004",
+            "has_image_link": false
+          },
+          "picture": "553079570f23161d25d6f9cef29e4c64",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "4"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16779_6a1f9741af79e70cb37434ac36f59471:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "烈焰马",
+            "printed_collector_number": "008",
+            "has_image_link": false
+          },
+          "picture": "264f09885cebb04495be8c176040b51c",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "8"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16780_771ff412f67e26e0c60c0449c4547f60:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "莱希拉姆",
+            "printed_collector_number": "009",
+            "has_image_link": false
+          },
+          "picture": "e7904c0c39e9ea7409cac66ac54c7234",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "9"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16781_5e9aab918c5a0b35753f7b28e344b155:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "炭小侍",
+            "printed_collector_number": "010",
+            "has_image_link": false
+          },
+          "picture": "6f9982ebd33ae78fbf92148e502ab5a6",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "10"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16782_4ea1a1faf9d8df91f84391bef0ba5567:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "红莲铠骑ex",
+            "printed_collector_number": "011",
+            "has_image_link": false
+          },
+          "picture": "3e9a314301c7419bf10b83a1f7c6669a",
+          "variant": "holo-sprigatito-silhouette-stamp",
+          "finish": "holo",
+          "number": "11"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16783_0db784f10b7035e1d7e454395f37fc3c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "拉普拉斯",
+            "printed_collector_number": "012",
+            "has_image_link": false
+          },
+          "picture": "63d8151b4e7bc0229fceb8f68edb4ebc",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "12"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16784_42cb34c2d4edd976b0b4b28ebe7dd7b5:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "玛力露",
+            "printed_collector_number": "013",
+            "has_image_link": false
+          },
+          "picture": "3d9e446d6d449d6a6cd9eec53ca85b0b",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "13"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16785_584b18c9812659d6530acd75ca120fa7:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "玛力露丽",
+            "printed_collector_number": "014",
+            "has_image_link": false
+          },
+          "picture": "6f086cae1e509507035c626fc3855bd0",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "14"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16786_babb7367bd3b1f656f5307977b6703cc:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "呱呱泡蛙",
+            "printed_collector_number": "015",
+            "has_image_link": false
+          },
+          "picture": "43a0e759d72081ab5ad7682e57b46fe4",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "15"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16787_5d1fde3bfbcc0b154535decd2b899627:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "呱头蛙",
+            "printed_collector_number": "016",
+            "has_image_link": false
+          },
+          "picture": "dcf2e49fabe3067b3bfd48b8a8d6158e",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "16"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16788_2a01985a262793eed56d16e0fee1fd9c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "甲贺忍蛙ex",
+            "printed_collector_number": "017",
+            "has_image_link": false
+          },
+          "picture": "48d7fb8713aaa6f08cb30a844bdb4281",
+          "variant": "holo-greninja-silhouette-stamp",
+          "finish": "holo",
+          "number": "17"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16789_f69cb55ff59fe6224cab75275a0e04c2:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "皮卡丘ex",
+            "printed_collector_number": "018",
+            "has_image_link": false
+          },
+          "picture": "2841f7c62e18857ccecc491a92ea0ec1",
+          "variant": "holo-pikachu-silhouette-stamp",
+          "finish": "holo",
+          "number": "18"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16791_b2004498d63acc00d4264b74980e0f9b:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "茸茸羊",
+            "printed_collector_number": "020",
+            "has_image_link": false
+          },
+          "picture": "6e36302654e8e8bf4e3256adbfb9ca9d",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "20"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16792_9119d436b740f3534547d077eae58732:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "电龙",
+            "printed_collector_number": "021",
+            "has_image_link": false
+          },
+          "picture": "7782758d0d97de8a828e53db681a9a92",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "21"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16793_40d7dbd532d8d3f11b1829df3ebb5701:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "布拨",
+            "printed_collector_number": "022",
+            "has_image_link": false
+          },
+          "picture": "1ff73d91cbe1c13e2161ce246db82c9a",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "22"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16794_8da4ad616cfe70f93006501f5c8f415d:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "密勒顿",
+            "printed_collector_number": "023",
+            "has_image_link": false
+          },
+          "picture": "9114096cee06d1b0b1d34e7e2826c344",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "23"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16795_90bf8a2441834a9a61190f93a361fe10:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "超梦",
+            "printed_collector_number": "024",
+            "has_image_link": false
+          },
+          "picture": "2e2972335dfde3d98431ebdedd4e0351",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "24"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16797_16fe2a71a2517ca48dbc4efdc80a4e65:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "超能艳鸵",
+            "printed_collector_number": "026",
+            "has_image_link": false
+          },
+          "picture": "0cf278aac4e35a5ec922ed56dabf3b24",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "26"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16798_222eca0666955b17b8b7ac15e498b4e3:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "墓仔狗",
+            "printed_collector_number": "027",
+            "has_image_link": false
+          },
+          "picture": "f34a2cfacf0f11b9ddf06af93bfe3a37",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "27"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16799_4740c090cd42cb64bfdb9c85dba80a2a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "墓扬犬ex",
+            "printed_collector_number": "028",
+            "has_image_link": false
+          },
+          "picture": "03d1d3c7b760f922104f205e75db5384",
+          "variant": "holo-pikachu-silhouette-stamp",
+          "finish": "holo",
+          "number": "28"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16800_dc1fb576405245cc9328901fad98e94a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "玛沙那",
+            "printed_collector_number": "029",
+            "has_image_link": false
+          },
+          "picture": "5353984df86962fc58ad0527ed233565",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "29"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16801_d66621ba8f46dacace7d949f3b65c52d:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "恰雷姆",
+            "printed_collector_number": "030",
+            "has_image_link": false
+          },
+          "picture": "864a6c16dd248bf5af2150348b450830",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "30"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16802_b1c0118aa0c7ea43125c940002ac0e5b:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "利欧路",
+            "printed_collector_number": "031",
+            "has_image_link": false
+          },
+          "picture": "ed35487b4f887bf97511f22e686ccba5",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "31"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16803_901bf5cc9611bb62443c8887676a3dd4:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "路卡利欧ex",
+            "printed_collector_number": "032",
+            "has_image_link": false
+          },
+          "picture": "0c0042856901b54548c0cc61720281b2",
+          "variant": "holo-lucario-silhouette-stamp",
+          "finish": "holo",
+          "number": "32"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16804_8e587b6baeb605ace2ecae070e93cf58:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "故勒顿",
+            "printed_collector_number": "033",
+            "has_image_link": false
+          },
+          "picture": "ca592d6c8514c3d3a084c94e84284617",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "33"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16805_ea4d8b1995e8da3d1a3339d2206ba289:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "达克莱伊ex",
+            "printed_collector_number": "034",
+            "has_image_link": false
+          },
+          "picture": "71fb493237f8745b5062e8199cc3a186",
+          "variant": "holo-greninja-silhouette-stamp",
+          "finish": "holo",
+          "number": "34"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16806_3e1d613373080955cc6adb23e1adfe0b:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "驹刀小兵",
+            "printed_collector_number": "035",
+            "has_image_link": false
+          },
+          "picture": "60e58e542736c57fd7585c7cbc2e262c",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "35"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16807_dd43c2dde26d33415635927acae753f1:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "劈斩司令",
+            "printed_collector_number": "036",
+            "has_image_link": false
+          },
+          "picture": "54332de2b33346157e79f559668a5a15",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "36"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16808_59dff38db38f53ddaae1ca09eb0bbb27:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "仆刀将军",
+            "printed_collector_number": "037",
+            "has_image_link": false
+          },
+          "picture": "90002d68d0cc21d90c5b3cf1d9e2838e",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "37"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16809_12a1a548908d3322a8aff6c1eedb8a6c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "下石鸟",
+            "printed_collector_number": "038",
+            "has_image_link": false
+          },
+          "picture": "a3818479dc515efa7ed6a50d66d63817",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "38"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16810_ac866802dd2fd04fbeb7b49519374090:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "基拉祈",
+            "printed_collector_number": "039",
+            "has_image_link": false
+          },
+          "picture": "735fd19fdc278caeb02e3f18e81f1cd6",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "39"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16811_f0997a53b91014df2f06f22d8658ae7b:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "美录坦",
+            "printed_collector_number": "040",
+            "has_image_link": false
+          },
+          "picture": "601b7975f17afe51f8f6c10e97a5ba3a",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "40"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16812_fc76c4dcd73fd3d1d3e2a5c5d9056529:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "美录梅塔ex",
+            "printed_collector_number": "041",
+            "has_image_link": false
+          },
+          "picture": "4369d018337f0b07cd1fc0e08276bf4d",
+          "variant": "holo-lucario-silhouette-stamp",
+          "finish": "holo",
+          "number": "41"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16813_7530bfe723463edac3b72e576966d4e4:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "噗隆隆",
+            "printed_collector_number": "042",
+            "has_image_link": false
+          },
+          "picture": "562444d145cbed15ed041cb2c92fbafa",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "42"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16814_f0c43fcf2666096b94aa7616cda4b221:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "普隆隆姆",
+            "printed_collector_number": "043",
+            "has_image_link": false
+          },
+          "picture": "3293e7c278d62849795697692fd30808",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "43"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16815_eb51a6d3b163a0de4a9b9b37b0e561a9:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "肯泰罗",
+            "printed_collector_number": "044",
+            "has_image_link": false
+          },
+          "picture": "19ec50488709085d7420f359385df380",
+          "variant": "non-holo-pikachu-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "44"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16816_6f26014810f1565711664c187f6dffc0:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "伊布",
+            "printed_collector_number": "045",
+            "has_image_link": false
+          },
+          "picture": "36efe3426fce67a1d00c3acaf58342a8",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "45"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16817_c529c0906943760a201669beb2b3783e:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "卡比兽",
+            "printed_collector_number": "046",
+            "has_image_link": false
+          },
+          "picture": "951aee0a605252f3abb5d82963304cf1",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "46"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16818_16b4debb74b4eb44673b2f55ad88143c:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "爱吃豚",
+            "printed_collector_number": "047",
+            "has_image_link": false
+          },
+          "picture": "cb6bd56d3607b97cb58ed0972959da14",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "47"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16819_fd5472985e1ffdc792c288e1cd71498a:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "摩托蜥",
+            "printed_collector_number": "048",
+            "has_image_link": false
+          },
+          "picture": "e381d794a9ca03dac88254ea18067edb",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "48"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16820_c5f0bfa97024d4573bb1c0aff10cff96:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "能量回收",
+            "printed_collector_number": "049",
+            "has_image_link": false
+          },
+          "picture": "849ad9fd13387383da1a439f88c49ca0",
+          "variant": "non-holo-sprigatito-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "49"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16823_6c2332bc33b9c037ea9f78a631542119:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "粉碎之锤",
+            "printed_collector_number": "051",
+            "has_image_link": false
+          },
+          "picture": "1736ae7eb8dca48350a21dc48df691ee",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "51"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16828_d1b44c6ba5c175c3b543d8be18d43bc9:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "神奇糖果",
+            "printed_collector_number": "053",
+            "has_image_link": false
+          },
+          "picture": "a64d9a4afd7a917d7dba7358fbb8e439",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "53"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16840_f0239e20af0fb8a0c9b193bbbe85fcf8:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "活力头带",
+            "printed_collector_number": "057",
+            "has_image_link": false
+          },
+          "picture": "593434644331946eb6202ece25346e86",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "57"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16841_1b3419b69186b9dc9e6179afd4806197:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "西餐厨师",
+            "printed_collector_number": "058",
+            "has_image_link": false
+          },
+          "picture": "b71b55398d18f2e514d0e13f76863b09",
+          "variant": "non-holo-lucario-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "58"
+        },
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:326_16861_7be0db89a84a0e9681de0ed1b69e0eac:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:326",
+            "native_card_name": "老大的指令",
+            "printed_collector_number": "066",
+            "has_image_link": false
+          },
+          "picture": "7965d56623eee2d725bb84f9911e0eb6",
+          "variant": "non-holo-greninja-silhouette-stamp",
+          "finish": "non_holo",
+          "number": "66"
+        }
+      ]
+    },
+    {
+      "id": "488",
+      "source_set": "zh-hans/happy-set-dragonite-mewtwo-camerupt-sinistcha",
+      "source_code": "CSVH5C",
+      "source_git_blob": "d6670e4af4d10df9df1526acaf3fcfeae06767a5",
+      "source_content_sha256": "24ba30ad16b4495d5ace85fdca769c0ddec6dd1e9aaa089f71cb0739da765302",
+      "live_snapshot_sha256": "aae09079fa5ff22f076f809a2f29727fe4748f6cad9626bad039f43428b44f59",
+      "live_missing": 241,
+      "expected_crosswalk_subset_sha256": "f5f532b8741461c3444c918061744dac1f7c08240d28984790e8489c1375ab63",
+      "actual_tuple_sha256": "f5f532b8741461c3444c918061744dac1f7c08240d28984790e8489c1375ab63",
+      "matched_count": 1,
+      "rows": [
+        {
+          "live": {
+            "canonical_printing_id": "ptcg-chs-datasets:printing:488_20840_e5dfbb3b8fb60d248f847b3cbc6ca9a6:zh-cn:CN",
+            "language": "zh-cn",
+            "set_id": "ptcg-chs-datasets:set:488",
+            "native_card_name": "超梦ex",
+            "printed_collector_number": "012",
+            "has_image_link": false
+          },
+          "picture": "9e416a4e2c959cb316fb02b33341f524",
+          "variant": "plain",
+          "number": "12"
+        }
+      ]
+    }
+  ]
+}
