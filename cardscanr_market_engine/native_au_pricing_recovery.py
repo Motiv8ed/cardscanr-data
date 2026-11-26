@@ -68,18 +68,49 @@ if ($task.State -ne 'Disabled' -or $running.Count) { exit 2 }
                    check=True, timeout=12, capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
 
-def _assert_reviewed_browser() -> None:
-    from .native_windows_pricing_browser import listener_owner
-    from .providers.desktop_win32_ebay_nav import _check_page, _read, _window
+def reviewed_browser_identity() -> dict:
+    """Collect identity only. The owner separately reviews the page and receipt."""
+    from .native_windows_pricing_browser import cdp_json, listener_owner, require_active_console_session, valid_socket
+    from .providers.desktop_win32_ebay_nav import _page_socket, _window
 
     owner = listener_owner()
     if owner is None:
         raise RuntimeError("REVIEWED_NATIVE_BROWSER_NOT_RUNNING")
+    session = require_active_console_session()
     _window(owner)
-    _, page = _read()
+    meta = cdp_json("/json/version")
+    socket = meta.get("webSocketDebuggerUrl", "") if isinstance(meta, dict) else ""
+    if not isinstance(socket, str) or not valid_socket(socket, "/devtools/browser/"):
+        raise RuntimeError("REVIEWED_BROWSER_IDENTITY_UNVERIFIED")
+    target, _ = _page_socket()
+    if listener_owner() != owner or require_active_console_session() != session:
+        raise RuntimeError("REVIEWED_BROWSER_IDENTITY_CHANGED")
+    return {"pid": owner, "sessionId": session, "targetId": target,
+            "browserId": urlsplit(socket).path.rsplit("/", 1)[-1]}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _verify_browser(expected: dict, expires: datetime, target: str | None = None) -> None:
+    if _now() >= expires:
+        raise RuntimeError("OWNER_REVIEW_EXPIRED")
+    if (target is not None and target != expected.get("targetId")) or reviewed_browser_identity() != expected:
+        raise RuntimeError("REVIEWED_BROWSER_IDENTITY_CHANGED")
+    if _now() >= expires:
+        raise RuntimeError("OWNER_REVIEW_EXPIRED")
+
+
+def _assert_reviewed_browser(expected: dict, expires: datetime) -> None:
+    from .providers.desktop_win32_ebay_nav import _check_page, _read
+
+    _verify_browser(expected, expires)
+    target, page = _read(expected["targetId"])
     _check_page(page)
-    if not urlsplit(page["url"]).path.startswith(("/sch/", "/itm/")) or listener_owner() != owner:
+    if not urlsplit(page["url"]).path.startswith(("/sch/", "/itm/")):
         raise RuntimeError("REVIEWED_NORMAL_AU_PAGE_REQUIRED")
+    _verify_browser(expected, expires, target)
 
 
 class _NoAdditionalSubmission:
@@ -137,7 +168,7 @@ def run_native_recovery(review_file: Path | None, approval: str) -> dict:
     if not isinstance(review, dict):
         raise RuntimeError("OWNER_REVIEW_INVALID_OR_EXPIRED")
     expires = parse_utc(review.get("expiresAtUtc"))
-    now = datetime.now(timezone.utc)
+    now = _now()
     price_key = review.get("priceKeyId")
     incident_id = review.get("incidentId")
     evidence = review.get("marketplaceAuthorizationReference")
@@ -160,7 +191,10 @@ def run_native_recovery(review_file: Path | None, approval: str) -> dict:
     if (not gate.allowed or gate.availability_state != "PROBE_REQUIRED" or gate.probe_in_flight
             or availability.get("lastOutcome") not in REVIEW_OUTCOMES):
         raise RuntimeError("RECOVERY_GATE_NOT_OPEN")
-    _assert_reviewed_browser()
+    browser = review.get("browserIdentity")
+    if not isinstance(browser, dict) or set(browser) != {"pid", "sessionId", "targetId", "browserId"}:
+        raise RuntimeError("OWNER_REVIEW_BROWSER_IDENTITY_REQUIRED")
+    _assert_reviewed_browser(browser, expires)
     if _reviewed_state() != reviewed:
         raise RuntimeError("OWNER_REVIEW_STATE_CHANGED")
 
@@ -182,7 +216,11 @@ def run_native_recovery(review_file: Path | None, approval: str) -> dict:
 
         write("CLAIMED")
         started = begin_probe(market="AU", expected_updated_at=availability["updatedAtUtc"]).to_dict()["updatedAtUtc"]
-        with native_probe_scope(started):
+        from .providers.desktop_win32_ebay_nav import recovery_browser_scope
+
+        with native_probe_scope(started), recovery_browser_scope(
+            lambda target: _verify_browser(browser, expires, target),
+        ):
             try:
                 if not evaluate_native_browser_work_gate().allowed:
                     raise RuntimeError("RECOVERY_GATE_CHANGED")
@@ -195,6 +233,7 @@ def run_native_recovery(review_file: Path | None, approval: str) -> dict:
                         or capture.get("attemptId") != attempt_id or capture.get("priceKeyId") != price_key
                         or not evaluate_native_browser_work_gate().allowed):
                     raise RuntimeError("RECOVERY_EVIDENCE_UNVERIFIED")
+                _verify_browser(browser, expires)
                 record_healthy_browser_check(market="AU", from_probe=True, probe_started_at=started)
                 status = "PROBE_HEALTHY_STREAK_PENDING"
             except ProviderError as exc:

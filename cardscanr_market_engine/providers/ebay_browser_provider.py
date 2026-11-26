@@ -3346,13 +3346,14 @@ class EbayBrowserSoldCompsProvider:
     @staticmethod
     def _ensure_native_chrome_cdp_ready() -> int:
         from ..ebay_browser_work_gate import evaluate_native_browser_work_gate
-        from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT, ensure_chrome_with_cdp
+        from .desktop_win32_ebay_nav import DEFAULT_CDP_PORT, ensure_chrome_with_cdp, verify_recovery_browser
 
         gate = evaluate_native_browser_work_gate(market="AU")
         if not gate.allowed or not gate.state_integrity_ok:
             raise ProviderBlockedError("Marketplace work gate blocks Windows pricing", diagnostics=gate.to_dict())
         try:
-            ensure_chrome_with_cdp()
+            if not verify_recovery_browser():
+                ensure_chrome_with_cdp()
         except Exception as exc:
             raise ProviderTemporaryError(
                 "Dedicated Windows Chrome unavailable", diagnostics={"failureClass": type(exc).__name__},

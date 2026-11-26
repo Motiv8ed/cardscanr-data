@@ -148,10 +148,11 @@ ITM_HREF_COUNT_JS = """
 """
 
 # Read-only challenge UI probe — never clicks/solves CAPTCHA; visibility only.
-CHALLENGE_UI_JS = """
+CHALLENGE_UI_JS = r"""
 () => {
   const bodyText = (document.body && document.body.innerText) || '';
-  const visibleChallengeText = /verify you are|verify yourself|are you a robot|security challenge|robot check|confirm you are human|please verify yourself|press and hold/i.test(bodyText);
+  const challengeText = /verify you are|verify yourself|are you a robot|security challenge|robot check|confirm you are human|please verify yourself|press and hold/i;
+  const visibleChallengeText = challengeText.test(bodyText);
   const frames = Array.from(document.querySelectorAll('iframe')).map((f) => {
     let display = '';
     let visibility = '';
@@ -166,14 +167,24 @@ CHALLENGE_UI_JS = """
     const src = String(f.src || '');
     const id = String(f.id || '');
     const cls = String(f.className || '');
-    const captchaLike = /captcha|recaptcha|challenge/i.test(src + ' ' + id + ' ' + cls);
+    // Invisible reCAPTCHA anchors are passive badges; a visible challenge
+    // frame or rendered verification text inside a same-origin iframe is active.
+    const passiveAnchor = /^https:\/\/(?:www\.google\.com|www\.recaptcha\.net)\/recaptcha\/(?:api2|enterprise)\/anchor\?/i.test(src)
+      && /[?&]size=invisible(?:&|$)/i.test(src);
+    let embeddedText = false;
+    try {
+      embeddedText = challengeText.test((f.contentDocument?.body?.innerText || '').slice(0, 12000));
+    } catch (e) {}
+    const captchaLike = embeddedText || /captcha|recaptcha|challenge/i.test(src + ' ' + id + ' ' + cls);
     const w = Number(f.offsetWidth || 0);
     const h = Number(f.offsetHeight || 0);
-    const renderedVisible = captchaLike && w > 2 && h > 2 && display !== 'none' && visibility !== 'hidden';
+    const visible = f.checkVisibility ? f.checkVisibility({opacityProperty: true, visibilityProperty: true})
+      : display !== 'none' && visibility !== 'hidden';
+    const renderedVisible = captchaLike && (embeddedText || !passiveAnchor) && w > 2 && h > 2 && visible;
     return { src: src.slice(0, 180), w, h, display, visibility, captchaLike, renderedVisible };
   });
   const captchaFrames = frames.filter((f) => f.captchaLike).slice(0, 12);
-  const visibleCaptchaFrames = captchaFrames.filter((f) => f.renderedVisible);
+  const visibleCaptchaFrames = frames.filter((f) => f.renderedVisible);
   const listingNodeCount = document.querySelectorAll('li.s-item, .s-item, .srp-results li, a[href*="/itm/"]').length;
   return {
     visibleChallengeText,

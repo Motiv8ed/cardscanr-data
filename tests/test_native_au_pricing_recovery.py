@@ -49,7 +49,7 @@ def reviewed_state(tmp_path, monkeypatch):
 def test_recovery_refuses_missing_or_stale_owner_approval(reviewed_state, monkeypatch):
     path, review = reviewed_state
 
-    def unexpected():
+    def unexpected(*_args):
         pytest.fail("A refused probe must stop before the browser check")
 
     monkeypatch.setattr(recovery, "_assert_reviewed_browser", unexpected)
@@ -74,10 +74,59 @@ def test_recovery_refuses_new_incident_even_with_reviewed_hashes(reviewed_state,
     assert not load_availability(market="AU").probe_in_flight
 
 
+@pytest.mark.parametrize("operation", ["navigate", "submit"])
+@pytest.mark.parametrize("change", ["expiry", "pid", "sessionId", "targetId", "browserId"])
+def test_recovery_revalidates_at_browser_action(monkeypatch, operation, change):
+    from cardscanr_market_engine.providers import desktop_win32_ebay_nav as nav
+
+    original = {"pid": 123, "sessionId": 1, "targetId": "page", "browserId": "browser"}
+    current = original.copy()
+    now = [datetime(2026, 1, 1, tzinfo=timezone.utc)]
+    expiry = now[0] + timedelta(seconds=10)
+    monkeypatch.setattr(recovery, "_now", lambda: now[0])
+    monkeypatch.setattr(recovery, "reviewed_browser_identity", lambda: current)
+    monkeypatch.setattr(nav, "_page_socket", lambda target: (target, "fixture-socket"))
+    state = {"url": "about:blank", "title": "", "body": "", "challengeUi": {}}
+    actions = []
+
+    class FakeSession:
+        def __init__(self, *_args, **_kwargs):
+            # Simulate a change after preliminary verification and socket selection.
+            if change == "expiry":
+                now[0] = expiry
+            else:
+                replacement = {"pid": 456, "sessionId": 2, "targetId": "replacement", "browserId": "new-browser"}
+                current[change] = replacement[change]
+
+        def evaluate(self, *_args, **_kwargs):
+            return state
+
+        def call(self, *_args, **_kwargs):
+            actions.append("navigation")
+
+        def evaluate_function(self, *_args, **_kwargs):
+            actions.append("submission")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(nav, "DirectCdpSession", FakeSession)
+    guard = lambda target: recovery._verify_browser(original, expiry, target)
+    guard("page")
+    expected = "OWNER_REVIEW_EXPIRED" if change == "expiry" else "REVIEWED_BROWSER_IDENTITY_CHANGED"
+    with nav.recovery_browser_scope(guard), pytest.raises(RuntimeError, match=expected):
+        if operation == "navigate":
+            nav._open_home("page")
+        else:
+            nav._activate_control("page", state, "submit")
+    assert not actions
+    assert nav.verify_recovery_browser() is False
+
+
 @pytest.mark.skipif(sys.platform != "win32" or os.getenv("CARDSCANR_RUN_WINDOWS_FIXTURE") != "1",
                     reason="requires an active Windows console and Chrome")
-@pytest.mark.parametrize("fail", [False, True])
-def test_reviewed_native_recovery_uses_real_browser_and_capture(reviewed_state, tmp_path, monkeypatch, fail):
+@pytest.mark.parametrize("case", ["success", "cooldown", "embedded"])
+def test_reviewed_native_recovery_uses_real_browser_and_capture(reviewed_state, tmp_path, monkeypatch, case):
     from cardscanr_market_engine import continuous_safety, native_windows_pricing_browser as chrome, supabase_client
     from cardscanr_market_engine.live_navigation_attempt import lookup_search_submission_event
     from cardscanr_market_engine.models import MarketPriceKey
@@ -85,7 +134,7 @@ def test_reviewed_native_recovery_uses_real_browser_and_capture(reviewed_state, 
     from cardscanr_market_engine.providers import ebay_browser_provider as browser
     from cardscanr_market_engine.providers import post_sold_capture as capture, post_sold_capture_process as process
 
-    path, _ = reviewed_state
+    path, review = reviewed_state
     events = []
     date = datetime.now(timezone.utc).strftime("%d %b %Y")
     sold = (f'<h1>Sold listings</h1><ul class="srp-results"><li class="s-item">'
@@ -101,12 +150,16 @@ def test_reviewed_native_recovery_uses_real_browser_and_capture(reviewed_state, 
             title = "Local AU fixture"
             if parts.path == "/sch/" and not params:
                 body = "Owner-reviewed local page"
+                if case == "embedded":
+                    body += '<iframe title="Verification" srcdoc="<p>Verify you are human</p>"></iframe>'
+                elif case == "success":
+                    body += '<iframe id="recaptcha-bootstrap" hidden srcdoc="<p>Passive resource</p>"></iframe>'
             elif parts.path == "/":
                 body = '<form action="/sch/"><input name="_nkw"><button>Search</button></form>'
             elif parts.path == "/sch/" and "LH_Sold" not in params and "_nkw" in params:
                 event_path, = (tmp_path / "attempts").glob("*.json")
                 events.append(lookup_search_submission_event(event_path.name.split(".")[0]))
-                if fail:
+                if case == "cooldown":
                     title = "Error Page"
                     body = "Sorry, there was a temporary error."
                 else:
@@ -176,16 +229,41 @@ def test_reviewed_native_recovery_uses_real_browser_and_capture(reviewed_state, 
         try:
             chrome.ensure_browser()
             nav._open_home(nav._page_socket()[0])
-            nav._wait(nav._page_socket()[0], lambda value: value["url"] == origin + "/sch/")
+            if case == "embedded":
+                from time import monotonic, sleep
+
+                deadline = monotonic() + 8
+                while monotonic() < deadline:
+                    _, state = nav._read()
+                    if state["challengeUi"]["visibleCaptchaFrameCount"]:
+                        break
+                    sleep(0.15)
+                assert state["url"] == origin + "/sch/" and state["title"] == "Local AU fixture"
+                assert state["challengeUi"]["visibleCaptchaFrameCount"] == 1
+            else:
+                nav._wait(nav._page_socket()[0], lambda value: value["url"] == origin + "/sch/")
+            review["browserIdentity"] = recovery.reviewed_browser_identity()
+            path.write_text(json.dumps(review), encoding="utf-8")
             monkeypatch.setattr(nav, "_HOME", origin + "/")
+            if case == "embedded":
+                with pytest.raises(RuntimeError, match="CHALLENGE_REQUIRED"):
+                    recovery.run_native_recovery(path, recovery.APPROVAL)
+                assert not events and not (tmp_path / "attempts").exists()
+                assert not load_availability(market="AU").probe_in_flight
+                save_availability(EbayAvailabilitySnapshot(state="HEALTHY", market="AU"), force=True)
+                monkeypatch.setenv("CARDSCANR_MARKET", "AU")
+                navigation = nav.navigate_query_to_sold("Local fixture", attempt_id="embedded-refusal")
+                assert navigation.error == "CHALLENGE_REQUIRED"
+                assert not events and not list((tmp_path / "attempts").glob("*.json"))
+                return
             result = recovery.run_native_recovery(path, recovery.APPROVAL)
             assert len(events) == 1 and events[0]["valid"]
             assert events[0]["attemptId"] == result["attemptId"]
             assert events[0]["event"]["priceKeyId"] == "fixture-key"
             snap = load_availability(market="AU")
             assert not snap.probe_in_flight and not snap.confirmed_healthy
-            assert result["status"] == ("PROBE_COOLDOWN" if fail else "PROBE_HEALTHY_STREAK_PENDING")
-            assert snap.state == ("COOLDOWN" if fail else "HEALTHY")
+            assert result["status"] == ("PROBE_COOLDOWN" if case == "cooldown" else "PROBE_HEALTHY_STREAK_PENDING")
+            assert snap.state == ("COOLDOWN" if case == "cooldown" else "HEALTHY")
             with pytest.raises(RuntimeError, match="OWNER_REVIEW_STATE_CHANGED"):
                 recovery.run_native_recovery(path, recovery.APPROVAL)
             assert len(events) == 1
