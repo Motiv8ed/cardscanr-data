@@ -1,0 +1,734 @@
+{
+  "id": "35",
+  "classification": "LIVE_MISSING_AND_PINNED_NATIVE_SINGLE_VARIANT_PROOF",
+  "source_commit": "6fabdd3411c14d2d4c4ab84f4f24af79e1814ddc",
+  "source_git_blob": "d353c11f7248b51e2a56e0edb127bbd4f94ee6ee",
+  "source_content_sha256": "209c8a4c43e3d33d8d68d34798b7881dab0290f77f9d0436927077e2902067db",
+  "source_set": "zh-hans/dynamax-tactics",
+  "source_code": "CS15C",
+  "live_snapshot_sha256": "fdce234da43144d9bb7089b892a9642b2016fb828c4d69230d7e37e9f0f07ae8",
+  "live_missing": 141,
+  "expected_crosswalk_count": 51,
+  "expected_crosswalk_tuple_sha256": "34a243ca589c87c37d28b16ef22494efdd4f3873d93f4fc7d6d8c2080711a3ce",
+  "actual_tuple_sha256": "34a243ca589c87c37d28b16ef22494efdd4f3873d93f4fc7d6d8c2080711a3ce",
+  "matched_count": 51,
+  "verified_candidates": 51,
+  "live_imports": 0,
+  "rights_granted": false,
+  "rows": [
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5184_b388180794f8eb60052fb333b368622e:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "破破舵轮V",
+        "printed_collector_number": "001",
+        "has_image_link": false
+      },
+      "picture": "2d9a063cb30e67d72289529c7ca6b9c7",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "1"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5185_2cfdc065533c4d49bdaa11d38807d157:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "破破舵轮VMAX",
+        "printed_collector_number": "002",
+        "has_image_link": false
+      },
+      "picture": "64c74e5b58506cdc941ded28407a80dd",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "2"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5189_0adbda47183905a8040e5b61f679788f:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "白蓬蓬V",
+        "printed_collector_number": "006",
+        "has_image_link": false
+      },
+      "picture": "554788879cc04aa6753ab358cbc90d4c",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "6"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5197_86a9d07c535d6ff495b1bf104dfc5128:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "美纳斯V",
+        "printed_collector_number": "014",
+        "has_image_link": false
+      },
+      "picture": "74d47f4f8883969f99c1149f3c4e4ce5",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "14"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5200_2c4789ae0bf737352b8e365f94b9c79a:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "锹农炮虫V",
+        "printed_collector_number": "017",
+        "has_image_link": false
+      },
+      "picture": "1f5ff023608c0b653ce9e9c257bc5c0b",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "17"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5208_f848a08d6bbcf1d88c7bdd38954aa4ed:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托V",
+        "printed_collector_number": "025",
+        "has_image_link": false
+      },
+      "picture": "c397c20df2a39357cc7b29abdd33caa3",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "25"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5209_e3aa7a75bf82a0fdd0a6653f1d90f7dc:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托VMAX",
+        "printed_collector_number": "026",
+        "has_image_link": false
+      },
+      "picture": "b845620566ded4e671aa741f1a0df2a0",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "26"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5214_76c0c2cd0f62b3aaf15f5dfc6aa7ca67:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 泥巴鱼V",
+        "printed_collector_number": "031",
+        "has_image_link": false
+      },
+      "picture": "961b37e296cf9b61881a25cf934a19de",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "31"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5223_d901f55253a672f6e1e7302e4e5571d5:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "古月鸟V",
+        "printed_collector_number": "040",
+        "has_image_link": false
+      },
+      "picture": "dce80e976e5a24db2f9b434e76f23e1f",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "40"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5224_8af3a6f0492e32a62fc88836998c9b31:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "古月鸟VMAX",
+        "printed_collector_number": "041",
+        "has_image_link": false
+      },
+      "picture": "5faca9e4c38c163e1ae579eefe239274",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "41"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5239_e76f35e76f5bcab4ad621df187f8ff75:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "索侦虫",
+        "printed_collector_number": "056",
+        "has_image_link": false
+      },
+      "picture": "2901ab9fb231a1746cbc39fa25cbbd31",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "56"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5240_60544f6db70179dabec516eb93049ca2:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "天罩虫",
+        "printed_collector_number": "057",
+        "has_image_link": false
+      },
+      "picture": "5563bfb47a3fe3ce48b3dde0b9bda95d",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "57"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5241_f038105d77e46b2a4a7957a76a5fe6b4:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "以欧路普",
+        "printed_collector_number": "058",
+        "has_image_link": false
+      },
+      "picture": "c064768e71cdb2d49975f6ee6ed95832",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "58"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5242_b9640db655acdde7c1f3aad5658e4733:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "啃果虫",
+        "printed_collector_number": "059",
+        "has_image_link": false
+      },
+      "picture": "6d1efca551b25bf9b0c3b5853e8dc3d1",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "59"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5243_08a06702d44f4f55af18467ef8fb61b1:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "苹裹龙",
+        "printed_collector_number": "060",
+        "has_image_link": false
+      },
+      "picture": "3bedfc0cbf92e513e079297499b8ef9c",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "60"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5244_dc67e8b942308b5a413099a74b731a16:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "丰蜜龙",
+        "printed_collector_number": "061",
+        "has_image_link": false
+      },
+      "picture": "12c62b8c2924b6b88031ca36793bed25",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "61"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5245_3b78a054ac5aa88e98b4bb7f602ddfc1:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 魔墙人偶",
+        "printed_collector_number": "062",
+        "has_image_link": false
+      },
+      "picture": "0157a061c44af836c0ae28bfc0096873",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "62"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5246_65dc8c25a2b09141b28a4a5a7832e1cd:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 踏冰人偶",
+        "printed_collector_number": "063",
+        "has_image_link": false
+      },
+      "picture": "0684b02fb702dc5773485665e2b258f2",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "63"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5247_9aaf12efb31a54007a8838aa0dc961fa:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "咚咚鼠",
+        "printed_collector_number": "064",
+        "has_image_link": false
+      },
+      "picture": "58578bf2f75c92dbc8ca06bbcda0122b",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "64"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5248_2c2fd6713cb7e64aa68530a0122d6b66:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "来悲茶",
+        "printed_collector_number": "065",
+        "has_image_link": false
+      },
+      "picture": "fd058f684929c22add5b3c6ba5ef9ad9",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "65"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5249_2e422ee3eccad98ef3ffcf08ffa71bf8:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "怖思壶",
+        "printed_collector_number": "066",
+        "has_image_link": false
+      },
+      "picture": "6dc16a113d182b9ad1049c70d831780a",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "66"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5250_bcedc06e3f42360ed12585156d3d3cf4:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "瓦斯弹",
+        "printed_collector_number": "067",
+        "has_image_link": false
+      },
+      "picture": "ab3ff82ba68b9253caaed63f505015e3",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "67"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5251_c06a0186ab16ea33928336f3f7171849:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 双弹瓦斯",
+        "printed_collector_number": "068",
+        "has_image_link": false
+      },
+      "picture": "4b87e6f38c1763072838985fa078e56d",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "68"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5252_433812d7a3a658907b770101d60d141a:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 喵喵",
+        "printed_collector_number": "069",
+        "has_image_link": false
+      },
+      "picture": "36e98b0cb651bb03267b44e0b07c47a4",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "69"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5253_2e48ae9f40489bd63b0eea70033ff2fe:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 喵头目",
+        "printed_collector_number": "070",
+        "has_image_link": false
+      },
+      "picture": "2a8e08b8b176aa21d391926d294e9893",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "70"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5254_080e02b4fa06bf0e3340c9630da425b9:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "掘掘兔",
+        "printed_collector_number": "071",
+        "has_image_link": false
+      },
+      "picture": "1e6ae8a5f9fd2dbc37d7f13508abbc24",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "71"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5255_fb056f2dd9887a6a53c8ee170d55a7bb:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "智挥猩",
+        "printed_collector_number": "072",
+        "has_image_link": false
+      },
+      "picture": "65045004311e4e8e70211a9bfb8a24ab",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "72"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5256_3b167c8cac9665f76a45b9b494069da8:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "破破舵轮V",
+        "printed_collector_number": "073",
+        "has_image_link": false
+      },
+      "picture": "d5b5fb51f39757575e945f3fac4ac325",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "73"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5257_7d0945b85556bf2c2a6dabc53dcfa9a6:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "白蓬蓬V",
+        "printed_collector_number": "074",
+        "has_image_link": false
+      },
+      "picture": "f2f6ccd67aefa683d5cc8fc2a42e66c5",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "74"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5258_0faff0fe9b0a5fc5e3f86ea9f752d326:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "美纳斯V",
+        "printed_collector_number": "075",
+        "has_image_link": false
+      },
+      "picture": "13be4b00fc240b3b8786cb5f4528c7df",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "75"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5259_c4abb2709ab447c55117a15751453046:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "锹农炮虫V",
+        "printed_collector_number": "076",
+        "has_image_link": false
+      },
+      "picture": "05694d4d5c961a82a9f7d902fa0a37db",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "76"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5260_48ad68881148e6f3bf1c0fdbd44be74a:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托V",
+        "printed_collector_number": "077",
+        "has_image_link": false
+      },
+      "picture": "938b314e63d2d85a54e82dda975b6ecb",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "77"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5261_af5673c272b2bf598adb533238f2d09e:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 泥巴鱼V",
+        "printed_collector_number": "078",
+        "has_image_link": false
+      },
+      "picture": "5df770be31a2baefb224950f7a2c268d",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "78"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5262_54906cdfcebc1850bad34d1609c5c669:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "古月鸟V",
+        "printed_collector_number": "079",
+        "has_image_link": false
+      },
+      "picture": "0fa423de64e5970f12431c2bcc2adc81",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "79"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5263_6cfaaa688edea8c9e609ecc082bc0be2:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "奥利薇",
+        "printed_collector_number": "080",
+        "has_image_link": false
+      },
+      "picture": "b825ec82f92999691645f4958ea0e750",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "80"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5264_fcc07ff075e6d1a201118aa0e0a9b321:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "卡芜",
+        "printed_collector_number": "081",
+        "has_image_link": false
+      },
+      "picture": "d393fcc65df0606322bf21e17f2abd9d",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "81"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5265_6f5edfb876726b99fd461b30fca07328:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "宝可梦培育家的培训",
+        "printed_collector_number": "082",
+        "has_image_link": false
+      },
+      "picture": "302d0db1b154da39d4ae49c6ae5100b2",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "82"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5266_33e0b87762e406ed4df696e7f595b479:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "白蓬蓬V",
+        "printed_collector_number": "083",
+        "has_image_link": false
+      },
+      "picture": "777518019ba03ffdee5980c4d321bd8b",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "83"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5267_0f1b0b5558a02bb983ce5cd037ab0153:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托V",
+        "printed_collector_number": "084",
+        "has_image_link": false
+      },
+      "picture": "d53e0a34727152f04593987dd382e1f5",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "84"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5268_eb9ee48e211b1d88c253f62196ed9eb4:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托VMAX",
+        "printed_collector_number": "085",
+        "has_image_link": false
+      },
+      "picture": "fcf084326cc915d7cb0d33f0ee125711",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "85"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5269_a2995d97a0c14941356e4d49ad572670:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "古月鸟V",
+        "printed_collector_number": "086",
+        "has_image_link": false
+      },
+      "picture": "fe4ad4fd1e7a3642c33b8cd600a9de71",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "86"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5270_0c79e4455b23f6aeac817866f5156199:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "多龙巴鲁托VMAX",
+        "printed_collector_number": "087",
+        "has_image_link": false
+      },
+      "picture": "fce7a2054479d48461125ccecaf673c4",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "87"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5271_adbff07aecca2a86bfc7d6ceb17a1b6f:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "奥利薇",
+        "printed_collector_number": "088",
+        "has_image_link": false
+      },
+      "picture": "568cd777b2767a5ba1196e789af47f22",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "88"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5272_78975bbad5035bbb841f3d29beeabbf2:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "卡芜",
+        "printed_collector_number": "089",
+        "has_image_link": false
+      },
+      "picture": "9fcc7869e16f4cab81aa938db2ee2afe",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "89"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5273_4c62255dcdb5d941c2b7aff7d1a577a3:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "宝可梦培育家的培训",
+        "printed_collector_number": "090",
+        "has_image_link": false
+      },
+      "picture": "7412b6d091c66ee6e78bba485620200d",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "90"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5274_678402506d2a522c4c1198006d308271:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "伽勒尔 喵头目",
+        "printed_collector_number": "091",
+        "has_image_link": false
+      },
+      "picture": "946af4844880e650860218de2ca945b6",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "91"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5275_c448c8de986425ef76e7a3294508eb60:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "智挥猩",
+        "printed_collector_number": "092",
+        "has_image_link": false
+      },
+      "picture": "0ab35beffbff4c7d05da8deea2775525",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "92"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5276_043a428cd903c82c55d7dfe93be0264c:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "奇异罐头",
+        "printed_collector_number": "093",
+        "has_image_link": false
+      },
+      "picture": "87ad3be33e2fd5fed3f392a86c3952f2",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "93"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5277_3004efd9e8f294c3ee34485ecc59d619:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "回收网",
+        "printed_collector_number": "094",
+        "has_image_link": false
+      },
+      "picture": "a5f751e1936a9ab2c3567d0d4cc19943",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "94"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5278_777876866fa25e342094ece2eacb8632:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "道具拆除器",
+        "printed_collector_number": "095",
+        "has_image_link": false
+      },
+      "picture": "d7cabce80fcb8722d4456e5f8a329bbc",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "95"
+    },
+    {
+      "live": {
+        "canonical_printing_id": "ptcg-chs-datasets:printing:35_5279_61b922aae5953248523fd81e4986b079:zh-cn:CN",
+        "language": "zh-cn",
+        "set_id": "ptcg-chs-datasets:set:35",
+        "native_card_name": "捕获能量",
+        "printed_collector_number": "096",
+        "has_image_link": false
+      },
+      "picture": "09488fa22027bd6ab33e847ee2e810d4",
+      "variant": "holo",
+      "finish": "holo",
+      "number": "96"
+    }
+  ]
+}
