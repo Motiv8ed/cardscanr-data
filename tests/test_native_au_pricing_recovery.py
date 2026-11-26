@@ -1,4 +1,5 @@
 """Opt-in Windows owner-recovery tests. The only browser origin is loopback."""
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -38,7 +39,6 @@ def reviewed_state(tmp_path, monkeypatch):
     document = {
         "schema": "cardscanr-owner-native-au-probe-v1", "release": "fixture-release",
         "incidentId": "fixture-review", "priceKeyId": "fixture-key",
-        "marketplaceAuthorizationReference": "isolated fixture approval",
         "expiresAtUtc": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "stateSha256": recovery._reviewed_state(),
     }
@@ -59,6 +59,57 @@ def test_recovery_refuses_missing_or_stale_owner_approval(reviewed_state, monkey
     path.write_text(json.dumps(review), encoding="utf-8")
     with pytest.raises(RuntimeError, match="OWNER_REVIEW_STATE_CHANGED"):
         recovery.run_native_recovery(path, recovery.APPROVAL)
+    assert not load_availability(market="AU").probe_in_flight
+
+
+def test_recovery_accepts_review_without_marketplace_authorization_reference(reviewed_state, monkeypatch):
+    path, review = reviewed_state
+    review["browserIdentity"] = {"pid": 1, "sessionId": 1, "targetId": "page", "browserId": "browser"}
+    review["stateSha256"] = recovery._reviewed_state()
+    path.write_text(json.dumps(review), encoding="utf-8")
+    assert "marketplaceAuthorizationReference" not in review
+
+    reached = []
+
+    def reached_browser_check(*_args, **_kwargs):
+        reached.append(True)
+        raise RuntimeError("REACHED_BROWSER_CHECK")
+
+    monkeypatch.setattr(recovery, "_assert_reviewed_browser", reached_browser_check)
+    with pytest.raises(RuntimeError, match="REACHED_BROWSER_CHECK"):
+        recovery.run_native_recovery(path, recovery.APPROVAL)
+    assert reached
+
+
+@pytest.mark.parametrize(
+    ("diagnostics", "expected_status", "expected_availability"),
+    (
+        ({"providerOutcome": "challenge_required"}, "PROBE_CHALLENGE", "CHALLENGE_REQUIRED"),
+        ({"ownedDailyOutcome": "EBAY_ACCESS_DENIED_403"}, "PROBE_COOLDOWN", "COOLDOWN"),
+        ({"failureClass": "EBAY_RATE_LIMITED"}, "PROBE_COOLDOWN", "COOLDOWN"),
+    ),
+)
+def test_recovery_probe_stops_on_challenge_access_denied_and_rate_limit(
+    reviewed_state, monkeypatch, diagnostics, expected_status, expected_availability,
+):
+    from cardscanr_market_engine.providers import desktop_win32_ebay_nav as nav
+    from cardscanr_market_engine.providers.errors import ProviderError
+
+    path, review = reviewed_state
+    review["browserIdentity"] = {"pid": 1, "sessionId": 1, "targetId": "page", "browserId": "browser"}
+    review["stateSha256"] = recovery._reviewed_state()
+    path.write_text(json.dumps(review), encoding="utf-8")
+
+    def raise_provider_error(*_args, **_kwargs):
+        raise ProviderError("fixture", diagnostics=diagnostics)
+
+    monkeypatch.setattr(recovery, "_assert_reviewed_browser", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(recovery, "_fetch", raise_provider_error)
+    monkeypatch.setattr(nav, "recovery_browser_scope", lambda *_args, **_kwargs: nullcontext())
+
+    outcome = recovery.run_native_recovery(path, recovery.APPROVAL)
+    assert outcome["status"] == expected_status
+    assert load_availability(market="AU").state == expected_availability
     assert not load_availability(market="AU").probe_in_flight
 
 
