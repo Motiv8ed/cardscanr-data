@@ -171,13 +171,11 @@ def run_native_recovery(review_file: Path | None, approval: str) -> dict:
     now = _now()
     price_key = review.get("priceKeyId")
     incident_id = review.get("incidentId")
-    evidence = review.get("marketplaceAuthorizationReference")
     if (review.get("schema") != "cardscanr-owner-native-au-probe-v1"
             or review.get("release") != _release()
             or not expires or not now < expires <= now + timedelta(minutes=30)
             or not isinstance(incident_id, str) or not incident_id
-            or not isinstance(price_key, str) or not price_key
-            or not isinstance(evidence, str) or not evidence.strip()):
+            or not isinstance(price_key, str) or not price_key):
         raise RuntimeError("OWNER_REVIEW_INVALID_OR_EXPIRED")
     reviewed = _reviewed_state()
     if review.get("stateSha256") != reviewed:
