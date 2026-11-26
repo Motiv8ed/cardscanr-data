@@ -1,17 +1,19 @@
 """Windows rendered-UI navigation on the verified dedicated pricing browser."""
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import ctypes
 from ctypes import wintypes
 from dataclasses import dataclass
 import os
 from pathlib import Path
 import time
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qs, urlsplit
 from websocket import WebSocketTimeoutException
 
-from ..ebay_browser_work_gate import evaluate_ebay_browser_work_gate
+from ..ebay_browser_work_gate import evaluate_native_browser_work_gate
 from ..live_navigation_attempt import emit_search_submission_started, has_search_submission_started
 from ..marketplace_gate_url import is_marketplace_gate_page
 from ..native_windows_pricing_browser import (
@@ -19,7 +21,7 @@ from ..native_windows_pricing_browser import (
     listener_owner, valid_socket,
 )
 from ..navigation_runtime_context import PRE_SUBMIT_QUERY_READY, pre_submit_only_requested
-from .post_sold_capture_cdp import DirectCdpSession
+from .post_sold_capture_cdp import CHALLENGE_UI_JS, DirectCdpSession
 
 _HOME = "https://www.ebay.com.au/"
 _ORIGIN = "https://www.ebay.com.au"
@@ -43,11 +45,34 @@ _CONTROLS = r"""
     const controls = {field, submit: buttons.length === 1 ? buttons[0] : null,
                       sold: sold.length === 1 ? sold[0] : null};
 """
+_CHALLENGE_UI = "(" + CHALLENGE_UI_JS + ")()"
 _STATE = "(() => {" + _CONTROLS + r"""
     return {url: location.href, title: document.title, body: document.body?.innerText.slice(0, 60000) || '',
         field: !!field, query: field?.value, form: field?.form?.action, method: field?.form?.method,
-        submit: !!controls.submit, sold: !!controls.sold};
+        submit: !!controls.submit, sold: !!controls.sold, challengeUi: """ + _CHALLENGE_UI + """};
 })()"""
+
+_recovery_guard: ContextVar[Callable[[str | None], None] | None] = ContextVar(
+    "native_recovery_browser_guard", default=None,
+)
+
+
+@contextmanager
+def recovery_browser_scope(guard: Callable[[str | None], None]):
+    token = _recovery_guard.set(guard)
+    try:
+        yield
+    finally:
+        _recovery_guard.reset(token)
+
+
+def verify_recovery_browser(target: str | None = None) -> bool:
+    guard = _recovery_guard.get()
+    if guard is None:
+        return False
+    guard(target)
+    return True
+
 
 
 @dataclass
@@ -117,8 +142,8 @@ def _read(target_id: str | None = None) -> tuple[str, dict]:
         state = session.evaluate(_STATE, timeout=4)
     finally:
         session.close()
-    if not isinstance(state, dict):
-        raise RuntimeError("Chrome page inspection returned no state")
+    if not isinstance(state, dict) or not isinstance(state.get("challengeUi"), dict):
+        raise RuntimeError("Chrome page inspection returned incomplete state")
     return target, state
 
 
@@ -126,6 +151,11 @@ def _open_home(target: str) -> None:
     _, socket = _page_socket(target)
     session = DirectCdpSession(socket, timeout=6, suppress_origin=True)
     try:
+        state = session.evaluate(_STATE, timeout=4)
+        if not isinstance(state, dict) or not isinstance(state.get("challengeUi"), dict):
+            raise RuntimeError("Chrome page inspection returned incomplete state")
+        _check_page(state, allow_blank=True)
+        verify_recovery_browser(target)
         session.call("Page.navigate", {"url": _HOME}, timeout=6)
     finally:
         session.close()
@@ -139,6 +169,7 @@ def _activate_control(target: str, state: dict, control: str, *, query: str = ""
     _, socket = _page_socket(target)
     session = DirectCdpSession(socket, timeout=4, suppress_origin=True)
     try:
+        verify_recovery_browser(target)
         activated = session.evaluate_function(
             "(args) => {" + _CONTROLS + r"""
                 if (location.href !== args.url) return false;
@@ -151,12 +182,17 @@ def _activate_control(target: str, state: dict, control: str, *, query: str = ""
                     field.select();
                     return document.activeElement === field;
                 }
+                const challenge = """ + _CHALLENGE_UI + """;
+                if (challenge.visibleChallengeText || challenge.visibleCaptchaFrameCount
+                    || challenge.visibleChallengeWidget) return "challenge";
                 control.click();
                 return true;
             }""",
             {"url": state["url"], "control": control, "query": state.get("query")},
             timeout=4,
         )
+        if activated == "challenge":
+            raise RuntimeError("CHALLENGE_REQUIRED")
         if activated is not True:
             raise RuntimeError("Rendered pricing control changed or is obscured")
         if control == "field":
@@ -171,18 +207,22 @@ def _search_form(state: dict) -> bool:
 
 
 def _require_gate(market: str) -> None:
-    gate = evaluate_ebay_browser_work_gate(market=market)
+    gate = evaluate_native_browser_work_gate(market=market)
     if not gate.allowed or not gate.state_integrity_ok:
         raise RuntimeError("MARKETPLACE_WORK_GATE_BLOCKED")
 
 
 def _check_page(state: dict, *, allow_blank: bool = False) -> None:
-    from .ebay_browser_provider import is_ebay_authentication_url
+    from .ebay_browser_provider import classify_browser_page_state
 
     url, title, body = state["url"], state["title"], state["body"]
-    if is_ebay_authentication_url(url):
+    classification = classify_browser_page_state(
+        url=url, title=title, body_text=body, challenge_ui=state.get("challengeUi"),
+    )["outcome"]
+    if classification == "authentication_required":
         raise RuntimeError("EBAY_AUTH_REQUIRED")
-    if is_marketplace_gate_page(url, title=title, body=body) or "captcha" in body.lower() or "security measure" in body.lower():
+    if (is_marketplace_gate_page(url, title=title, body=body)
+            or classification in {"challenge_detected", "access_blocked", "ambiguous_security_state"}):
         raise RuntimeError("CHALLENGE_REQUIRED")
     if "error page" in title.lower() or "/error" in urlsplit(url).path.lower():
         raise RuntimeError("TEMPORARY_EBAY_SERVER_FAILURE")
@@ -262,6 +302,7 @@ def navigate_query_to_sold(
                 raise RuntimeError("NATIVE_PRICING_BROWSER_OWNER_CHANGED")
             _require_gate(market)
             state = _wait(target, lambda s: _search_form(s) and s.get("query") == query, timeout=8)
+            verify_recovery_browser(target)
             event = emit_search_submission_started(
                 attempt_id=attempt_id, price_key_id=price_key_id, query=query, market=market,
                 currency=os.getenv("CARDSCANR_CURRENCY"), fingerprint=os.getenv("CARDSCANR_FINGERPRINT"),

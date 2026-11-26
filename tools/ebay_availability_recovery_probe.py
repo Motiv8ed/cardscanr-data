@@ -6,6 +6,7 @@ probe + 2 additional due checks (= 3 healthy streak path).
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -27,11 +28,8 @@ from cardscanr_market_engine.job_runner import MarketPriceJobRunner
 from cardscanr_market_engine.providers.factory import create_market_comps_provider
 from cardscanr_market_engine.supabase_client import SupabaseMarketEngineClient
 from cardscanr_market_engine.supabase_env_loader import load_supabase_env
-from tools.desktop_ebay_e2e_pricing import due_owned_key_ids, run_forced_job
-from tools.linux_x11_ebay_batch10 import sample_resources
 
 OUT = ROOT / "reports" / "artifacts" / "ebay_availability_recovery"
-OUT.mkdir(parents=True, exist_ok=True)
 
 
 def _client() -> SupabaseMarketEngineClient:
@@ -54,6 +52,30 @@ def _configure() -> None:
 
 
 def main() -> int:
+    from cardscanr_market_engine.providers.search_entry_contract import native_windows_pricing_selected
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--review-receipt", type=Path)
+    parser.add_argument("--approval", default="")
+    args = parser.parse_args()
+    if native_windows_pricing_selected() or args.review_receipt is not None or args.approval:
+        from cardscanr_market_engine.native_au_pricing_recovery import run_native_recovery
+
+        try:
+            result = run_native_recovery(args.review_receipt, args.approval)
+        except (RuntimeError, OSError, ValueError):
+            print("NATIVE_RECOVERY_REFUSED")
+            return 2
+        print(json.dumps(result))
+        return 0 if result["status"] == "PROBE_HEALTHY_STREAK_PENDING" else 2
+    return _run_linux_recovery()
+
+
+def _run_linux_recovery() -> int:
+    from tools.desktop_ebay_e2e_pricing import due_owned_key_ids, run_forced_job
+    from tools.linux_x11_ebay_batch10 import sample_resources
+
+    OUT.mkdir(parents=True, exist_ok=True)
     _configure()
     snap = get_availability()
     allowed, reason, snap = browser_work_allowed(for_probe=True)

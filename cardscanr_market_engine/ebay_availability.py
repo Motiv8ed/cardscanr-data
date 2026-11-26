@@ -454,11 +454,14 @@ def begin_probe(
     now: datetime | None = None,
     path: Path | None = None,
     market: str | None = None,
+    expected_updated_at: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Mark the single allowed recovery probe as in-flight."""
     current = now or utc_now()
 
     def _apply(snap: EbayAvailabilitySnapshot) -> EbayAvailabilitySnapshot:
+        if expected_updated_at is not None and snap.to_dict()["updatedAtUtc"] != expected_updated_at:
+            raise RuntimeError("probe_reviewed_availability_changed")
         if snap.state != "PROBE_REQUIRED":
             raise RuntimeError(f"begin_probe_requires_PROBE_REQUIRED got={snap.state}")
         if snap.probe_in_flight:
@@ -470,12 +473,21 @@ def begin_probe(
     return _mutate_availability(_apply, path=path, now=current, market=market)
 
 
+def _assert_probe_ownership(snap: EbayAvailabilitySnapshot, started_at: str | None) -> None:
+    if started_at is not None and not (
+        snap.state == "PROBE_REQUIRED" and snap.probe_in_flight and snap.last_outcome == "probe_started"
+        and snap.to_dict()["updatedAtUtc"] == started_at
+    ):
+        raise RuntimeError("probe_availability_ownership_changed")
+
+
 def release_probe_local_failure(
     *,
     now: datetime | None = None,
     path: Path | None = None,
     reference: str | None = None,
     market: str | None = None,
+    probe_started_at: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Clear probe_in_flight after a local finalize failure (not SORRY, not healthy).
 
@@ -485,6 +497,7 @@ def release_probe_local_failure(
     current = now or utc_now()
 
     def _apply(snap: EbayAvailabilitySnapshot) -> EbayAvailabilitySnapshot:
+        _assert_probe_ownership(snap, probe_started_at)
         snap.probe_in_flight = False
         if snap.state in {"PROBE_REQUIRED", "COOLDOWN"}:
             snap.state = "PROBE_REQUIRED"
@@ -527,12 +540,14 @@ def record_sorry(
     path: Path | None = None,
     reference: str | None = None,
     market: str | None = None,
+    probe_started_at: str | None = None,
     from_probe: bool | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Open/extend worker-wide COOLDOWN after TEMPORARY_EBAY_SERVER_FAILURE."""
     current = now or utc_now()
 
     def _apply(snap: EbayAvailabilitySnapshot) -> EbayAvailabilitySnapshot:
+        _assert_probe_ownership(snap, probe_started_at)
         was_probe = (
             bool(from_probe)
             if from_probe is not None
@@ -559,11 +574,13 @@ def record_challenge(
     path: Path | None = None,
     reference: str | None = None,
     market: str | None = None,
+    probe_started_at: str | None = None,
     incident_id: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     current = now or utc_now()
 
     def _apply(snap: EbayAvailabilitySnapshot) -> EbayAvailabilitySnapshot:
+        _assert_probe_ownership(snap, probe_started_at)
         snap.state = "CHALLENGE_REQUIRED"
         snap.opened_at = snap.opened_at or current
         snap.probe_in_flight = False
@@ -589,11 +606,13 @@ def record_healthy_browser_check(
     path: Path | None = None,
     from_probe: bool | None = None,
     market: str | None = None,
+    probe_started_at: str | None = None,
 ) -> EbayAvailabilitySnapshot:
     """Record a successful SOLD/pricing browser check (not a synthetic ping)."""
     current = now or utc_now()
 
     def _apply(snap: EbayAvailabilitySnapshot) -> EbayAvailabilitySnapshot:
+        _assert_probe_ownership(snap, probe_started_at)
         was_probe = bool(from_probe) if from_probe is not None else bool(snap.probe_in_flight)
         # Fail closed: never let a stale healthy reconciliation erase a newer
         # challenge/SORRY protection that won the lock race.

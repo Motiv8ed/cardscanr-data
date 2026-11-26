@@ -468,10 +468,17 @@ def resume() -> dict:
 
 def main() -> int:
     args = argparse.ArgumentParser()
-    args.add_argument("--mode", choices=["inspect", "apply", "status", "resume"], required=True)
+    args.add_argument("--mode", choices=["inspect", "apply", "status", "resume", "native-probe"], required=True)
     args.add_argument("--approval", default="")
+    args.add_argument("--review-receipt", type=Path)
     parsed = args.parse_args()
     try:
+        if parsed.mode == "native-probe":
+            from cardscanr_market_engine.native_au_pricing_recovery import run_native_recovery
+
+            result = run_native_recovery(parsed.review_receipt, parsed.approval)
+            print(json.dumps(result, separators=(",", ":")))
+            return 0 if result["status"] == "PROBE_HEALTHY_STREAK_PENDING" else 2
         if parsed.mode == "inspect":
             result = inspect()
         elif parsed.mode == "apply":
