@@ -1,0 +1,157 @@
+{
+  "classification": "READ_ONLY_DEPLOYMENT_READINESS_NOT_AUTHORIZATION",
+  "generated_utc": "2026-11-28T03:10:56.982093+00:00",
+  "candidate_sha256": "0f16153b678cedbe09426a98dab9a1b75e7337f1f87223a5ed4a77375eda0d11",
+  "review_commit": "a2d9023036bb769a43d88faa29ad787d36ff5126",
+  "linked": 129666,
+  "missing": 29137,
+  "newly_covered_if_imported": 4223,
+  "groups": [
+    {
+      "group": "group01",
+      "sha256": "b7ad70d9635f83447f5c344c6fa1446beed12919c711cb1afa3d6c76b5fed219",
+      "count": 231,
+      "newly_covered": 231
+    },
+    {
+      "group": "group02",
+      "sha256": "d34bf4220c599da0a3ed756cda7051b5a27b42c24822413399fc732c5d9c796b",
+      "count": 351,
+      "newly_covered": 351
+    },
+    {
+      "group": "group03",
+      "sha256": "390ed2b148c31ea2e7d05ecf706bdde1f0fa28307ed51a761b64fa364b95ad6c",
+      "count": 635,
+      "newly_covered": 635
+    },
+    {
+      "group": "group04",
+      "sha256": "a09493e1892976c51ae8b969db07b091b0c5aa79ef2bdba5020bf5ba32f3374a",
+      "count": 474,
+      "newly_covered": 474
+    },
+    {
+      "group": "group05",
+      "sha256": "7a951f11089288d256f8d5b841b94611fba98f569d1815e9e3fe3a08a89af572",
+      "count": 255,
+      "newly_covered": 255
+    },
+    {
+      "group": "group06",
+      "sha256": "484e3d503427f2b6a62eef8044841a1dadf4426094cb6e7d24fe8a38bf1ec76d",
+      "count": 374,
+      "newly_covered": 374
+    },
+    {
+      "group": "group07",
+      "sha256": "d4b23dfb09d4d1db706e929922b5eaee365ad4abd1bc6eb7d2fcc37bd8e4d493",
+      "count": 696,
+      "newly_covered": 696
+    },
+    {
+      "group": "group08",
+      "sha256": "ec6bfd04a72b463587843155e27c9fb6493220828b7fb9893daa2941fd2cfdd2",
+      "count": 506,
+      "newly_covered": 506
+    },
+    {
+      "group": "group09",
+      "sha256": "9fddf495e00f0cc6bdb59c8e2b0aef10fae2396d3e11b4cae20160cfcd3299ca",
+      "count": 327,
+      "newly_covered": 327
+    },
+    {
+      "group": "group10",
+      "sha256": "0efa03bb06ee05e2c2ae0eca08249489c51133af935047822f1e74bc8e01292d",
+      "count": 374,
+      "newly_covered": 374
+    }
+  ],
+  "capacity": {
+    "total": 197,
+    "completed_verified": 101,
+    "unsettled": 49,
+    "redundant_verified": 47,
+    "unsettled_before_redundancy": 96,
+    "unsettled_limit": 96,
+    "history_limit": 256,
+    "available_slots": 47,
+    "state": "available"
+  },
+  "queue": {
+    "enabled": true,
+    "pending": 0,
+    "current": null,
+    "blocked": null
+  },
+  "runtime": {
+    "tasks": [
+      {
+        "TaskName": "CardScanR Bridge Supervisor",
+        "State": "Disabled"
+      },
+      {
+        "TaskName": "CardScanR Workbench AutoStart",
+        "State": "Disabled"
+      }
+    ],
+    "listener": [
+      {
+        "LocalPort": 8855,
+        "OwningProcess": 57784
+      }
+    ],
+    "pending": false,
+    "claimed": false
+  },
+  "prs": [
+    {
+      "headRefOid": "d4cfd9ad9abd899f6cfc365a50b3743e859c9afb",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": "",
+      "state": "OPEN",
+      "number": 244,
+      "expected_head": "d4cfd9ad9abd899f6cfc365a50b3743e859c9afb",
+      "head_matches": true
+    },
+    {
+      "headRefOid": "6d3584af63560d2dd40ecf531b6c1e8ba1d4e161",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": "",
+      "state": "OPEN",
+      "number": 255,
+      "expected_head": "6d3584af63560d2dd40ecf531b6c1e8ba1d4e161",
+      "head_matches": true
+    },
+    {
+      "headRefOid": "c6c67787933993550ce6d78d1623802865bd938f",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": "",
+      "state": "OPEN",
+      "number": 257,
+      "expected_head": "c6c67787933993550ce6d78d1623802865bd938f",
+      "head_matches": true
+    },
+    {
+      "headRefOid": "bb299d08b3e571b7328f7d7bc10becdc2986f686",
+      "mergeStateStatus": "UNSTABLE",
+      "reviewDecision": "",
+      "state": "OPEN",
+      "number": 258,
+      "expected_head": "bb299d08b3e571b7328f7d7bc10becdc2986f686",
+      "head_matches": true
+    }
+  ],
+  "db_bytes": 681889792,
+  "free_bytes": 86165688320,
+  "backup_budget_bytes": 8818897920,
+  "blockers": [
+    "canonical_release_not_merged",
+    "independent_review_not_confirmed",
+    "owner_cutover_requires_quiesced_listener",
+    "owner_local_canonical_cutover_and_fresh_grant_required"
+  ],
+  "activation_authorized": false,
+  "live_writes": 0
+}
